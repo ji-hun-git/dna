@@ -11,6 +11,7 @@
         :root {
             --bg-color: #000000;
             --surface-color: #111111;
+            --surface-hover: #1c1c1e;
             --text-primary: #f5f5f7;
             --text-secondary: #86868b;
             --accent: #2997ff;
@@ -25,6 +26,7 @@
             margin: 0;
             padding: 0;
             -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
         .wrapper {
@@ -33,7 +35,6 @@
             padding: 4rem 2rem;
         }
 
-        /* Modern Two-Column Layout */
         .grid-layout {
             display: grid;
             grid-template-columns: 1fr;
@@ -47,11 +48,12 @@
             }
         }
 
-        /* Sticky Sidebar */
+        /* Sidebar */
         .sidebar {
             position: sticky;
             top: 4rem;
             height: max-content;
+            z-index: 10;
         }
 
         h1 {
@@ -78,13 +80,15 @@
             color: var(--text-primary);
             text-decoration: none;
             font-size: 0.95rem;
-            transition: color 0.2s ease;
+            transition: color 0.3s ease, transform 0.3s ease;
             display: inline-flex;
             align-items: center;
+            width: fit-content;
         }
 
         .contact-links a:hover {
             color: var(--accent);
+            transform: translateX(4px);
         }
 
         /* Content Sections */
@@ -103,18 +107,22 @@
             margin-bottom: 2rem;
         }
 
+        /* Interactive Cards */
         .card {
             background-color: var(--surface-color);
             border-radius: 16px;
             padding: 2rem;
             margin-bottom: 1.5rem;
             border: 1px solid var(--border);
-            transition: transform 0.3s ease, background-color 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: default;
         }
 
         .card:hover {
-            background-color: #1a1a1c;
-            transform: translateY(-2px);
+            background-color: var(--surface-hover);
+            transform: translateY(-4px) scale(1.01);
+            border-color: #444446;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .card-header {
@@ -156,7 +164,7 @@
             margin-bottom: 0.5rem;
         }
 
-        /* Publications Styling */
+        /* Publications */
         .pub-list {
             display: flex;
             flex-direction: column;
@@ -166,7 +174,14 @@
         .pub-item {
             font-size: 0.95rem;
             color: #a1a1a6;
-            line-height: 1.5;
+            line-height: 1.6;
+            padding: 1.5rem;
+            border-radius: 12px;
+            transition: background-color 0.3s ease;
+        }
+
+        .pub-item:hover {
+            background-color: var(--surface-color);
         }
 
         .pub-item strong {
@@ -178,12 +193,38 @@
             color: var(--accent);
             text-decoration: none;
             font-size: 0.85rem;
-            margin-left: 0.5rem;
+            margin-top: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            transition: gap 0.3s ease;
+            gap: 4px;
         }
 
-        .pub-link:hover {
-            text-decoration: underline;
+        .pub-link::after {
+            content: '→';
+            transition: transform 0.3s ease;
         }
+
+        .pub-link:hover::after {
+            transform: translateX(4px);
+        }
+
+        /* --- Scroll Reveal Animations --- */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s cubic-bezier(0.5, 0, 0, 1), transform 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Staggered load for sidebar elements */
+        .delay-1 { transition-delay: 0.1s; }
+        .delay-2 { transition-delay: 0.2s; }
+        .delay-3 { transition-delay: 0.3s; }
     </style>
 </head>
 <body>
@@ -192,18 +233,18 @@
         <div class="grid-layout">
             
             <aside class="sidebar">
-                <h1>Jihun Chae</h1>
-                <div class="title-role">HCI & Generative AI Researcher</div>
+                <h1 class="reveal active">Jihun Chae</h1>
+                <div class="title-role reveal active delay-1">HCI & Generative AI Researcher</div>
                 
-                <div class="contact-links">
+                <div class="contact-links reveal active delay-2">
                     <a href="mailto:chaejihun@kaist.ac.kr">chaejihun@kaist.ac.kr</a>
-                    <a href="https://github.com/ji-hun-git" target="_blank">GitHub Profile</a>
+                    <a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank">LinkedIn Profile</a>
                 </div>
             </aside>
 
             <main>
                 
-                <section>
+                <section class="reveal">
                     <h2>Education</h2>
                     
                     <div class="card">
@@ -231,7 +272,7 @@
                     </div>
                 </section>
 
-                <section>
+                <section class="reveal">
                     <h2>Research Experience</h2>
                     
                     <div class="card">
@@ -259,14 +300,16 @@
                     </div>
                 </section>
 
-                <section>
+                <section class="reveal">
                     <h2>Selected Publications</h2>
                     <div class="pub-list">
                         <div class="pub-item">
-                            <strong>Chae, J.</strong>, Seo, G., Jeong, S., & Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. <a href="https://doi.org/10.1145/3742413.3789155" class="pub-link" target="_blank">View Paper →</a>
+                            <strong>Chae, J.</strong>, Seo, G., Jeong, S., & Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>.<br>
+                            <a href="https://doi.org/10.1145/3742413.3789155" class="pub-link" target="_blank">View Paper</a>
                         </div>
                         <div class="pub-item">
-                            Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., & Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities. <em>CHI Conference on Human Factors in Computing Systems</em>. <a href="https://doi.org/10.1145/3706599.3719723" class="pub-link" target="_blank">View Paper →</a>
+                            Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., & Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities. <em>CHI Conference on Human Factors in Computing Systems</em>.<br>
+                            <a href="https://doi.org/10.1145/3706599.3719723" class="pub-link" target="_blank">View Paper</a>
                         </div>
                         <div class="pub-item">
                             <strong>Chae, J.</strong>, & Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>.
@@ -274,7 +317,7 @@
                     </div>
                 </section>
 
-                <section>
+                <section class="reveal">
                     <h2>Honors & Awards</h2>
                     <div class="card">
                         <div class="card-header">
@@ -296,5 +339,27 @@
         </div>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15 // Triggers when 15% of the element is visible
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        // Optional: Stop observing once revealed
+                        // observer.unobserve(entry.target); 
+                    }
+                });
+            }, observerOptions);
+
+            const revealElements = document.querySelectorAll('.reveal:not(.active)');
+            revealElements.forEach(el => observer.observe(el));
+        });
+    </script>
 </body>
 </html>
