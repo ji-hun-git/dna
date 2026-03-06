@@ -18,7 +18,7 @@
             --text-muted: #86868b;
             --accent: #2997ff;
             --accent-glow: rgba(41, 151, 255, 0.15);
-            --gradient-text: linear-gradient(135deg, #ffffff 0%, #a1a1a6 100%);
+            --gradient-text: linear-gradient(180deg, #ffffff 0%, #86868b 100%);
         }
 
         * { box-sizing: border-box; }
@@ -85,36 +85,68 @@
             * { cursor: auto !important; }
         }
 
-        /* Ambient AI Background Game (Abstract Pong) */
+        /* Ambient AI Background Geometry (Pong & Galaga) */
         .ai-game-bg {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             z-index: -1;
             pointer-events: none;
             overflow: hidden;
-            opacity: 0.1; /* Very subtle */
-            filter: blur(4px); /* Makes it look like it's behind frosted glass */
         }
+        
         .ai-shape {
             position: absolute;
-            background: var(--text-main);
-            box-shadow: 0 0 20px var(--text-main);
+            background: rgba(134, 134, 139, 0.15); /* Distinctly visible, but dark */
+            pointer-events: none;
+        }
+        
+        /* Instance 1: Pure Pong */
+        .ai-game-bg.pong {
+            filter: blur(1px); /* Keep Pong geometry clean but soft */
         }
         .ai-paddle-left {
-            width: 12px; height: 120px; border-radius: 6px;
+            width: 14px; height: 140px; border-radius: 4px;
             left: 5%;
-            animation: movePaddle 7s infinite ease-in-out alternate;
+            animation: movePaddle 9s infinite ease-in-out alternate;
         }
         .ai-paddle-right {
-            width: 12px; height: 120px; border-radius: 6px;
+            width: 14px; height: 140px; border-radius: 4px;
             right: 5%;
-            animation: movePaddle 9s infinite ease-in-out alternate-reverse;
+            animation: movePaddle 11s infinite ease-in-out alternate-reverse;
         }
         .ai-ball {
-            width: 20px; height: 20px; border-radius: 50%;
-            animation: moveBallX 4s infinite linear alternate, 
-                       moveBallY 5.5s infinite linear alternate;
+            width: 22px; height: 22px; border-radius: 50%;
+            animation: moveBallX 5s infinite linear alternate, 
+                       moveBallY 6.5s infinite linear alternate;
         }
+        
+        /* Instance 2: Galaga-Abstract */
+        .ai-game-bg.galaga {
+            filter: blur(1px);
+        }
+        .ai-alien {
+            width: 50px; height: 50px;
+            top: 10%;
+            opacity: 0.1;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); /* Abstract Alien shape */
+            animation: moveGalagaX 10s infinite ease-in-out alternate, 
+                       alienFlap 0.8s infinite linear alternate; /* Alien "flap" animation */
+        }
+        .ai-fighter {
+            width: 60px; height: 60px;
+            bottom: 5%;
+            opacity: 0.1;
+            clip-path: polygon(50% 0%, 100% 100%, 50% 80%, 0% 100%); /* Fighter ship shape */
+            animation: moveGalagaX 10s infinite ease-in-out alternate-reverse;
+        }
+        .ai-laser {
+            width: 3px; height: 30px; border-radius: 2px;
+            bottom: 10%;
+            background: rgba(41, 151, 255, 0.2); /* Laser Accent Color */
+            animation: moveGalagaX 10s infinite ease-in-out alternate-reverse,
+                       laserShoot 3.5s infinite linear;
+        }
+
         @keyframes movePaddle {
             0% { top: 15%; } 100% { top: 75%; }
         }
@@ -123,6 +155,15 @@
         }
         @keyframes moveBallY {
             0% { top: 10%; } 100% { top: 90%; }
+        }
+        @keyframes moveGalagaX {
+            0% { left: 10%; } 100% { left: 80%; }
+        }
+        @keyframes alienFlap {
+            0% { transform: scale(1); } 100% { transform: scale(1.1) rotate(5deg); }
+        }
+        @keyframes laserShoot {
+            0% { bottom: 10%; opacity: 0; } 50% { opacity: 0.3; } 100% { bottom: 90%; opacity: 0; }
         }
 
         /* Glowing Authorship Badges */
@@ -180,20 +221,77 @@
 
         .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem 6rem; }
 
-        /* Cinematic Hero Section */
+        /* --- Redesigned Cinematic Hero Section --- */
         .hero {
-            min-height: 80vh;
+            min-height: 85vh;
             display: flex; flex-direction: column; justify-content: center;
-            padding-top: 120px; padding-bottom: 40px;
+            padding-top: 140px; padding-bottom: 40px;
         }
+        
+        .hero-headline-container {
+            max-width: 100%;
+            overflow: visible;
+        }
+        
         .hero h1 {
-            font-size: clamp(3rem, 8vw, 6rem);
+            font-size: clamp(2.5rem, 8vw, 6.5rem); /* Dynamically scale headline to stay small on small screens */
             font-weight: 700; letter-spacing: -0.04em; line-height: 1.05;
             margin: 0 0 1.5rem 0;
             background: var(--gradient-text);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            /* Ensure the text never wraps on desktop */
+            white-space: nowrap; 
         }
+        
+        @media (max-width: 768px) {
+            .hero h1 { white-space: normal; /* Allow wrap on mobile */ }
+        }
+
+        /* Face Image Blend Concept */
+        .hero-profile-area {
+            display: flex; gap: 3rem; align-items: start; margin-top: 1rem;
+        }
+        @media (max-width: 768px) {
+            .hero-profile-area { flex-direction: column-reverse; gap: 2rem; }
+        }
+
+        /* AI Target/Recognition Bounding Box Styling */
+        .profile-blend-container {
+            position: relative;
+            width: 180px; height: 180px; /* Small, blended image */
+            flex-shrink: 0;
+            border: 1px solid rgba(41, 151, 255, 0.2); /* Faint AI Border */
+            background: linear-gradient(135deg, rgba(41, 151, 255, 0.05) 0%, rgba(0,0,0,0) 100%);
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        
+        /* The "AI Corners" */
+        .profile-blend-container::before, .profile-blend-container::after {
+            content: ''; position: absolute; width: 25px; height: 25px;
+            border-color: var(--accent); border-style: solid; opacity: 0.7;
+            animation: aiBoxPulse 4s infinite ease-in-out;
+        }
+        .profile-blend-container::before {
+            top: -5px; left: -5px; border-width: 2px 0 0 2px; /* Top Left */
+        }
+        .profile-blend-container::after {
+            bottom: -5px; right: -5px; border-width: 0 2px 2px 0; /* Bottom Right */
+        }
+        
+        @keyframes aiBoxPulse {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.03); }
+        }
+
+        .hero-face-img {
+            width: 100%; height: 100%; object-fit: cover;
+            /* Blending effects */
+            filter: grayscale(100%) contrast(1.1); /* Grayscale to match theme */
+            mix-blend-mode: screen; /* Blends gray into the black background */
+            opacity: 0.8;
+        }
+
         .hero p {
             font-size: clamp(1.1rem, 3vw, 1.5rem); color: var(--text-muted);
             max-width: 800px; margin-bottom: 2rem; line-height: 1.5;
@@ -218,6 +316,8 @@
             background-color: var(--card-bg); border: 1px solid var(--card-border);
             border-radius: 24px; padding: 2.5rem; position: relative; overflow: hidden;
             display: flex; flex-direction: column;
+            /* Subtly make the card itself blue monochome-tinted */
+            background: linear-gradient(135deg, rgba(25, 25, 25, 0.6) 0%, rgba(20, 20, 20, 0.8) 100%);
         }
         .card::before {
             content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -269,14 +369,19 @@
     <div class="cursor-dot" id="cursorDot"></div>
     <div class="cursor-outline" id="cursorOutline"></div>
 
-    <div class="ai-game-bg">
+    <div class="ai-game-bg pong">
         <div class="ai-shape ai-paddle-left"></div>
         <div class="ai-shape ai-paddle-right"></div>
         <div class="ai-shape ai-ball"></div>
     </div>
+    <div class="ai-game-bg galaga">
+        <div class="ai-shape ai-alien"></div>
+        <div class="ai-shape ai-fighter"></div>
+        <div class="ai-shape ai-laser"></div>
+    </div>
 
     <nav id="navbar">
-        <div class="nav-logo">Jihun Chae</div>
+        <div class="nav-logo hoverable">Jihun Chae</div>
         <div class="nav-links">
             <a href="#about" class="hoverable">About</a>
             <a href="#experience" class="hoverable">Experience</a>
@@ -288,10 +393,20 @@
     <div class="container">
         
         <section class="hero reveal" id="about">
-            <h1>Designing the future of play.</h1>
-            <p>PhD student at KAIST GSCT. My research explores what it means to play with and against AI, focusing on creating intelligent, autonomous agents that support diverse players, including those with disabilities.</p>
-            <div>
-                <a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank" class="btn hoverable">Connect on LinkedIn</a>
+            <div class="hero-headline-container">
+                <h1>Designing the future of play.</h1>
+            </div>
+            
+            <div class="hero-profile-area">
+                <div class="profile-blend-container hoverable">
+                    <img src="your-image.jpg" alt="Jihun Chae Recognition" class="hero-face-img" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=\'color:#86868b; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);\'>Image Error</span>';">
+                </div>
+                <div>
+                    <p>PhD student at KAIST GSCT. My research explores what it means to play with and against AI, focusing on creating intelligent, autonomous agents that support diverse players, including those with disabilities.</p>
+                    <div>
+                        <a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank" class="btn hoverable">Connect on LinkedIn</a>
+                    </div>
+                </div>
             </div>
         </section>
 
