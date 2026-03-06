@@ -1,424 +1,572 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark-theme">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jihun Chae | Researcher</title>
+    <title>Jihun Chae | HCI & AI Researcher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* True Apple Pro Aesthetic Variables */
+        /* Modern Apple Pro Variables */
         :root {
             --bg-base: #000000;
-            --bg-elevated: #1d1d1f;
+            --bg-glass: rgba(10, 10, 10, 0.7);
+            --card-bg: rgba(25, 25, 25, 0.6);
+            --card-border: rgba(255, 255, 255, 0.1);
             --text-main: #f5f5f7;
             --text-muted: #86868b;
-            --accent-blue: #2997ff;
-            --border-subtle: #424245;
+            --accent: #2997ff;
+            --accent-glow: rgba(41, 151, 255, 0.15);
+            --gradient-text: linear-gradient(135deg, #ffffff 0%, #a1a1a6 100%);
         }
 
+        * { box-sizing: border-box; }
+
         body {
-            /* Exact Apple System Font Stack */
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
             background-color: var(--bg-base);
             color: var(--text-main);
             margin: 0;
             padding: 0;
-            line-height: 1.4;
+            line-height: 1.6;
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
         }
 
-        /* Frosted Glass Navigation */
+        /* Dynamic Glass Navbar */
         nav {
             position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(29, 29, 31, 0.72);
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            z-index: 100;
+            top: 0; width: 100%;
+            background: var(--bg-glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid var(--card-border);
+            z-index: 1000;
+            padding: 1.2rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.8rem 2rem;
-            box-sizing: border-box;
-            font-size: 0.85rem;
-            font-weight: 500;
-            letter-spacing: -0.01em;
+            transition: all 0.3s ease;
         }
 
-        nav a {
-            color: var(--text-main);
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-
-        nav a:hover {
-            color: var(--accent-blue);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 1.5rem;
-        }
-
-        /* Cinematic Hero Section */
-        .hero {
-            padding: 15vh 2rem 10vh;
-            max-width: 980px;
-            margin: 0 auto;
-            text-align: center;
-        }
-
-        .hero h1 {
-            font-size: clamp(3rem, 8vw, 5.5rem);
-            font-weight: 700;
-            letter-spacing: -0.04em;
-            margin: 0;
-            background: linear-gradient(180deg, #fff 0%, #a1a1a6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero h2 {
-            font-size: clamp(1.2rem, 3vw, 1.8rem);
-            font-weight: 500;
+        .nav-logo { font-weight: 600; font-size: 1.1rem; letter-spacing: -0.01em; }
+        
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-links a {
             color: var(--text-muted);
-            letter-spacing: -0.01em;
-            margin: 1rem 0 2rem;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.3s ease;
         }
+        .nav-links a:hover { color: var(--text-main); }
 
-        /* Content Container */
+        /* Container & Layout */
         .container {
-            max-width: 980px;
+            max-width: 1100px;
             margin: 0 auto;
             padding: 0 2rem 6rem;
         }
 
-        /* Section Typography */
-        h3 {
+        /* Cinematic Hero Section */
+        .hero {
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-top: 120px;
+            padding-bottom: 40px;
+        }
+
+        .hero h1 {
+            font-size: clamp(3.5rem, 8vw, 6rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            line-height: 1.05;
+            margin: 0 0 1.5rem 0;
+            background: var(--gradient-text);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            color: var(--text-muted);
+            max-width: 800px;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .hero .btn {
+            display: inline-block;
+            background: var(--text-main);
+            color: var(--bg-base);
+            padding: 1rem 2rem;
+            border-radius: 40px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+        .hero .btn:hover {
+            transform: scale(1.05);
+            background: #ffffff;
+        }
+
+        /* Section Titles */
+        h2 {
             font-size: 2.5rem;
             font-weight: 600;
             letter-spacing: -0.03em;
-            margin: 5rem 0 2rem;
-            border-bottom: 1px solid var(--border-subtle);
+            margin: 8rem 0 3rem;
             padding-bottom: 1rem;
+            border-bottom: 1px solid var(--card-border);
         }
 
-        /* Minimalist Cards */
-        .item-block {
-            margin-bottom: 3rem;
+        /* === Premium Glow Cards Layout === */
+        .cards-grid {
             display: grid;
+            gap: 1.5rem;
             grid-template-columns: 1fr;
-            gap: 0.5rem;
         }
 
         @media (min-width: 768px) {
-            .item-block {
-                grid-template-columns: 200px 1fr;
-                gap: 2rem;
+            .cards-grid.bento {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
-        .item-time {
-            color: var(--text-muted);
-            font-size: 1rem;
-            font-weight: 500;
-            padding-top: 0.2rem;
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        .item-content h4 {
+        /* The Magic Spotlight Mouse Effect */
+        .card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(
+                800px circle at var(--mouse-x, 0) var(--mouse-y, 0), 
+                var(--accent-glow), 
+                transparent 40%
+            );
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .card:hover::before { opacity: 1; }
+
+        .card-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .card h3 {
             font-size: 1.4rem;
-            font-weight: 600;
             margin: 0 0 0.5rem 0;
             letter-spacing: -0.01em;
         }
 
-        .item-content .org {
-            font-size: 1.1rem;
-            color: var(--accent-blue);
-            margin-bottom: 1rem;
+        .tagline {
+            color: var(--accent);
             font-weight: 500;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
         }
 
-        .item-content p, .item-content ul {
-            color: #a1a1a6;
-            font-size: 1.05rem;
-            line-height: 1.5;
-        }
-
-        .item-content ul {
-            padding-left: 1.2rem;
-            margin-top: 0;
-        }
-
-        /* Publications Specific Style */
-        .pub-item {
-            font-size: 1.05rem;
-            color: #a1a1a6;
-            line-height: 1.5;
+        .meta-info {
+            font-size: 0.9rem;
+            color: var(--text-muted);
             margin-bottom: 1.5rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .pub-item:last-child {
-            border-bottom: none;
-        }
-
-        .pub-item strong {
-            color: var(--text-main);
-            font-weight: 600;
-        }
-
-        .pub-link {
-            display: inline-block;
-            margin-top: 0.5rem;
-            color: var(--text-main);
-            background: var(--bg-elevated);
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            text-decoration: none;
-            transition: background 0.3s;
-        }
-
-        .pub-link:hover {
-            background: var(--border-subtle);
-        }
-
-        /* Certifications tags */
-        .tag-container {
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
         }
 
-        .tag {
-            background: var(--bg-elevated);
-            color: var(--text-main);
-            padding: 0.8rem 1.5rem;
-            border-radius: 30px;
+        .card p, .card ul {
+            color: #a1a1a6;
             font-size: 1rem;
-            font-weight: 500;
-            border: 1px solid var(--border-subtle);
+            margin-top: 0;
         }
 
-        /* Fade-in Animation */
-        .fade-in {
+        .card ul { padding-left: 1.2rem; }
+        .card li { margin-bottom: 0.6rem; }
+
+        .collaborators {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--card-border);
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        .collaborators strong { color: var(--text-main); }
+
+        /* Minimal Publications */
+        .pub-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .pub-item {
+            padding: 1.5rem;
+            background: rgba(25, 25, 25, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            color: #a1a1a6;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .pub-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateX(10px);
+        }
+        .pub-item strong { color: var(--text-main); }
+
+        /* Scroll Reveal Animation */
+        .reveal {
             opacity: 0;
-            transform: translateY(20px);
-            animation: fadeInUp 0.8s ease forwards;
+            transform: translateY(30px) scale(0.98);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
         }
 
-        @keyframes fadeInUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
     </style>
 </head>
 <body>
 
-    <nav>
-        <div style="font-weight: 600; font-size: 1rem;">Jihun Chae</div>
+    <nav id="navbar">
+        <div class="nav-logo">Jihun Chae</div>
         <div class="nav-links">
-            <a href="mailto:chaejihun@kaist.ac.kr">Email</a>
-            <a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank">LinkedIn</a>
+            <a href="#about">About</a>
+            <a href="#experience">Experience</a>
+            <a href="#awards">Awards</a>
+            <a href="#publications">Publications</a>
         </div>
     </nav>
 
-    <header class="hero fade-in">
-        <h1>Researching the future<br>of HCI and Generative AI.</h1>
-        <h2>PhD Student @ KAIST. Building inclusive game experiences.</h2>
-    </header>
-
-    <div class="container fade-in" style="animation-delay: 0.2s;">
+    <div class="container">
         
-        <section>
-            <h3>Education</h3>
-            
-            <div class="item-block">
-                <div class="item-time">2026 – Current</div>
-                <div class="item-content">
-                    <h4>PhD, Graduate School of Culture Technology</h4>
-                    <div class="org">KAIST (Korea Advanced Institute of Science and Technology)</div>
-                </div>
+        <section class="hero reveal" id="about">
+            <h1>Designing the future<br>of inclusive play.</h1>
+            <p>PhD student at KAIST GSCT. My research explores what it means to play with and against AI, focusing on creating intelligent, autonomous agents that support diverse players, including those with disabilities.</p>
+            <div>
+                <a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank" class="btn">Connect on LinkedIn</a>
             </div>
+        </section>
 
-            <div class="item-block">
-                <div class="item-time">2024 – 2026</div>
-                <div class="item-content">
-                    <h4>Master’s, Graduate School of Culture Technology</h4>
-                    <div class="org">KAIST</div>
+        <section class="reveal">
+            <h2>Education</h2>
+            <div class="cards-grid bento" id="edu-cards">
+                <div class="card">
+                    <div class="card-content">
+                        <h3>KAIST</h3>
+                        <div class="tagline">PhD, Graduate School of Culture Technology</div>
+                        <div class="meta-info"><span>2026 – Current</span></div>
+                    </div>
                 </div>
-            </div>
-
-            <div class="item-block">
-                <div class="item-time">2018 – 2024</div>
-                <div class="item-content">
-                    <h4>ICT Convergence & Product Design</h4>
-                    <div class="org">Handong Global University</div>
+                <div class="card">
+                    <div class="card-content">
+                        <h3>KAIST</h3>
+                        <div class="tagline">Master’s, Graduate School of Culture Technology</div>
+                        <div class="meta-info"><span>2024 – 2026</span></div>
+                    </div>
                 </div>
-            </div>
-
-            <div class="item-block">
-                <div class="item-time">2016 – 2018</div>
-                <div class="item-content">
-                    <h4>Management of Applied Chemistry</h4>
-                    <div class="org">Ateneo de Manila University</div>
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Handong Global University</h3>
+                        <div class="tagline">ICT Convergence & Product Design</div>
+                        <div class="meta-info"><span>2018 – 2024</span></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Ateneo de Manila University</h3>
+                        <div class="tagline">Management of Applied Chemistry</div>
+                        <div class="meta-info"><span>2016 – 2018</span></div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section>
-            <h3>Research Experience</h3>
-
-            <div class="item-block">
-                <div class="item-time">May 2024 – Apr 2027</div>
-                <div class="item-content">
-                    <h4>Inclusive Conversational AI Service for Game Accessibility</h4>
-                    <div class="org">Student Researcher Lead (NRF) @ KAIST</div>
-                    <ul>
-                        <li>User research and technical development of a conversational AI agent designed to bridge the digital divide for gamers with disabilities.</li>
-                        <li>Participatory design workshops to integrate the lived experiences of PWDs into the AI training loop, ensuring ethical applicability.</li>
-                        <li>Establishing a cross-sector consortium to standardize accessibility guidelines with Samsung Electronics, Nexon, Smilegate, and SpecialEffect.</li>
-                    </ul>
+        <section class="reveal" id="experience">
+            <h2>Research Project Experience</h2>
+            <div class="cards-grid" id="exp-cards">
+                
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Inclusive Conversational AI Service for Game Accessibility Enhancement</h3>
+                        <div class="tagline">Student Researcher Lead | National Research Foundation of Korea (NRF)</div>
+                        <div class="meta-info"><span>KAIST</span> • <span>May 2024 – Apr 2027</span></div>
+                        <ul>
+                            <li>User research and technical development of a conversational AI agent designed to bridge the digital divide for gamers with disabilities.</li>
+                            <li>Organizing participatory design workshops to integrate the lived experiences of PWDs into the AI training loop, ensuring ethical and practical applicability.</li>
+                            <li>Establishing a cross-sector consortium to standardize accessibility guidelines.</li>
+                        </ul>
+                        <div class="collaborators">
+                            <strong>Collaborators:</strong> Samsung Electronics (Corporate Design Center), Nexon Intelligence Labs, Smilegate D&I, Korea National Rehabilitation Center, SpecialEffect (UK).
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="item-block">
-                <div class="item-time">Jun 2025 – Sep 2025</div>
-                <div class="item-content">
-                    <h4>Preserving the Haenyeo Legacy: Serious Games for Social Impact</h4>
-                    <div class="org">Student Researcher (Leverhulme Trust) @ KAIST</div>
-                    <ul>
-                        <li>Co-designing a serious game to archive and promote the UNESCO Intangible Cultural Heritage of the Jeju Haenyeo.</li>
-                        <li>Designing gamified narratives highlighting environmental stewardship and the role of women in fisheries to drive climate action.</li>
-                    </ul>
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Preserving the Haenyeo Legacy: Serious Games for Social Impact</h3>
+                        <div class="tagline">Student Researcher | Leverhulme Trust International Fellow</div>
+                        <div class="meta-info"><span>KAIST</span> • <span>Jun 2025 – Sep 2025</span></div>
+                        <ul>
+                            <li>Co-designing a serious game to archive and promote the UNESCO Intangible Cultural Heritage of the Jeju Haenyeo (female divers), focusing on intergenerational knowledge transfer.</li>
+                            <li>Designing gamified narratives that highlight environmental stewardship and the role of women in fisheries, aiming to drive behavioral changes regarding climate action.</li>
+                            <li>Facilitating global academic exchange between Korea and the UK to analyze the sociological impact of serious games on community resilience.</li>
+                        </ul>
+                        <div class="collaborators">
+                            <strong>Partners:</strong> Brunel University London (Games Research Lab), Jeju Haenyeo Museum, the Haenyeo communities of Sinrye-ri, Daepyeong-ri, and Yeongnak-ri.
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="item-block">
-                <div class="item-time">Apr 2024 – Jun 2025</div>
-                <div class="item-content">
-                    <h4>Real-Time XR Interface Technology for Environmental Adaptation</h4>
-                    <div class="org">Student Researcher (IITP) @ KAIST</div>
-                    <ul>
-                        <li>Engineering a scalable XR platform capable of managing "Meta-Objects" that adapt to real-world physical constraints in real-time.</li>
-                    </ul>
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Real-Time XR Interface Technology for Environmental Adaptation</h3>
+                        <div class="tagline">Student Researcher | IITP</div>
+                        <div class="meta-info"><span>KAIST</span> • <span>Apr 2024 – Jun 2025</span></div>
+                        <ul>
+                            <li>Engineering a scalable XR platform capable of managing "Meta-Objects"—intelligent virtual assets that adapt to real-world physical constraints in real-time.</li>
+                            <li>Developing immersive visual-haptic interfaces, integrating multi-sensory feedback systems to enhance user presence in mixed-reality environments.</li>
+                        </ul>
+                        <div class="collaborators">
+                            <strong>Partners:</strong> Fraunhofer Institute (Germany), NYU, UniSA, Anipen, bHaptics.
+                        </div>
+                    </div>
                 </div>
+
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Defense Technology Research: Camouflage Effectiveness</h3>
+                        <div class="tagline">Student Researcher | Korea Aerospace Industries (KAI)</div>
+                        <div class="meta-info"><span>Handong Global University</span> • <span>Apr 2023 – Feb 2024</span></div>
+                        <ul>
+                            <li>Executed quantitative analysis on the visual stealth capabilities of the KF-21 Boramae fighter jet, simulating various altitudes and climatic conditions.</li>
+                            <li>Processed environmental data to evaluate camouflage performance across diverse geographical contexts, directly contributing to defense design optimizations.</li>
+                            <li>Suggested new camouflage patterns and colors.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Smart City Infrastructure & AI Object Tracking</h3>
+                        <div class="tagline">Student Researcher</div>
+                        <div class="meta-info"><span>Handong Global University</span> • <span>Jan 2023 – Feb 2024</span></div>
+                        <ul>
+                            <li>Architected IoT data collection units for urban road systems, utilizing 3D printing for rapid prototyping of sensor housings.</li>
+                            <li>Deployed proprietary AI computer vision algorithms, implementing dynamic anchor box clustering to optimize object tracking accuracy in high-traffic environments.</li>
+                        </ul>
+                    </div>
+                </div>
+
             </div>
-            
-            <div class="item-block">
-                <div class="item-time">Apr 2023 – Feb 2024</div>
-                <div class="item-content">
-                    <h4>Defense Technology Research: Camouflage Effectiveness</h4>
-                    <div class="org">Student Researcher (KAI) @ Handong Global University</div>
-                    <ul>
-                        <li>Executed quantitative analysis on the visual stealth capabilities of the KF-21 Boramae fighter jet, simulating various altitudes and climatic conditions.</li>
-                    </ul>
+        </section>
+
+        <section class="reveal" id="awards">
+            <h2>Honors & Awards</h2>
+            <div class="cards-grid bento" id="award-cards">
+                
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Selected Entrepreneurial Team</h3>
+                        <div class="tagline">Climate Tech Track | Asan Nanum Foundation</div>
+                        <div class="meta-info"><span>Mar 2024</span> • <span>Chung Ju-yung Startup Competition</span></div>
+                        <ul>
+                            <li>Selected as a representative startup team for the Asan UniverCT incubation program, aimed at fostering climate-tech innovators.</li>
+                            <li>Secured funding and mentorship leveraging resources from KAIST and Asan Nanum Foundation.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Grand Prize (President's Award)</h3>
+                        <div class="tagline">Pohang Culture & Arts Factory Hackathon</div>
+                        <div class="meta-info"><span>Jan 2024</span> • <span>Handong Global University</span></div>
+                        <ul>
+                            <li>Directed the technical implementation of a large-scale media facade using Unreal Engine, successfully demonstrating the "Smart City" concept.</li>
+                            <li>Co-hosted by Pohang City, Pohang Cultural Foundation, KT, and Handong Global Univ.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Excellence Award</h3>
+                        <div class="tagline">National Metaverse Developer Contest</div>
+                        <div class="meta-info"><span>Jun 2023</span> • <span>Ministry of Science and ICT (MSIT)</span></div>
+                        <ul>
+                            <li>Engineered a gamified digital therapeutic for eye muscle rehabilitation utilizing Meta Quest Pro’s advanced eye-tracking capabilities.</li>
+                            <li>Recognized for innovation by the Korea Metaverse Industry Association and Skonec Entertainment.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Outstanding Student Research Award</h3>
+                        <div class="tagline">Korea Multimedia Society (KMMS)</div>
+                        <div class="meta-info"><span>Nov 2023</span></div>
+                        <p>Authored and presented research on "Eye-tracking-based VR Interactive Games," analyzing occulomotor responses to enhance immersion and accessibility in virtual environments.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-content">
+                        <h3>President's Award</h3>
+                        <div class="tagline">Startup Idea Competition</div>
+                        <div class="meta-info"><span>Nov 2022</span> • <span>Handong Global University</span></div>
+                        <p>Conceptualized a high-impact startup business model integrating ESG principles with Augmented Reality (AR) technology, evaluated as the top proposal.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Outstanding Student Research Award</h3>
+                        <div class="tagline">Korea Multimedia Society (KMMS)</div>
+                        <div class="meta-info"><span>May 2022</span></div>
+                        <p>Conducted experimental research on VR exposure therapy for cynophobia, proposing novel spatiotemporal design factors to increase treatment efficacy.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Top 14 Finalist</h3>
+                        <div class="tagline">DB-SNUbiz Global Startup Challenge</div>
+                        <div class="meta-info"><span>May 2021</span> • <span>Seoul National University Business School</span></div>
+                        <p>Distinguished in a competitive global startup challenge ($91k prize pool). Pitched a blockchain-based solution to VCs. Co-hosted by DB Kim Joon-Ki Foundation.</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="reveal">
+            <h2>Patents & Certifications</h2>
+            <div class="cards-grid bento" id="cert-cards">
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Patent: AI-Based Technology Acceptance Prediction Method</h3>
+                        <div class="tagline">Korean Intellectual Property Office (No: 40-2022-0179493)</div>
+                        <div class="meta-info"><span>Dec 23, 2022</span></div>
+                        <p>Co-Patentor: Impactive AI Corp.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-content">
+                        <h3>Certifications</h3>
+                        <div class="tagline">Professional Qualifications</div>
+                        <br>
+                        <ul>
+                            <li><strong>AI-900:</strong> Microsoft Azure, Machine Learning, and AI</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section>
-            <h3>Selected Publications</h3>
-            
-            <div class="pub-item">
-                <strong>Chae, J.</strong>, Seo, G., Jeong, S., & Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. ACM.<br>
-                <a href="https://doi.org/10.1145/3742413.3789155" class="pub-link" target="_blank">View Paper ↗</a>
-            </div>
+        <section class="reveal" id="publications">
+            <h2>Publications</h2>
+            <div class="pub-list">
+                <div class="pub-item"><strong>Chae, J.</strong>, Seo, G., Jeong, S., & Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. ACM.</div>
+                
+                <div class="pub-item">Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., & Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties. <em>Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA ’25)</em>. ACM. (Co-first Author)</div>
+                
+                <div class="pub-item"><strong>Chae, J.</strong>, & Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>.</div>
+                
+                <div class="pub-item">Oh, H., Eum, K., Park, E., <strong>Chae, J.</strong>, Seo, J., Choi, E., & Doh, Y. Y. (2025). RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA. <em>Korea HCI Conference 2025</em>. (Co-second Author)</div>
+                
+                <div class="pub-item">Choi, E., <strong>Chae, J.</strong>, & Doh, Y. Y. (2024). Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH). <em>Korean Artificial Intelligence Association Conference 2024</em>. (Co-first Author)</div>
+                
+                <div class="pub-item">Eum, K., Park, E., <strong>Chae, J.</strong>, & Doh, Y. Y. (2024). GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies. <em>Korea Computer Graphics Society Conference 2024</em>. (Co-first Author)</div>
+                
+                <div class="pub-item">Park, E., <strong>Chae, J.</strong>, Kim, K., Yi, H. W., Lootah, M. K., & Doh, Y. Y. (2024). Challenges and opportunities of game NPC research using LLM: A scoping review. <em>Korean Game Society Conference 2024</em>. (Co-first Author)</div>
 
-            <div class="pub-item">
-                Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., & Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties. <em>Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA ’25)</em>. ACM. (Co-first Author)<br>
-                <a href="https://doi.org/10.1145/3706599.3719723" class="pub-link" target="_blank">View Paper ↗</a>
-            </div>
+                <div class="pub-item">Kim, Y. B., & <strong>Chae, J.</strong> (2024). A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd. <em>Korea Technology Innovation Society Conference 2024</em>.</div>
 
-            <div class="pub-item">
-                <strong>Chae, J.</strong>, & Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>.
-            </div>
+                <div class="pub-item">Kim, Y. B., & <strong>Chae, J.</strong> (2024). From BigHit to HYBE: Sentiment analysis and strategic transition through news data. <em>Korea Society for Innovation Management & Economics Conference 2024</em>.</div>
 
-            <div class="pub-item">
-                Oh, H., Eum, K., Park, E., <strong>Chae, J.</strong>, Seo, J., Choi, E., & Doh, Y. Y. (2025). RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA. <em>Korea HCI Conference 2025</em>. (Co-second Author)
-            </div>
+                <div class="pub-item"><strong>Chae, J.</strong>, Yoo, S., Lee, Y., Kim, Y., Kim, H., & Han, D. (2023). Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles. <em>Journal of the Korea Computer Graphics Society</em>, 29(3), 137–147.</div>
 
-            <div class="pub-item">
-                Choi, E., <strong>Chae, J.</strong>, & Doh, Y. Y. (2024). Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH). <em>Korean Artificial Intelligence Association Conference 2024</em>. (Co-first Author)
-            </div>
+                <div class="pub-item"><strong>Chae, J.</strong>, Kim, H., Kim, Y., Kim, M., Kim, S., & Han, D. (2023). A study on the effect of group commitment on improving awareness of recycling through gamification. <em>Korea HCI Conference 2023</em>.</div>
 
-            <div class="pub-item">
-                Eum, K., Park, E., <strong>Chae, J.</strong>, & Doh, Y. Y. (2024). GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies. <em>Korea Computer Graphics Society Conference 2024</em>. (Co-first Author)
-            </div>
+                <div class="pub-item">Kim, Y., <strong>Chae, J.</strong>, Lee, Y., Kim, H., Lee, Y., & Han, D. (2023). Enhancing participation in rehabilitation for diplopia through gamification. <em>Korea Computer Graphics Society Conference 2023</em>.</div>
 
-            <div class="pub-item">
-                Park, E., <strong>Chae, J.</strong>, Kim, K., Yi, H. W., Lootah, M. K., & Doh, Y. Y. (2024). Challenges and opportunities of game NPC research using LLM: A scoping review. <em>Korean Game Society Conference 2024</em>. (Co-first Author)
-            </div>
-            
-            <div class="pub-item">
-                Kim, Y. B., & <strong>Chae, J.</strong> (2024). A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd. <em>Korea Technology Innovation Society Conference 2024</em>.
-            </div>
-            
-            <div class="pub-item">
-                Kim, Y. B., & <strong>Chae, J.</strong> (2024). From BigHit to HYBE: Sentiment analysis and strategic transition through news data. <em>Korea Society for Innovation Management & Economics Conference 2024</em>.
-            </div>
-            
-            <div class="pub-item">
-                <strong>Chae, J.</strong>, Yoo, S., Lee, Y., Kim, Y., Kim, H., & Han, D. (2023). Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles. <em>Journal of the Korea Computer Graphics Society</em>, 29(3), 137–147.
-            </div>
+                <div class="pub-item">Lee, Y. S., Kim, Y., Kim, H., <strong>Chae, J.</strong>, Lee, Y., & Han, D. (2023). Eye-tracking-based VR interactive games for eye movements. <em>Korea Multimedia Society Conference 2023</em>.</div>
 
-            <div class="pub-item">
-                Yoon, D., Park, S., Song, Y., <strong>Chae, J.</strong>, & Chung, D. (2023). Methodology for improving the performance of demand forecasting through machine learning. <em>Preprint available at Research Square</em>.<br>
-                <a href="https://doi.org/10.21203/rs.3.rs-2637740/v1" class="pub-link" target="_blank">View Preprint ↗</a>
-            </div>
-        </section>
+                <div class="pub-item">Yoon, D., Park, S., Song, Y., <strong>Chae, J.</strong>, & Chung, D. (2023). Methodology for improving the performance of demand forecasting through machine learning. <em>Preprint available at Research Square.</em></div>
 
-        <section>
-            <h3>Honors, Awards & Patents</h3>
-            
-            <div class="item-block">
-                <div class="item-time">Mar 2024</div>
-                <div class="item-content">
-                    <h4>Selected Entrepreneurial Team (Climate Tech Track)</h4>
-                    <div class="org">Asan Nanum Foundation</div>
-                </div>
-            </div>
+                <div class="pub-item">Yoo, S., <strong>Chae, J.</strong>, Kim, H., Lee, Y., Kim, S., Kim, Y., & Han, S. (2022). Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for cynophobia. <em>Korea Multimedia Society Conference 2022</em>.</div>
 
-            <div class="item-block">
-                <div class="item-time">Jan 2024</div>
-                <div class="item-content">
-                    <h4>Grand Prize (President's Award)</h4>
-                    <div class="org">Pohang Culture & Arts Factory Hackathon</div>
-                </div>
-            </div>
+                <div class="pub-item">Park, S., Yoon, D., <strong>Chae, J.</strong>, Song, Y., & Chung, D. (2022). Enhanced predictive model performance through clustering. <em>Korea Society of Management Information Systems Conference 2022</em>.</div>
 
-            <div class="item-block">
-                <div class="item-time">Jun 2023</div>
-                <div class="item-content">
-                    <h4>Excellence Award</h4>
-                    <div class="org">National Metaverse Developer Contest (MSIT)</div>
-                </div>
-            </div>
-
-            <div class="item-block">
-                <div class="item-time">Dec 2022</div>
-                <div class="item-content">
-                    <h4>Patent: AI-Based Technology Acceptance Prediction Method</h4>
-                    <div class="org">Korean Intellectual Property Office (No: 40-2022-0179493)</div>
-                </div>
-            </div>
-        </section>
-
-        <section style="margin-bottom: 8rem;">
-            <h3>Certifications</h3>
-            <div class="tag-container">
-                <div class="tag">TOEIC 920</div>
-                <div class="tag">AI-900: Microsoft Azure, Machine Learning, and AI</div>
+                <div class="pub-item">Park, S., Yoon, D., Song, Y., <strong>Chae, J.</strong>, & Chung, D. (2022). Combined regression coefficient reduction method with clustering for performance enhancement. <em>Korea Intelligent Information Systems Society Conference 2022</em>.</div>
             </div>
         </section>
 
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // 1. Scroll Reveal Logic
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+            // 2. Mouse Spotlight Effect for all cards grids
+            const gridContainers = document.querySelectorAll('.cards-grid');
+            
+            gridContainers.forEach(grid => {
+                grid.addEventListener('mousemove', e => {
+                    const cards = grid.querySelectorAll('.card');
+                    for(const card of cards) {
+                        const rect = card.getBoundingClientRect(),
+                              x = e.clientX - rect.left,
+                              y = e.clientY - rect.top;
+                        
+                        card.style.setProperty('--mouse-x', `${x}px`);
+                        card.style.setProperty('--mouse-y', `${y}px`);
+                    }
+                });
+            });
+
+            // 3. Navbar background blur toggle on scroll
+            const nav = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                if(window.scrollY > 50) {
+                    nav.style.background = 'rgba(10, 10, 10, 0.85)';
+                    nav.style.padding = '1rem 2rem';
+                } else {
+                    nav.style.background = 'rgba(10, 10, 10, 0.7)';
+                    nav.style.padding = '1.2rem 2rem';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
