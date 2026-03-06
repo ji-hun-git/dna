@@ -17,7 +17,7 @@
             --text-main: #f5f5f7;
             --text-muted: #86868b;
             --accent: #2997ff;
-            --accent-glow: rgba(41, 151, 255, 0.25); /* INCREASED SPOTLIGHT BRIGHTNESS */
+            --accent-glow: rgba(41, 151, 255, 0.25); 
             --gradient-text: linear-gradient(180deg, #ffffff 0%, #86868b 100%);
         }
 
@@ -74,12 +74,11 @@
                         height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
                         background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
         }
-        /* BRIGHTER HOVER STATE */
         .cursor-outline.hover-active {
             width: 70px; height: 70px;
-            background-color: rgba(41, 151, 255, 0.25); /* More visible fill */
-            border-color: rgba(41, 151, 255, 1); /* Solid border */
-            box-shadow: 0 0 20px rgba(41, 151, 255, 0.6); /* Neon glow effect */
+            background-color: rgba(41, 151, 255, 0.25); 
+            border-color: rgba(41, 151, 255, 1); 
+            box-shadow: 0 0 20px rgba(41, 151, 255, 0.6); 
         }
         
         /* Disable custom cursor on mobile/touch screens */
@@ -88,14 +87,15 @@
             * { cursor: auto !important; }
         }
 
-        /* Ambient AI Background Geometry (Pong & Galaga) */
+        /* Ambient AI Background Geometry (Subtle Pong) */
         .ai-game-bg {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             z-index: -1;
             pointer-events: none;
             overflow: hidden;
-            opacity: 0.4; 
+            opacity: 0.15; /* Back to subtle */
+            filter: blur(4px); /* Soften the shapes */
         }
         
         .ai-shape {
@@ -103,50 +103,23 @@
             pointer-events: none;
         }
         
-        /* Instance 1: Pure Pong */
         .ai-paddle-left {
             width: 14px; height: 140px; border-radius: 4px;
             left: 5%;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.4);
             animation: movePaddle 9s infinite ease-in-out alternate;
         }
         .ai-paddle-right {
             width: 14px; height: 140px; border-radius: 4px;
             right: 5%;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.4);
             animation: movePaddle 11s infinite ease-in-out alternate-reverse;
         }
         .ai-ball {
             width: 22px; height: 22px; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.5);
             animation: moveBallX 5s infinite linear alternate, 
                        moveBallY 6.5s infinite linear alternate;
-        }
-        
-        /* Instance 2: Galaga-Abstract */
-        .ai-alien {
-            width: 60px; height: 60px;
-            top: 15%;
-            background: rgba(41, 151, 255, 0.4); 
-            box-shadow: 0 0 20px rgba(41, 151, 255, 0.3);
-            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-            animation: moveGalagaX 10s infinite ease-in-out alternate, 
-                       alienFlap 0.6s infinite linear alternate;
-        }
-        .ai-fighter {
-            width: 70px; height: 70px;
-            bottom: 5%;
-            background: rgba(255, 255, 255, 0.3); 
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-            clip-path: polygon(50% 0%, 100% 100%, 50% 80%, 0% 100%);
-            animation: moveGalagaX 10s infinite ease-in-out alternate-reverse;
-        }
-        .ai-laser {
-            width: 4px; height: 40px; border-radius: 2px;
-            background: rgba(255, 60, 60, 0.6); 
-            box-shadow: 0 0 10px rgba(255, 60, 60, 0.5);
-            animation: moveGalagaX 10s infinite ease-in-out alternate-reverse,
-                       laserShoot 2.5s infinite linear;
         }
 
         @keyframes movePaddle {
@@ -157,15 +130,6 @@
         }
         @keyframes moveBallY {
             0% { top: 10%; } 100% { top: 90%; }
-        }
-        @keyframes moveGalagaX {
-            0% { left: 10%; } 100% { left: 80%; }
-        }
-        @keyframes alienFlap {
-            0% { transform: scale(1); } 100% { transform: scale(1.1) rotate(5deg); }
-        }
-        @keyframes laserShoot {
-            0% { bottom: 10%; opacity: 0; } 50% { opacity: 1; } 100% { bottom: 90%; opacity: 0; }
         }
 
         /* Glowing Authorship Badges */
@@ -179,7 +143,7 @@
             font-weight: 700;
             margin-left: 0.5rem;
             vertical-align: middle;
-            box-shadow: 0 0 15px rgba(41, 151, 255, 0.3); /* Stronger glow */
+            box-shadow: 0 0 15px rgba(41, 151, 255, 0.3);
             border: 1px solid rgba(41, 151, 255, 0.6);
             background: rgba(41, 151, 255, 0.15);
             color: var(--accent);
@@ -235,7 +199,7 @@
         }
         
         .hero h1 {
-            font-size: clamp(2.5rem, 5.5vw, 5.5rem);
+            font-size: clamp(2.2rem, 5vw, 4.8rem); /* Slightly smaller font size */
             font-weight: 700; letter-spacing: -0.04em; line-height: 1.1;
             margin: 0 0 1.5rem 0;
             background: var(--gradient-text);
@@ -256,12 +220,12 @@
         .profile-blend-container {
             position: relative;
             width: 180px; 
-            height: max-content; /* Dynamically adjusts to your image's ratio */
+            height: max-content; 
             flex-shrink: 0;
             border: 1px solid rgba(41, 151, 255, 0.2); 
             background: linear-gradient(135deg, rgba(41, 151, 255, 0.05) 0%, rgba(0,0,0,0) 100%);
             box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            padding: 4px; /* Creates a slight framed look inside the bounding box */
+            padding: 4px; 
         }
         
         /* The "AI Corners" */
@@ -285,8 +249,8 @@
 
         .hero-face-img {
             width: 100%; 
-            height: auto; /* Keeps original aspect ratio */
-            display: block; /* Prevents tiny gaps below the image */
+            height: auto; 
+            display: block; 
             filter: grayscale(100%) contrast(1.1);
             mix-blend-mode: screen; 
             opacity: 0.85;
@@ -372,9 +336,6 @@
         <div class="ai-shape ai-paddle-left"></div>
         <div class="ai-shape ai-paddle-right"></div>
         <div class="ai-shape ai-ball"></div>
-        <div class="ai-shape ai-alien"></div>
-        <div class="ai-shape ai-fighter"></div>
-        <div class="ai-shape ai-laser"></div>
     </div>
 
     <nav id="navbar">
@@ -626,6 +587,7 @@
         <section class="reveal" id="publications">
             <h2>Publications</h2>
             <div class="pub-list">
+                
                 <div class="pub-item hoverable"><strong>Chae, J.</strong>, Seo, G., Jeong, S., & Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. ACM. <span class="badge">First Author</span></div>
                 
                 <div class="pub-item hoverable">Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., & Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties. <em>Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA ’25)</em>. ACM. <span class="badge">Co-first Author</span></div>
