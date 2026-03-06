@@ -17,7 +17,7 @@
             --text-main: #f5f5f7;
             --text-muted: #86868b;
             --accent: #2997ff;
-            --accent-glow: rgba(41, 151, 255, 0.15);
+            --accent-glow: rgba(41, 151, 255, 0.25); /* INCREASED SPOTLIGHT BRIGHTNESS */
             --gradient-text: linear-gradient(180deg, #ffffff 0%, #86868b 100%);
         }
 
@@ -72,13 +72,16 @@
             border: 1px solid rgba(41, 151, 255, 0.5);
             transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
                         height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                        background-color 0.3s;
+                        background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
         }
+        /* BRIGHTER HOVER STATE */
         .cursor-outline.hover-active {
             width: 70px; height: 70px;
-            background-color: rgba(41, 151, 255, 0.1);
-            border-color: rgba(41, 151, 255, 0.8);
+            background-color: rgba(41, 151, 255, 0.25); /* More visible fill */
+            border-color: rgba(41, 151, 255, 1); /* Solid border */
+            box-shadow: 0 0 20px rgba(41, 151, 255, 0.6); /* Neon glow effect */
         }
+        
         /* Disable custom cursor on mobile/touch screens */
         @media (max-width: 768px) {
             .cursor-dot, .cursor-outline { display: none !important; }
@@ -92,59 +95,58 @@
             z-index: -1;
             pointer-events: none;
             overflow: hidden;
+            opacity: 0.4; 
         }
         
         .ai-shape {
             position: absolute;
-            background: rgba(134, 134, 139, 0.15); /* Distinctly visible, but dark */
             pointer-events: none;
         }
         
         /* Instance 1: Pure Pong */
-        .ai-game-bg.pong {
-            filter: blur(1px); /* Keep Pong geometry clean but soft */
-        }
         .ai-paddle-left {
             width: 14px; height: 140px; border-radius: 4px;
             left: 5%;
+            background: rgba(255, 255, 255, 0.15);
             animation: movePaddle 9s infinite ease-in-out alternate;
         }
         .ai-paddle-right {
             width: 14px; height: 140px; border-radius: 4px;
             right: 5%;
+            background: rgba(255, 255, 255, 0.15);
             animation: movePaddle 11s infinite ease-in-out alternate-reverse;
         }
         .ai-ball {
             width: 22px; height: 22px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
             animation: moveBallX 5s infinite linear alternate, 
                        moveBallY 6.5s infinite linear alternate;
         }
         
         /* Instance 2: Galaga-Abstract */
-        .ai-game-bg.galaga {
-            filter: blur(1px);
-        }
         .ai-alien {
-            width: 50px; height: 50px;
-            top: 10%;
-            opacity: 0.1;
-            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); /* Abstract Alien shape */
+            width: 60px; height: 60px;
+            top: 15%;
+            background: rgba(41, 151, 255, 0.4); 
+            box-shadow: 0 0 20px rgba(41, 151, 255, 0.3);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
             animation: moveGalagaX 10s infinite ease-in-out alternate, 
-                       alienFlap 0.8s infinite linear alternate; /* Alien "flap" animation */
+                       alienFlap 0.6s infinite linear alternate;
         }
         .ai-fighter {
-            width: 60px; height: 60px;
+            width: 70px; height: 70px;
             bottom: 5%;
-            opacity: 0.1;
-            clip-path: polygon(50% 0%, 100% 100%, 50% 80%, 0% 100%); /* Fighter ship shape */
+            background: rgba(255, 255, 255, 0.3); 
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            clip-path: polygon(50% 0%, 100% 100%, 50% 80%, 0% 100%);
             animation: moveGalagaX 10s infinite ease-in-out alternate-reverse;
         }
         .ai-laser {
-            width: 3px; height: 30px; border-radius: 2px;
-            bottom: 10%;
-            background: rgba(41, 151, 255, 0.2); /* Laser Accent Color */
+            width: 4px; height: 40px; border-radius: 2px;
+            background: rgba(255, 60, 60, 0.6); 
+            box-shadow: 0 0 10px rgba(255, 60, 60, 0.5);
             animation: moveGalagaX 10s infinite ease-in-out alternate-reverse,
-                       laserShoot 3.5s infinite linear;
+                       laserShoot 2.5s infinite linear;
         }
 
         @keyframes movePaddle {
@@ -163,7 +165,7 @@
             0% { transform: scale(1); } 100% { transform: scale(1.1) rotate(5deg); }
         }
         @keyframes laserShoot {
-            0% { bottom: 10%; opacity: 0; } 50% { opacity: 0.3; } 100% { bottom: 90%; opacity: 0; }
+            0% { bottom: 10%; opacity: 0; } 50% { opacity: 1; } 100% { bottom: 90%; opacity: 0; }
         }
 
         /* Glowing Authorship Badges */
@@ -177,9 +179,9 @@
             font-weight: 700;
             margin-left: 0.5rem;
             vertical-align: middle;
-            box-shadow: 0 0 15px rgba(41, 151, 255, 0.2);
-            border: 1px solid rgba(41, 151, 255, 0.5);
-            background: rgba(41, 151, 255, 0.1);
+            box-shadow: 0 0 15px rgba(41, 151, 255, 0.3); /* Stronger glow */
+            border: 1px solid rgba(41, 151, 255, 0.6);
+            background: rgba(41, 151, 255, 0.15);
             color: var(--accent);
             text-shadow: 0 0 8px rgba(41, 151, 255, 0.5);
         }
@@ -230,25 +232,19 @@
         
         .hero-headline-container {
             max-width: 100%;
-            overflow: visible;
         }
         
         .hero h1 {
-            font-size: clamp(2.5rem, 8vw, 6.5rem); /* Dynamically scale headline to stay small on small screens */
-            font-weight: 700; letter-spacing: -0.04em; line-height: 1.05;
+            font-size: clamp(2.5rem, 5.5vw, 5.5rem);
+            font-weight: 700; letter-spacing: -0.04em; line-height: 1.1;
             margin: 0 0 1.5rem 0;
             background: var(--gradient-text);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            /* Ensure the text never wraps on desktop */
-            white-space: nowrap; 
-        }
-        
-        @media (max-width: 768px) {
-            .hero h1 { white-space: normal; /* Allow wrap on mobile */ }
+            word-break: keep-all; 
         }
 
-        /* Face Image Blend Concept */
+        /* Face Image Blend Concept - FIXED RATIO */
         .hero-profile-area {
             display: flex; gap: 3rem; align-items: start; margin-top: 1rem;
         }
@@ -259,11 +255,13 @@
         /* AI Target/Recognition Bounding Box Styling */
         .profile-blend-container {
             position: relative;
-            width: 180px; height: 180px; /* Small, blended image */
+            width: 180px; 
+            height: max-content; /* Dynamically adjusts to your image's ratio */
             flex-shrink: 0;
-            border: 1px solid rgba(41, 151, 255, 0.2); /* Faint AI Border */
+            border: 1px solid rgba(41, 151, 255, 0.2); 
             background: linear-gradient(135deg, rgba(41, 151, 255, 0.05) 0%, rgba(0,0,0,0) 100%);
             box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            padding: 4px; /* Creates a slight framed look inside the bounding box */
         }
         
         /* The "AI Corners" */
@@ -271,6 +269,7 @@
             content: ''; position: absolute; width: 25px; height: 25px;
             border-color: var(--accent); border-style: solid; opacity: 0.7;
             animation: aiBoxPulse 4s infinite ease-in-out;
+            pointer-events: none;
         }
         .profile-blend-container::before {
             top: -5px; left: -5px; border-width: 2px 0 0 2px; /* Top Left */
@@ -285,16 +284,17 @@
         }
 
         .hero-face-img {
-            width: 100%; height: 100%; object-fit: cover;
-            /* Blending effects */
-            filter: grayscale(100%) contrast(1.1); /* Grayscale to match theme */
-            mix-blend-mode: screen; /* Blends gray into the black background */
-            opacity: 0.8;
+            width: 100%; 
+            height: auto; /* Keeps original aspect ratio */
+            display: block; /* Prevents tiny gaps below the image */
+            filter: grayscale(100%) contrast(1.1);
+            mix-blend-mode: screen; 
+            opacity: 0.85;
         }
 
         .hero p {
-            font-size: clamp(1.1rem, 3vw, 1.5rem); color: var(--text-muted);
-            max-width: 800px; margin-bottom: 2rem; line-height: 1.5;
+            font-size: clamp(1.1rem, 3vw, 1.3rem); color: var(--text-muted);
+            max-width: 800px; margin-bottom: 2rem; line-height: 1.6;
         }
         .hero .btn {
             display: inline-block; background: var(--text-main); color: var(--bg-base);
@@ -316,7 +316,6 @@
             background-color: var(--card-bg); border: 1px solid var(--card-border);
             border-radius: 24px; padding: 2.5rem; position: relative; overflow: hidden;
             display: flex; flex-direction: column;
-            /* Subtly make the card itself blue monochome-tinted */
             background: linear-gradient(135deg, rgba(25, 25, 25, 0.6) 0%, rgba(20, 20, 20, 0.8) 100%);
         }
         .card::before {
@@ -358,7 +357,7 @@
             .container { padding: 0 1.5rem 4rem; }
             .card { padding: 1.5rem; }
             h2 { margin: 5rem 0 2rem; }
-            .badge { display: block; width: fit-content; margin: 10px 0 0 0; } /* Stack badges on mobile */
+            .badge { display: block; width: fit-content; margin: 10px 0 0 0; }
         }
     </style>
 </head>
@@ -369,12 +368,10 @@
     <div class="cursor-dot" id="cursorDot"></div>
     <div class="cursor-outline" id="cursorOutline"></div>
 
-    <div class="ai-game-bg pong">
+    <div class="ai-game-bg">
         <div class="ai-shape ai-paddle-left"></div>
         <div class="ai-shape ai-paddle-right"></div>
         <div class="ai-shape ai-ball"></div>
-    </div>
-    <div class="ai-game-bg galaga">
         <div class="ai-shape ai-alien"></div>
         <div class="ai-shape ai-fighter"></div>
         <div class="ai-shape ai-laser"></div>
@@ -399,7 +396,7 @@
             
             <div class="hero-profile-area">
                 <div class="profile-blend-container hoverable">
-                    <img src="your-image.jpg" alt="Jihun Chae Recognition" class="hero-face-img" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=\'color:#86868b; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);\'>Image Error</span>';">
+                    <img src="your-image.jpg" alt="Jihun Chae Recognition" class="hero-face-img" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=\'color:#86868b; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:100%; text-align:center;\'>Image Error</span>';">
                 </div>
                 <div>
                     <p>PhD student at KAIST GSCT. My research explores what it means to play with and against AI, focusing on creating intelligent, autonomous agents that support diverse players, including those with disabilities.</p>
@@ -629,11 +626,11 @@
         <section class="reveal" id="publications">
             <h2>Publications</h2>
             <div class="pub-list">
-                <div class="pub-item hoverable"><strong>Chae, J.</strong>, Seo, G., Jeong, S., & Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. ACM.</div>
+                <div class="pub-item hoverable"><strong>Chae, J.</strong>, Seo, G., Jeong, S., & Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. ACM. <span class="badge">First Author</span></div>
                 
                 <div class="pub-item hoverable">Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., & Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties. <em>Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA ’25)</em>. ACM. <span class="badge">Co-first Author</span></div>
                 
-                <div class="pub-item hoverable"><strong>Chae, J.</strong>, & Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>.</div>
+                <div class="pub-item hoverable"><strong>Chae, J.</strong>, & Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>. <span class="badge">First Author</span></div>
                 
                 <div class="pub-item hoverable">Oh, H., Eum, K., Park, E., <strong>Chae, J.</strong>, Seo, J., Choi, E., & Doh, Y. Y. (2025). RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA. <em>Korea HCI Conference 2025</em>. <span class="badge co-second">Co-second Author</span></div>
                 
@@ -647,9 +644,9 @@
 
                 <div class="pub-item hoverable">Kim, Y. B., & <strong>Chae, J.</strong> (2024). From BigHit to HYBE: Sentiment analysis and strategic transition through news data. <em>Korea Society for Innovation Management & Economics Conference 2024</em>.</div>
 
-                <div class="pub-item hoverable"><strong>Chae, J.</strong>, Yoo, S., Lee, Y., Kim, Y., Kim, H., & Han, D. (2023). Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles. <em>Journal of the Korea Computer Graphics Society</em>, 29(3), 137–147.</div>
+                <div class="pub-item hoverable"><strong>Chae, J.</strong>, Yoo, S., Lee, Y., Kim, Y., Kim, H., & Han, D. (2023). Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles. <em>Journal of the Korea Computer Graphics Society</em>, 29(3), 137–147. <span class="badge">First Author</span></div>
 
-                <div class="pub-item hoverable"><strong>Chae, J.</strong>, Kim, H., Kim, Y., Kim, M., Kim, S., & Han, D. (2023). A study on the effect of group commitment on improving awareness of recycling through gamification. <em>Korea HCI Conference 2023</em>.</div>
+                <div class="pub-item hoverable"><strong>Chae, J.</strong>, Kim, H., Kim, Y., Kim, M., Kim, S., & Han, D. (2023). A study on the effect of group commitment on improving awareness of recycling through gamification. <em>Korea HCI Conference 2023</em>. <span class="badge">First Author</span></div>
 
                 <div class="pub-item hoverable">Kim, Y., <strong>Chae, J.</strong>, Lee, Y., Kim, H., Lee, Y., & Han, D. (2023). Enhancing participation in rehabilitation for diplopia through gamification. <em>Korea Computer Graphics Society Conference 2023</em>.</div>
 
@@ -738,7 +735,6 @@
             // 5. Navbar background blur toggle on scroll
             const nav = document.getElementById('navbar');
             window.addEventListener('scroll', () => {
-                // Ignore style changes on small mobile screens to keep layout clean
                 if(window.innerWidth > 768) {
                     if(window.scrollY > 50) {
                         nav.style.background = 'rgba(10, 10, 10, 0.85)';
