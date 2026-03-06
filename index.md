@@ -3,217 +3,298 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jihun Chae | HCI & Generative AI Researcher</title>
+    <title>Jihun Chae | Research Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        /* Apple-inspired Minimalist Styling */
         :root {
-            --bg-color: #fbfbfd;
-            --text-main: #1d1d1f;
-            --text-muted: #86868b;
-            --link-color: #0066cc;
-            --divider-color: #d2d2d7;
+            --bg-color: #000000;
+            --surface-color: #111111;
+            --text-primary: #f5f5f7;
+            --text-secondary: #86868b;
+            --accent: #2997ff;
+            --border: #333336;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.5;
+            color: var(--text-primary);
+            line-height: 1.6;
             margin: 0;
-            padding: 60px 20px;
+            padding: 0;
             -webkit-font-smoothing: antialiased;
         }
 
-        .container {
-            max-width: 800px;
+        .wrapper {
+            max-width: 1100px;
             margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        /* Modern Two-Column Layout */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 4rem;
+        }
+
+        @media (min-width: 768px) {
+            .grid-layout {
+                grid-template-columns: 300px 1fr;
+                gap: 6rem;
+            }
+        }
+
+        /* Sticky Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 4rem;
+            height: max-content;
         }
 
         h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            margin-bottom: 0.5rem;
-        }
-
-        h2 {
-            font-size: 1.5rem;
+            font-size: 2.5rem;
             font-weight: 600;
-            color: var(--text-main);
-            margin-top: 3.5rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid var(--divider-color);
-            padding-bottom: 0.5rem;
+            letter-spacing: -0.03em;
+            margin: 0 0 0.5rem 0;
         }
 
-        .subtitle {
-            font-size: 1.25rem;
-            color: var(--text-muted);
+        .title-role {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
             font-weight: 400;
-            margin-top: 0;
-            margin-bottom: 1.5rem;
-        }
-
-        .contact-info {
-            font-size: 1rem;
-            margin-bottom: 3rem;
-        }
-
-        .contact-info a {
-            color: var(--link-color);
-            text-decoration: none;
-        }
-
-        .contact-info a:hover {
-            text-decoration: underline;
-        }
-
-        .section-item {
             margin-bottom: 2rem;
         }
 
-        .item-title {
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin-bottom: 0.2rem;
+        .contact-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
         }
 
-        .item-meta {
-            color: var(--text-muted);
+        .contact-links a {
+            color: var(--text-primary);
+            text-decoration: none;
             font-size: 0.95rem;
-            margin-bottom: 0.5rem;
+            transition: color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
         }
 
-        .pub-item {
+        .contact-links a:hover {
+            color: var(--accent);
+        }
+
+        /* Content Sections */
+        section {
+            margin-bottom: 5rem;
+        }
+
+        h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: var(--surface-color);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+            transition: transform 0.3s ease, background-color 0.3s ease;
+        }
+
+        .card:hover {
+            background-color: #1a1a1c;
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .meta {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .org {
+            font-weight: 500;
+            color: var(--text-primary);
             margin-bottom: 1rem;
-            padding-left: 1rem;
-            border-left: 2px solid var(--divider-color);
+            font-size: 0.95rem;
         }
 
         ul {
-            padding-left: 20px;
-            margin-top: 0.5rem;
-            color: #424245;
+            margin: 0;
+            padding-left: 1.2rem;
+            color: #a1a1a6;
+            font-size: 0.95rem;
         }
 
         li {
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.5rem;
         }
 
-        a {
-            color: var(--link-color);
+        /* Publications Styling */
+        .pub-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .pub-item {
+            font-size: 0.95rem;
+            color: #a1a1a6;
+            line-height: 1.5;
+        }
+
+        .pub-item strong {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .pub-link {
+            color: var(--accent);
             text-decoration: none;
+            font-size: 0.85rem;
+            margin-left: 0.5rem;
         }
 
-        a:hover {
+        .pub-link:hover {
             text-decoration: underline;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <h1>Jihun Chae</h1>
-            <p class="subtitle">Research Fields: Human-Computer Interaction in Games, Generative AI in Games</p>
-            <div class="contact-info">
-                <a href="mailto:chaejihun@kaist.ac.kr">chaejihun@kaist.ac.kr</a> • 
-                <a href="https://github.com/ji-hun-git" target="_blank">GitHub</a>
-            </div>
-        </header>
+    <div class="wrapper">
+        <div class="grid-layout">
+            
+            <aside class="sidebar">
+                <h1>Jihun Chae</h1>
+                <div class="title-role">HCI & Generative AI Researcher</div>
+                
+                <div class="contact-links">
+                    <a href="mailto:chaejihun@kaist.ac.kr">chaejihun@kaist.ac.kr</a>
+                    <a href="https://github.com/ji-hun-git" target="_blank">GitHub Profile</a>
+                </div>
+            </aside>
 
-        <section>
-            <h2>Education</h2>
-            <div class="section-item">
-                <div class="item-title">Korea Advanced Institute of Science and Technology (KAIST)</div>
-                <div class="item-meta">PhD Student, Graduate School of Culture Technology | 2026 – Current</div>
-            </div>
-            <div class="section-item">
-                <div class="item-title">Korea Advanced Institute of Science and Technology (KAIST)</div>
-                <div class="item-meta">Master’s Student, Graduate School of Culture Technology | 2024 – 2026</div>
-            </div>
-            <div class="section-item">
-                <div class="item-title">Handong Global University</div>
-                <div class="item-meta">ICT Convergence / Product Design | 2018 – 2024</div>
-            </div>
-            <div class="section-item">
-                <div class="item-title">Ateneo de Manila University</div>
-                <div class="item-meta">Management of Applied Chemistry | 2016 – 2018</div>
-            </div>
-        </section>
+            <main>
+                
+                <section>
+                    <h2>Education</h2>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>KAIST</h3>
+                            <span class="meta">2026 – Current</span>
+                        </div>
+                        <div class="org">PhD Student, Graduate School of Culture Technology</div>
+                    </div>
 
-        <section>
-            <h2>Research Project Experience</h2>
-            <div class="section-item">
-                <div class="item-title">Development and Evaluation of the Inclusive Conversational AI Service for Game Accessibility Enhancement</div>
-                <div class="item-meta">Student Researcher Lead (NRF) | KAIST | May 2024 – Apr 2027</div>
-                <ul>
-                    <li>User research and technical development of a conversational AI agent designed to bridge the digital divide for gamers with disabilities.</li>
-                    <li>Establishing a cross-sector consortium to standardize accessibility guidelines (Collaborators: Samsung Electronics, Nexon, Smilegate, etc.).</li>
-                </ul>
-            </div>
-            <div class="section-item">
-                <div class="item-title">Preserving the Haenyeo Legacy: Serious Games for Social Impact</div>
-                <div class="item-meta">Student Researcher (Leverhulme Trust) | KAIST | Jun 2025 – Sep 2025</div>
-                <ul>
-                    <li>Co-designing a serious game to archive and promote the UNESCO Intangible Cultural Heritage of the Jeju Haenyeo.</li>
-                    <li>Designing gamified narratives that highlight environmental stewardship and climate action.</li>
-                </ul>
-            </div>
-            <div class="section-item">
-                <div class="item-title">Real-Time XR Interface Technology for Environmental Adaptation</div>
-                <div class="item-meta">Student Researcher (IITP) | KAIST | Apr 2024 – Jun 2025</div>
-                <ul>
-                    <li>Engineering a scalable XR platform capable of managing "Meta-Objects" adapting to real-world constraints.</li>
-                </ul>
-            </div>
-        </section>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>KAIST</h3>
+                            <span class="meta">2024 – 2026</span>
+                        </div>
+                        <div class="org">Master’s Student, Graduate School of Culture Technology</div>
+                    </div>
 
-        <section>
-            <h2>Selected Publications</h2>
-            <div class="pub-item">
-                <strong>Chae, J.</strong>, Seo, G., Jeong, S., & Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. <a href="https://doi.org/10.1145/3742413.3789155" target="_blank">Link</a>
-            </div>
-            <div class="pub-item">
-                Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., & Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities. <em>CHI Conference on Human Factors in Computing Systems</em>. (Co-first Author) <a href="https://doi.org/10.1145/3706599.3719723" target="_blank">Link</a>
-            </div>
-            <div class="pub-item">
-                <strong>Chae, J.</strong>, & Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>.
-            </div>
-            </section>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Handong Global University</h3>
+                            <span class="meta">2018 – 2024</span>
+                        </div>
+                        <div class="org">ICT Convergence / Product Design</div>
+                    </div>
+                </section>
 
-        <section>
-            <h2>Honors & Awards</h2>
-            <div class="section-item">
-                <div class="item-title">Selected Entrepreneurial Team (Climate Tech Track)</div>
-                <div class="item-meta">Asan Nanum Foundation | Mar 2024</div>
-            </div>
-            <div class="section-item">
-                <div class="item-title">Grand Prize (President's Award)</div>
-                <div class="item-meta">Pohang Culture & Arts Factory Hackathon | Jan 2024</div>
-            </div>
-            <div class="section-item">
-                <div class="item-title">Excellence Award</div>
-                <div class="item-meta">National Metaverse Developer Contest (MSIT) | Jun 2023</div>
-            </div>
-        </section>
+                <section>
+                    <h2>Research Experience</h2>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Inclusive Conversational AI Service</h3>
+                            <span class="meta">May 2024 – Apr 2027</span>
+                        </div>
+                        <div class="org">Student Researcher Lead | NRF</div>
+                        <ul>
+                            <li>User research and technical development of a conversational AI agent designed to bridge the digital divide for gamers with disabilities.</li>
+                            <li>Establishing a cross-sector consortium to standardize accessibility guidelines with Samsung, Nexon, and Smilegate.</li>
+                        </ul>
+                    </div>
 
-        <section>
-            <h2>Patents & Certifications</h2>
-            <div class="section-item">
-                <div class="item-title">Artificial Intelligence-Based Technology Acceptance Prediction Method</div>
-                <div class="item-meta">Korean Intellectual Property Office (No: 40-2022-0179493) | Dec 2022</div>
-            </div>
-            <div class="section-item">
-                <div class="item-title">Certifications</div>
-                <ul>
-                    <li>TOEIC 920</li>
-                    <li>AI-900: Microsoft Azure, Machine Learning, and AI</li>
-                </ul>
-            </div>
-        </section>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Preserving the Haenyeo Legacy</h3>
+                            <span class="meta">Jun 2025 – Sep 2025</span>
+                        </div>
+                        <div class="org">Student Researcher | Leverhulme Trust</div>
+                        <ul>
+                            <li>Co-designing a serious game to archive and promote the UNESCO Intangible Cultural Heritage of the Jeju Haenyeo.</li>
+                            <li>Designing gamified narratives highlighting environmental stewardship to drive climate action behavior.</li>
+                        </ul>
+                    </div>
+                </section>
 
-        <br><br><br> </div>
+                <section>
+                    <h2>Selected Publications</h2>
+                    <div class="pub-list">
+                        <div class="pub-item">
+                            <strong>Chae, J.</strong>, Seo, G., Jeong, S., & Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. <a href="https://doi.org/10.1145/3742413.3789155" class="pub-link" target="_blank">View Paper →</a>
+                        </div>
+                        <div class="pub-item">
+                            Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., & Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities. <em>CHI Conference on Human Factors in Computing Systems</em>. <a href="https://doi.org/10.1145/3706599.3719723" class="pub-link" target="_blank">View Paper →</a>
+                        </div>
+                        <div class="pub-item">
+                            <strong>Chae, J.</strong>, & Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>.
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Honors & Awards</h2>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Selected Entrepreneurial Team</h3>
+                            <span class="meta">Mar 2024</span>
+                        </div>
+                        <div class="org">Asan Nanum Foundation (Climate Tech Track)</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Grand Prize</h3>
+                            <span class="meta">Jan 2024</span>
+                        </div>
+                        <div class="org">Pohang Culture & Arts Factory Hackathon</div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
 
 </body>
 </html>
