@@ -35,6 +35,7 @@
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            font-size: 125%;
         }
 
         .progress-bar {
@@ -76,266 +77,13 @@
         }
 
         @media (max-width: 768px) {
-            .cursor-dot, .cursor-outline { display: none !important; }
-            * { cursor: auto !important; }
-        }
-
-        .ai-game-bg {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: -1;
-            pointer-events: none;
-            overflow: hidden;
-            opacity: 0.28;
-            filter: blur(1.5px);
-        }
-
-        .ai-shape {
-            position: absolute;
-            pointer-events: none;
-        }
-
-        .ai-paddle-left {
-            width: 16px; height: 180px; border-radius: 6px;
-            left: 4%;
-            background: rgba(255, 255, 255, 0.7);
-            box-shadow: 0 0 28px rgba(41, 151, 255, 0.35);
-            animation: movePaddle 8s infinite ease-in-out alternate;
-        }
-        .ai-paddle-right {
-            width: 16px; height: 180px; border-radius: 6px;
-            right: 4%;
-            background: rgba(255, 255, 255, 0.7);
-            box-shadow: 0 0 28px rgba(41, 151, 255, 0.35);
-            animation: movePaddle 10s infinite ease-in-out alternate-reverse;
-        }
-        .ai-ball {
-            width: 26px; height: 26px; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 0 30px rgba(41, 151, 255, 0.55), 0 0 60px rgba(41, 151, 255, 0.22);
-            animation: moveBallX 4.4s infinite linear alternate,
-                       moveBallY 6s infinite linear alternate;
-        }
-
-        @keyframes movePaddle {
-            0% { top: 12%; } 100% { top: 73%; }
-        }
-        @keyframes moveBallX {
-            0% { left: 6%; } 100% { left: 92%; }
-        }
-        @keyframes moveBallY {
-            0% { top: 10%; } 100% { top: 88%; }
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.2rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 700;
-            margin-left: 0.5rem;
-            vertical-align: middle;
-            box-shadow: 0 0 15px rgba(41, 151, 255, 0.3);
-            border: 1px solid rgba(41, 151, 255, 0.6);
-            background: rgba(41, 151, 255, 0.15);
-            color: var(--accent);
-            text-shadow: 0 0 8px rgba(41, 151, 255, 0.5);
-        }
-        .badge.co-second {
-            color: #d2d2d7;
-            border-color: rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.05);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-            text-shadow: none;
-        }
-
-        nav {
-            position: fixed;
-            top: 0; width: 100%;
-            background: var(--bg-glass);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-bottom: 1px solid var(--card-border);
-            z-index: 1000;
-            padding: 1.2rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
-        }
-        .nav-logo { font-weight: 600; font-size: 1.1rem; letter-spacing: -0.01em; }
-        .nav-links { display: flex; gap: 2rem; }
-        .nav-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-        .nav-links a:hover { color: var(--text-main); }
-
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem 6rem; }
-
-        .hero {
-            min-height: 72vh;
-            display: flex; flex-direction: column; justify-content: center;
-            padding-top: 130px; padding-bottom: 10px;
-        }
-
-        .hero-headline-container {
-            max-width: 100%;
-            margin-bottom: 0.75rem;
-        }
-
-        .hero h1 {
-            font-size: clamp(2.2rem, 5vw, 4.8rem);
-            font-weight: 700; letter-spacing: -0.04em; line-height: 1.16;
-            margin: 0 0 1.75rem 0;
-            padding-bottom: 0.16em;
-            background: var(--gradient-text);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            word-break: keep-all;
-            overflow: visible;
-        }
-
-        .hero-profile-area {
-            display: flex; gap: 3rem; align-items: start; margin-top: 0.5rem;
-        }
-        @media (max-width: 768px) {
-            .hero-profile-area { flex-direction: column-reverse; gap: 2rem; }
-        }
-
-        .profile-blend-container {
-            position: relative;
-            width: 180px;
-            height: max-content;
-            flex-shrink: 0;
-            border: 1px solid rgba(41, 151, 255, 0.2);
-            background: linear-gradient(135deg, rgba(41, 151, 255, 0.05) 0%, rgba(0,0,0,0) 100%);
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            padding: 4px;
-        }
-
-        .profile-blend-container::before, .profile-blend-container::after {
-            content: ''; position: absolute; width: 25px; height: 25px;
-            border-color: var(--accent); border-style: solid; opacity: 0.7;
-            animation: aiBoxPulse 4s infinite ease-in-out;
-            pointer-events: none;
-        }
-        .profile-blend-container::before {
-            top: -5px; left: -5px; border-width: 2px 0 0 2px;
-        }
-        .profile-blend-container::after {
-            bottom: -5px; right: -5px; border-width: 0 2px 2px 0;
-        }
-
-        @keyframes aiBoxPulse {
-            0%, 100% { opacity: 0.4; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.03); }
-        }
-
-        .hero-face-img {
-            width: 100%;
-            height: auto;
-            display: block;
-            filter: grayscale(100%) contrast(1.1);
-            mix-blend-mode: screen;
-            opacity: 0.85;
-        }
-
-        .hero p {
-            font-size: clamp(1.1rem, 3vw, 1.3rem); color: var(--text-muted);
-            max-width: 800px; margin-bottom: 1.5rem; line-height: 1.6;
-        }
-        .hero .btn {
-            display: inline-block; background: var(--text-main); color: var(--bg-base);
-            padding: 1rem 2rem; border-radius: 40px; font-weight: 600; text-decoration: none;
-            transition: transform 0.3s ease, background 0.3s ease;
-        }
-        .hero .btn:hover { transform: scale(1.05); background: #ffffff; }
-
-        .scholar-keywords {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.7rem;
-            margin-top: 1rem;
-            max-width: 780px;
-        }
-        .keyword-chip {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.5rem 0.9rem;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #d7d7dc;
-            font-size: 0.9rem;
-            line-height: 1;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-        .keyword-chip.accent {
-            color: var(--accent);
-            border-color: rgba(41, 151, 255, 0.45);
-            box-shadow: 0 0 18px rgba(41, 151, 255, 0.16);
-            background: rgba(41, 151, 255, 0.08);
-        }
-
-        h2 {
-            font-size: clamp(2rem, 5vw, 2.5rem); font-weight: 600; letter-spacing: -0.03em;
-            margin: 5.5rem 0 3rem; padding-bottom: 1rem; border-bottom: 1px solid var(--card-border);
-        }
-
-        .cards-grid { display: grid; gap: 1.5rem; grid-template-columns: 1fr; }
-        @media (min-width: 768px) { .cards-grid.bento { grid-template-columns: repeat(2, 1fr); } }
-
-        .card {
-            background-color: var(--card-bg); border: 1px solid var(--card-border);
-            border-radius: 24px; padding: 2.5rem; position: relative; overflow: hidden;
-            display: flex; flex-direction: column;
-            background: linear-gradient(135deg, rgba(25, 25, 25, 0.6) 0%, rgba(20, 20, 20, 0.8) 100%);
-        }
-        .card::before {
-            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(800px circle at var(--mouse-x, 0) var(--mouse-y, 0), var(--accent-glow), transparent 40%);
-            opacity: 0; transition: opacity 0.5s; z-index: 0; pointer-events: none;
-        }
-        .card:hover::before { opacity: 1; }
-        .card-content { position: relative; z-index: 1; }
-
-        .card h3 { font-size: 1.4rem; margin: 0 0 0.5rem 0; letter-spacing: -0.01em; }
-        .tagline { color: var(--accent); font-weight: 500; font-size: 0.95rem; margin-bottom: 1rem; }
-        .meta-info { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
-        .card p, .card ul { color: #a1a1a6; font-size: 1rem; margin-top: 0; }
-        .card ul { padding-left: 1.2rem; }
-        .card li { margin-bottom: 0.6rem; }
-        .collaborators { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--card-border); font-size: 0.9rem; color: var(--text-muted); }
-        .collaborators strong { color: var(--text-main); }
-
-        .pub-list { display: flex; flex-direction: column; gap: 1.5rem; }
-        .pub-item {
-            padding: 1.5rem; background: rgba(25, 25, 25, 0.3); border: 1px solid var(--card-border);
-            border-radius: 16px; color: #a1a1a6; font-size: 1rem; transition: all 0.3s ease; position: relative;
-        }
-        .pub-item:hover {
-            background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.2); transform: translateX(10px);
-        }
-        .pub-item strong { color: var(--text-main); }
-
-        .reveal { opacity: 0; transform: translateY(30px) scale(0.98); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
-        .reveal.active { opacity: 1; transform: translateY(0) scale(1); }
-
-        @media (max-width: 768px) {
             nav { padding: 1rem; flex-wrap: wrap; gap: 1rem; justify-content: center; }
-            .nav-links { gap: 1rem; font-size: 0.85rem; }
-            .container { padding: 0 1.5rem 4rem; }
-            .card { padding: 1.5rem; }
+            .nav-links { gap: 1rem; font-size: 0.95rem; }
+            .container { padding: 0 1.25rem 4rem; }
+            .card { padding: 1.8rem; }
             h2 { margin: 4.4rem 0 2rem; }
             .badge { display: block; width: fit-content; margin: 10px 0 0 0; }
-            .hero { min-height: auto; padding-top: 115px; padding-bottom: 0; }
+            .hero { min-height: auto; padding-top: 115px; padding-bottom: 0; }g-bottom: 0; }
             .hero h1 { padding-bottom: 0.2em; }
         }
     </style>
@@ -347,10 +95,10 @@
     <div class="cursor-dot" id="cursorDot"></div>
     <div class="cursor-outline" id="cursorOutline"></div>
 
-    <div class="ai-game-bg">
-        <div class="ai-shape ai-paddle-left"></div>
-        <div class="ai-shape ai-paddle-right"></div>
-        <div class="ai-shape ai-ball"></div>
+    <div class="ai-game-bg" id="aiGameBg">
+        <div class="ai-shape ai-paddle-left" id="paddleLeft"></div>
+        <div class="ai-shape ai-paddle-right" id="paddleRight"></div>
+        <div class="ai-shape ai-ball" id="pongBall"></div>
     </div>
 
     <nav id="navbar">
@@ -689,6 +437,101 @@
                     }
                 });
             });
+
+            const gameBg = document.getElementById('aiGameBg');
+            const paddleLeft = document.getElementById('paddleLeft');
+            const paddleRight = document.getElementById('paddleRight');
+            const pongBall = document.getElementById('pongBall');
+
+            const game = {
+                paddleWidth: 16,
+                paddleHeight: 180,
+                ballSize: 26,
+                leftY: window.innerHeight * 0.3,
+                rightY: window.innerHeight * 0.3,
+                ballX: window.innerWidth * 0.5,
+                ballY: window.innerHeight * 0.45,
+                vx: 5.5,
+                vy: 3.2,
+                leftSpeed: 0,
+                rightSpeed: 0
+            };
+
+            function clamp(value, min, max) {
+                return Math.max(min, Math.min(max, value));
+            }
+
+            function resetBall(direction = 1) {
+                game.ballX = window.innerWidth * 0.5;
+                game.ballY = window.innerHeight * (0.35 + Math.random() * 0.3);
+                game.vx = direction * (5 + Math.random() * 1.5);
+                game.vy = (Math.random() * 4 - 2) || 2.2;
+            }
+
+            function resizePong() {
+                game.leftY = clamp(game.leftY, 0, window.innerHeight - game.paddleHeight);
+                game.rightY = clamp(game.rightY, 0, window.innerHeight - game.paddleHeight);
+                game.ballX = clamp(game.ballX, 0, window.innerWidth - game.ballSize);
+                game.ballY = clamp(game.ballY, 0, window.innerHeight - game.ballSize);
+            }
+
+            function updatePong() {
+                const leftX = window.innerWidth * 0.04;
+                const rightX = window.innerWidth * 0.96 - game.paddleWidth;
+                const targetLeft = game.ballY - game.paddleHeight / 2 + game.ballSize / 2;
+                const targetRight = game.ballY - game.paddleHeight / 2 + game.ballSize / 2;
+
+                game.leftY += (targetLeft - game.leftY) * 0.08;
+                game.rightY += (targetRight - game.rightY) * 0.085;
+
+                game.leftY = clamp(game.leftY, 0, window.innerHeight - game.paddleHeight);
+                game.rightY = clamp(game.rightY, 0, window.innerHeight - game.paddleHeight);
+
+                game.ballX += game.vx;
+                game.ballY += game.vy;
+
+                if (game.ballY <= 0 || game.ballY >= window.innerHeight - game.ballSize) {
+                    game.vy *= -1;
+                    game.ballY = clamp(game.ballY, 0, window.innerHeight - game.ballSize);
+                }
+
+                const hitLeft = game.ballX <= leftX + game.paddleWidth &&
+                    game.ballX + game.ballSize >= leftX &&
+                    game.ballY + game.ballSize >= game.leftY &&
+                    game.ballY <= game.leftY + game.paddleHeight;
+
+                const hitRight = game.ballX + game.ballSize >= rightX &&
+                    game.ballX <= rightX + game.paddleWidth &&
+                    game.ballY + game.ballSize >= game.rightY &&
+                    game.ballY <= game.rightY + game.paddleHeight;
+
+                if (hitLeft && game.vx < 0) {
+                    const impact = ((game.ballY + game.ballSize / 2) - (game.leftY + game.paddleHeight / 2)) / (game.paddleHeight / 2);
+                    game.vx = Math.abs(game.vx) * 1.015;
+                    game.vy += impact * 1.6;
+                    game.ballX = leftX + game.paddleWidth;
+                }
+
+                if (hitRight && game.vx > 0) {
+                    const impact = ((game.ballY + game.ballSize / 2) - (game.rightY + game.paddleHeight / 2)) / (game.paddleHeight / 2);
+                    game.vx = -Math.abs(game.vx) * 1.015;
+                    game.vy += impact * 1.6;
+                    game.ballX = rightX - game.ballSize;
+                }
+
+                if (game.ballX < -60) resetBall(1);
+                if (game.ballX > window.innerWidth + 60) resetBall(-1);
+
+                paddleLeft.style.transform = `translate3d(0, ${game.leftY}px, 0)`;
+                paddleRight.style.transform = `translate3d(0, ${game.rightY}px, 0)`;
+                pongBall.style.transform = `translate3d(${game.ballX}px, ${game.ballY}px, 0)`;
+
+                requestAnimationFrame(updatePong);
+            }
+
+            window.addEventListener('resize', resizePong);
+            resetBall(Math.random() > 0.5 ? 1 : -1);
+            updatePong();
 
             const nav = document.getElementById('navbar');
             window.addEventListener('scroll', () => {
