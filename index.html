@@ -7,1503 +7,298 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet"
-  />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <style>
     :root {
       --bg-base: #000000;
-      --bg-elev: rgba(255, 255, 255, 0.04);
-      --bg-glass: rgba(10, 10, 10, 0.72);
-      --card-bg: rgba(22, 22, 22, 0.62);
-      --card-border: rgba(255, 255, 255, 0.09);
+      --bg-glass: rgba(8, 8, 8, 0.75);
+      --card-bg: rgba(20, 20, 22, 0.6);
+      --card-border: rgba(255, 255, 255, 0.08);
       --text-main: #f5f5f7;
-      --text-muted: #8e8e93;
-      --text-soft: #b8b8be;
-      --accent: #2997ff;
-      --accent-2: #7cc3ff;
-      --accent-glow: rgba(41, 151, 255, 0.22);
-      --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.35);
-      --shadow-md: 0 16px 36px rgba(0, 0, 0, 0.24);
-      --gradient-text: linear-gradient(180deg, #ffffff 0%, #b3b3b8 100%);
-      --hero-glow:
-        radial-gradient(circle at 18% 18%, rgba(41, 151, 255, 0.14), transparent 30%),
-        radial-gradient(circle at 82% 62%, rgba(255, 255, 255, 0.08), transparent 28%);
-      --nav-height: 86px;
-      --radius-xl: 30px;
-      --radius-lg: 22px;
-      --radius-md: 16px;
-      --container: 1320px;
+      --text-muted: #86868b;
+      --text-soft: #a1a1a6;
+      --accent: #0071e3;
+      --accent-glow: rgba(0, 113, 227, 0.3);
+      --nav-height: 72px;
+      --radius-xl: 24px;
+      --container: 1200px;
+      --ease-standard: cubic-bezier(0.23, 1, 0.32, 1);
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      padding: 0;
       background: var(--bg-base);
       color: var(--text-main);
-      font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-      line-height: 1.6;
+      font-family: "Inter", -apple-system, sans-serif;
+      line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
-      font-size: 125%;
+      font-size: 115%;
     }
 
-    img {
-      max-width: 100%;
-      display: block;
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
+    /* --- Enhanced Cursor --- */
     @media (hover: hover) and (pointer: fine) {
-      * {
-        cursor: none !important;
-      }
+      * { cursor: none !important; }
     }
-
-    .cursor-dot,
-    .cursor-outline {
+    .cursor-dot, .cursor-outline {
       position: fixed;
-      top: 0;
-      left: 0;
-      border-radius: 999px;
+      top: 0; left: 0;
+      border-radius: 50%;
       pointer-events: none;
       z-index: 9999;
+      transform: translate(-50%, -50%);
     }
-
     .cursor-dot {
-      width: 9px;
-      height: 9px;
-      background: var(--accent);
-      box-shadow: 0 0 12px var(--accent);
-      transform: translate(-50%, -50%);
+      width: 6px; height: 6px;
+      background: #fff;
+      transition: width 0.3s var(--ease-standard), height 0.3s var(--ease-standard), background 0.3s;
     }
-
     .cursor-outline {
-      width: 42px;
-      height: 42px;
-      transform: translate(-50%, -50%);
-      border: 1px solid rgba(41, 151, 255, 0.45);
-      background: rgba(41, 151, 255, 0.03);
-      transition:
-        width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-        height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-        background-color 0.28s ease,
-        border-color 0.28s ease,
-        box-shadow 0.28s ease;
+      width: 34px; height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: width 0.4s var(--ease-standard), height 0.4s var(--ease-standard), border 0.4s;
     }
-
     .cursor-outline.hover-active {
-      width: 74px;
-      height: 74px;
-      background: rgba(41, 151, 255, 0.12);
-      border-color: rgba(41, 151, 255, 0.92);
-      box-shadow: 0 0 26px rgba(41, 151, 255, 0.34);
+      width: 60px; height: 60px;
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.8);
     }
 
-    .progress-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 3px;
-      width: 0%;
-      background: linear-gradient(90deg, var(--accent), #8ad0ff);
-      box-shadow: 0 0 12px var(--accent), 0 0 26px rgba(41, 151, 255, 0.5);
-      z-index: 3000;
-      transition: width 0.08s linear;
-    }
-
+    /* --- Background & Nav --- */
     .hero-ambient-glow {
-      position: fixed;
-      inset: 0;
-      z-index: -3;
-      background: var(--hero-glow);
-      animation: glowDrift 18s ease-in-out infinite alternate;
-      pointer-events: none;
+      position: fixed; inset: 0; z-index: -3;
+      background: radial-gradient(circle at 20% 20%, rgba(0, 113, 227, 0.07), transparent 40%),
+                  radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.03), transparent 40%);
     }
-
-    @keyframes glowDrift {
-      0% { transform: translate3d(0, 0, 0) scale(1); }
-      100% { transform: translate3d(1.6%, -1.2%, 0) scale(1.04); }
+    
+    nav {
+      position: fixed; top: 0; width: 100%; height: var(--nav-height);
+      z-index: 2000; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 4rem; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
     }
-
-    .ai-game-bg {
-      position: fixed;
-      inset: 0;
-      z-index: -2;
-      overflow: hidden;
-      pointer-events: none;
-      opacity: 0.42;
-      filter: blur(0.6px);
+    .nav-links { display: flex; gap: 2.5rem; }
+    .nav-links a { 
+        color: var(--text-muted); font-size: 0.9rem; font-weight: 500; 
+        transition: color 0.3s, transform 0.3s;
     }
+    .nav-links a:hover { color: #fff; transform: translateY(-1px); }
 
-    .ai-center-line {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 50%;
-      width: 2px;
-      transform: translateX(-50%);
-      opacity: 0.45;
-      background:
-        linear-gradient(
-          to bottom,
-          rgba(255,255,255,0) 0%,
-          rgba(255,255,255,0.14) 8%,
-          rgba(255,255,255,0.14) 92%,
-          rgba(255,255,255,0) 100%
-        );
+    /* --- Interactive Keywords (Magnetic) --- */
+    .scholar-keywords {
+      display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem;
     }
-
-    .ai-shape {
-      position: absolute;
-      left: 0;
-      top: 0;
+    .keyword-chip {
+      padding: 0.6rem 1.2rem; border-radius: 100px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.9rem; font-weight: 500; color: var(--text-soft);
+      transition: background 0.3s, border 0.3s, color 0.3s, transform 0.1s linear;
       will-change: transform;
     }
-
-    .ai-paddle {
-      width: 18px;
-      height: 190px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.76);
-      box-shadow:
-        0 0 28px rgba(41, 151, 255, 0.25),
-        0 0 56px rgba(41, 151, 255, 0.12);
-    }
-
-    .ai-paddle::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0));
-    }
-
-    .ai-ball {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.96);
-      box-shadow:
-        0 0 22px rgba(255,255,255,0.45),
-        0 0 34px rgba(41, 151, 255, 0.62),
-        0 0 70px rgba(41, 151, 255, 0.24);
-    }
-
-    .ai-ball-trail {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 90px;
-      height: 10px;
-      border-radius: 999px;
-      transform-origin: left center;
-      background: linear-gradient(90deg, rgba(41,151,255,0.44), rgba(41,151,255,0));
-      filter: blur(6px);
-      opacity: 0.85;
-      will-change: transform, width;
-    }
-
-    .pong-score {
-      position: absolute;
-      top: 9%;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      gap: 3rem;
-      font-weight: 700;
-      letter-spacing: -0.04em;
-      color: rgba(255,255,255,0.22);
-      font-size: clamp(2rem, 4vw, 3.6rem);
-      user-select: none;
-      pointer-events: none;
-      text-shadow: 0 0 24px rgba(41, 151, 255, 0.12);
-    }
-
-    .pong-score span {
-      min-width: 1ch;
-      text-align: center;
-      transition: transform 0.3s ease, color 0.3s ease;
-    }
-
-    .pong-score span.flash {
-      color: rgba(255,255,255,0.45);
-      transform: scale(1.1);
-    }
-
-    nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: var(--nav-height);
-      z-index: 2000;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 2.25rem;
-      background: var(--bg-glass);
-      border-bottom: 1px solid var(--card-border);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-      transition:
-        height 0.28s ease,
-        background 0.28s ease,
-        border-color 0.28s ease,
-        box-shadow 0.28s ease;
-    }
-
-    nav.is-scrolled {
-      height: 72px;
-      background: rgba(10, 10, 10, 0.82);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
-    }
-
-    .nav-logo {
-      font-size: 1.3rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-    }
-
-    .nav-links a {
-      color: var(--text-muted);
-      font-size: 1.05rem;
-      font-weight: 500;
-      transition: color 0.2s ease, transform 0.2s ease;
-    }
-
-    .nav-links a:hover {
-      color: var(--text-main);
-      transform: translateY(-1px);
-    }
-
-    .container {
-      width: min(var(--container), calc(100% - 5rem));
-      margin: 0 auto;
-      padding-bottom: 7rem;
-    }
-
-    .hero {
-      min-height: 72vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding-top: 130px;
-      padding-bottom: 10px;
-      position: relative;
-    }
-
-    .hero-headline-container {
-      margin-bottom: 0.7rem;
-    }
-
-    .hero h1 {
-      margin: 0 0 1.6rem 0;
-      padding-bottom: 0.16em;
-      font-size: clamp(2.9rem, 6vw, 6rem);
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.055em;
-      word-break: keep-all;
-      background: var(--gradient-text);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: heroFadeUp 0.95s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    .hero-profile-area {
-      display: flex;
-      align-items: flex-start;
-      gap: 3rem;
-      animation: heroFadeUp 1.05s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    @keyframes heroFadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(18px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .profile-blend-container {
-      position: relative;
-      width: 225px;
-      flex-shrink: 0;
-      padding: 4px;
-      border: 1px solid rgba(41, 151, 255, 0.2);
-      background: linear-gradient(135deg, rgba(41,151,255,0.08), rgba(0,0,0,0.04));
-      box-shadow: 0 0 34px rgba(0,0,0,0.5), 0 0 22px rgba(41,151,255,0.08);
-      overflow: hidden;
-    }
-
-    .profile-blend-container::before,
-    .profile-blend-container::after {
-      content: "";
-      position: absolute;
-      width: 28px;
-      height: 28px;
-      border-style: solid;
-      border-color: var(--accent);
-      opacity: 0.7;
-      animation: aiBoxPulse 4.2s infinite ease-in-out;
-      pointer-events: none;
-    }
-
-    .profile-blend-container::before {
-      top: -5px;
-      left: -5px;
-      border-width: 2px 0 0 2px;
-    }
-
-    .profile-blend-container::after {
-      right: -5px;
-      bottom: -5px;
-      border-width: 0 2px 2px 0;
-    }
-
-    @keyframes aiBoxPulse {
-      0%, 100% { opacity: 0.42; transform: scale(1); }
-      50% { opacity: 0.9; transform: scale(1.04); }
-    }
-
-    .hero-face-img {
-      width: 100%;
-      height: auto;
-      filter: grayscale(100%) contrast(1.08);
-      mix-blend-mode: screen;
-      opacity: 0.92;
-    }
-
-    .hero-copy {
-      min-width: 0;
-    }
-
-    .hero-copy p {
-      max-width: 840px;
-      margin: 0 0 1.45rem 0;
-      font-size: clamp(1.28rem, 3.2vw, 1.56rem);
-      line-height: 1.62;
-      color: var(--text-muted);
-    }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .btn {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      padding: 1.15rem 2.3rem;
-      border-radius: 999px;
-      background: var(--text-main);
-      color: var(--bg-base);
-      font-size: 1rem;
-      font-weight: 700;
-      box-shadow: 0 8px 26px rgba(255,255,255,0.08);
-      transition: transform 0.26s ease, box-shadow 0.26s ease, background 0.26s ease;
-    }
-
-    .btn::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      transform: translateX(-120%);
-      background: linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.55) 50%, transparent 75%);
-      transition: transform 0.7s ease;
-    }
-
-    .btn:hover {
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 14px 34px rgba(255,255,255,0.12);
-      background: #ffffff;
-    }
-
-    .btn:hover::after {
-      transform: translateX(120%);
-    }
-
-    .scholar-keywords {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.72rem;
-      margin-top: 1rem;
-      max-width: 860px;
-    }
-
-    .keyword-chip {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.56rem 0.95rem;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #d7d7dc;
-      font-size: 1rem;
-      line-height: 1;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      transition:
-        transform 0.28s ease,
-        border-color 0.28s ease,
-        box-shadow 0.28s ease,
-        background 0.28s ease;
-      animation: chipFloat 8s ease-in-out infinite;
-    }
-
-    .keyword-chip:nth-child(2) { animation-delay: 0.4s; }
-    .keyword-chip:nth-child(3) { animation-delay: 0.9s; }
-    .keyword-chip:nth-child(4) { animation-delay: 1.3s; }
-    .keyword-chip:nth-child(5) { animation-delay: 1.8s; }
-    .keyword-chip:nth-child(6) { animation-delay: 2.2s; }
-    .keyword-chip:nth-child(7) { animation-delay: 2.7s; }
-
-    @keyframes chipFloat {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-2px); }
-    }
-
     .keyword-chip:hover {
-      transform: translateY(-3px);
-      border-color: rgba(255,255,255,0.18);
-      box-shadow: 0 10px 26px rgba(255,255,255,0.05);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #fff;
     }
-
     .keyword-chip.accent {
-      color: var(--accent-2);
-      border-color: rgba(41, 151, 255, 0.46);
-      background: rgba(41, 151, 255, 0.09);
-      box-shadow: 0 0 20px rgba(41, 151, 255, 0.15);
+      background: rgba(0, 113, 227, 0.1);
+      border-color: rgba(0, 113, 227, 0.4);
+      color: #7cc3ff;
     }
 
+    /* --- Layout & Sections --- */
+    .container { width: min(var(--container), 90%); margin: 0 auto; padding-top: 160px; }
+    h1 {
+      font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 800; letter-spacing: -0.04em;
+      line-height: 1.1; margin: 0 0 2rem 0;
+      background: linear-gradient(to bottom, #fff 40%, #a1a1a6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    
     section h2 {
-      margin: 5.35rem 0 2.55rem;
-      padding-bottom: 0.95rem;
-      border-bottom: 1px solid var(--card-border);
-      font-size: clamp(2.4rem, 5.5vw, 3.1rem);
-      font-weight: 700;
-      letter-spacing: -0.04em;
+      font-size: 2rem; font-weight: 700; margin: 6rem 0 2.5rem;
+      padding-bottom: 1rem; border-bottom: 1px solid var(--card-border);
     }
 
-    .cards-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
-
-    .cards-grid.bento {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
+    /* --- Advanced Bento Cards --- */
+    .cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
     .card {
-      position: relative;
-      overflow: hidden;
-      padding: 3rem;
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--card-border);
-      background:
-        linear-gradient(135deg, rgba(28,28,28,0.64), rgba(18,18,18,0.84));
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.03),
-        var(--shadow-md);
-      transition:
-        transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
-        border-color 0.3s ease,
-        box-shadow 0.3s ease;
-      transform-style: preserve-3d;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-xl); padding: 2.5rem; position: relative;
+      overflow: hidden; transition: border-color 0.4s var(--ease-standard), box-shadow 0.4s var(--ease-standard);
     }
-
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      opacity: 0;
-      pointer-events: none;
-      background: radial-gradient(
-        800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        var(--accent-glow),
-        transparent 40%
-      );
-      transition: opacity 0.5s ease;
-    }
-
     .card:hover {
-      border-color: rgba(255,255,255,0.16);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.05),
-        0 18px 46px rgba(0,0,0,0.28);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
     }
-
-    .card:hover::before {
-      opacity: 1;
-    }
-
-    .card-content {
-      position: relative;
-      z-index: 1;
-      transform: translateZ(20px);
-    }
-
-    .card h3 {
-      margin: 0 0 0.55rem 0;
-      font-size: 1.72rem;
-      line-height: 1.2;
-      letter-spacing: -0.02em;
-    }
-
-    .tagline {
-      color: var(--accent-2);
-      font-weight: 600;
-      font-size: 1.08rem;
-      margin-bottom: 1rem;
-    }
-
-    .meta-info {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.9rem;
-      margin-bottom: 1.35rem;
-      font-size: 1rem;
-      color: var(--text-muted);
-    }
-
-    .card p,
-    .card ul {
-      margin-top: 0;
-      color: var(--text-soft);
-      font-size: 1.08rem;
-    }
-
-    .card ul {
-      margin-bottom: 0;
-      padding-left: 1.2rem;
-    }
-
-    .card li {
-      margin-bottom: 0.64rem;
-    }
-
-    .collaborators {
-      margin-top: 1.2rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--card-border);
-      color: var(--text-muted);
-      font-size: 0.95rem;
-    }
-
-    .collaborators strong {
-      color: var(--text-main);
-    }
-
-    .pub-list {
-      display: flex;
-      flex-direction: column;
-      gap: 1.3rem;
-    }
-
+    .tagline { color: var(--accent); font-weight: 600; font-size: 0.95rem; margin-bottom: 0.5rem; }
+    .meta-info { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+    
+    /* --- Publication Items --- */
+    .pub-list { display: flex; flex-direction: column; gap: 1rem; }
     .pub-item {
-      position: relative;
-      overflow: hidden;
-      padding: 1.8rem;
-      border-radius: 18px;
-      border: 1px solid var(--card-border);
-      background: rgba(25,25,25,0.32);
-      color: var(--text-soft);
-      font-size: 1.08rem;
-      transition:
-        transform 0.26s ease,
-        border-color 0.26s ease,
-        background 0.26s ease,
-        box-shadow 0.26s ease;
+      padding: 1.5rem; border-radius: 16px; border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.02); transition: all 0.3s var(--ease-standard);
     }
-
-    .pub-item::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 18%;
-      bottom: 18%;
-      width: 3px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, transparent, var(--accent), transparent);
-      opacity: 0;
-      transition: opacity 0.26s ease, transform 0.26s ease;
-      transform: translateX(-8px);
-    }
-
     .pub-item:hover {
-      transform: translateX(9px);
-      border-color: rgba(255,255,255,0.18);
-      background: rgba(255,255,255,0.05);
-      box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateX(8px);
+      border-color: var(--accent);
     }
 
-    .pub-item:hover::before {
-      opacity: 1;
-      transform: translateX(0);
-    }
+    /* --- Animations --- */
+    .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s var(--ease-standard); }
+    .reveal.active { opacity: 1; transform: translateY(0); }
+    
+    /* Staggered entry classes */
+    .stagger-item { opacity: 0; transform: translateY(20px); transition: all 0.6s var(--ease-standard); }
+    .reveal.active .stagger-item { opacity: 1; transform: translateY(0); }
+    
+    /* Simple delay loops for children */
+    .reveal.active .stagger-item:nth-child(1) { transition-delay: 0.1s; }
+    .reveal.active .stagger-item:nth-child(2) { transition-delay: 0.2s; }
+    .reveal.active .stagger-item:nth-child(3) { transition-delay: 0.3s; }
+    .reveal.active .stagger-item:nth-child(4) { transition-delay: 0.4s; }
 
-    .pub-item strong {
-      color: var(--text-main);
-    }
-
-    .badge {
-      display: inline-block;
-      margin-left: 0.55rem;
-      vertical-align: middle;
-      padding: 0.25rem 0.9rem;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--accent);
-      background: rgba(41,151,255,0.15);
-      border: 1px solid rgba(41,151,255,0.6);
-      box-shadow: 0 0 16px rgba(41,151,255,0.2);
-    }
-
-    .badge.co-second {
-      color: #d5d5da;
-      background: rgba(255,255,255,0.05);
-      border-color: rgba(255,255,255,0.24);
-      box-shadow: 0 0 14px rgba(255,255,255,0.08);
-    }
-
-    .reveal {
-      opacity: 0;
-      transform: translateY(26px) scale(0.985);
-      transition:
-        opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-        transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .reveal.active {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-
-    @media (max-width: 1100px) {
-      .cards-grid.bento {
-        grid-template-columns: 1fr;
-      }
-
-      .hero-profile-area {
-        flex-direction: column-reverse;
-        gap: 2rem;
-      }
-    }
-
-    @media (max-width: 768px) {
-      body {
-        font-size: 112%;
-      }
-
-      .cursor-dot,
-      .cursor-outline {
-        display: none !important;
-      }
-
-      * {
-        cursor: auto !important;
-      }
-
-      :root {
-        --nav-height: 92px;
-      }
-
-      nav {
-        justify-content: center;
-        gap: 0.8rem;
-        flex-wrap: wrap;
-        padding: 0.75rem 1rem;
-        height: auto;
-        min-height: var(--nav-height);
-      }
-
-      nav.is-scrolled {
-        height: auto;
-      }
-
-      .nav-logo {
-        width: 100%;
-        text-align: center;
-      }
-
-      .nav-links {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.95rem 1rem;
-      }
-
-      .nav-links a {
-        font-size: 0.98rem;
-      }
-
-      .container {
-        width: min(100% - 1.2rem, var(--container));
-      }
-
-      .hero {
-        min-height: auto;
-        padding-top: 120px;
-        padding-bottom: 0;
-      }
-
-      .hero h1 {
-        padding-bottom: 0.2em;
-      }
-
-      .profile-blend-container {
-        width: 220px;
-      }
-
-      section h2 {
-        margin: 4.4rem 0 2rem;
-      }
-
-      .card {
-        padding: 1.8rem;
-        transform: none !important;
-      }
-
-      .card-content {
-        transform: none;
-      }
-
-      .badge {
-        display: block;
-        width: fit-content;
-        margin: 0.7rem 0 0 0;
-      }
-
-      .ai-game-bg {
-        opacity: 0.24;
-        filter: blur(0.3px);
-      }
-
-      .ai-paddle {
-        height: 138px;
-        width: 14px;
-      }
-
-      .ai-ball {
-        width: 22px;
-        height: 22px;
-      }
-
-      .pong-score {
-        top: 10%;
-        gap: 2rem;
-        font-size: 1.8rem;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      html {
-        scroll-behavior: auto;
-      }
-
-      *,
-      *::before,
-      *::after {
-        animation: none !important;
-        transition: none !important;
-      }
+    @media (max-width: 900px) {
+      .cards-grid { grid-template-columns: 1fr; }
+      nav { padding: 0 1.5rem; }
     }
   </style>
 </head>
 <body>
-  <div class="progress-bar" id="progressBar"></div>
-
   <div class="cursor-dot" id="cursorDot"></div>
   <div class="cursor-outline" id="cursorOutline"></div>
+  <div class="hero-ambient-glow"></div>
 
-  <div class="hero-ambient-glow" aria-hidden="true"></div>
-
-  <div class="ai-game-bg" id="aiGameBg" aria-hidden="true">
-    <div class="ai-center-line"></div>
-    <div class="pong-score">
-      <span id="scoreLeft">0</span>
-      <span id="scoreRight">0</span>
-    </div>
-    <div class="ai-shape ai-paddle" id="paddleLeft"></div>
-    <div class="ai-shape ai-paddle" id="paddleRight"></div>
-    <div class="ai-shape ai-ball" id="pongBall"></div>
-    <div class="ai-ball-trail" id="pongTrail"></div>
-  </div>
-
-  <nav id="navbar">
-    <div class="nav-logo hoverable">Jihun Chae</div>
+  <nav>
+    <div class="nav-logo hoverable" style="font-weight: 800; letter-spacing: -1px;">JC.</div>
     <div class="nav-links">
       <a href="#about" class="hoverable">About</a>
       <a href="#experience" class="hoverable">Experience</a>
-      <a href="#awards" class="hoverable">Awards</a>
-      <a href="#publications" class="hoverable">Publications</a>
+      <a href="#publications" class="hoverable">Research</a>
     </div>
   </nav>
 
   <main class="container">
     <section class="hero reveal" id="about">
-      <div class="hero-headline-container">
-        <h1>Designing the future of play.</h1>
-      </div>
+      <h1>Designing the<br/>future of play.</h1>
+      <p style="max-width: 600px; color: var(--text-soft); font-size: 1.2rem; margin-bottom: 2rem;">
+        PhD student at KAIST GSCT. Exploring the intersection of Ludic AI and Inclusive Design to build the next generation of intelligent game agents.
+      </p>
 
-      <div class="hero-profile-area">
-        <div class="profile-blend-container hoverable">
-          <img
-            src="your-image.jpg"
-            alt="Jihun Chae portrait"
-            class="hero-face-img"
-            onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=&quot;color:#86868b;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem;&quot;>Image not found</span>';"
-          />
-        </div>
-
-        <div class="hero-copy">
-          <p>
-            PhD student at KAIST GSCT. My research explores what it means to play
-            with and against AI, focusing on creating intelligent, autonomous
-            agents that support diverse players, including those with disabilities.
-          </p>
-
-          <div class="hero-actions">
-            <a
-              href="https://www.linkedin.com/in/jihun-chae-15457756/"
-              target="_blank"
-              rel="noreferrer"
-              class="btn hoverable"
-            >
-              Connect on LinkedIn
-            </a>
-          </div>
-
-          <div class="scholar-keywords">
-            <span class="keyword-chip accent">HCI</span>
-            <span class="keyword-chip accent">Game AI</span>
-            <span class="keyword-chip">Ludic AI</span>
-            <span class="keyword-chip">AI Agents</span>
-            <span class="keyword-chip">Game Accessibility</span>
-            <span class="keyword-chip">Inclusive Design</span>
-            <span class="keyword-chip">Multimodal Interaction</span>
-          </div>
-        </div>
+      <div class="scholar-keywords">
+        <span class="keyword-chip accent hoverable magnetic">HCI</span>
+        <span class="keyword-chip accent hoverable magnetic">Game AI</span>
+        <span class="keyword-chip hoverable magnetic">Ludic AI</span>
+        <span class="keyword-chip hoverable magnetic">Inclusive Design</span>
+        <span class="keyword-chip hoverable magnetic">Accessibility</span>
+        <span class="keyword-chip hoverable magnetic">Multimodal</span>
       </div>
     </section>
 
     <section class="reveal">
       <h2>Education</h2>
-      <div class="cards-grid bento">
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>KAIST</h3>
-            <div class="tagline">PhD, Graduate School of Culture Technology</div>
-            <div class="meta-info"><span>2026 – Current</span></div>
-          </div>
+      <div class="cards-grid">
+        <div class="card hoverable stagger-item">
+          <div class="tagline">PhD Researcher</div>
+          <h3 style="margin: 0.5rem 0;">KAIST GSCT</h3>
+          <div class="meta-info">2026 — Present</div>
+          <p style="font-size: 0.9rem; color: var(--text-soft);">Games & Life Lab. Focused on AI-driven accessibility.</p>
         </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>KAIST</h3>
-            <div class="tagline">Master’s, Graduate School of Culture Technology</div>
-            <div class="meta-info"><span>2024 – 2026</span></div>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Handong Global University</h3>
-            <div class="tagline">ICT Convergence &amp; Product Design</div>
-            <div class="meta-info"><span>2018 – 2024</span></div>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Ateneo de Manila University</h3>
-            <div class="tagline">Management of Applied Chemistry</div>
-            <div class="meta-info"><span>2016 – 2018</span></div>
-          </div>
+        <div class="card hoverable stagger-item">
+          <div class="tagline">Master of Science</div>
+          <h3 style="margin: 0.5rem 0;">KAIST GSCT</h3>
+          <div class="meta-info">2024 — 2026</div>
+          <p style="font-size: 0.9rem; color: var(--text-soft);">Specializing in Human-Computer Interaction.</p>
         </div>
       </div>
     </section>
 
     <section class="reveal" id="experience">
-      <h2>Research Project Experience</h2>
-      <div class="cards-grid">
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Inclusive Conversational AI Service for Game Accessibility Enhancement</h3>
-            <div class="tagline">Student Researcher Lead | National Research Foundation of Korea (NRF)</div>
-            <div class="meta-info"><span>KAIST</span> • <span>May 2024 – Apr 2027</span></div>
-            <ul>
-              <li>Led user research and prototype development for an inclusive conversational AI assistant designed to support gamers with disabilities across diverse play contexts.</li>
-              <li>Conducted interviews, participatory design workshops, and iterative concept development to identify accessibility needs and translate them into AI-supported interaction scenarios.</li>
-              <li>Contributed to the design of a research and collaboration framework connecting academia, industry, and rehabilitation stakeholders to inform future accessibility guidelines and real-world deployment.</li>
-            </ul>
-            <div class="collaborators">
-              <strong>Collaborators:</strong> Samsung Electronics (Corporate Design Center), Nexon Intelligence Labs, Smilegate D&amp;I, Korea National Rehabilitation Center, SpecialEffect (UK).
-            </div>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Preserving the Haenyeo Legacy: Serious Games for Social Impact</h3>
-            <div class="tagline">Student Researcher | Leverhulme Trust International Fellow</div>
-            <div class="meta-info"><span>KAIST</span> • <span>Jun 2025 – Sep 2025</span></div>
-            <ul>
-              <li>Contributed to the design of a serious game project aimed at preserving and communicating the cultural heritage of the Jeju Haenyeo, with a focus on intergenerational knowledge transmission.</li>
-              <li>Helped develop game concepts and narrative structures that connect Haenyeo practices, environmental change, and women’s community knowledge in an accessible interactive format.</li>
-              <li>Supported international research collaboration and field-based design discussions examining how serious games can contribute to cultural sustainability and community resilience.</li>
-            </ul>
-            <div class="collaborators">
-              <strong>Partners:</strong> Brunel University London (Games Research Lab), Jeju Haenyeo Museum, the Haenyeo communities of Sinrye-ri, Daepyeong-ri, and Yeongnak-ri.
-            </div>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Real-Time XR Interface Technology for Environmental Adaptation</h3>
-            <div class="tagline">Student Researcher | IITP</div>
-            <div class="meta-info"><span>KAIST</span> • <span>Apr 2024 – Jun 2025</span></div>
-            <ul>
-              <li>Participated in the development of an XR interface system for dynamically adapting virtual content to real-world environmental and spatial conditions.</li>
-              <li>Contributed to the design and implementation of interaction concepts involving adaptive virtual objects and multimodal interface behavior in mixed-reality settings.</li>
-              <li>Supported research on immersive visual-haptic feedback to improve presence and environmental responsiveness in XR experiences.</li>
-            </ul>
-            <div class="collaborators">
-              <strong>Partners:</strong> Fraunhofer Institute (Germany), NYU, UniSA, Anipen, bHaptics.
-            </div>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Defense Technology Research: Camouflage Effectiveness</h3>
-            <div class="tagline">Student Researcher | Korea Aerospace Industries (KAI)</div>
-            <div class="meta-info"><span>Handong Global University</span> • <span>Apr 2023 – Feb 2024</span></div>
-            <ul>
-              <li>Performed computational and visual evaluation of KF-21 Boramae camouflage effectiveness across altitude, terrain, and meteorological conditions to assess detectability under varied operational environments.</li>
-              <li>Processed environmental imagery and simulation-based datasets to analyze the interaction between aircraft surface patterns, background context, and visibility performance.</li>
-              <li>Developed camouflage colorways and pattern configurations for applied defense design, with selected proposals incorporated into real project outputs.</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Smart City Infrastructure &amp; AI Object Tracking</h3>
-            <div class="tagline">Student Researcher</div>
-            <div class="meta-info"><span>Handong Global University</span> • <span>Jan 2023 – Feb 2024</span></div>
-            <ul>
-              <li>Engineered IoT-based roadside sensing hardware for urban data acquisition, including enclosure design and rapid prototyping through 3D-printed sensor housings.</li>
-              <li>Supported AI-driven traffic object tracking pipelines by contributing to data preprocessing, detection workflow refinement, and model-level optimization for real-world road scenes.</li>
-              <li>Improved detection robustness in dense urban environments through anchor-box optimization and applied computer vision experimentation for high-traffic conditions.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="reveal" id="awards">
-      <h2>Honors &amp; Awards</h2>
-      <div class="cards-grid bento">
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Selected Entrepreneurial Team</h3>
-            <div class="tagline">Climate Tech Track | Asan Nanum Foundation</div>
-            <div class="meta-info"><span>Mar 2024</span> • <span>Chung Ju-yung Startup Competition</span></div>
-            <ul>
-              <li>Selected as a representative startup team for the Asan UniverCT incubation program, aimed at fostering climate-tech innovators.</li>
-              <li>Secured funding and mentorship leveraging resources from KAIST and Asan Nanum Foundation.</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Grand Prize (University President’s Award)</h3>
-            <div class="tagline">Pohang Culture &amp; Arts Factory Hackathon</div>
-            <div class="meta-info"><span>Jan 2024</span> • <span>Handong Global University</span></div>
-            <ul>
-              <li>Directed the technical implementation of a large-scale media facade using Unreal Engine, successfully demonstrating the “Smart City” concept.</li>
-              <li>Co-hosted by Pohang City, Pohang Cultural Foundation, KT, and Handong Global Univ.</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Excellence Award</h3>
-            <div class="tagline">National Metaverse Developer Contest</div>
-            <div class="meta-info"><span>Jun 2023</span> • <span>Ministry of Science and ICT (MSIT)</span></div>
-            <ul>
-              <li>Engineered a gamified digital therapeutic for eye muscle rehabilitation utilizing Meta Quest Pro’s advanced eye-tracking capabilities.</li>
-              <li>Recognized for innovation by the Korea Metaverse Industry Association and Skonec Entertainment.</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Outstanding Student Research Award</h3>
-            <div class="tagline">Korea Multimedia Society (KMMS)</div>
-            <div class="meta-info"><span>Nov 2023</span></div>
-            <p>Authored and presented research on “Eye-tracking-based VR Interactive Games,” analyzing occulomotor responses to enhance immersion and accessibility in virtual environments.</p>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>University President’s Award</h3>
-            <div class="tagline">Startup Idea Competition</div>
-            <div class="meta-info"><span>Nov 2022</span> • <span>Handong Global University</span></div>
-            <p>Conceptualized a high-impact startup business model integrating ESG principles with Augmented Reality (AR) technology, evaluated as the top proposal.</p>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Outstanding Student Research Award</h3>
-            <div class="tagline">Korea Multimedia Society (KMMS)</div>
-            <div class="meta-info"><span>May 2022</span></div>
-            <p>Conducted experimental research on VR exposure therapy for cynophobia, proposing novel spatiotemporal design factors to increase treatment efficacy.</p>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Top 14 Finalist</h3>
-            <div class="tagline">DB-SNUbiz Global Startup Challenge</div>
-            <div class="meta-info"><span>May 2021</span> • <span>Seoul National University Business School</span></div>
-            <p>Distinguished in a competitive global startup challenge ($91k prize pool). Pitched a blockchain-based solution to VCs. Co-hosted by DB Kim Joon-Ki Foundation.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="reveal">
-      <h2>Patents &amp; Certifications</h2>
-      <div class="cards-grid bento">
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Patent: AI-Based Technology Acceptance Prediction Method</h3>
-            <div class="tagline">Korean Intellectual Property Office (No: 40-2022-0179493)</div>
-            <div class="meta-info"><span>Dec 23, 2022</span></div>
-            <p>Co-Patentor: Impactive AI Corp.</p>
-          </div>
-        </div>
-
-        <div class="card hoverable tilt-card">
-          <div class="card-content">
-            <h3>Certifications</h3>
-            <div class="tagline">Professional Qualifications</div>
-            <ul>
-              <li><strong>AI-900:</strong> Microsoft Azure, Machine Learning, and AI</li>
-            </ul>
-          </div>
-        </div>
+      <h2>Lead Research</h2>
+      <div class="card hoverable" style="width: 100%;">
+        <div class="tagline">National Research Foundation of Korea</div>
+        <h3>Inclusive Conversational AI Service</h3>
+        <div class="meta-info">Lead Student Researcher | 2024 — 2027</div>
+        <p style="color: var(--text-soft);">Developing GAIA (Game AI Assistant) to bridge the accessibility gap for players with physical disabilities using RAG-enhanced LLM frameworks.</p>
       </div>
     </section>
 
     <section class="reveal" id="publications">
-      <h2>Publications</h2>
+      <h2>Selected Publications</h2>
       <div class="pub-list">
-        <div class="pub-item hoverable"><strong>Chae, J.</strong>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. ACM. <span class="badge">First Author</span></div>
-
-        <div class="pub-item hoverable">Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties. <em>Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA ’25)</em>. ACM. <span class="badge">Co-first Author</span></div>
-
-        <div class="pub-item hoverable"><strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>. <span class="badge">First Author</span></div>
-
-        <div class="pub-item hoverable">Oh, H., Eum, K., Park, E., <strong>Chae, J.</strong>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA. <em>Korea HCI Conference 2025</em>. <span class="badge co-second">Co-second Author</span></div>
-
-        <div class="pub-item hoverable">Choi, E., <strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2024). Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH). <em>Korean Artificial Intelligence Association Conference 2024</em>. <span class="badge">Co-first Author</span></div>
-
-        <div class="pub-item hoverable">Eum, K., Park, E., <strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2024). GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies. <em>Korea Computer Graphics Society Conference 2024</em>. <span class="badge">Co-first Author</span></div>
-
-        <div class="pub-item hoverable">Park, E., <strong>Chae, J.</strong>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). Challenges and opportunities of game NPC research using LLM: A scoping review. <em>Korean Game Society Conference 2024</em>. <span class="badge">Co-first Author</span></div>
-
-        <div class="pub-item hoverable">Kim, Y. B., &amp; <strong>Chae, J.</strong> (2024). A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd. <em>Korea Technology Innovation Society Conference 2024</em>.</div>
-
-        <div class="pub-item hoverable">Kim, Y. B., &amp; <strong>Chae, J.</strong> (2024). From BigHit to HYBE: Sentiment analysis and strategic transition through news data. <em>Korea Society for Innovation Management &amp; Economics Conference 2024</em>.</div>
-
-        <div class="pub-item hoverable"><strong>Chae, J.</strong>, Yoo, S., Lee, Y., Kim, Y., Kim, H., &amp; Han, D. (2023). Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles. <em>Journal of the Korea Computer Graphics Society</em>, 29(3), 137–147. <span class="badge">First Author</span></div>
-
-        <div class="pub-item hoverable"><strong>Chae, J.</strong>, Kim, H., Kim, Y., Kim, M., Kim, S., &amp; Han, D. (2023). A study on the effect of group commitment on improving awareness of recycling through gamification. <em>Korea HCI Conference 2023</em>. <span class="badge">First Author</span></div>
-
-        <div class="pub-item hoverable">Kim, Y., <strong>Chae, J.</strong>, Lee, Y., Kim, H., Lee, Y., &amp; Han, D. (2023). Enhancing participation in rehabilitation for diplopia through gamification. <em>Korea Computer Graphics Society Conference 2023</em>.</div>
-
-        <div class="pub-item hoverable">Lee, Y. S., Kim, Y., Kim, H., <strong>Chae, J.</strong>, Lee, Y., &amp; Han, D. (2023). Eye-tracking-based VR interactive games for eye movements. <em>Korea Multimedia Society Conference 2023</em>.</div>
-
-        <div class="pub-item hoverable">Yoon, D., Park, S., Song, Y., <strong>Chae, J.</strong>, &amp; Chung, D. (2023). Methodology for improving the performance of demand forecasting through machine learning. <em>Preprint available at Research Square.</em></div>
-
-        <div class="pub-item hoverable">Yoo, S., <strong>Chae, J.</strong>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for cynophobia. <em>Korea Multimedia Society Conference 2022</em>.</div>
-
-        <div class="pub-item hoverable">Park, S., Yoon, D., <strong>Chae, J.</strong>, Song, Y., &amp; Chung, D. (2022). Enhanced predictive model performance through clustering. <em>Korea Society of Management Information Systems Conference 2022</em>.</div>
-
-        <div class="pub-item hoverable">Park, S., Yoon, D., Song, Y., <strong>Chae, J.</strong>, &amp; Chung, D. (2022). Combined regression coefficient reduction method with clustering for performance enhancement. <em>Korea Intelligent Information Systems Society Conference 2022</em>.</div>
+        <div class="pub-item hoverable stagger-item">
+          <strong>Chae, J.</strong>, et al. (2026). Design principles of GAIA for players with disabilities. <em>ACM IUI '26.</em>
+        </div>
+        <div class="pub-item hoverable stagger-item">
+          Park, E., <strong>Chae, J.</strong>, et al. (2025). Thematic analysis of hardcore players with disabilities. <em>ACM CHI EA '25.</em>
+        </div>
       </div>
     </section>
   </main>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const isDesktopPointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+      // 1. Reveal on Scroll
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) entry.target.classList.add('active');
+        });
+      }, { threshold: 0.1 });
 
-      const progressBar = document.getElementById("progressBar");
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-      function updateProgressBar() {
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-        const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-        progressBar.style.width = progress + "%";
-      }
-
-      window.addEventListener("scroll", updateProgressBar, { passive: true });
-      updateProgressBar();
-
-      const nav = document.getElementById("navbar");
-
-      function updateNav() {
-        if (window.scrollY > 42) {
-          nav.classList.add("is-scrolled");
-        } else {
-          nav.classList.remove("is-scrolled");
-        }
-      }
-
-      window.addEventListener("scroll", updateNav, { passive: true });
-      updateNav();
-
+      // 2. Custom Cursor
       const dot = document.getElementById("cursorDot");
       const outline = document.getElementById("cursorOutline");
-      const hoverables = document.querySelectorAll(".hoverable");
+      let mouseX = 0, mouseY = 0;
+      let outlineX = 0, outlineY = 0;
 
-      if (isDesktopPointer && !prefersReducedMotion) {
-        let mouseX = window.innerWidth / 2;
-        let mouseY = window.innerHeight / 2;
-        let outlineX = mouseX;
-        let outlineY = mouseY;
-
-        window.addEventListener("mousemove", (e) => {
-          mouseX = e.clientX;
-          mouseY = e.clientY;
-          dot.style.transform = `translate(${mouseX - 4.5}px, ${mouseY - 4.5}px)`;
-        });
-
-        hoverables.forEach((el) => {
-          el.addEventListener("mouseenter", () => outline.classList.add("hover-active"));
-          el.addEventListener("mouseleave", () => outline.classList.remove("hover-active"));
-        });
-
-        function animateCursor() {
-          outlineX += (mouseX - outlineX) * 0.14;
-          outlineY += (mouseY - outlineY) * 0.14;
-          outline.style.transform = `translate(${outlineX - 21}px, ${outlineY - 21}px)`;
-          requestAnimationFrame(animateCursor);
-        }
-
-        animateCursor();
-      } else {
-        dot.style.display = "none";
-        outline.style.display = "none";
-      }
-
-      const revealEls = document.querySelectorAll(".reveal");
-      const revealObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) entry.target.classList.add("active");
-          });
-        },
-        { threshold: 0.12 }
-      );
-      revealEls.forEach((el) => revealObserver.observe(el));
-
-      const cardGrids = document.querySelectorAll(".cards-grid");
-      cardGrids.forEach((grid) => {
-        grid.addEventListener("mousemove", (e) => {
-          grid.querySelectorAll(".card").forEach((card) => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            card.style.setProperty("--mouse-x", `${x}px`);
-            card.style.setProperty("--mouse-y", `${y}px`);
-          });
-        });
+      window.addEventListener("mousemove", (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        dot.style.left = mouseX + "px";
+        dot.style.top = mouseY + "px";
       });
 
-      if (isDesktopPointer && !prefersReducedMotion) {
-        document.querySelectorAll(".tilt-card").forEach((card) => {
-          card.addEventListener("mousemove", (e) => {
-            const rect = card.getBoundingClientRect();
-            const px = (e.clientX - rect.left) / rect.width;
-            const py = (e.clientY - rect.top) / rect.height;
-
-            const rotateY = (px - 0.5) * 6;
-            const rotateX = (0.5 - py) * 5;
-
-            card.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
-          });
-
-          card.addEventListener("mouseleave", () => {
-            card.style.transform = "";
-          });
-        });
+      function animateCursor() {
+        outlineX += (mouseX - outlineX) * 0.15;
+        outlineY += (mouseY - outlineY) * 0.15;
+        outline.style.left = outlineX + "px";
+        outline.style.top = outlineY + "px";
+        requestAnimationFrame(animateCursor);
       }
+      animateCursor();
 
-      const leftPaddleEl = document.getElementById("paddleLeft");
-      const rightPaddleEl = document.getElementById("paddleRight");
-      const ballEl = document.getElementById("pongBall");
-      const trailEl = document.getElementById("pongTrail");
-      const scoreLeftEl = document.getElementById("scoreLeft");
-      const scoreRightEl = document.getElementById("scoreRight");
-
-      const pong = {
-        paddleWidth: 18,
-        paddleHeight: window.innerWidth <= 768 ? 138 : 190,
-        ballSize: window.innerWidth <= 768 ? 22 : 28,
-        leftX: 0,
-        rightX: 0,
-        leftY: 100,
-        rightY: 180,
-        ballX: 0,
-        ballY: 0,
-        vx: 5.2,
-        vy: 2.9,
-        maxSpeed: 10.8,
-        scoreLeft: 0,
-        scoreRight: 0,
-        frame: 0
-      };
-
-      function clamp(value, min, max) {
-        return Math.max(min, Math.min(max, value));
-      }
-
-      function randomRange(min, max) {
-        return Math.random() * (max - min) + min;
-      }
-
-      function flashScore(el) {
-        el.classList.add("flash");
-        setTimeout(() => el.classList.remove("flash"), 260);
-      }
-
-      function syncResponsivePong() {
-        pong.paddleHeight = window.innerWidth <= 768 ? 138 : 190;
-        pong.ballSize = window.innerWidth <= 768 ? 22 : 28;
-
-        leftPaddleEl.style.width = `${window.innerWidth <= 768 ? 14 : 18}px`;
-        rightPaddleEl.style.width = `${window.innerWidth <= 768 ? 14 : 18}px`;
-        leftPaddleEl.style.height = `${pong.paddleHeight}px`;
-        rightPaddleEl.style.height = `${pong.paddleHeight}px`;
-        ballEl.style.width = `${pong.ballSize}px`;
-        ballEl.style.height = `${pong.ballSize}px`;
-
-        pong.paddleWidth = window.innerWidth <= 768 ? 14 : 18;
-        pong.leftX = Math.max(14, window.innerWidth * 0.04);
-        pong.rightX = window.innerWidth - Math.max(14, window.innerWidth * 0.04) - pong.paddleWidth;
-
-        pong.leftY = clamp(pong.leftY, 0, window.innerHeight - pong.paddleHeight);
-        pong.rightY = clamp(pong.rightY, 0, window.innerHeight - pong.paddleHeight);
-        pong.ballX = clamp(pong.ballX, 0, window.innerWidth - pong.ballSize);
-        pong.ballY = clamp(pong.ballY, 0, window.innerHeight - pong.ballSize);
-      }
-
-      function resetBall(direction = Math.random() > 0.5 ? 1 : -1) {
-        pong.ballX = window.innerWidth / 2 - pong.ballSize / 2;
-        pong.ballY = window.innerHeight * randomRange(0.34, 0.62);
-        pong.vx = direction * randomRange(4.7, 5.9);
-        pong.vy = randomRange(-2.7, 2.7);
-
-        if (Math.abs(pong.vy) < 1.1) {
-          pong.vy = pong.vy < 0 ? -1.35 : 1.35;
-        }
-      }
-
-      function predictBallY(targetX) {
-        let simX = pong.ballX;
-        let simY = pong.ballY;
-        let simVX = pong.vx;
-        let simVY = pong.vy;
-        let guard = 0;
-
-        while (((simVX > 0 && simX < targetX) || (simVX < 0 && simX > targetX)) && guard < 4000) {
-          simX += simVX;
-          simY += simVY;
-
-          if (simY <= 0) {
-            simY = 0;
-            simVY *= -1;
-          } else if (simY >= window.innerHeight - pong.ballSize) {
-            simY = window.innerHeight - pong.ballSize;
-            simVY *= -1;
-          }
-          guard++;
-        }
-
-        return simY + pong.ballSize / 2;
-      }
-
-      function updatePaddleAI() {
-        const leftReceiving = pong.vx < 0;
-        const rightReceiving = pong.vx > 0;
-
-        const leftPredict = leftReceiving
-          ? predictBallY(pong.leftX + pong.paddleWidth)
-          : window.innerHeight * 0.5 + Math.sin(pong.frame * 0.018) * 60;
-
-        const rightPredict = rightReceiving
-          ? predictBallY(pong.rightX - pong.ballSize)
-          : window.innerHeight * 0.5 + Math.cos(pong.frame * 0.014) * 70;
-
-        const leftTarget = leftPredict - pong.paddleHeight / 2 + randomRange(-8, 8);
-        const rightTarget = rightPredict - pong.paddleHeight / 2 + randomRange(-8, 8);
-
-        const leftSpeed = leftReceiving ? 0.13 : 0.06;
-        const rightSpeed = rightReceiving ? 0.125 : 0.065;
-
-        pong.leftY += (leftTarget - pong.leftY) * leftSpeed;
-        pong.rightY += (rightTarget - pong.rightY) * rightSpeed;
-
-        pong.leftY = clamp(pong.leftY, 0, window.innerHeight - pong.paddleHeight);
-        pong.rightY = clamp(pong.rightY, 0, window.innerHeight - pong.paddleHeight);
-      }
-
-      function handleWallBounce() {
-        if (pong.ballY <= 0) {
-          pong.ballY = 0;
-          pong.vy *= -1;
-        } else if (pong.ballY >= window.innerHeight - pong.ballSize) {
-          pong.ballY = window.innerHeight - pong.ballSize;
-          pong.vy *= -1;
-        }
-      }
-
-      function handlePaddleBounce() {
-        const hitLeft =
-          pong.ballX <= pong.leftX + pong.paddleWidth &&
-          pong.ballX + pong.ballSize >= pong.leftX &&
-          pong.ballY + pong.ballSize >= pong.leftY &&
-          pong.ballY <= pong.leftY + pong.paddleHeight;
-
-        const hitRight =
-          pong.ballX + pong.ballSize >= pong.rightX &&
-          pong.ballX <= pong.rightX + pong.paddleWidth &&
-          pong.ballY + pong.ballSize >= pong.rightY &&
-          pong.ballY <= pong.rightY + pong.paddleHeight;
-
-        if (hitLeft && pong.vx < 0) {
-          const impact =
-            ((pong.ballY + pong.ballSize / 2) - (pong.leftY + pong.paddleHeight / 2)) /
-            (pong.paddleHeight / 2);
-
-          pong.vx = Math.min(Math.abs(pong.vx) * 1.025, pong.maxSpeed);
-          pong.vy += impact * 1.55;
-          pong.ballX = pong.leftX + pong.paddleWidth;
-        }
-
-        if (hitRight && pong.vx > 0) {
-          const impact =
-            ((pong.ballY + pong.ballSize / 2) - (pong.rightY + pong.paddleHeight / 2)) /
-            (pong.paddleHeight / 2);
-
-          pong.vx = -Math.min(Math.abs(pong.vx) * 1.025, pong.maxSpeed);
-          pong.vy += impact * 1.55;
-          pong.ballX = pong.rightX - pong.ballSize;
-        }
-      }
-
-      function handleScore() {
-        if (pong.ballX < -80) {
-          pong.scoreRight += 1;
-          scoreRightEl.textContent = pong.scoreRight;
-          flashScore(scoreRightEl);
-          resetBall(1);
-        } else if (pong.ballX > window.innerWidth + 80) {
-          pong.scoreLeft += 1;
-          scoreLeftEl.textContent = pong.scoreLeft;
-          flashScore(scoreLeftEl);
-          resetBall(-1);
-        }
-      }
-
-      function renderPong() {
-        leftPaddleEl.style.transform = `translate3d(${pong.leftX}px, ${pong.leftY}px, 0)`;
-        rightPaddleEl.style.transform = `translate3d(${pong.rightX}px, ${pong.rightY}px, 0)`;
-        ballEl.style.transform = `translate3d(${pong.ballX}px, ${pong.ballY}px, 0)`;
-
-        const trailLength = Math.min(Math.abs(pong.vx) * 10 + 24, 110);
-        const angle = Math.atan2(pong.vy, pong.vx) * (180 / Math.PI);
-
-        trailEl.style.width = `${trailLength}px`;
-        trailEl.style.transform =
-          `translate3d(${pong.ballX + pong.ballSize / 2}px, ${pong.ballY + pong.ballSize / 2 - 5}px, 0) rotate(${angle + 180}deg)`;
-      }
-
-      function animatePong() {
-        pong.frame += 1;
-
-        updatePaddleAI();
-
-        pong.ballX += pong.vx;
-        pong.ballY += pong.vy;
-
-        handleWallBounce();
-        handlePaddleBounce();
-        handleScore();
-        renderPong();
-
-        requestAnimationFrame(animatePong);
-      }
-
-      syncResponsivePong();
-      resetBall(Math.random() > 0.5 ? 1 : -1);
-      renderPong();
-
-      window.addEventListener("resize", () => {
-        syncResponsivePong();
-        renderPong();
+      // Hover States
+      document.querySelectorAll('.hoverable').forEach(el => {
+        el.addEventListener('mouseenter', () => outline.classList.add('hover-active'));
+        el.addEventListener('mouseleave', () => outline.classList.remove('hover-active'));
       });
 
-      if (!prefersReducedMotion) {
-        animatePong();
-      } else {
-        renderPong();
-      }
+      // 3. Magnetic Interaction for Keywords
+      const magneticEls = document.querySelectorAll('.magnetic');
+      magneticEls.forEach(el => {
+        el.addEventListener('mousemove', (e) => {
+          const rect = el.getBoundingClientRect();
+          const x = e.clientX - rect.left - rect.width / 2;
+          const y = e.clientY - rect.top - rect.height / 2;
+          
+          // Move the element slightly toward the mouse
+          el.style.transform = `translate(${x * 0.3}px, ${y * 0.4}px)`;
+          el.style.backgroundColor = "rgba(255,255,255,0.12)";
+        });
+
+        el.addEventListener('mouseleave', () => {
+          el.style.transform = `translate(0px, 0px)`;
+          el.style.backgroundColor = "";
+        });
+      });
     });
   </script>
 </body>
