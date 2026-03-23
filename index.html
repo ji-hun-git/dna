@@ -16,21 +16,18 @@
     :root {
       /* OLED Dark Mode Palette */
       --bg-base: #000000;
-      --card-bg: rgba(20, 20, 20, 0.4); 
-      --card-hover: rgba(30, 30, 30, 0.6);
+      --card-bg: #111111; 
+      --card-hover: #1a1a1a;
       --card-border: rgba(255, 255, 255, 0.08); 
       
-      /* Shiny Gradients & Accents */
-      --accent-1: #2997ff;
-      --accent-2: #a855f7;
-      --accent-gradient: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 100%);
-      --accent-glow: rgba(168, 85, 247, 0.2);
-      
       /* Typography */
-      --text-main: #f5f5f7; 
+      --text-main: #f5f5f7; /* Apple's exact off-white */
       --text-muted: #86868b;
       --text-soft: #a1a1a6;
-      --text-gradient: linear-gradient(to right, #ffffff, #a1a1a6, #ffffff);
+      
+      /* Accents */
+      --accent: #2997ff;
+      --accent-glow: rgba(41, 151, 255, 0.15);
       
       /* Physics Easing */
       --spring-ease: cubic-bezier(0.175, 0.885, 0.32, 1.05);
@@ -52,15 +49,16 @@
     }
 
     /* Elegant Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: var(--bg-base); }
     ::-webkit-scrollbar-thumb { 
-      background: rgba(255, 255, 255, 0.15); 
+      background: #333; 
       border-radius: 10px; 
+      border: 2px solid var(--bg-base);
     }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
 
-    ::selection { background: rgba(168, 85, 247, 0.3); color: #fff; }
+    ::selection { background: rgba(41, 151, 255, 0.3); color: #fff; }
 
     body {
       margin: 0;
@@ -87,25 +85,23 @@
       position: fixed;
       top: 0;
       left: 0;
-      width: 14px;
-      height: 14px;
-      background: #ffffff;
-      mix-blend-mode: difference;
+      width: 12px;
+      height: 12px;
+      background: var(--text-main);
       border-radius: 50%;
       pointer-events: none;
       z-index: 9999;
       transform: translate(-50%, -50%);
-      transition: width 0.3s var(--spring-ease), height 0.3s var(--spring-ease), opacity 0.3s ease;
+      transition: width 0.3s var(--spring-ease), height 0.3s var(--spring-ease), background 0.3s ease, border 0.3s ease;
       will-change: transform, width, height;
     }
 
     .custom-cursor.hovering {
-      width: 48px;
-      height: 48px;
-      background: transparent;
-      border: 1.5px solid rgba(255, 255, 255, 0.8);
-      mix-blend-mode: normal;
-      backdrop-filter: blur(2px);
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(4px);
     }
 
     /* --- BACKGROUND ELEMENTS --- */
@@ -114,16 +110,9 @@
       inset: 0;
       z-index: -3;
       background: 
-        radial-gradient(circle at 15% 10%, rgba(41, 151, 255, 0.08), transparent 45%),
-        radial-gradient(circle at 85% 75%, rgba(168, 85, 247, 0.08), transparent 45%);
+        radial-gradient(circle at 20% 0%, rgba(41, 151, 255, 0.08), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.03), transparent 40%);
       pointer-events: none;
-      animation: ambientBreathe 12s infinite alternate ease-in-out;
-      will-change: opacity, transform;
-    }
-
-    @keyframes ambientBreathe {
-      0% { transform: scale(1); opacity: 0.8; }
-      100% { transform: scale(1.05); opacity: 1; }
     }
 
     .ai-game-bg {
@@ -132,25 +121,13 @@
       z-index: -2;
       overflow: hidden;
       pointer-events: none;
-      opacity: 0.3;
+      opacity: 0.25;
       filter: blur(1px);
     }
-    .ai-center-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent); }
+    .ai-center-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255,255,255,0.1); }
     .ai-shape { position: absolute; will-change: transform; }
-    .ai-paddle { 
-      width: 6px; 
-      height: 100px; 
-      border-radius: 6px; 
-      background: var(--text-main); 
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); 
-    }
-    .ai-ball { 
-      width: 14px; 
-      height: 14px; 
-      border-radius: 50%; 
-      background: var(--text-main); 
-      box-shadow: 0 0 20px var(--accent-1), 0 0 40px var(--accent-2); 
-    }
+    .ai-paddle { width: 8px; height: 120px; border-radius: 4px; background: rgba(255, 255, 255, 0.4); }
+    .ai-ball { width: 16px; height: 16px; border-radius: 50%; background: rgba(255, 255, 255, 0.7); box-shadow: 0 0 20px var(--accent); }
 
     /* --- FLOATING PILL NAVIGATION --- */
     .nav-container {
@@ -162,22 +139,21 @@
       justify-content: center;
       z-index: 2000;
       transition: top 0.4s var(--fluid-ease);
-      pointer-events: none; 
-      will-change: top;
+      pointer-events: none; /* Let clicks pass through the container */
     }
 
     nav {
-      pointer-events: auto; 
+      pointer-events: auto; /* Re-enable clicks for the actual nav */
       display: flex;
       align-items: center;
       gap: 3rem;
       padding: 0.8rem 2.5rem;
-      background: rgba(15, 15, 15, 0.6);
+      background: rgba(20, 20, 20, 0.7);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 999px;
-      backdrop-filter: blur(24px) saturate(200%);
-      -webkit-backdrop-filter: blur(24px) saturate(200%);
-      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
       transition: all 0.4s var(--fluid-ease);
     }
 
@@ -192,9 +168,7 @@
       font-size: 1rem;
       font-weight: 700;
       letter-spacing: -0.02em;
-      background: var(--accent-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text-main);
     }
 
     .nav-links { display: flex; gap: 2rem; }
@@ -221,22 +195,16 @@
       position: relative;
     }
 
-    /* Shimmering Gradient Header */
     .hero h1 {
       margin: 0 0 1.5rem 0;
       font-size: clamp(3rem, 6vw, 5.5rem);
       font-weight: 800;
       line-height: 1.05;
       letter-spacing: -0.05em;
-      background: var(--text-gradient);
-      background-size: 200% auto;
+      background: linear-gradient(135deg, #ffffff 0%, #86868b 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      animation: fadeUp 1s var(--fluid-ease) forwards, shimmerText 6s linear infinite;
-    }
-
-    @keyframes shimmerText {
-      to { background-position: 200% center; }
+      animation: fadeUp 1s var(--fluid-ease) forwards;
     }
 
     .hero-profile-area {
@@ -258,19 +226,17 @@
       border-radius: var(--radius-lg);
       overflow: hidden;
       border: 1px solid var(--card-border);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
     }
 
-    /* Black and White constraint enforced */
     .profile-img-wrapper img {
       width: 100%;
       height: auto;
-      filter: grayscale(100%) contrast(1.1);
-      transition: filter 0.5s ease, transform 0.8s var(--fluid-ease);
-      will-change: transform;
+      filter: grayscale(100%);
+      transition: filter 0.5s ease, transform 0.5s var(--fluid-ease);
     }
     
     .profile-img-wrapper:hover img {
+      filter: grayscale(0%);
       transform: scale(1.05);
     }
 
@@ -283,42 +249,24 @@
       letter-spacing: -0.01em;
     }
 
-    /* Shiny Gradient Button */
+    /* Apple-style Button */
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       padding: 0.9rem 2rem;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: var(--text-main);
+      background: var(--text-main);
+      color: var(--bg-base);
       font-size: 0.95rem;
       font-weight: 600;
-      backdrop-filter: blur(12px);
-      transition: all 0.4s var(--spring-ease);
-      position: relative;
-      overflow: hidden;
-      will-change: transform, box-shadow;
-    }
-
-    .btn::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: var(--accent-gradient);
-      opacity: 0;
-      transition: opacity 0.4s ease;
-      z-index: -1;
+      transition: transform 0.3s var(--spring-ease), background 0.3s ease;
     }
 
     .btn:hover {
-      transform: scale(1.03) translateY(-2px);
-      border-color: transparent;
-      box-shadow: 0 10px 30px var(--accent-glow);
+      transform: scale(1.03);
+      background: #ffffff;
     }
-
-    .btn:hover::before { opacity: 1; }
 
     .scholar-keywords {
       display: flex;
@@ -335,16 +283,13 @@
       color: var(--text-soft);
       font-size: 0.8rem;
       font-weight: 500;
-      transition: all 0.4s var(--spring-ease);
-      will-change: transform, box-shadow;
+      transition: all 0.3s ease;
     }
 
     .keyword-chip:hover {
-      background: transparent;
-      border-color: var(--accent-2);
-      color: #fff;
+      background: rgba(255,255,255,0.08);
+      color: var(--text-main);
       transform: translateY(-2px);
-      box-shadow: inset 0 0 10px var(--accent-glow), 0 4px 12px var(--accent-glow);
     }
 
     section h2 {
@@ -371,18 +316,15 @@
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       overflow: hidden;
-      transition: transform 0.5s var(--spring-ease), border-color 0.4s ease, background 0.4s ease;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      will-change: transform;
+      transition: transform 0.4s var(--spring-ease), border-color 0.4s ease;
     }
 
-    /* High-End Inner Reflection */
+    /* Subtle Inner Glow on Hover (Premium Touch) */
     .card::before {
       content: "";
       position: absolute;
       inset: 0;
-      background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.04), transparent 40%);
+      background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.03), transparent 40%);
       opacity: 0;
       transition: opacity 0.4s ease;
       pointer-events: none;
@@ -390,9 +332,8 @@
 
     .card:hover {
       transform: translateY(-4px) scale(1.01);
-      border-color: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.12);
       background: var(--card-hover);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
     .card:hover::before { opacity: 1; }
@@ -405,13 +346,10 @@
     }
 
     .tagline {
-      background: var(--accent-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text-main);
       font-weight: 500;
       font-size: 0.95rem;
       margin-bottom: 1rem;
-      display: inline-block;
     }
 
     .meta-info {
@@ -436,15 +374,13 @@
       border: 1px solid var(--card-border);
       color: var(--text-soft);
       font-size: 0.95rem;
-      transition: all 0.5s var(--spring-ease);
-      will-change: transform, background;
+      transition: all 0.4s var(--spring-ease);
     }
 
     .pub-item:hover {
       transform: translateX(8px);
-      background: rgba(30, 30, 30, 0.6);
-      border-color: rgba(255,255,255,0.12);
-      box-shadow: -8px 0 20px rgba(0,0,0,0.2);
+      background: var(--card-hover);
+      border-color: rgba(255,255,255,0.1);
     }
 
     .pub-item strong { color: var(--text-main); font-weight: 600; }
@@ -458,83 +394,17 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      background: var(--accent-gradient);
-      color: #fff;
+      color: var(--bg-base);
+      background: var(--text-main);
     }
 
     .badge.co-second {
       background: transparent;
-      color: var(--text-soft);
-      border: 1px solid rgba(255,255,255,0.2);
-    }
-
-    /* --- SCROLL UP BUTTON (NEW) --- */
-    .scroll-up-btn {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: rgba(20, 20, 20, 0.6);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
       color: var(--text-main);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-      cursor: none; /* Let custom cursor handle it */
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(20px) scale(0.9);
-      transition: opacity 0.5s var(--fluid-ease), transform 0.5s var(--fluid-ease), box-shadow 0.4s ease;
-      will-change: transform, opacity;
+      border: 1px solid rgba(255,255,255,0.3);
     }
 
-    .scroll-up-btn.visible {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(0) scale(1);
-    }
-
-    .scroll-up-btn::before {
-      content: "";
-      position: absolute;
-      inset: -1px;
-      border-radius: 50%;
-      background: var(--accent-gradient);
-      z-index: -1;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-
-    .scroll-up-btn:hover {
-      transform: translateY(-4px) scale(1.05);
-      box-shadow: 0 10px 24px var(--accent-glow);
-    }
-
-    .scroll-up-btn:hover::before {
-      opacity: 1;
-    }
-
-    .scroll-up-btn svg {
-      width: 20px;
-      height: 20px;
-      stroke: currentColor;
-      stroke-width: 2.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-      transition: transform 0.4s var(--spring-ease);
-    }
-
-    .scroll-up-btn:hover svg {
-      transform: translateY(-2px);
-    }
-
-    /* Scroll Indicator (Bottom center) */
+    /* Scroll Indicator */
     .scroll-indicator {
       position: absolute;
       bottom: 40px;
@@ -562,7 +432,6 @@
       opacity: 0;
       transform: translateY(30px);
       transition: opacity 0.8s var(--fluid-ease), transform 0.8s var(--fluid-ease);
-      will-change: opacity, transform;
     }
     .reveal.active { opacity: 1; transform: translateY(0); }
 
@@ -574,22 +443,19 @@
     }
 
     @media (max-width: 768px) {
+      /* Force native cursor on mobile */
       .custom-cursor { display: none !important; }
       * { cursor: auto !important; }
 
       .nav-container { top: 16px; padding: 0 1rem; }
       nav { width: 100%; justify-content: space-between; padding: 0.8rem 1.5rem; gap: 1rem; }
-      .nav-links { display: none; }
+      .nav-links { display: none; /* Hide links on pure mobile, keep logo centered */ }
       
       .hero { padding-top: 100px; }
       .card, .pub-item { transform: none !important; padding: 1.5rem; }
       .card:hover { transform: none; background: var(--card-bg); }
       
       .scroll-indicator { bottom: 20px; }
-      
-      .scroll-up-btn {
-        bottom: 20px; right: 20px; width: 44px; height: 44px;
-      }
     }
   </style>
 </head>
@@ -763,64 +629,45 @@
     </section>
   </main>
 
-  <button id="scrollUpBtn" class="scroll-up-btn interactive" aria-label="Scroll to top">
-    <svg viewBox="0 0 24 24">
-      <polyline points="18 15 12 9 6 15"></polyline>
-    </svg>
-  </button>
-
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       // Feature Detection
       const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       
-      // 1. FRAME-PERFECT CURSOR LOGIC (Desktop Only)
+      // 1. ROBUST CURSOR LOGIC (Desktop Only)
       if (!isTouch) {
         const cursor = document.getElementById("cursor");
         let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
         let cursorX = mouseX, cursorY = mouseY;
         
+        // Use a simple, highly performant lerp loop
         window.addEventListener("mousemove", (e) => {
           mouseX = e.clientX;
           mouseY = e.clientY;
         });
 
-        // RequestAnimationFrame for buttery smooth interpolation
         const loop = () => {
-          cursorX += (mouseX - cursorX) * 0.25;
-          cursorY += (mouseY - cursorY) * 0.25;
-          // translate3d forces hardware acceleration
-          cursor.style.transform = `translate3d(calc(${cursorX}px - 50%), calc(${cursorY}px - 50%), 0)`;
+          // Linear interpolation for smooth trailing
+          cursorX += (mouseX - cursorX) * 0.2;
+          cursorY += (mouseY - cursorY) * 0.2;
+          cursor.style.transform = `translate(calc(${cursorX}px - 50%), calc(${cursorY}px - 50%))`;
           requestAnimationFrame(loop);
         };
         requestAnimationFrame(loop);
 
-        // Hover states
+        // Hover scaling
         document.querySelectorAll('.interactive').forEach(el => {
           el.addEventListener('mouseenter', () => cursor.classList.add('hovering'));
           el.addEventListener('mouseleave', () => cursor.classList.remove('hovering'));
         });
       }
 
-      // 2. NAV SHRINK & SCROLL UP BUTTON
+      // 2. NAV SHRINK ON SCROLL
       const navContainer = document.getElementById("navContainer");
-      const scrollUpBtn = document.getElementById("scrollUpBtn");
-      
       window.addEventListener("scroll", () => {
-        const y = window.scrollY;
-        
-        // Nav Pill
-        if (y > 50) navContainer.classList.add("is-scrolled");
+        if (window.scrollY > 50) navContainer.classList.add("is-scrolled");
         else navContainer.classList.remove("is-scrolled");
-        
-        // Scroll Up Orb
-        if (y > 500) scrollUpBtn.classList.add("visible");
-        else scrollUpBtn.classList.remove("visible");
       }, { passive: true });
-
-      scrollUpBtn.addEventListener("click", () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
 
       // 3. SCROLL REVEAL (Intersection Observer)
       const observer = new IntersectionObserver((entries) => {
@@ -834,7 +681,7 @@
       
       document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
 
-      // 4. HIGH-PERFORMANCE CARD GLOW
+      // 4. INNER GLOW / SPOTLIGHT (Cards)
       if (!isTouch) {
         document.querySelectorAll('.card').forEach(card => {
           card.addEventListener('mousemove', e => {
@@ -845,14 +692,14 @@
         });
       }
 
-      // 5. HARDWARE-ACCELERATED AI PONG
+      // 5. SUBTLE BACKGROUND PONG (Optimized)
       const pong = {
         left: document.getElementById("paddleLeft"),
         right: document.getElementById("paddleRight"),
         ball: document.getElementById("pongBall"),
-        bx: window.innerWidth / 2, by: window.innerHeight / 2,
-        vx: 3, vy: 2,
-        ly: window.innerHeight / 2, ry: window.innerHeight / 2
+        bx: window.innerWidth/2, by: window.innerHeight/2,
+        vx: 4, vy: 2.5,
+        ly: window.innerHeight/2, ry: window.innerHeight/2
       };
 
       if (!isTouch) {
@@ -861,26 +708,26 @@
           pong.by += pong.vy;
 
           // Wall bounce
-          if (pong.by <= 0 || pong.by >= window.innerHeight - 14) pong.vy *= -1;
+          if(pong.by <= 0 || pong.by >= window.innerHeight - 16) pong.vy *= -1;
           
-          // Reset if out of bounds (score simulation without numbers)
-          if (pong.bx < -50 || pong.bx > window.innerWidth + 50) {
-            pong.bx = window.innerWidth / 2;
+          // Reset if out of bounds
+          if(pong.bx < -50 || pong.bx > window.innerWidth + 50) {
+            pong.bx = window.innerWidth/2;
             pong.vx *= -1;
           }
 
-          // Buttery AI paddle tracking
-          pong.ly += (pong.by - pong.ly - 50) * 0.04;
-          pong.ry += (pong.by - pong.ry - 50) * 0.04;
+          // Simple AI paddles
+          pong.ly += (pong.by - pong.ly - 60) * 0.05;
+          pong.ry += (pong.by - pong.ry - 60) * 0.05;
 
-          // translate3d for 0 layout thrashing
+          // Render
           pong.ball.style.transform = `translate3d(${pong.bx}px, ${pong.by}px, 0)`;
-          pong.left.style.transform = `translate3d(30px, ${pong.ly}px, 0)`;
-          pong.right.style.transform = `translate3d(${window.innerWidth - 36}px, ${pong.ry}px, 0)`;
+          pong.left.style.transform = `translate3d(20px, ${pong.ly}px, 0)`;
+          pong.right.style.transform = `translate3d(${window.innerWidth - 28}px, ${pong.ry}px, 0)`;
 
           requestAnimationFrame(runPong);
         }
-        requestAnimationFrame(runPong);
+        runPong();
       }
     });
   </script>
