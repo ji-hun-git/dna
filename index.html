@@ -2,7 +2,7 @@
 <html lang="en" class="dark-theme">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Jihun Chae | HCI & AI Researcher</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,31 +15,54 @@
   <style>
     :root {
       --bg-base: #000000;
-      --bg-glass: rgba(10, 10, 10, 0.72);
-      --card-bg: rgba(22, 22, 22, 0.62);
-      --card-border: rgba(255, 255, 255, 0.09);
+      --bg-glass: rgba(10, 10, 10, 0.65);
+      --card-bg: rgba(22, 22, 22, 0.35); 
+      --card-border: rgba(255, 255, 255, 0.06); 
       --text-main: #f5f5f7;
       --text-muted: #8e8e93;
-      --text-soft: #b8b8be;
+      --text-soft: #a1a1a6;
       --accent: #2997ff;
       --accent-2: #7cc3ff;
-      --accent-glow: rgba(41, 151, 255, 0.22);
-      --shadow-md: 0 16px 36px rgba(0, 0, 0, 0.24);
-      --gradient-text: linear-gradient(180deg, #ffffff 0%, #b3b3b8 100%);
+      --accent-glow: rgba(41, 151, 255, 0.12);
+      --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.15);
+      --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.4);
+      --gradient-text: linear-gradient(180deg, #ffffff 0%, #a1a1a6 100%);
       --hero-glow:
-        radial-gradient(circle at 18% 18%, rgba(41, 151, 255, 0.14), transparent 30%),
-        radial-gradient(circle at 82% 62%, rgba(255, 255, 255, 0.08), transparent 28%);
-      --nav-height: 86px;
-      --radius-xl: 30px;
-      --container: 1320px;
+        radial-gradient(circle at 18% 18%, rgba(41, 151, 255, 0.12), transparent 30%),
+        radial-gradient(circle at 82% 62%, rgba(255, 255, 255, 0.05), transparent 28%);
+      --nav-height: 80px;
+      --radius-xl: 24px;
+      --container: 1100px;
     }
 
     * {
       box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
     }
 
     html {
       scroll-behavior: smooth;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Custom Text Selection */
+    ::selection {
+      background: rgba(41, 151, 255, 0.25);
+      color: #ffffff;
     }
 
     body {
@@ -50,8 +73,10 @@
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       overflow-x: hidden;
-      font-size: 125%;
+      font-size: 100%;
+      letter-spacing: -0.015em;
     }
 
     img {
@@ -64,6 +89,7 @@
       text-decoration: none;
     }
 
+    /* --- PREMIUM CURSOR --- */
     @media (hover: hover) and (pointer: fine) {
       * {
         cursor: none !important;
@@ -81,45 +107,52 @@
     }
 
     .cursor-dot {
-      width: 9px;
-      height: 9px;
-      background: var(--accent);
-      box-shadow: 0 0 12px var(--accent);
+      width: 8px;
+      height: 8px;
+      background: #ffffff; /* White for difference blending */
+      mix-blend-mode: difference;
       transform: translate(-50%, -50%);
+      transition: width 0.2s ease, height 0.2s ease;
     }
 
     .cursor-outline {
-      width: 42px;
-      height: 42px;
+      width: 40px;
+      height: 40px;
       transform: translate(-50%, -50%);
-      border: 1px solid rgba(41, 151, 255, 0.45);
-      background: rgba(41, 151, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
       transition:
-        width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-        height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-        background-color 0.28s ease,
-        border-color 0.28s ease,
-        box-shadow 0.28s ease;
+        width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        background-color 0.3s ease,
+        border-color 0.3s ease;
     }
 
     .cursor-outline.hover-active {
-      width: 74px;
-      height: 74px;
-      background: rgba(41, 151, 255, 0.12);
-      border-color: rgba(41, 151, 255, 0.92);
-      box-shadow: 0 0 26px rgba(41, 151, 255, 0.34);
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+    
+    .cursor-dot.hover-active {
+      width: 4px;
+      height: 4px;
     }
 
+    /* --- UI ELEMENTS --- */
     .progress-bar {
       position: fixed;
       top: 0;
       left: 0;
-      height: 3px;
+      height: 2px;
       width: 0%;
       background: linear-gradient(90deg, var(--accent), #8ad0ff);
-      box-shadow: 0 0 12px var(--accent), 0 0 26px rgba(41, 151, 255, 0.5);
+      box-shadow: 0 0 10px var(--accent);
       z-index: 3000;
-      transition: width 0.08s linear;
+      transition: width 0.1s ease-out;
     }
 
     .hero-ambient-glow {
@@ -127,23 +160,24 @@
       inset: 0;
       z-index: -3;
       background: var(--hero-glow);
-      animation: glowDrift 18s ease-in-out infinite alternate;
+      animation: glowDrift 22s ease-in-out infinite alternate;
       pointer-events: none;
     }
 
     @keyframes glowDrift {
       0% { transform: translate3d(0, 0, 0) scale(1); }
-      100% { transform: translate3d(1.6%, -1.2%, 0) scale(1.04); }
+      100% { transform: translate3d(2%, -1.5%, 0) scale(1.05); }
     }
 
+    /* --- AI BACKGROUND GAME --- */
     .ai-game-bg {
       position: fixed;
       inset: 0;
       z-index: -2;
       overflow: hidden;
       pointer-events: none;
-      opacity: 0.4;
-      filter: blur(0.35px);
+      opacity: 0.35;
+      filter: blur(0.6px);
     }
 
     .ai-center-line {
@@ -151,15 +185,15 @@
       top: 0;
       bottom: 0;
       left: 50%;
-      width: 2px;
+      width: 1px;
       transform: translateX(-50%);
-      opacity: 0.4;
+      opacity: 0.2;
       background:
         linear-gradient(
           to bottom,
           rgba(255,255,255,0) 0%,
-          rgba(255,255,255,0.13) 10%,
-          rgba(255,255,255,0.13) 90%,
+          rgba(255,255,255,0.15) 10%,
+          rgba(255,255,255,0.15) 90%,
           rgba(255,255,255,0) 100%
         );
     }
@@ -172,13 +206,11 @@
     }
 
     .ai-paddle {
-      width: 18px;
-      height: 190px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.76);
-      box-shadow:
-        0 0 28px rgba(41, 151, 255, 0.22),
-        0 0 56px rgba(41, 151, 255, 0.1);
+      width: 12px;
+      height: 140px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.5);
+      box-shadow: 0 0 24px rgba(41, 151, 255, 0.1);
     }
 
     .ai-paddle::after {
@@ -186,61 +218,34 @@
       position: absolute;
       inset: 0;
       border-radius: inherit;
-      background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0));
+      background: linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0));
     }
 
     .ai-ball {
-      width: 28px;
-      height: 28px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.97);
+      background: rgba(255, 255, 255, 0.8);
       box-shadow:
-        0 0 22px rgba(255,255,255,0.42),
-        0 0 34px rgba(41, 151, 255, 0.56),
-        0 0 68px rgba(41, 151, 255, 0.22);
+        0 0 16px rgba(255,255,255,0.2),
+        0 0 32px rgba(41, 151, 255, 0.3);
     }
 
     .ai-ball-trail {
       position: absolute;
       left: 0;
       top: 0;
-      width: 90px;
-      height: 10px;
+      width: 70px;
+      height: 6px;
       border-radius: 999px;
       transform-origin: left center;
-      background: linear-gradient(90deg, rgba(41,151,255,0.4), rgba(41,151,255,0));
-      filter: blur(4px);
-      opacity: 0.82;
+      background: linear-gradient(90deg, rgba(41,151,255,0.25), rgba(41,151,255,0));
+      filter: blur(2px);
+      opacity: 0.6;
       will-change: transform, width;
     }
 
-    .pong-score {
-      position: absolute;
-      top: 9%;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      gap: 3rem;
-      font-weight: 700;
-      letter-spacing: -0.04em;
-      color: rgba(255,255,255,0.18);
-      font-size: clamp(2rem, 4vw, 3.6rem);
-      user-select: none;
-      pointer-events: none;
-      text-shadow: 0 0 24px rgba(41, 151, 255, 0.1);
-    }
-
-    .pong-score span {
-      min-width: 1ch;
-      text-align: center;
-      transition: transform 0.3s ease, color 0.3s ease;
-    }
-
-    .pong-score span.flash {
-      color: rgba(255,255,255,0.42);
-      transform: scale(1.08);
-    }
-
+    /* --- NAVIGATION --- */
     nav {
       position: fixed;
       top: 0;
@@ -251,147 +256,160 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 2.25rem;
+      padding: 0 3rem;
       background: var(--bg-glass);
-      border-bottom: 1px solid var(--card-border);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       transition:
-        height 0.28s ease,
-        background 0.28s ease,
-        border-color 0.28s ease,
-        box-shadow 0.28s ease;
+        height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        background 0.3s ease,
+        border-color 0.3s ease,
+        box-shadow 0.3s ease;
     }
 
     nav.is-scrolled {
-      height: 72px;
-      background: rgba(10, 10, 10, 0.82);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+      height: 60px;
+      background: rgba(8, 8, 8, 0.85);
+      box-shadow: var(--shadow-sm);
+      border-bottom-color: rgba(255,255,255,0.06);
     }
 
     .nav-logo {
-      font-size: 1.3rem;
+      font-size: 1.1rem;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
+      opacity: 0;
+      animation: navFadeDown 0.6s 0.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 2rem;
+      gap: 2.5rem;
     }
 
     .nav-links a {
       color: var(--text-muted);
-      font-size: 1.05rem;
+      font-size: 0.9rem;
       font-weight: 500;
-      transition: color 0.2s ease, transform 0.2s ease;
+      padding: 0.5rem 0; /* Expanded touch target */
+      transition: color 0.25s ease;
+      opacity: 0;
     }
+    
+    .nav-links a:nth-child(1) { animation: navFadeDown 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .nav-links a:nth-child(2) { animation: navFadeDown 0.6s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .nav-links a:nth-child(3) { animation: navFadeDown 0.6s 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .nav-links a:nth-child(4) { animation: navFadeDown 0.6s 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
     .nav-links a:hover {
       color: var(--text-main);
-      transform: translateY(-1px);
     }
 
+    @keyframes navFadeDown {
+      from { opacity: 0; transform: translateY(-12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* --- LAYOUT --- */
     .container {
-      width: min(var(--container), calc(100% - 5rem));
+      width: min(var(--container), calc(100% - 4rem));
       margin: 0 auto;
-      padding-bottom: 7rem;
+      padding-bottom: 6rem;
     }
 
     .hero {
-      min-height: 72vh;
+      min-height: 80vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding-top: 130px;
-      padding-bottom: 10px;
+      padding-top: 100px;
+      padding-bottom: 20px;
       position: relative;
     }
 
     .hero-headline-container {
-      margin-bottom: 0.7rem;
+      margin-bottom: 1rem;
     }
 
     .hero h1 {
-      margin: 0 0 1.6rem 0;
-      padding-bottom: 0.16em;
-      font-size: clamp(2.9rem, 6vw, 6rem);
+      margin: 0 0 1.2rem 0;
+      padding-bottom: 0.1em;
+      font-size: clamp(2.5rem, 5vw, 4.5rem);
       font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.055em;
+      line-height: 1.1;
+      letter-spacing: -0.04em;
       word-break: keep-all;
       background: var(--gradient-text);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      animation: heroFadeUp 0.95s cubic-bezier(0.16, 1, 0.3, 1) both;
+      opacity: 0;
+      animation: heroFadeUp 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .hero-profile-area {
       display: flex;
       align-items: flex-start;
-      gap: 3rem;
-      animation: heroFadeUp 1.05s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+      gap: 3.5rem;
+      opacity: 0;
+      animation: heroFadeUp 0.8s 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     @keyframes heroFadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(18px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .profile-blend-container {
       position: relative;
-      width: 225px;
+      width: 180px;
       flex-shrink: 0;
       padding: 4px;
-      border: 1px solid rgba(41, 151, 255, 0.2);
-      background: linear-gradient(135deg, rgba(41,151,255,0.08), rgba(0,0,0,0.04));
-      box-shadow: 0 0 34px rgba(0,0,0,0.5), 0 0 22px rgba(41,151,255,0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(0,0,0,0.02));
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
       overflow: hidden;
+      border-radius: 12px;
     }
 
     .profile-blend-container::before,
     .profile-blend-container::after {
       content: "";
       position: absolute;
-      width: 28px;
-      height: 28px;
+      width: 20px;
+      height: 20px;
       border-style: solid;
-      border-color: var(--accent);
-      opacity: 0.7;
-      animation: aiBoxPulse 4.2s infinite ease-in-out;
+      border-color: rgba(255,255,255,0.4);
+      opacity: 0.6;
+      animation: aiBoxPulse 4s infinite ease-in-out;
       pointer-events: none;
     }
 
     .profile-blend-container::before {
-      top: -5px;
-      left: -5px;
+      top: -2px;
+      left: -2px;
       border-width: 2px 0 0 2px;
     }
 
     .profile-blend-container::after {
-      right: -5px;
-      bottom: -5px;
+      right: -2px;
+      bottom: -2px;
       border-width: 0 2px 2px 0;
     }
 
     @keyframes aiBoxPulse {
-      0%, 100% { opacity: 0.42; transform: scale(1); }
-      50% { opacity: 0.9; transform: scale(1.04); }
+      0%, 100% { opacity: 0.2; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.02); }
     }
 
     .hero-face-img {
       width: 100%;
       height: auto;
-      filter: grayscale(100%) contrast(1.08);
+      filter: grayscale(100%) contrast(1.1);
       mix-blend-mode: screen;
-      opacity: 0.92;
+      opacity: 0.85;
+      border-radius: 8px;
     }
 
     .hero-copy {
@@ -399,11 +417,12 @@
     }
 
     .hero-copy p {
-      max-width: 840px;
-      margin: 0 0 1.45rem 0;
-      font-size: clamp(1.28rem, 3.2vw, 1.56rem);
-      line-height: 1.62;
-      color: var(--text-muted);
+      max-width: 720px;
+      margin: 0 0 1.8rem 0;
+      font-size: clamp(1.05rem, 1.8vw, 1.2rem);
+      line-height: 1.65;
+      color: var(--text-soft);
+      font-weight: 300;
     }
 
     .hero-actions {
@@ -419,14 +438,14 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      padding: 1.15rem 2.3rem;
+      padding: 0.85rem 1.8rem;
       border-radius: 999px;
       background: var(--text-main);
       color: var(--bg-base);
-      font-size: 1rem;
-      font-weight: 700;
-      box-shadow: 0 8px 26px rgba(255,255,255,0.08);
-      transition: transform 0.26s ease, box-shadow 0.26s ease, background 0.26s ease;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 6px 20px rgba(255,255,255,0.08);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, background 0.3s ease;
     }
 
     .btn::after {
@@ -434,13 +453,13 @@
       position: absolute;
       inset: 0;
       transform: translateX(-120%);
-      background: linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.55) 50%, transparent 75%);
-      transition: transform 0.7s ease;
+      background: linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.6) 50%, transparent 75%);
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .btn:hover {
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 14px 34px rgba(255,255,255,0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(255,255,255,0.15);
       background: #ffffff;
     }
 
@@ -451,28 +470,25 @@
     .scholar-keywords {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.72rem;
-      margin-top: 1rem;
+      gap: 0.6rem;
+      margin-top: 1.5rem;
       max-width: 860px;
     }
 
     .keyword-chip {
       display: inline-flex;
       align-items: center;
-      padding: 0.56rem 0.95rem;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #d7d7dc;
-      font-size: 1rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px; /* Squarer premium look */
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text-soft);
+      font-size: 0.8rem;
+      font-weight: 500;
       line-height: 1;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      transition:
-        transform 0.28s ease,
-        border-color 0.28s ease,
-        box-shadow 0.28s ease,
-        background 0.28s ease;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: all 0.3s ease;
       animation: chipFloat 8s ease-in-out infinite;
     }
 
@@ -489,31 +505,30 @@
     }
 
     .keyword-chip:hover {
-      transform: translateY(-3px);
-      border-color: rgba(255,255,255,0.18);
-      box-shadow: 0 10px 26px rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+      color: #fff;
     }
 
     .keyword-chip.accent {
-      color: var(--accent-2);
-      border-color: rgba(41, 151, 255, 0.46);
-      background: rgba(41, 151, 255, 0.09);
-      box-shadow: 0 0 20px rgba(41, 151, 255, 0.15);
+      color: var(--text-main);
+      border-color: rgba(41, 151, 255, 0.3);
+      background: rgba(41, 151, 255, 0.08);
     }
 
     section h2 {
-      margin: 5.35rem 0 2.55rem;
-      padding-bottom: 0.95rem;
+      margin: 5rem 0 2rem;
+      padding-bottom: 0.8rem;
       border-bottom: 1px solid var(--card-border);
-      font-size: clamp(2.4rem, 5.5vw, 3.1rem);
+      font-size: clamp(1.8rem, 3.5vw, 2.2rem);
       font-weight: 700;
-      letter-spacing: -0.04em;
+      letter-spacing: -0.03em;
     }
 
     .cards-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 1.5rem;
+      gap: 1.25rem;
     }
 
     .cards-grid.bento {
@@ -523,18 +538,19 @@
     .card {
       position: relative;
       overflow: hidden;
-      padding: 3rem;
+      padding: 2.2rem;
       border-radius: var(--radius-xl);
       border: 1px solid var(--card-border);
-      background:
-        linear-gradient(135deg, rgba(28,28,28,0.64), rgba(18,18,18,0.84));
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,0.03),
         var(--shadow-md);
       transition:
-        transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
-        border-color 0.3s ease,
-        box-shadow 0.3s ease;
+        transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+        border-color 0.4s ease,
+        box-shadow 0.4s ease;
       transform-style: preserve-3d;
     }
 
@@ -546,18 +562,18 @@
       opacity: 0;
       pointer-events: none;
       background: radial-gradient(
-        800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        var(--accent-glow),
+        600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 255, 255, 0.04),
         transparent 40%
       );
       transition: opacity 0.5s ease;
     }
 
     .card:hover {
-      border-color: rgba(255,255,255,0.16);
+      border-color: rgba(255,255,255,0.15);
       box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.05),
-        0 18px 46px rgba(0,0,0,0.28);
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        0 16px 40px rgba(0,0,0,0.5);
     }
 
     .card:hover::before {
@@ -571,149 +587,151 @@
     }
 
     .card h3 {
-      margin: 0 0 0.55rem 0;
-      font-size: 1.72rem;
-      line-height: 1.2;
-      letter-spacing: -0.02em;
+      margin: 0 0 0.5rem 0;
+      font-size: 1.35rem;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+      font-weight: 600;
     }
 
     .tagline {
-      color: var(--accent-2);
-      font-weight: 600;
-      font-size: 1.08rem;
+      color: var(--text-soft);
+      font-weight: 400;
+      font-size: 0.95rem;
       margin-bottom: 1rem;
     }
 
     .meta-info {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.9rem;
-      margin-bottom: 1.35rem;
-      font-size: 1rem;
+      gap: 0.8rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.85rem;
       color: var(--text-muted);
+      font-family: monospace;
+      letter-spacing: 0.02em;
     }
 
     .card p,
     .card ul {
       margin-top: 0;
       color: var(--text-soft);
-      font-size: 1.08rem;
+      font-size: 0.95rem;
+      font-weight: 300;
     }
 
     .card ul {
       margin-bottom: 0;
-      padding-left: 1.2rem;
+      padding-left: 1.1rem;
     }
 
     .card li {
-      margin-bottom: 0.64rem;
+      margin-bottom: 0.6rem;
     }
 
     .collaborators {
       margin-top: 1.2rem;
       padding-top: 1rem;
-      border-top: 1px solid var(--card-border);
+      border-top: 1px solid rgba(255,255,255,0.04);
       color: var(--text-muted);
-      font-size: 0.95rem;
+      font-size: 0.85rem;
+      font-weight: 300;
     }
 
     .collaborators strong {
       color: var(--text-main);
+      font-weight: 500;
     }
 
     .pub-list {
       display: flex;
       flex-direction: column;
-      gap: 1.3rem;
+      gap: 1rem;
     }
 
     .pub-item {
       position: relative;
       overflow: hidden;
-      padding: 1.8rem;
-      border-radius: 18px;
+      padding: 1.5rem;
+      border-radius: 16px;
       border: 1px solid var(--card-border);
-      background: rgba(25,25,25,0.32);
+      background: rgba(20,20,20,0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       color: var(--text-soft);
-      font-size: 1.08rem;
-      transition:
-        transform 0.26s ease,
-        border-color 0.26s ease,
-        background 0.26s ease,
-        box-shadow 0.26s ease;
+      font-size: 0.95rem;
+      font-weight: 300;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .pub-item::before {
       content: "";
       position: absolute;
       left: 0;
-      top: 18%;
-      bottom: 18%;
+      top: 0;
+      bottom: 0;
       width: 3px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, transparent, var(--accent), transparent);
+      background: rgba(255, 255, 255, 0.2);
       opacity: 0;
-      transition: opacity 0.26s ease, transform 0.26s ease;
-      transform: translateX(-8px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      transform: scaleY(0);
+      transform-origin: center;
     }
 
     .pub-item:hover {
-      transform: translateX(9px);
-      border-color: rgba(255,255,255,0.18);
-      background: rgba(255,255,255,0.05);
-      box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+      transform: translateX(4px);
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
     }
 
     .pub-item:hover::before {
       opacity: 1;
-      transform: translateX(0);
+      transform: scaleY(1);
     }
 
     .pub-item strong {
       color: var(--text-main);
+      font-weight: 500;
     }
 
     .badge {
       display: inline-block;
-      margin-left: 0.55rem;
+      margin-left: 0.4rem;
       vertical-align: middle;
-      padding: 0.25rem 0.9rem;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      font-weight: 800;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--accent);
-      background: rgba(41,151,255,0.15);
-      border: 1px solid rgba(41,151,255,0.6);
-      box-shadow: 0 0 16px rgba(41,151,255,0.2);
+      color: var(--bg-base);
+      background: var(--text-main);
     }
 
     .badge.co-second {
-      color: #d5d5da;
-      background: rgba(255,255,255,0.05);
-      border-color: rgba(255,255,255,0.24);
-      box-shadow: 0 0 14px rgba(255,255,255,0.08);
+      color: var(--text-main);
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
     }
 
     .reveal {
       opacity: 0;
-      transform: translateY(26px) scale(0.985);
+      transform: translateY(20px);
       transition:
-        opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-        transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+        opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .reveal.active {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translateY(0);
     }
 
+    /* --- RESPONSIVE / MOBILE OPTIMIZATION --- */
     @media (max-width: 1100px) {
       .cards-grid.bento {
         grid-template-columns: 1fr;
       }
-
       .hero-profile-area {
         flex-direction: column-reverse;
         gap: 2rem;
@@ -722,9 +740,10 @@
 
     @media (max-width: 768px) {
       body {
-        font-size: 112%;
+        font-size: 92%; 
       }
 
+      /* Force disable custom cursor logic and rendering on mobile */
       .cursor-dot,
       .cursor-outline {
         display: none !important;
@@ -735,93 +754,93 @@
       }
 
       :root {
-        --nav-height: 92px;
+        --nav-height: auto;
       }
 
       nav {
-        justify-content: center;
-        gap: 0.8rem;
-        flex-wrap: wrap;
-        padding: 0.75rem 1rem;
-        height: auto;
-        min-height: var(--nav-height);
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+        flex-direction: column;
+        gap: 1rem;
       }
 
       nav.is-scrolled {
-        height: auto;
+        padding: 0.8rem 1.5rem;
       }
 
       .nav-logo {
         width: 100%;
         text-align: center;
+        font-size: 1.2rem;
       }
 
       .nav-links {
+        gap: 1.2rem;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 0.95rem 1rem;
       }
 
       .nav-links a {
-        font-size: 0.98rem;
+        padding: 0.5rem; /* Better touch target */
       }
 
       .container {
-        width: min(100% - 1.2rem, var(--container));
+        width: min(100% - 2rem, var(--container));
+        padding-bottom: 4rem;
       }
 
       .hero {
+        padding-top: 140px;
         min-height: auto;
-        padding-top: 120px;
-        padding-bottom: 0;
-      }
-
-      .hero h1 {
-        padding-bottom: 0.2em;
       }
 
       .profile-blend-container {
-        width: 220px;
+        width: 140px;
       }
 
       section h2 {
-        margin: 4.4rem 0 2rem;
+        margin: 4rem 0 1.5rem;
       }
 
       .card {
-        padding: 1.8rem;
-        transform: none !important;
+        padding: 1.5rem;
+        border-radius: 16px;
+        transform: none !important; /* Disable complex 3d on mobile */
+      }
+      
+      .card:hover {
+        transform: none;
+        box-shadow: var(--shadow-md);
       }
 
       .card-content {
         transform: none;
       }
 
+      .pub-item {
+        padding: 1.2rem;
+        transform: none !important;
+      }
+
       .badge {
         display: block;
         width: fit-content;
-        margin: 0.7rem 0 0 0;
+        margin: 0.8rem 0 0 0;
       }
 
       .ai-game-bg {
-        opacity: 0.24;
-        filter: blur(0.15px);
+        opacity: 0.2;
+        filter: blur(0px);
       }
 
       .ai-paddle {
-        height: 138px;
-        width: 14px;
+        height: 100px;
+        width: 8px;
       }
 
       .ai-ball {
-        width: 22px;
-        height: 22px;
-      }
-
-      .pong-score {
-        top: 10%;
-        gap: 2rem;
-        font-size: 1.8rem;
+        width: 14px;
+        height: 14px;
       }
     }
 
@@ -849,10 +868,6 @@
 
   <div class="ai-game-bg" id="aiGameBg" aria-hidden="true">
     <div class="ai-center-line"></div>
-    <div class="pong-score">
-      <span id="scoreLeft">0</span>
-      <span id="scoreRight">0</span>
-    </div>
     <div class="ai-shape ai-paddle" id="paddleLeft"></div>
     <div class="ai-shape ai-paddle" id="paddleRight"></div>
     <div class="ai-shape ai-ball" id="pongBall"></div>
@@ -881,7 +896,7 @@
             src="your-image.jpg"
             alt="Jihun Chae portrait"
             class="hero-face-img"
-            onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=&quot;color:#86868b;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem;&quot;>Image not found</span>';"
+            onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=&quot;color:#86868b;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem;font-size:0.85rem;&quot;>Image not found</span>';"
           />
         </div>
 
@@ -904,13 +919,13 @@
           </div>
 
           <div class="scholar-keywords">
-            <span class="keyword-chip accent">HCI</span>
-            <span class="keyword-chip accent">Game AI</span>
-            <span class="keyword-chip">Ludic AI</span>
-            <span class="keyword-chip">AI Agents</span>
-            <span class="keyword-chip">Game Accessibility</span>
-            <span class="keyword-chip">Inclusive Design</span>
-            <span class="keyword-chip">Multimodal Interaction</span>
+            <span class="keyword-chip accent hoverable">HCI</span>
+            <span class="keyword-chip accent hoverable">Game AI</span>
+            <span class="keyword-chip hoverable">Ludic AI</span>
+            <span class="keyword-chip hoverable">AI Agents</span>
+            <span class="keyword-chip hoverable">Game Accessibility</span>
+            <span class="keyword-chip hoverable">Inclusive Design</span>
+            <span class="keyword-chip hoverable">Multimodal Interaction</span>
           </div>
         </div>
       </div>
@@ -1185,34 +1200,36 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
+      // Touch/mobile detection
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const isDesktopPointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+      // We only want the custom cursor and tilt effects on proper desktop devices
+      const isDesktopPointer = !isTouchDevice && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
+      // Progress bar
       const progressBar = document.getElementById("progressBar");
-
       function updateProgressBar() {
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;
         const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
         progressBar.style.width = progress + "%";
       }
-
       window.addEventListener("scroll", updateProgressBar, { passive: true });
       updateProgressBar();
 
+      // Navbar shrink on scroll
       const nav = document.getElementById("navbar");
-
       function updateNav() {
-        if (window.scrollY > 42) nav.classList.add("is-scrolled");
+        if (window.scrollY > 30) nav.classList.add("is-scrolled");
         else nav.classList.remove("is-scrolled");
       }
-
       window.addEventListener("scroll", updateNav, { passive: true });
       updateNav();
 
+      // Custom Cursor Logic
       const dot = document.getElementById("cursorDot");
       const outline = document.getElementById("cursorOutline");
-      const hoverables = document.querySelectorAll(".hoverable");
+      const hoverables = document.querySelectorAll(".hoverable, a, .card, .pub-item"); // Expanded hover targets
 
       if (isDesktopPointer && !prefersReducedMotion) {
         let mouseX = window.innerWidth / 2;
@@ -1223,128 +1240,117 @@
         window.addEventListener("mousemove", (e) => {
           mouseX = e.clientX;
           mouseY = e.clientY;
-          dot.style.transform = `translate(${mouseX - 4.5}px, ${mouseY - 4.5}px)`;
+          // Center the dot exactly
+          dot.style.transform = `translate(${mouseX}px, ${mouseY}px)`;
         });
 
         hoverables.forEach((el) => {
-          el.addEventListener("mouseenter", () => outline.classList.add("hover-active"));
-          el.addEventListener("mouseleave", () => outline.classList.remove("hover-active"));
+          el.addEventListener("mouseenter", () => {
+            outline.classList.add("hover-active");
+            dot.classList.add("hover-active");
+          });
+          el.addEventListener("mouseleave", () => {
+            outline.classList.remove("hover-active");
+            dot.classList.remove("hover-active");
+          });
         });
 
         function animateCursor() {
-          outlineX += (mouseX - outlineX) * 0.14;
-          outlineY += (mouseY - outlineY) * 0.14;
-          outline.style.transform = `translate(${outlineX - 21}px, ${outlineY - 21}px)`;
+          outlineX += (mouseX - outlineX) * 0.15; // Smooth interpolation
+          outlineY += (mouseY - outlineY) * 0.15;
+          outline.style.transform = `translate(${outlineX}px, ${outlineY}px)`;
           requestAnimationFrame(animateCursor);
         }
-
         animateCursor();
       } else {
-        dot.style.display = "none";
-        outline.style.display = "none";
+        // Ensure strictly disabled on mobile/touch
+        if(dot) dot.style.display = "none";
+        if(outline) outline.style.display = "none";
       }
 
+      // Scroll Reveal Elements
       const revealEls = document.querySelectorAll(".reveal");
       const revealObserver = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
-            if (entry.isIntersecting) entry.target.classList.add("active");
+            if (entry.isIntersecting) {
+              entry.target.classList.add("active");
+              // Optional: stop observing once revealed
+              revealObserver.unobserve(entry.target);
+            }
           });
         },
-        { threshold: 0.12 }
+        { threshold: 0.1, rootMargin: "0px 0px -50px 0px" } // Trigger slightly before it hits bottom
       );
       revealEls.forEach((el) => revealObserver.observe(el));
 
+      // Spotlight effect on cards
       const cardGrids = document.querySelectorAll(".cards-grid");
-      cardGrids.forEach((grid) => {
-        grid.addEventListener("mousemove", (e) => {
-          grid.querySelectorAll(".card").forEach((card) => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            card.style.setProperty("--mouse-x", `${x}px`);
-            card.style.setProperty("--mouse-y", `${y}px`);
+      if (isDesktopPointer) {
+        cardGrids.forEach((grid) => {
+          grid.addEventListener("mousemove", (e) => {
+            grid.querySelectorAll(".card").forEach((card) => {
+              const rect = card.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              card.style.setProperty("--mouse-x", `${x}px`);
+              card.style.setProperty("--mouse-y", `${y}px`);
+            });
           });
         });
-      });
+      }
 
+      // 3D Tilt Effect (Desktop only)
       if (isDesktopPointer && !prefersReducedMotion) {
         document.querySelectorAll(".tilt-card").forEach((card) => {
           card.addEventListener("mousemove", (e) => {
             const rect = card.getBoundingClientRect();
             const px = (e.clientX - rect.left) / rect.width;
             const py = (e.clientY - rect.top) / rect.height;
-            const rotateY = (px - 0.5) * 5.5;
-            const rotateX = (0.5 - py) * 4.5;
-            card.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+            const rotateY = (px - 0.5) * 6; // Max rotation
+            const rotateX = (0.5 - py) * 6;
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-2px) scale3d(1.01, 1.01, 1.01)`;
           });
 
           card.addEventListener("mouseleave", () => {
-            card.style.transform = "";
+            card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
           });
         });
       }
 
+      // --- AI Pong Background Game Logic ---
       const leftPaddleEl = document.getElementById("paddleLeft");
       const rightPaddleEl = document.getElementById("paddleRight");
       const ballEl = document.getElementById("pongBall");
       const trailEl = document.getElementById("pongTrail");
-      const scoreLeftEl = document.getElementById("scoreLeft");
-      const scoreRightEl = document.getElementById("scoreRight");
 
       const pong = {
-        paddleWidth: 18,
-        paddleHeight: window.innerWidth <= 768 ? 138 : 190,
-        ballSize: window.innerWidth <= 768 ? 22 : 28,
-
-        leftX: 0,
-        rightX: 0,
-        leftY: 100,
-        rightY: 180,
-
-        leftVY: 0,
-        rightVY: 0,
-
-        ballX: 0,
-        ballY: 0,
-        vx: 5.2,
-        vy: 2.9,
-        maxSpeed: 10.8,
-
-        scoreLeft: 0,
-        scoreRight: 0,
-        frame: 0,
-        leftBias: 0,
-        rightBias: 0
+        paddleWidth: 10,
+        paddleHeight: window.innerWidth <= 768 ? 100 : 140,
+        ballSize: window.innerWidth <= 768 ? 14 : 20,
+        leftX: 0, rightX: 0, leftY: 100, rightY: 180,
+        leftVY: 0, rightVY: 0,
+        ballX: 0, ballY: 0, vx: 5, vy: 3, maxSpeed: 10,
+        frame: 0, leftBias: 0, rightBias: 0
       };
 
-      function clamp(value, min, max) {
-        return Math.max(min, Math.min(max, value));
-      }
-
-      function randomRange(min, max) {
-        return Math.random() * (max - min) + min;
-      }
-
-      function flashScore(el) {
-        el.classList.add("flash");
-        setTimeout(() => el.classList.remove("flash"), 260);
-      }
+      function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+      function randomRange(min, max) { return Math.random() * (max - min) + min; }
 
       function syncResponsivePong() {
-        pong.paddleHeight = window.innerWidth <= 768 ? 138 : 190;
-        pong.ballSize = window.innerWidth <= 768 ? 22 : 28;
+        pong.paddleHeight = window.innerWidth <= 768 ? 100 : 140;
+        pong.ballSize = window.innerWidth <= 768 ? 14 : 20;
+        pong.paddleWidth = window.innerWidth <= 768 ? 8 : 12;
 
-        leftPaddleEl.style.width = `${window.innerWidth <= 768 ? 14 : 18}px`;
-        rightPaddleEl.style.width = `${window.innerWidth <= 768 ? 14 : 18}px`;
+        leftPaddleEl.style.width = `${pong.paddleWidth}px`;
+        rightPaddleEl.style.width = `${pong.paddleWidth}px`;
         leftPaddleEl.style.height = `${pong.paddleHeight}px`;
         rightPaddleEl.style.height = `${pong.paddleHeight}px`;
         ballEl.style.width = `${pong.ballSize}px`;
         ballEl.style.height = `${pong.ballSize}px`;
 
-        pong.paddleWidth = window.innerWidth <= 768 ? 14 : 18;
-        pong.leftX = Math.max(14, window.innerWidth * 0.04);
-        pong.rightX = window.innerWidth - Math.max(14, window.innerWidth * 0.04) - pong.paddleWidth;
+        pong.leftX = Math.max(10, window.innerWidth * 0.03);
+        pong.rightX = window.innerWidth - Math.max(10, window.innerWidth * 0.03) - pong.paddleWidth;
 
         pong.leftY = clamp(pong.leftY, 0, window.innerHeight - pong.paddleHeight);
         pong.rightY = clamp(pong.rightY, 0, window.innerHeight - pong.paddleHeight);
@@ -1354,90 +1360,47 @@
 
       function resetBall(direction = Math.random() > 0.5 ? 1 : -1) {
         pong.ballX = window.innerWidth / 2 - pong.ballSize / 2;
-        pong.ballY = window.innerHeight * randomRange(0.34, 0.62);
-        pong.vx = direction * randomRange(4.7, 5.8);
-        pong.vy = randomRange(-2.4, 2.4);
+        pong.ballY = window.innerHeight * randomRange(0.3, 0.7);
+        pong.vx = direction * randomRange(4.5, 6.0);
+        pong.vy = randomRange(-3.0, 3.0);
 
-        if (Math.abs(pong.vy) < 1.0) {
-          pong.vy = pong.vy < 0 ? -1.25 : 1.25;
-        }
-
-        pong.leftBias = randomRange(-10, 10);
-        pong.rightBias = randomRange(-10, 10);
+        if (Math.abs(pong.vy) < 1.0) pong.vy = pong.vy < 0 ? -1.5 : 1.5;
+        
+        pong.leftBias = randomRange(-15, 15);
+        pong.rightBias = randomRange(-15, 15);
       }
 
       function predictBallY(targetX) {
-        let simX = pong.ballX;
-        let simY = pong.ballY;
-        let simVX = pong.vx;
-        let simVY = pong.vy;
+        let simX = pong.ballX, simY = pong.ballY, simVX = pong.vx, simVY = pong.vy;
         let guard = 0;
 
         while (((simVX > 0 && simX < targetX) || (simVX < 0 && simX > targetX)) && guard < 4000) {
-          simX += simVX;
-          simY += simVY;
-
-          if (simY <= 0) {
-            simY = 0;
-            simVY *= -1;
-          } else if (simY >= window.innerHeight - pong.ballSize) {
-            simY = window.innerHeight - pong.ballSize;
-            simVY *= -1;
-          }
-
+          simX += simVX; simY += simVY;
+          if (simY <= 0) { simY = 0; simVY *= -1; } 
+          else if (simY >= window.innerHeight - pong.ballSize) { simY = window.innerHeight - pong.ballSize; simVY *= -1; }
           guard++;
         }
-
         return simY + pong.ballSize / 2;
       }
 
       function smoothPaddle(currentY, currentVY, targetY, stiffness, damping) {
         const force = (targetY - currentY) * stiffness;
         currentVY = (currentVY + force) * damping;
-        currentY += currentVY;
-        return { y: currentY, vy: currentVY };
+        return { y: currentY + currentVY, vy: currentVY };
       }
 
       function updatePaddleAI() {
         const leftReceiving = pong.vx < 0;
         const rightReceiving = pong.vx > 0;
 
-        const idleLeft =
-          window.innerHeight * 0.5 +
-          Math.sin(pong.frame * 0.012) * 42 +
-          pong.leftBias;
+        const idleLeft = window.innerHeight * 0.5 + Math.sin(pong.frame * 0.01) * 50 + pong.leftBias;
+        const idleRight = window.innerHeight * 0.5 + Math.cos(pong.frame * 0.009) * 50 + pong.rightBias;
 
-        const idleRight =
-          window.innerHeight * 0.5 +
-          Math.cos(pong.frame * 0.011) * 46 +
-          pong.rightBias;
+        const leftTarget = (leftReceiving ? predictBallY(pong.leftX + pong.paddleWidth) : idleLeft) - pong.paddleHeight / 2;
+        const rightTarget = (rightReceiving ? predictBallY(pong.rightX - pong.ballSize) : idleRight) - pong.paddleHeight / 2;
 
-        const leftPredict = leftReceiving
-          ? predictBallY(pong.leftX + pong.paddleWidth)
-          : idleLeft;
-
-        const rightPredict = rightReceiving
-          ? predictBallY(pong.rightX - pong.ballSize)
-          : idleRight;
-
-        const leftTarget = leftPredict - pong.paddleHeight / 2;
-        const rightTarget = rightPredict - pong.paddleHeight / 2;
-
-        const leftMotion = smoothPaddle(
-          pong.leftY,
-          pong.leftVY,
-          leftTarget,
-          leftReceiving ? 0.04 : 0.02,
-          0.88
-        );
-
-        const rightMotion = smoothPaddle(
-          pong.rightY,
-          pong.rightVY,
-          rightTarget,
-          rightReceiving ? 0.04 : 0.02,
-          0.88
-        );
+        const leftMotion = smoothPaddle(pong.leftY, pong.leftVY, leftTarget, leftReceiving ? 0.05 : 0.02, 0.85);
+        const rightMotion = smoothPaddle(pong.rightY, pong.rightVY, rightTarget, rightReceiving ? 0.05 : 0.02, 0.85);
 
         pong.leftY = clamp(leftMotion.y, 0, window.innerHeight - pong.paddleHeight);
         pong.rightY = clamp(rightMotion.y, 0, window.innerHeight - pong.paddleHeight);
@@ -1445,62 +1408,33 @@
         pong.rightVY = rightMotion.vy;
       }
 
-      function handleWallBounce() {
-        if (pong.ballY <= 0) {
-          pong.ballY = 0;
-          pong.vy *= -1;
-        } else if (pong.ballY >= window.innerHeight - pong.ballSize) {
-          pong.ballY = window.innerHeight - pong.ballSize;
-          pong.vy *= -1;
-        }
-      }
+      function handlePhysics() {
+        // Wall Bounce
+        if (pong.ballY <= 0) { pong.ballY = 0; pong.vy *= -1; } 
+        else if (pong.ballY >= window.innerHeight - pong.ballSize) { pong.ballY = window.innerHeight - pong.ballSize; pong.vy *= -1; }
 
-      function handlePaddleBounce() {
-        const hitLeft =
-          pong.ballX <= pong.leftX + pong.paddleWidth &&
-          pong.ballX + pong.ballSize >= pong.leftX &&
-          pong.ballY + pong.ballSize >= pong.leftY &&
-          pong.ballY <= pong.leftY + pong.paddleHeight;
-
-        const hitRight =
-          pong.ballX + pong.ballSize >= pong.rightX &&
-          pong.ballX <= pong.rightX + pong.paddleWidth &&
-          pong.ballY + pong.ballSize >= pong.rightY &&
-          pong.ballY <= pong.rightY + pong.paddleHeight;
+        // Paddle Bounce
+        const hitLeft = pong.ballX <= pong.leftX + pong.paddleWidth && pong.ballX + pong.ballSize >= pong.leftX && pong.ballY + pong.ballSize >= pong.leftY && pong.ballY <= pong.leftY + pong.paddleHeight;
+        const hitRight = pong.ballX + pong.ballSize >= pong.rightX && pong.ballX <= pong.rightX + pong.paddleWidth && pong.ballY + pong.ballSize >= pong.rightY && pong.ballY <= pong.rightY + pong.paddleHeight;
 
         if (hitLeft && pong.vx < 0) {
-          const impact =
-            ((pong.ballY + pong.ballSize / 2) - (pong.leftY + pong.paddleHeight / 2)) /
-            (pong.paddleHeight / 2);
-
-          pong.vx = Math.min(Math.abs(pong.vx) * 1.018, pong.maxSpeed);
-          pong.vy += impact * 1.35;
+          const impact = ((pong.ballY + pong.ballSize / 2) - (pong.leftY + pong.paddleHeight / 2)) / (pong.paddleHeight / 2);
+          pong.vx = Math.min(Math.abs(pong.vx) * 1.02, pong.maxSpeed);
+          pong.vy += impact * 1.5;
           pong.ballX = pong.leftX + pong.paddleWidth;
         }
 
         if (hitRight && pong.vx > 0) {
-          const impact =
-            ((pong.ballY + pong.ballSize / 2) - (pong.rightY + pong.paddleHeight / 2)) /
-            (pong.paddleHeight / 2);
-
-          pong.vx = -Math.min(Math.abs(pong.vx) * 1.018, pong.maxSpeed);
-          pong.vy += impact * 1.35;
+          const impact = ((pong.ballY + pong.ballSize / 2) - (pong.rightY + pong.paddleHeight / 2)) / (pong.paddleHeight / 2);
+          pong.vx = -Math.min(Math.abs(pong.vx) * 1.02, pong.maxSpeed);
+          pong.vy += impact * 1.5;
           pong.ballX = pong.rightX - pong.ballSize;
         }
       }
 
       function handleScore() {
-        if (pong.ballX < -80) {
-          pong.scoreRight += 1;
-          scoreRightEl.textContent = pong.scoreRight;
-          flashScore(scoreRightEl);
-          resetBall(1);
-        } else if (pong.ballX > window.innerWidth + 80) {
-          pong.scoreLeft += 1;
-          scoreLeftEl.textContent = pong.scoreLeft;
-          flashScore(scoreLeftEl);
-          resetBall(-1);
-        }
+        if (pong.ballX < -100) resetBall(1);
+        else if (pong.ballX > window.innerWidth + 100) resetBall(-1);
       }
 
       function renderPong() {
@@ -1508,42 +1442,29 @@
         rightPaddleEl.style.transform = `translate3d(${pong.rightX}px, ${pong.rightY}px, 0)`;
         ballEl.style.transform = `translate3d(${pong.ballX}px, ${pong.ballY}px, 0)`;
 
-        const trailLength = Math.min(Math.abs(pong.vx) * 10 + 24, 110);
+        const trailLength = Math.min(Math.abs(pong.vx) * 8 + 20, 100);
         const angle = Math.atan2(pong.vy, pong.vx) * (180 / Math.PI);
-
         trailEl.style.width = `${trailLength}px`;
-        trailEl.style.transform =
-          `translate3d(${pong.ballX + pong.ballSize / 2}px, ${pong.ballY + pong.ballSize / 2 - 5}px, 0) rotate(${angle + 180}deg)`;
+        trailEl.style.transform = `translate3d(${pong.ballX + pong.ballSize / 2}px, ${pong.ballY + pong.ballSize / 2 - 3}px, 0) rotate(${angle + 180}deg)`;
       }
 
       function animatePong() {
         pong.frame += 1;
-
         updatePaddleAI();
-
         pong.ballX += pong.vx;
         pong.ballY += pong.vy;
-
-        handleWallBounce();
-        handlePaddleBounce();
+        handlePhysics();
         handleScore();
         renderPong();
-
         requestAnimationFrame(animatePong);
       }
 
       syncResponsivePong();
-      resetBall(Math.random() > 0.5 ? 1 : -1);
+      resetBall();
       renderPong();
 
-      window.addEventListener("resize", () => {
-        syncResponsivePong();
-        renderPong();
-      });
-
-      if (!prefersReducedMotion) {
-        animatePong();
-      }
+      window.addEventListener("resize", () => { syncResponsivePong(); renderPong(); });
+      if (!prefersReducedMotion) animatePong();
     });
   </script>
 </body>
