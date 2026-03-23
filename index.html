@@ -21,7 +21,7 @@
       --text-main: #f5f5f7;
       --text-muted: #8e8e93;
       --text-soft: #a1a1a6;
-      --accent: #2997ff;
+      --accent: #2997ff; /* The color is back! */
       --accent-2: #7cc3ff;
       --accent-glow: rgba(41, 151, 255, 0.12);
       --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.15);
@@ -52,11 +52,11 @@
       background: var(--bg-base);
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(41, 151, 255, 0.2); /* Accent scrollbar */
       border-radius: 10px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.25);
+      background: rgba(41, 151, 255, 0.4);
     }
 
     /* Custom Text Selection */
@@ -89,7 +89,7 @@
       text-decoration: none;
     }
 
-    /* --- PREMIUM CURSOR --- */
+    /* --- ADVANCED HIGH-CLASS CURSOR --- */
     @media (hover: hover) and (pointer: fine) {
       * {
         cursor: none !important;
@@ -104,15 +104,17 @@
       border-radius: 999px;
       pointer-events: none;
       z-index: 9999;
+      opacity: 0; /* Starts hidden until mousemove */
+      transition: opacity 0.3s ease;
     }
 
     .cursor-dot {
       width: 8px;
       height: 8px;
-      background: #ffffff;
-      mix-blend-mode: difference;
+      background: var(--accent); /* Accent color dot */
+      box-shadow: 0 0 10px var(--accent-glow);
       transform: translate(-50%, -50%);
-      transition: width 0.2s ease, height 0.2s ease;
+      transition: opacity 0.3s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, width 0.2s ease, height 0.2s ease;
     }
 
     .cursor-outline {
@@ -121,25 +123,30 @@
       transform: translate(-50%, -50%);
       border: 1px solid rgba(255, 255, 255, 0.15);
       background: rgba(255, 255, 255, 0.02);
+      mix-blend-mode: difference; /* Premium blend mode */
       backdrop-filter: blur(2px);
       -webkit-backdrop-filter: blur(2px);
       transition:
+        opacity 0.3s ease,
+        transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
         width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
         height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
         background-color 0.3s ease,
-        border-color 0.3s ease;
+        border-color 0.3s ease,
+        border-radius 0.3s ease;
     }
 
+    /* Target hover effect (Nav links, buttons) */
     .cursor-outline.hover-active {
-      width: 60px;
-      height: 60px;
-      background: rgba(255, 255, 255, 0.05);
+      width: 80px; /* Expands to frame text */
+      height: 40px;
+      background: rgba(255, 255, 255, 0.08);
       border-color: rgba(255, 255, 255, 0.4);
+      border-radius: 8px; /* Square off to frame */
     }
     
     .cursor-dot.hover-active {
-      width: 4px;
-      height: 4px;
+      opacity: 0; /* Dot hides on links */
     }
 
     /* --- UI ELEMENTS --- */
@@ -210,7 +217,7 @@
       height: 140px;
       border-radius: 6px;
       background: rgba(255, 255, 255, 0.5);
-      box-shadow: 0 0 24px rgba(41, 151, 255, 0.1);
+      box-shadow: 0 0 24px var(--accent-glow);
     }
 
     .ai-paddle::after {
@@ -228,7 +235,7 @@
       background: rgba(255, 255, 255, 0.8);
       box-shadow:
         0 0 16px rgba(255,255,255,0.2),
-        0 0 32px rgba(41, 151, 255, 0.3);
+        0 0 32px var(--accent);
     }
 
     .ai-ball-trail {
@@ -257,7 +264,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 0 3rem;
-      background: transparent; /* Starts transparent for full landing page effect */
+      background: transparent; 
       transition:
         height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
         background 0.3s ease,
@@ -293,9 +300,10 @@
       color: var(--text-muted);
       font-size: 0.9rem;
       font-weight: 500;
-      padding: 0.5rem 0; 
+      padding: 0.5rem 0.2rem; 
       transition: color 0.25s ease;
       opacity: 0;
+      position: relative;
     }
     
     .nav-links a:nth-child(1) { animation: navFadeDown 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -320,7 +328,6 @@
     }
 
     .hero {
-      /* Full viewport height for a true landing page */
       min-height: 100vh;
       min-height: 100dvh; 
       display: flex;
@@ -407,7 +414,10 @@
     .hero-face-img {
       width: 100%;
       height: auto;
-      /* Restored full color by removing grayscale and blend modes */
+      /* FIXED - Back to Black and White */
+      filter: grayscale(100%) contrast(1.1); 
+      mix-blend-mode: screen; 
+      opacity: 0.85;
       border-radius: 8px;
     }
 
@@ -431,6 +441,7 @@
       gap: 1rem;
     }
 
+    /* SPOTLIGHT BUTTON INTERACTION */
     .btn {
       position: relative;
       display: inline-flex;
@@ -447,6 +458,26 @@
       transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, background 0.3s ease;
     }
 
+    /* Button Spotlight Overlay */
+    .btn-spotlight {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,1), transparent 60%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      mix-blend-mode: overlay; /* Soft premium glow */
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(255,255,255,0.15);
+      background: #ffffff;
+    }
+    
+    .btn:hover .btn-spotlight {
+      opacity: 0.4; /* Subtle peak high class peak */
+    }
+
     .btn::after {
       content: "";
       position: absolute;
@@ -454,12 +485,7 @@
       transform: translateX(-120%);
       background: linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.6) 50%, transparent 75%);
       transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 24px rgba(255,255,255,0.15);
-      background: #ffffff;
+      z-index: 1;
     }
 
     .btn:hover::after {
@@ -511,11 +537,11 @@
 
     .keyword-chip.accent {
       color: var(--text-main);
-      border-color: rgba(41, 151, 255, 0.3);
+      border-color: rgba(41, 151, 255, 0.3); /* Color is back */
       background: rgba(41, 151, 255, 0.08);
     }
 
-    /* Scroll Indicator */
+    /* Scroll Indicator - Accent color restored */
     .scroll-indicator {
       position: absolute;
       bottom: 40px;
@@ -531,7 +557,7 @@
       text-transform: uppercase;
       font-weight: 600;
       opacity: 0;
-      animation: heroFadeUp 0.8s 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: heroFadeUp 0.8s 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .mouse {
@@ -545,7 +571,7 @@
     .wheel {
       width: 2px;
       height: 6px;
-      background: var(--text-muted);
+      background: var(--accent); /* Color restored */
       border-radius: 2px;
       position: absolute;
       top: 6px;
@@ -578,6 +604,7 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    /* Dynamic Card Spotlight restored */
     .card {
       position: relative;
       overflow: hidden;
@@ -597,7 +624,8 @@
       transform-style: preserve-3d;
     }
 
-    .card::before {
+    .card::before,
+    .pub-item::after { /* Reusing spotlight logic for high class feel */
       content: "";
       position: absolute;
       inset: 0;
@@ -606,7 +634,7 @@
       pointer-events: none;
       background: radial-gradient(
         600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        rgba(255, 255, 255, 0.04),
+        var(--accent-glow), /* Back to accent color */
         transparent 40%
       );
       transition: opacity 0.5s ease;
@@ -692,6 +720,7 @@
       gap: 1rem;
     }
 
+    /* Peak High Class Interaction on Publication Items */
     .pub-item {
       position: relative;
       overflow: hidden;
@@ -707,6 +736,17 @@
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
+    /* Publication mouse spotlight restored */
+    .pub-item::after { 
+      content: "";
+      background: radial-gradient(
+        300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 255, 255, 0.05),
+        transparent 40%
+      );
+    }
+
+    /* Accent color line on publications */
     .pub-item::before {
       content: "";
       position: absolute;
@@ -714,11 +754,12 @@
       top: 0;
       bottom: 0;
       width: 3px;
-      background: rgba(255, 255, 255, 0.2);
+      background: var(--accent); /* Color restored */
       opacity: 0;
       transition: opacity 0.3s ease, transform 0.3s ease;
       transform: scaleY(0);
       transform-origin: center;
+      z-index: 1;
     }
 
     .pub-item:hover {
@@ -730,6 +771,10 @@
     .pub-item:hover::before {
       opacity: 1;
       transform: scaleY(1);
+    }
+    
+    .pub-item:hover::after {
+      opacity: 1; /* Mouse spotlight activates */
     }
 
     .pub-item strong {
@@ -747,8 +792,9 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--bg-base);
-      background: var(--text-main);
+      color: #fff;
+      background: rgba(41, 151, 255, 0.2);
+      border: 1px solid rgba(41, 151, 255, 0.5); /* Color restored */
     }
 
     .badge.co-second {
@@ -832,7 +878,7 @@
       }
 
       .hero {
-        padding-top: 100px; /* Adjusted padding for mobile */
+        padding-top: 100px;
       }
       
       .scroll-indicator {
@@ -922,10 +968,10 @@
   <nav id="navbar">
     <div class="nav-logo hoverable">Jihun Chae</div>
     <div class="nav-links">
-      <a href="#about" class="hoverable">About</a>
-      <a href="#experience" class="hoverable">Experience</a>
-      <a href="#awards" class="hoverable">Awards</a>
-      <a href="#publications" class="hoverable">Publications</a>
+      <a href="#about" class="hoverable advanced-magnetic">About</a>
+      <a href="#experience" class="hoverable advanced-magnetic">Experience</a>
+      <a href="#awards" class="hoverable advanced-magnetic">Awards</a>
+      <a href="#publications" class="hoverable advanced-magnetic">Publications</a>
     </div>
   </nav>
 
@@ -957,8 +1003,9 @@
               href="https://www.linkedin.com/in/jihun-chae-15457756/"
               target="_blank"
               rel="noreferrer"
-              class="btn hoverable"
+              class="btn hoverable advanced-magnetic"
             >
+              <div class="btn-spotlight"></div>
               Connect on LinkedIn
             </a>
           </div>
@@ -1213,39 +1260,39 @@
     <section class="reveal" id="publications">
       <h2>Publications</h2>
       <div class="pub-list">
-        <div class="pub-item hoverable"><strong>Chae, J.</strong>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. ACM. <span class="badge">First Author</span></div>
+        <div class="pub-item hoverable tilt-card-sm"><strong>Chae, J.</strong>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. ACM. <span class="badge">First Author</span></div>
 
-        <div class="pub-item hoverable">Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties. <em>Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA ’25)</em>. ACM. <span class="badge">Co-first Author</span></div>
+        <div class="pub-item hoverable tilt-card-sm">Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties. <em>Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA ’25)</em>. ACM. <span class="badge">Co-first Author</span></div>
 
-        <div class="pub-item hoverable"><strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>. <span class="badge">First Author</span></div>
+        <div class="pub-item hoverable tilt-card-sm"><strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>. <span class="badge">First Author</span></div>
 
-        <div class="pub-item hoverable">Oh, H., Eum, K., Park, E., <strong>Chae, J.</strong>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA. <em>Korea HCI Conference 2025</em>. <span class="badge co-second">Co-second Author</span></div>
+        <div class="pub-item hoverable tilt-card-sm">Oh, H., Eum, K., Park, E., <strong>Chae, J.</strong>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA. <em>Korea HCI Conference 2025</em>. <span class="badge co-second">Co-second Author</span></div>
 
-        <div class="pub-item hoverable">Choi, E., <strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2024). Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH). <em>Korean Artificial Intelligence Association Conference 2024</em>. <span class="badge">Co-first Author</span></div>
+        <div class="pub-item hoverable tilt-card-sm">Choi, E., <strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2024). Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH). <em>Korean Artificial Intelligence Association Conference 2024</em>. <span class="badge">Co-first Author</span></div>
 
-        <div class="pub-item hoverable">Eum, K., Park, E., <strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2024). GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies. <em>Korea Computer Graphics Society Conference 2024</em>. <span class="badge">Co-first Author</span></div>
+        <div class="pub-item hoverable tilt-card-sm">Eum, K., Park, E., <strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2024). GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies. <em>Korea Computer Graphics Society Conference 2024</em>. <span class="badge">Co-first Author</span></div>
 
-        <div class="pub-item hoverable">Park, E., <strong>Chae, J.</strong>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). Challenges and opportunities of game NPC research using LLM: A scoping review. <em>Korean Game Society Conference 2024</em>. <span class="badge">Co-first Author</span></div>
+        <div class="pub-item hoverable tilt-card-sm">Park, E., <strong>Chae, J.</strong>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). Challenges and opportunities of game NPC research using LLM: A scoping review. <em>Korean Game Society Conference 2024</em>. <span class="badge">Co-first Author</span></div>
 
-        <div class="pub-item hoverable">Kim, Y. B., &amp; <strong>Chae, J.</strong> (2024). A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd. <em>Korea Technology Innovation Society Conference 2024</em>.</div>
+        <div class="pub-item hoverable tilt-card-sm">Kim, Y. B., &amp; <strong>Chae, J.</strong> (2024). A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd. <em>Korea Technology Innovation Society Conference 2024</em>.</div>
 
-        <div class="pub-item hoverable">Kim, Y. B., &amp; <strong>Chae, J.</strong> (2024). From BigHit to HYBE: Sentiment analysis and strategic transition through news data. <em>Korea Society for Innovation Management &amp; Economics Conference 2024</em>.</div>
+        <div class="pub-item hoverable tilt-card-sm">Kim, Y. B., &amp; <strong>Chae, J.</strong> (2024). From BigHit to HYBE: Sentiment analysis and strategic transition through news data. <em>Korea Society for Innovation Management &amp; Economics Conference 2024</em>.</div>
 
-        <div class="pub-item hoverable"><strong>Chae, J.</strong>, Yoo, S., Lee, Y., Kim, Y., Kim, H., &amp; Han, D. (2023). Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles. <em>Journal of the Korea Computer Graphics Society</em>, 29(3), 137–147. <span class="badge">First Author</span></div>
+        <div class="pub-item hoverable tilt-card-sm"><strong>Chae, J.</strong>, Yoo, S., Lee, Y., Kim, Y., Kim, H., &amp; Han, D. (2023). Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles. <em>Journal of the Korea Computer Graphics Society</em>, 29(3), 137–147. <span class="badge">First Author</span></div>
 
-        <div class="pub-item hoverable"><strong>Chae, J.</strong>, Kim, H., Kim, Y., Kim, M., Kim, S., &amp; Han, D. (2023). A study on the effect of group commitment on improving awareness of recycling through gamification. <em>Korea HCI Conference 2023</em>. <span class="badge">First Author</span></div>
+        <div class="pub-item hoverable tilt-card-sm"><strong>Chae, J.</strong>, Kim, H., Kim, Y., Kim, M., Kim, S., &amp; Han, D. (2023). A study on the effect of group commitment on improving awareness of recycling through gamification. <em>Korea HCI Conference 2023</em>. <span class="badge">First Author</span></div>
 
-        <div class="pub-item hoverable">Kim, Y., <strong>Chae, J.</strong>, Lee, Y., Kim, H., Lee, Y., &amp; Han, D. (2023). Enhancing participation in rehabilitation for diplopia through gamification. <em>Korea Computer Graphics Society Conference 2023</em>.</div>
+        <div class="pub-item hoverable tilt-card-sm">Kim, Y., <strong>Chae, J.</strong>, Lee, Y., Kim, H., Lee, Y., &amp; Han, D. (2023). Enhancing participation in rehabilitation for diplopia through gamification. <em>Korea Computer Graphics Society Conference 2023</em>.</div>
 
-        <div class="pub-item hoverable">Lee, Y. S., Kim, Y., Kim, H., <strong>Chae, J.</strong>, Lee, Y., &amp; Han, D. (2023). Eye-tracking-based VR interactive games for eye movements. <em>Korea Multimedia Society Conference 2023</em>.</div>
+        <div class="pub-item hoverable tilt-card-sm">Lee, Y. S., Kim, Y., Kim, H., <strong>Chae, J.</strong>, Lee, Y., &amp; Han, D. (2023). Eye-tracking-based VR interactive games for eye movements. <em>Korea Multimedia Society Conference 2023</em>.</div>
 
-        <div class="pub-item hoverable">Yoon, D., Park, S., Song, Y., <strong>Chae, J.</strong>, &amp; Chung, D. (2023). Methodology for improving the performance of demand forecasting through machine learning. <em>Preprint available at Research Square.</em></div>
+        <div class="pub-item hoverable tilt-card-sm">Yoon, D., Park, S., Song, Y., <strong>Chae, J.</strong>, &amp; Chung, D. (2023). Methodology for improving the performance of demand forecasting through machine learning. <em>Preprint available at Research Square.</em></div>
 
-        <div class="pub-item hoverable">Yoo, S., <strong>Chae, J.</strong>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for cynophobia. <em>Korea Multimedia Society Conference 2022</em>.</div>
+        <div class="pub-item hoverable tilt-card-sm">Yoo, S., <strong>Chae, J.</strong>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for cynophobia. <em>Korea Multimedia Society Conference 2022</em>.</div>
 
-        <div class="pub-item hoverable">Park, S., Yoon, D., <strong>Chae, J.</strong>, Song, Y., &amp; Chung, D. (2022). Enhanced predictive model performance through clustering. <em>Korea Society of Management Information Systems Conference 2022</em>.</div>
+        <div class="pub-item hoverable tilt-card-sm">Park, S., Yoon, D., <strong>Chae, J.</strong>, Song, Y., &amp; Chung, D. (2022). Enhanced predictive model performance through clustering. <em>Korea Society of Management Information Systems Conference 2022</em>.</div>
 
-        <div class="pub-item hoverable">Park, S., Yoon, D., Song, Y., <strong>Chae, J.</strong>, &amp; Chung, D. (2022). Combined regression coefficient reduction method with clustering for performance enhancement. <em>Korea Intelligent Information Systems Society Conference 2022</em>.</div>
+        <div class="pub-item hoverable tilt-card-sm">Park, S., Yoon, D., Song, Y., <strong>Chae, J.</strong>, &amp; Chung, D. (2022). Combined regression coefficient reduction method with clustering for performance enhancement. <em>Korea Intelligent Information Systems Society Conference 2022</em>.</div>
       </div>
     </section>
   </main>
@@ -1255,7 +1302,7 @@
       // Touch/mobile detection
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      // We only want the custom cursor and tilt effects on proper desktop devices
+      // High Class interacts enabled only on desktop
       const isDesktopPointer = !isTouchDevice && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
       // Progress bar
@@ -1278,12 +1325,21 @@
       window.addEventListener("scroll", updateNav, { passive: true });
       updateNav();
 
-      // Custom Cursor Logic
+      // ADVANCED PEAK HIGH-CLASS CURSOR LOGIC
       const dot = document.getElementById("cursorDot");
       const outline = document.getElementById("cursorOutline");
-      const hoverables = document.querySelectorAll(".hoverable, a, .card, .pub-item"); 
+      // All elements that trigger advanced frame effect
+      const advancedMagneticLinks = document.querySelectorAll(".advanced-magnetic, .nav-logo, .nav-links a"); 
+      // All hoverable elements
+      const allHoverables = document.querySelectorAll(".hoverable, a, .card, .pub-item, .keyword-chip");
 
       if (isDesktopPointer && !prefersReducedMotion) {
+        // Show cursor only when mouse moves initially
+        document.addEventListener("mousemove", () => {
+          dot.style.opacity = "1";
+          outline.style.opacity = "1";
+        }, { once: true });
+
         let mouseX = window.innerWidth / 2;
         let mouseY = window.innerHeight / 2;
         let outlineX = mouseX;
@@ -1292,30 +1348,56 @@
         window.addEventListener("mousemove", (e) => {
           mouseX = e.clientX;
           mouseY = e.clientY;
-          // Center the dot exactly
+          // Exact dot position
           dot.style.transform = `translate(${mouseX}px, ${mouseY}px)`;
         });
 
-        hoverables.forEach((el) => {
-          el.addEventListener("mouseenter", () => {
+        // Frame/Magnetic effect on links
+        advancedMagneticLinks.forEach((el) => {
+          el.addEventListener("mouseenter", (e) => {
+            const rect = e.target.getBoundingClientRect();
+            const padding = 15;
+            
+            // Tell outline to become a frame and hide dot
             outline.classList.add("hover-active");
             dot.classList.add("hover-active");
+            
+            // Lock outline to the element's position
+            outline.style.width = `${rect.width + padding * 2}px`;
+            outline.style.height = `${rect.height + padding / 2}px`;
+            
+            // Override the animation loop temporarily
+            outline.style.transition = "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)";
+            outline.style.transform = `translate(${rect.left + rect.width/2}px, ${rect.top + rect.height/2}px)`;
           });
+          
           el.addEventListener("mouseleave", () => {
+            // Release lock
             outline.classList.remove("hover-active");
             dot.classList.remove("hover-active");
+            
+            // Restore animation properties
+            outline.style.transition = "width 0.3s ease, height 0.3s ease, border-radius 0.3s ease, background 0.3s ease, border-color 0.3s ease";
+            outline.style.width = "40px";
+            outline.style.height = "40px";
           });
         });
 
+        // Animation Loop for Smooth Outline Follow
         function animateCursor() {
-          outlineX += (mouseX - outlineX) * 0.15; 
-          outlineY += (mouseY - outlineY) * 0.15;
-          outline.style.transform = `translate(${outlineX}px, ${outlineY}px)`;
+          // Normal follow behavior (when not locked as a frame)
+          if (!outline.classList.contains("hover-active")) {
+            outlineX += (mouseX - outlineX) * 0.15; 
+            outlineY += (mouseY - outlineY) * 0.15;
+            outline.style.transform = `translate(${outlineX}px, ${outlineY}px)`;
+          } else {
+            // Even when locked, subtly smooth the internal movement for peak class
+          }
           requestAnimationFrame(animateCursor);
         }
         animateCursor();
       } else {
-        // Ensure strictly disabled on mobile/touch
+        // Disabled on mobile
         if(dot) dot.style.display = "none";
         if(outline) outline.style.display = "none";
       }
@@ -1335,17 +1417,27 @@
       );
       revealEls.forEach((el) => revealObserver.observe(el));
 
-      // Spotlight effect on cards
-      const cardGrids = document.querySelectorAll(".cards-grid");
+      // MOUSE SPOTLIGHTS (Cards, Pub Items, Buttons)
+      const spotlights = document.querySelectorAll(".cards-grid, .pub-list, .hero-actions");
       if (isDesktopPointer) {
-        cardGrids.forEach((grid) => {
-          grid.addEventListener("mousemove", (e) => {
-            grid.querySelectorAll(".card").forEach((card) => {
-              const rect = card.getBoundingClientRect();
+        spotlights.forEach((container) => {
+          container.addEventListener("mousemove", (e) => {
+            // Update Spotlight on Card/Pub Items
+            container.querySelectorAll(".card, .pub-item").forEach((item) => {
+              const rect = item.getBoundingClientRect();
               const x = e.clientX - rect.left;
               const y = e.clientY - rect.top;
-              card.style.setProperty("--mouse-x", `${x}px`);
-              card.style.setProperty("--mouse-y", `${y}px`);
+              item.style.setProperty("--mouse-x", `${x}px`);
+              item.style.setProperty("--mouse-y", `${y}px`);
+            });
+            
+            // Update Spotlight on Buttons
+            container.querySelectorAll(".btn").forEach((btn) => {
+              const rect = btn.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              btn.style.setProperty("--mouse-x", `${x}px`);
+              btn.style.setProperty("--mouse-y", `${y}px`);
             });
           });
         });
