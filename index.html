@@ -14,29 +14,30 @@
 
   <style>
     :root {
-      /* OLED Dark Mode Palette */
+      /* Classic Monochrome / Pro Palette */
       --bg-base: #000000;
-      --card-bg: #111111; 
-      --card-hover: #1a1a1a;
+      --card-bg: rgba(15, 15, 15, 0.6); 
+      --card-hover: rgba(26, 26, 26, 0.8);
       --card-border: rgba(255, 255, 255, 0.08); 
       
+      /* Subtle Accents */
+      --accent-1: #ffffff;
+      --accent-2: #cccccc;
+      --accent-glow: rgba(255, 255, 255, 0.08);
+      
       /* Typography */
-      --text-main: #f5f5f7; /* Apple's exact off-white */
+      --text-main: #f5f5f7; 
       --text-muted: #86868b;
       --text-soft: #a1a1a6;
-      
-      /* Accents */
-      --accent: #2997ff;
-      --accent-glow: rgba(41, 151, 255, 0.15);
       
       /* Physics Easing */
       --spring-ease: cubic-bezier(0.175, 0.885, 0.32, 1.05);
       --fluid-ease: cubic-bezier(0.16, 1, 0.3, 1);
       
       /* Layout */
-      --radius-xl: 28px;
-      --radius-lg: 18px;
-      --container: 1060px;
+      --radius-xl: 24px;
+      --radius-lg: 16px;
+      --container: 1100px;
     }
 
     * {
@@ -48,17 +49,13 @@
       scroll-behavior: smooth;
     }
 
-    /* Elegant Scrollbar */
-    ::-webkit-scrollbar { width: 8px; }
+    /* Minimal Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg-base); }
-    ::-webkit-scrollbar-thumb { 
-      background: #333; 
-      border-radius: 10px; 
-      border: 2px solid var(--bg-base);
-    }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #555; }
 
-    ::selection { background: rgba(41, 151, 255, 0.3); color: #fff; }
+    ::selection { background: rgba(255, 255, 255, 0.2); color: #fff; }
 
     body {
       margin: 0;
@@ -76,7 +73,7 @@
     img { max-width: 100%; display: block; }
     a { color: inherit; text-decoration: none; }
 
-    /* --- ROBUST CUSTOM CURSOR --- */
+    /* --- CLASSIC CUSTOM CURSOR --- */
     @media (hover: hover) and (pointer: fine) {
       * { cursor: none !important; }
     }
@@ -87,21 +84,22 @@
       left: 0;
       width: 12px;
       height: 12px;
-      background: var(--text-main);
+      background: #ffffff;
+      mix-blend-mode: difference;
       border-radius: 50%;
       pointer-events: none;
       z-index: 9999;
       transform: translate(-50%, -50%);
-      transition: width 0.3s var(--spring-ease), height 0.3s var(--spring-ease), background 0.3s ease, border 0.3s ease;
+      transition: width 0.3s var(--spring-ease), height 0.3s var(--spring-ease), opacity 0.3s ease;
       will-change: transform, width, height;
     }
 
     .custom-cursor.hovering {
       width: 44px;
       height: 44px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1.5px solid rgba(255, 255, 255, 0.5);
-      backdrop-filter: blur(4px);
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      mix-blend-mode: normal;
     }
 
     /* --- BACKGROUND ELEMENTS --- */
@@ -110,8 +108,8 @@
       inset: 0;
       z-index: -3;
       background: 
-        radial-gradient(circle at 20% 0%, rgba(41, 151, 255, 0.08), transparent 40%),
-        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.03), transparent 40%);
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03), transparent 50%),
+        radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.02), transparent 50%);
       pointer-events: none;
     }
 
@@ -121,13 +119,12 @@
       z-index: -2;
       overflow: hidden;
       pointer-events: none;
-      opacity: 0.25;
-      filter: blur(1px);
+      opacity: 0.15;
     }
-    .ai-center-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255,255,255,0.1); }
+    .ai-center-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.15), transparent); }
     .ai-shape { position: absolute; will-change: transform; }
-    .ai-paddle { width: 8px; height: 120px; border-radius: 4px; background: rgba(255, 255, 255, 0.4); }
-    .ai-ball { width: 16px; height: 16px; border-radius: 50%; background: rgba(255, 255, 255, 0.7); box-shadow: 0 0 20px var(--accent); }
+    .ai-paddle { width: 4px; height: 80px; border-radius: 2px; background: #ffffff; }
+    .ai-ball { width: 10px; height: 10px; border-radius: 50%; background: #ffffff; }
 
     /* --- FLOATING PILL NAVIGATION --- */
     .nav-container {
@@ -139,35 +136,36 @@
       justify-content: center;
       z-index: 2000;
       transition: top 0.4s var(--fluid-ease);
-      pointer-events: none; /* Let clicks pass through the container */
+      pointer-events: none; 
+      will-change: top;
     }
 
     nav {
-      pointer-events: auto; /* Re-enable clicks for the actual nav */
+      pointer-events: auto; 
       display: flex;
       align-items: center;
       gap: 3rem;
       padding: 0.8rem 2.5rem;
-      background: rgba(20, 20, 20, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(10, 10, 10, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 999px;
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(24px) saturate(120%);
+      -webkit-backdrop-filter: blur(24px) saturate(120%);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
       transition: all 0.4s var(--fluid-ease);
     }
 
     .nav-container.is-scrolled { top: 16px; }
     .nav-container.is-scrolled nav {
       padding: 0.6rem 2rem;
-      background: rgba(10, 10, 10, 0.85);
+      background: rgba(5, 5, 5, 0.85);
       gap: 2rem;
     }
 
     .nav-logo {
       font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+      font-weight: 600;
+      letter-spacing: -0.01em;
       color: var(--text-main);
     }
 
@@ -175,7 +173,7 @@
     .nav-links a {
       color: var(--text-muted);
       font-size: 0.85rem;
-      font-weight: 500;
+      font-weight: 400;
       transition: color 0.3s ease;
     }
     .nav-links a:hover { color: var(--text-main); }
@@ -198,12 +196,10 @@
     .hero h1 {
       margin: 0 0 1.5rem 0;
       font-size: clamp(3rem, 6vw, 5.5rem);
-      font-weight: 800;
+      font-weight: 700;
       line-height: 1.05;
-      letter-spacing: -0.05em;
-      background: linear-gradient(135deg, #ffffff 0%, #86868b 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.04em;
+      color: #ffffff;
       animation: fadeUp 1s var(--fluid-ease) forwards;
     }
 
@@ -221,118 +217,111 @@
     }
 
     .profile-img-wrapper {
-      width: 160px;
+      width: 170px;
       flex-shrink: 0;
-      border-radius: var(--radius-lg);
+      border-radius: 4px; 
       overflow: hidden;
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 4px;
+      background: #0a0a0a;
     }
 
     .profile-img-wrapper img {
       width: 100%;
       height: auto;
-      filter: grayscale(100%);
-      transition: filter 0.5s ease, transform 0.5s var(--fluid-ease);
+      filter: grayscale(100%) contrast(1.15);
+      transition: transform 0.8s var(--fluid-ease);
+      will-change: transform;
+      border-radius: 2px;
     }
     
     .profile-img-wrapper:hover img {
-      filter: grayscale(0%);
-      transform: scale(1.05);
+      transform: scale(1.03);
     }
 
     .hero-copy p {
-      max-width: 680px;
-      margin: 0 0 2rem 0;
-      font-size: clamp(1.1rem, 2vw, 1.25rem);
+      max-width: 700px;
+      margin: 0 0 1.2rem 0;
+      font-size: clamp(1.05rem, 2vw, 1.15rem);
       color: var(--text-muted);
       font-weight: 400;
       letter-spacing: -0.01em;
+      line-height: 1.7;
     }
 
-    /* Apple-style Button */
+    .hero-copy strong {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0.9rem 2rem;
-      border-radius: 999px;
-      background: var(--text-main);
-      color: var(--bg-base);
-      font-size: 0.95rem;
-      font-weight: 600;
-      transition: transform 0.3s var(--spring-ease), background 0.3s ease;
+      padding: 0.8rem 1.8rem;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: var(--text-main);
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      transition: all 0.4s var(--fluid-ease);
+      margin-top: 1rem;
     }
 
     .btn:hover {
-      transform: scale(1.03);
       background: #ffffff;
-    }
-
-    .scholar-keywords {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 2rem;
-    }
-
-    .keyword-chip {
-      padding: 0.4rem 0.9rem;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.05);
-      color: var(--text-soft);
-      font-size: 0.8rem;
-      font-weight: 500;
-      transition: all 0.3s ease;
-    }
-
-    .keyword-chip:hover {
-      background: rgba(255,255,255,0.08);
-      color: var(--text-main);
+      color: #000000;
+      border-color: #ffffff;
       transform: translateY(-2px);
     }
 
     section h2 {
       margin: 6rem 0 2.5rem;
-      font-size: clamp(2rem, 4vw, 2.8rem);
-      font-weight: 700;
-      letter-spacing: -0.04em;
+      font-size: clamp(1.8rem, 4vw, 2.4rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
       color: var(--text-main);
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 1rem;
     }
 
     /* --- BENTO GRID & CARDS --- */
     .cards-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 1.5rem;
+      gap: 1.25rem;
     }
 
     .cards-grid.bento { grid-template-columns: repeat(2, 1fr); }
 
     .card {
       position: relative;
-      padding: 2.5rem;
-      border-radius: var(--radius-xl);
+      padding: 2.2rem;
+      border-radius: var(--radius-lg);
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       overflow: hidden;
-      transition: transform 0.4s var(--spring-ease), border-color 0.4s ease;
+      transition: transform 0.5s var(--spring-ease), border-color 0.4s ease, background 0.4s ease;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      will-change: transform;
     }
 
-    /* Subtle Inner Glow on Hover (Premium Touch) */
     .card::before {
       content: "";
       position: absolute;
       inset: 0;
-      background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.03), transparent 40%);
+      background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.03), transparent 40%);
       opacity: 0;
       transition: opacity 0.4s ease;
       pointer-events: none;
     }
 
     .card:hover {
-      transform: translateY(-4px) scale(1.01);
-      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,0.2);
       background: var(--card-hover);
     }
 
@@ -340,68 +329,151 @@
 
     .card h3 {
       margin: 0 0 0.5rem 0;
-      font-size: 1.4rem;
-      letter-spacing: -0.02em;
+      font-size: 1.25rem;
+      letter-spacing: -0.01em;
       font-weight: 600;
+      color: #ffffff;
     }
 
     .tagline {
-      color: var(--text-main);
-      font-weight: 500;
-      font-size: 0.95rem;
+      color: var(--text-soft);
+      font-weight: 400;
+      font-size: 0.9rem;
       margin-bottom: 1rem;
+      display: inline-block;
     }
 
     .meta-info {
       display: flex;
+      flex-wrap: wrap;
       gap: 1rem;
-      margin-bottom: 1.5rem;
-      font-size: 0.85rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.8rem;
       color: var(--text-muted);
-      font-family: monospace;
+      font-family: 'SF Mono', ui-monospace, monospace;
     }
 
-    .card ul { padding-left: 1.2rem; margin: 0; color: var(--text-soft); font-size: 0.95rem; }
-    .card li { margin-bottom: 0.6rem; }
+    .card p, .card ul { margin-top: 0; color: var(--text-soft); font-size: 0.9rem; line-height: 1.6; }
+    .card ul { padding-left: 1.2rem; margin-bottom: 0; }
+    .card li { margin-bottom: 0.5rem; }
+    
+    .collaborators {
+      margin-top: 1.2rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 300;
+    }
+
+    .collaborators strong {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    /* Tag Chips */
+    .chip-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    .chip {
+      padding: 0.3rem 0.7rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--text-soft);
+      transition: all 0.3s ease;
+    }
+    
+    .chip:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border-color: rgba(255,255,255,0.3);
+    }
 
     /* --- PUBLICATIONS --- */
-    .pub-list { display: flex; flex-direction: column; gap: 1rem; }
+    .pub-list { display: flex; flex-direction: column; gap: 0.8rem; }
     
     .pub-item {
-      padding: 1.8rem;
+      padding: 1.5rem;
       border-radius: var(--radius-lg);
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       color: var(--text-soft);
-      font-size: 0.95rem;
-      transition: all 0.4s var(--spring-ease);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      transition: all 0.5s var(--spring-ease);
     }
 
     .pub-item:hover {
-      transform: translateX(8px);
-      background: var(--card-hover);
-      border-color: rgba(255,255,255,0.1);
+      transform: translateX(6px);
+      background: rgba(26, 26, 26, 0.8);
+      border-color: rgba(255,255,255,0.15);
     }
 
-    .pub-item strong { color: var(--text-main); font-weight: 600; }
+    .pub-item strong { color: var(--text-main); font-weight: 500; }
 
     .badge {
       display: inline-block;
       margin-left: 0.5rem;
-      padding: 0.2rem 0.6rem;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--bg-base);
-      background: var(--text-main);
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
     }
 
-    .badge.co-second {
-      background: transparent;
+    /* --- SCROLL UP BUTTON --- */
+    .scroll-up-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 44px;
+      height: 44px;
+      border-radius: 4px;
+      background: rgba(15, 15, 15, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       color: var(--text-main);
-      border: 1px solid rgba(255,255,255,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      cursor: none; 
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+      transition: opacity 0.5s var(--fluid-ease), transform 0.5s var(--fluid-ease);
+      will-change: transform, opacity;
+    }
+
+    .scroll-up-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .scroll-up-btn:hover {
+      background: #ffffff;
+      color: #000000;
+    }
+
+    .scroll-up-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: square;
+      fill: none;
     }
 
     /* Scroll Indicator */
@@ -413,25 +485,26 @@
       opacity: 0;
       animation: fadeUp 1s 1.5s var(--fluid-ease) forwards;
       color: var(--text-muted);
-      font-size: 0.8rem;
-      font-weight: 500;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
     }
     
     .scroll-indicator::after {
       content: '';
       width: 1px;
-      height: 30px;
-      background: linear-gradient(to bottom, var(--text-muted), transparent);
+      height: 40px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent);
     }
 
     .reveal {
       opacity: 0;
-      transform: translateY(30px);
+      transform: translateY(20px);
       transition: opacity 0.8s var(--fluid-ease), transform 0.8s var(--fluid-ease);
+      will-change: opacity, transform;
     }
     .reveal.active { opacity: 1; transform: translateY(0); }
 
@@ -439,30 +512,29 @@
     @media (max-width: 900px) {
       .cards-grid.bento { grid-template-columns: 1fr; }
       .hero-profile-area { flex-direction: column-reverse; gap: 2rem; }
-      .profile-img-wrapper { width: 120px; }
+      .profile-img-wrapper { width: 140px; }
     }
 
     @media (max-width: 768px) {
-      /* Force native cursor on mobile */
       .custom-cursor { display: none !important; }
       * { cursor: auto !important; }
 
       .nav-container { top: 16px; padding: 0 1rem; }
       nav { width: 100%; justify-content: space-between; padding: 0.8rem 1.5rem; gap: 1rem; }
-      .nav-links { display: none; /* Hide links on pure mobile, keep logo centered */ }
+      .nav-links { display: none; }
       
       .hero { padding-top: 100px; }
       .card, .pub-item { transform: none !important; padding: 1.5rem; }
       .card:hover { transform: none; background: var(--card-bg); }
       
       .scroll-indicator { bottom: 20px; }
+      .scroll-up-btn { bottom: 20px; right: 20px; }
     }
   </style>
 </head>
 <body>
 
   <div class="custom-cursor" id="cursor"></div>
-
   <div class="hero-ambient-glow" aria-hidden="true"></div>
 
   <div class="ai-game-bg" id="aiGameBg" aria-hidden="true">
@@ -477,8 +549,8 @@
       <div class="nav-logo interactive">Jihun Chae</div>
       <div class="nav-links">
         <a href="#about" class="interactive">About</a>
+        <a href="#education" class="interactive">Education</a>
         <a href="#experience" class="interactive">Experience</a>
-        <a href="#awards" class="interactive">Awards</a>
         <a href="#publications" class="interactive">Publications</a>
       </div>
     </nav>
@@ -491,23 +563,14 @@
       <div class="hero-profile-area">
         <div class="hero-copy">
           <p>
-            PhD student at KAIST GSCT. My research explores what it means to play
-            with and against AI, focusing on creating intelligent, autonomous
-            agents that support diverse players, including those with disabilities.
+            PhD student at <strong>KAIST Graduate School of Culture Technology</strong> in the <strong>Games and Life Lab</strong>. 
+            My research spans Human-Computer Interaction and Generative AI in games, focusing on creating intelligent, autonomous agents that support diverse players, including those with disabilities.
           </p>
 
           <div class="hero-actions">
             <a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank" class="btn interactive">
-              Connect on LinkedIn
+              LinkedIn Profile
             </a>
-          </div>
-
-          <div class="scholar-keywords">
-            <span class="keyword-chip interactive">HCI</span>
-            <span class="keyword-chip interactive">Game AI</span>
-            <span class="keyword-chip interactive">Ludic AI</span>
-            <span class="keyword-chip interactive">Game Accessibility</span>
-            <span class="keyword-chip interactive">Inclusive Design</span>
           </div>
         </div>
 
@@ -515,7 +578,7 @@
           <img
             src="your-image.jpg"
             alt="Jihun Chae"
-            onerror="this.style.display='none'; this.parentNode.innerHTML='<div style=&quot;width:100%;height:160px;background:#111;display:flex;align-items:center;justify-content:center;color:#666;font-size:0.8rem;&quot;>No Image</div>';"
+            onerror="this.style.display='none'; this.parentNode.innerHTML='<div style=&quot;width:100%;height:160px;background:#111;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.8rem;&quot;>No Image</div>';"
           />
         </div>
       </div>
@@ -523,7 +586,7 @@
       <div class="scroll-indicator">Scroll</div>
     </section>
 
-    <section class="reveal">
+    <section class="reveal" id="education">
       <h2>Education</h2>
       <div class="cards-grid bento">
         <div class="card interactive">
@@ -553,34 +616,69 @@
     </section>
 
     <section class="reveal" id="experience">
-      <h2>Experience</h2>
+      <h2>Research Experience</h2>
       <div class="cards-grid">
         <div class="card interactive">
           <h3>Inclusive Conversational AI Service for Game Accessibility Enhancement</h3>
-          <div class="tagline">Student Researcher Lead | NRF</div>
+          <div class="tagline">Student Researcher Lead | National Research Foundation of Korea (NRF)</div>
           <div class="meta-info"><span>KAIST</span><span>May 2024 – Apr 2027</span></div>
           <ul>
             <li>Led user research and prototype development for an inclusive conversational AI assistant designed to support gamers with disabilities across diverse play contexts.</li>
-            <li>Conducted interviews, participatory design workshops, and iterative concept development to identify accessibility needs.</li>
+            <li>Conducted interviews, participatory design workshops, and iterative concept development to identify accessibility needs and translate them into AI-supported interaction scenarios.</li>
+            <li>Contributed to the design of a research and collaboration framework connecting academia, industry, and rehabilitation stakeholders to inform future accessibility guidelines and real-world deployment.</li>
           </ul>
+          <div class="collaborators">
+            <strong>Collaborators:</strong> Samsung Electronics (Corporate Design Center), Nexon Intelligence Labs, Smilegate D&amp;I, Korea National Rehabilitation Center, SpecialEffect (UK)
+          </div>
         </div>
 
         <div class="card interactive">
           <h3>Preserving the Haenyeo Legacy: Serious Games for Social Impact</h3>
-          <div class="tagline">Student Researcher | Leverhulme Trust</div>
+          <div class="tagline">Student Researcher | Leverhulme Trust International Fellow</div>
           <div class="meta-info"><span>KAIST</span><span>Jun 2025 – Sep 2025</span></div>
           <ul>
-            <li>Contributed to the design of a serious game project aimed at preserving and communicating the cultural heritage of the Jeju Haenyeo.</li>
-            <li>Helped develop game concepts connecting Haenyeo practices and environmental change.</li>
+            <li>Contributed to the design of a serious game project aimed at preserving and communicating the cultural heritage of the Jeju Haenyeo, with a focus on intergenerational knowledge transmission.</li>
+            <li>Helped develop game concepts and narrative structures that connect Haenyeo practices, environmental change, and women’s community knowledge in an accessible interactive format.</li>
+            <li>Supported international research collaboration and field-based design discussions examining how serious games can contribute to cultural sustainability and community resilience.</li>
           </ul>
+          <div class="collaborators">
+            <strong>Partners:</strong> Brunel University London (Games Research Lab), Jeju Haenyeo Museum, the Haenyeo communities of Sinrye-ri, Daepyeong-ri, and Yeongnak-ri
+          </div>
         </div>
-        
+
         <div class="card interactive">
           <h3>Real-Time XR Interface Technology for Environmental Adaptation</h3>
           <div class="tagline">Student Researcher | IITP</div>
           <div class="meta-info"><span>KAIST</span><span>Apr 2024 – Jun 2025</span></div>
           <ul>
-            <li>Participated in the development of an XR interface system for dynamically adapting virtual content to real-world conditions.</li>
+            <li>Participated in the development of an XR interface system for dynamically adapting virtual content to real-world environmental and spatial conditions.</li>
+            <li>Contributed to the design and implementation of interaction concepts involving adaptive virtual objects and multimodal interface behavior in mixed-reality settings.</li>
+            <li>Supported research on immersive visual-haptic feedback to improve presence and environmental responsiveness in XR experiences.</li>
+          </ul>
+          <div class="collaborators">
+            <strong>Partners:</strong> Fraunhofer Institute (Germany), NYU, UniSA, Anipen, bHaptics
+          </div>
+        </div>
+
+        <div class="card interactive">
+          <h3>Defense Technology Research: Camouflage Effectiveness</h3>
+          <div class="tagline">Student Researcher | Korea Aerospace Industries (KAI)</div>
+          <div class="meta-info"><span>Handong Global University</span><span>Apr 2023 – Feb 2024</span></div>
+          <ul>
+            <li>Performed computational and visual evaluation of KF-21 Boramae camouflage effectiveness across altitude, terrain, and meteorological conditions to assess detectability under varied operational environments.</li>
+            <li>Processed environmental imagery and simulation-based datasets to analyze the interaction between aircraft surface patterns, background context, and visibility performance.</li>
+            <li>Developed camouflage colorways and pattern configurations for applied defense design, with selected proposals incorporated into real project outputs.</li>
+          </ul>
+        </div>
+
+        <div class="card interactive">
+          <h3>Smart City Infrastructure &amp; AI Object Tracking</h3>
+          <div class="tagline">Student Researcher</div>
+          <div class="meta-info"><span>Handong Global University</span><span>Jan 2023 – Feb 2024</span></div>
+          <ul>
+            <li>Engineered IoT-based roadside sensing hardware for urban data acquisition, including enclosure design and rapid prototyping through 3D-printed sensor housings.</li>
+            <li>Supported AI-driven traffic object tracking pipelines by contributing to data preprocessing, detection workflow refinement, and model-level optimization for real-world road scenes.</li>
+            <li>Improved detection robustness in dense urban environments through anchor-box optimization and applied computer vision experimentation for high-traffic conditions.</li>
           </ul>
         </div>
       </div>
@@ -592,25 +690,78 @@
         <div class="card interactive">
           <h3>Selected Entrepreneurial Team</h3>
           <div class="tagline">Climate Tech Track | Asan Nanum Foundation</div>
-          <div class="meta-info"><span>Mar 2024</span></div>
+          <div class="meta-info"><span>Chung Ju-yung Startup Competition</span><span>Mar 2024</span></div>
+          <ul>
+            <li>Selected as a representative startup team in the Asan UniverCT incubation program for climate-tech ventures.</li>
+            <li>Secured early-stage funding and mentorship through KAIST and the Asan Nanum Foundation ecosystem.</li>
+          </ul>
         </div>
 
         <div class="card interactive">
-          <h3>Grand Prize</h3>
+          <h3>Grand Prize (University President’s Award)</h3>
           <div class="tagline">Pohang Culture &amp; Arts Factory Hackathon</div>
-          <div class="meta-info"><span>Jan 2024</span></div>
+          <div class="meta-info"><span>Handong Global University</span><span>Jan 2024</span></div>
+          <ul>
+            <li>Led the technical implementation of a large-scale Unreal Engine media facade prototype demonstrating a smart-city experience concept.</li>
+          </ul>
         </div>
 
         <div class="card interactive">
           <h3>Excellence Award</h3>
           <div class="tagline">National Metaverse Developer Contest</div>
-          <div class="meta-info"><span>Jun 2023</span></div>
+          <div class="meta-info"><span>Ministry of Science and ICT (MSIT)</span><span>Jun 2023</span></div>
+          <ul>
+            <li>Developed a gamified digital therapeutic concept for eye-muscle rehabilitation using Meta Quest Pro eye-tracking capabilities.</li>
+          </ul>
         </div>
 
         <div class="card interactive">
-          <h3>Top 14 Finalist</h3>
-          <div class="tagline">DB-SNUbiz Global Startup Challenge</div>
-          <div class="meta-info"><span>May 2021</span></div>
+          <h3>Outstanding Student Research Award</h3>
+          <div class="tagline">Korea Multimedia Society (KMMS)</div>
+          <div class="meta-info"><span>Conference Presentation</span><span>Nov 2023</span></div>
+          <ul>
+            <li>Presented research on eye-tracking-based VR interactive games, examining oculomotor response patterns for immersion and accessibility design.</li>
+          </ul>
+        </div>
+
+        <div class="card interactive">
+          <h3>University President’s Award</h3>
+          <div class="tagline">Startup Idea Competition</div>
+          <div class="meta-info"><span>Handong Global University</span><span>Nov 2022</span></div>
+          <ul>
+            <li>Designed a startup concept integrating ESG strategy with augmented reality services and was selected as the top proposal.</li>
+          </ul>
+        </div>
+
+        <div class="card interactive">
+          <h3>Outstanding Student Research Award</h3>
+          <div class="tagline">Korea Multimedia Society (KMMS)</div>
+          <div class="meta-info"><span>Conference Presentation</span><span>May 2022</span></div>
+          <ul>
+            <li>Presented experimental research on VR exposure therapy for cynophobia, proposing spatiotemporal design factors for improved intervention effectiveness.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="reveal" id="certifications">
+      <h2>Patents & Certifications</h2>
+      <div class="cards-grid bento">
+        <div class="card interactive">
+          <h3>Certifications</h3>
+          <div class="chip-container">
+            <span class="chip interactive">TOEIC: 920</span>
+            <span class="chip interactive">Microsoft Azure AI-900</span>
+          </div>
+        </div>
+
+        <div class="card interactive">
+          <h3>Patent: AI-Based Technology Acceptance Prediction Method</h3>
+          <p style="font-size: 0.8rem; margin-bottom: 0; margin-top: 0.5rem; color: var(--text-soft);">
+            Korean Intellectual Property Office (No. 40-2022-0179493)<br>
+            Co-patentor with Impactive AI Corp.<br>
+            Dec 23, 2022
+          </p>
         </div>
       </div>
     </section>
@@ -618,58 +769,96 @@
     <section class="reveal" id="publications">
       <h2>Publications</h2>
       <div class="pub-list">
-        <div class="pub-item interactive"><strong>Chae, J.</strong>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities. <em>IUI ’26</em>. ACM. <span class="badge">First Author</span></div>
+        <div class="pub-item interactive"><strong>Chae, J.</strong>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns. <em>Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI ’26)</em>. ACM. <span class="badge">First Author</span></div>
 
-        <div class="pub-item interactive">Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). Press start to continue: A thematic analysis of hardcore players with disabilities. <em>CHI EA ’25</em>. ACM. <span class="badge">Co-first</span></div>
+        <div class="pub-item interactive">Park, E., <strong>Chae, J.</strong>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties. <em>Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA ’25)</em>. ACM. <span class="badge">Co-first Author</span></div>
 
-        <div class="pub-item interactive"><strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>DiGRA Korea 2025</em>. <span class="badge">First Author</span></div>
+        <div class="pub-item interactive"><strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2025). The identity and role of game NPCs: Past, present, and future. <em>Proceedings of the 1st DiGRA Korea Conference 2025</em>. <span class="badge">First Author</span></div>
 
-        <div class="pub-item interactive">Oh, H., Eum, K., Park, E., <strong>Chae, J.</strong>, et al. (2025). RAG-Enhanced LLM Chatbot for Game Accessibility. <em>Korea HCI 2025</em>. <span class="badge co-second">Co-second</span></div>
+        <div class="pub-item interactive">Oh, H., Eum, K., Park, E., <strong>Chae, J.</strong>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA. <em>Korea HCI Conference 2025</em>. <span class="badge">Co-second</span></div>
+
+        <div class="pub-item interactive">Choi, E., <strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2024). Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH). <em>Korean Artificial Intelligence Association Conference 2024</em>. <span class="badge">Co-first Author</span></div>
+
+        <div class="pub-item interactive">Eum, K., Park, E., <strong>Chae, J.</strong>, &amp; Doh, Y. Y. (2024). GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies. <em>Korea Computer Graphics Society Conference 2024</em>. <span class="badge">Co-first Author</span></div>
+
+        <div class="pub-item interactive">Park, E., <strong>Chae, J.</strong>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). Challenges and opportunities of game NPC research using LLM: A scoping review. <em>Korean Game Society Conference 2024</em>. <span class="badge">Co-first Author</span></div>
+
+        <div class="pub-item interactive">Kim, Y. B., &amp; <strong>Chae, J.</strong> (2024). A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd. <em>Korea Technology Innovation Society Conference 2024</em>.</div>
+
+        <div class="pub-item interactive">Kim, Y. B., &amp; <strong>Chae, J.</strong> (2024). From BigHit to HYBE: Sentiment analysis and strategic transition through news data. <em>Korea Society for Innovation Management &amp; Economics Conference 2024</em>.</div>
+
+        <div class="pub-item interactive"><strong>Chae, J.</strong>, Yoo, S., Lee, Y., Kim, Y., Kim, H., &amp; Han, D. (2023). Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles. <em>Journal of the Korea Computer Graphics Society</em>, 29(3), 137–147. <span class="badge">First Author</span></div>
+
+        <div class="pub-item interactive"><strong>Chae, J.</strong>, Kim, H., Kim, Y., Kim, M., Kim, S., &amp; Han, D. (2023). A study on the effect of group commitment on improving awareness of recycling through gamification. <em>Korea HCI Conference 2023</em>. <span class="badge">First Author</span></div>
+
+        <div class="pub-item interactive">Kim, Y., <strong>Chae, J.</strong>, Lee, Y., Kim, H., Lee, Y., &amp; Han, D. (2023). Enhancing participation in rehabilitation for diplopia through gamification. <em>Korea Computer Graphics Society Conference 2023</em>.</div>
+
+        <div class="pub-item interactive">Lee, Y. S., Kim, Y., Kim, H., <strong>Chae, J.</strong>, Lee, Y., &amp; Han, D. (2023). Eye-tracking-based VR interactive games for eye movements. <em>Korea Multimedia Society Conference 2023</em>.</div>
+
+        <div class="pub-item interactive">Yoon, D., Park, S., Song, Y., <strong>Chae, J.</strong>, &amp; Chung, D. (2023). Methodology for improving the performance of demand forecasting through machine learning. <em>Preprint available at Research Square.</em></div>
+
+        <div class="pub-item interactive">Yoo, S., <strong>Chae, J.</strong>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for cynophobia. <em>Korea Multimedia Society Conference 2022</em>.</div>
+
+        <div class="pub-item interactive">Park, S., Yoon, D., <strong>Chae, J.</strong>, Song, Y., &amp; Chung, D. (2022). Enhanced predictive model performance through clustering. <em>Korea Society of Management Information Systems Conference 2022</em>.</div>
+
+        <div class="pub-item interactive">Park, S., Yoon, D., Song, Y., <strong>Chae, J.</strong>, &amp; Chung, D. (2022). Combined regression coefficient reduction method with clustering for performance enhancement. <em>Korea Intelligent Information Systems Society Conference 2022</em>.</div>
       </div>
     </section>
   </main>
 
+  <button id="scrollUpBtn" class="scroll-up-btn interactive" aria-label="Scroll to top">
+    <svg viewBox="0 0 24 24">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+  </button>
+
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      // Feature Detection
       const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       
-      // 1. ROBUST CURSOR LOGIC (Desktop Only)
+      // 1. CLASSIC CURSOR LOGIC
       if (!isTouch) {
         const cursor = document.getElementById("cursor");
         let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
         let cursorX = mouseX, cursorY = mouseY;
         
-        // Use a simple, highly performant lerp loop
         window.addEventListener("mousemove", (e) => {
           mouseX = e.clientX;
           mouseY = e.clientY;
         });
 
         const loop = () => {
-          // Linear interpolation for smooth trailing
-          cursorX += (mouseX - cursorX) * 0.2;
-          cursorY += (mouseY - cursorY) * 0.2;
-          cursor.style.transform = `translate(calc(${cursorX}px - 50%), calc(${cursorY}px - 50%))`;
+          cursorX += (mouseX - cursorX) * 0.25;
+          cursorY += (mouseY - cursorY) * 0.25;
+          cursor.style.transform = `translate3d(calc(${cursorX}px - 50%), calc(${cursorY}px - 50%), 0)`;
           requestAnimationFrame(loop);
         };
         requestAnimationFrame(loop);
 
-        // Hover scaling
         document.querySelectorAll('.interactive').forEach(el => {
           el.addEventListener('mouseenter', () => cursor.classList.add('hovering'));
           el.addEventListener('mouseleave', () => cursor.classList.remove('hovering'));
         });
       }
 
-      // 2. NAV SHRINK ON SCROLL
+      // 2. NAV & SCROLL UP
       const navContainer = document.getElementById("navContainer");
+      const scrollUpBtn = document.getElementById("scrollUpBtn");
+      
       window.addEventListener("scroll", () => {
-        if (window.scrollY > 50) navContainer.classList.add("is-scrolled");
+        const y = window.scrollY;
+        if (y > 50) navContainer.classList.add("is-scrolled");
         else navContainer.classList.remove("is-scrolled");
+        
+        if (y > 600) scrollUpBtn.classList.add("visible");
+        else scrollUpBtn.classList.remove("visible");
       }, { passive: true });
 
-      // 3. SCROLL REVEAL (Intersection Observer)
+      scrollUpBtn.addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      // 3. SCROLL REVEAL
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
@@ -678,10 +867,9 @@
           }
         });
       }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
-      
       document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
 
-      // 4. INNER GLOW / SPOTLIGHT (Cards)
+      // 4. SPOTLIGHT GLOW
       if (!isTouch) {
         document.querySelectorAll('.card').forEach(card => {
           card.addEventListener('mousemove', e => {
@@ -692,14 +880,14 @@
         });
       }
 
-      // 5. SUBTLE BACKGROUND PONG (Optimized)
+      // 5. WIREFRAME AI PONG
       const pong = {
         left: document.getElementById("paddleLeft"),
         right: document.getElementById("paddleRight"),
         ball: document.getElementById("pongBall"),
-        bx: window.innerWidth/2, by: window.innerHeight/2,
-        vx: 4, vy: 2.5,
-        ly: window.innerHeight/2, ry: window.innerHeight/2
+        bx: window.innerWidth / 2, by: window.innerHeight / 2,
+        vx: 2.5, vy: 1.5,
+        ly: window.innerHeight / 2, ry: window.innerHeight / 2
       };
 
       if (!isTouch) {
@@ -707,27 +895,23 @@
           pong.bx += pong.vx;
           pong.by += pong.vy;
 
-          // Wall bounce
-          if(pong.by <= 0 || pong.by >= window.innerHeight - 16) pong.vy *= -1;
+          if (pong.by <= 0 || pong.by >= window.innerHeight - 10) pong.vy *= -1;
           
-          // Reset if out of bounds
-          if(pong.bx < -50 || pong.bx > window.innerWidth + 50) {
-            pong.bx = window.innerWidth/2;
+          if (pong.bx < -50 || pong.bx > window.innerWidth + 50) {
+            pong.bx = window.innerWidth / 2;
             pong.vx *= -1;
           }
 
-          // Simple AI paddles
-          pong.ly += (pong.by - pong.ly - 60) * 0.05;
-          pong.ry += (pong.by - pong.ry - 60) * 0.05;
+          pong.ly += (pong.by - pong.ly - 40) * 0.03;
+          pong.ry += (pong.by - pong.ry - 40) * 0.03;
 
-          // Render
           pong.ball.style.transform = `translate3d(${pong.bx}px, ${pong.by}px, 0)`;
-          pong.left.style.transform = `translate3d(20px, ${pong.ly}px, 0)`;
-          pong.right.style.transform = `translate3d(${window.innerWidth - 28}px, ${pong.ry}px, 0)`;
+          pong.left.style.transform = `translate3d(30px, ${pong.ly}px, 0)`;
+          pong.right.style.transform = `translate3d(${window.innerWidth - 34}px, ${pong.ry}px, 0)`;
 
           requestAnimationFrame(runPong);
         }
-        runPong();
+        requestAnimationFrame(runPong);
       }
     });
   </script>
