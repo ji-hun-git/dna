@@ -1,1 +1,244 @@
-d
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Jihun Chae - HCI Researcher and PhD student at KAIST specializing in Generative AI, Game Accessibility, and Ludic AI." />
+  <meta name="keywords" content="HCI, Human-Computer Interaction, Ludic AI, UX Research, Mixed-Methods, Jihun Chae, KAIST, PhD" />
+  
+  <title>Jihun Chae | Interactive Research Portfolio</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-base: #000000;
+      --card-bg: rgba(15, 15, 15, 0.6); 
+      --card-hover: rgba(26, 26, 26, 0.8);
+      --card-border: rgba(255, 255, 255, 0.08); 
+      --text-main: #f5f5f7; 
+      --text-muted: #86868b;
+      --text-soft: #a1a1a6;
+      --spring-ease: cubic-bezier(0.175, 0.885, 0.32, 1.05);
+      --fluid-ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --radius-lg: 16px;
+      --container: 1100px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; padding: 0; background: var(--bg-base); color: var(--text-main);
+      font-family: "Inter", -apple-system, sans-serif; line-height: 1.65;
+      overflow-x: hidden;
+    }
+
+    /* --- CUSTOM CURSOR --- */
+    @media (hover: hover) and (pointer: fine) { * { cursor: none !important; } }
+    .custom-cursor {
+      position: fixed; top: 0; left: 0; width: 12px; height: 12px; background: #ffffff;
+      mix-blend-mode: difference; border-radius: 50%; pointer-events: none; z-index: 9999;
+      transform: translate(-50%, -50%); transition: width 0.3s var(--spring-ease), height 0.3s var(--spring-ease);
+    }
+    .custom-cursor.hovering { width: 44px; height: 44px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.6); mix-blend-mode: normal; }
+
+    /* --- BACKGROUND ELEMENTS --- */
+    .hero-ambient-glow {
+      position: fixed; inset: 0; z-index: -3;
+      background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03), transparent 50%);
+    }
+    .ai-game-bg { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; opacity: 0.15; }
+    .ai-shape { position: absolute; will-change: transform; background: #fff; }
+    .ai-paddle { width: 4px; height: 80px; border-radius: 2px; }
+    .ai-ball { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* --- NAVIGATION --- */
+    .nav-container { position: fixed; top: 24px; left: 0; width: 100%; display: flex; justify-content: center; z-index: 2000; transition: top 0.4s var(--fluid-ease); }
+    nav {
+      display: flex; align-items: center; gap: 3rem; padding: 0.8rem 2.5rem;
+      background: rgba(10, 10, 10, 0.65); border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 999px; backdrop-filter: blur(24px); box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+    }
+    .nav-logo { font-size: 1rem; font-weight: 600; color: #fff; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .nav-links { display: flex; gap: 2rem; }
+    .nav-links a { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; transition: color 0.3s; }
+    .nav-links a:hover { color: #fff; }
+
+    /* --- CONTENT LAYOUT --- */
+    .container { width: min(var(--container), calc(100% - 3rem)); margin: 0 auto; padding-bottom: 8rem; }
+    section h2 { margin: 6rem 0 2.5rem; font-size: 2.2rem; font-weight: 600; border-bottom: 1px solid var(--card-border); padding-bottom: 1rem; }
+    
+    .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; position: relative; }
+    .hero h1 { font-size: clamp(3rem, 6vw, 5rem); font-weight: 700; line-height: 1.1; letter-spacing: -0.04em; margin-bottom: 2rem; }
+    .hero-profile-area { display: flex; gap: 4rem; align-items: flex-start; }
+    .profile-img-wrapper { width: 170px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); padding: 4px; background: #0a0a0a; overflow: hidden; }
+    .profile-img-wrapper img { width: 100%; filter: grayscale(100%); transition: transform 0.8s; }
+    .profile-img-wrapper:hover img { transform: scale(1.05); }
+
+    /* --- CARDS & GRIDS --- */
+    .cards-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+    .cards-grid.bento { grid-template-columns: repeat(2, 1fr); }
+    .card {
+      position: relative; display: flex; flex-direction: column; height: 100%; padding: 2.2rem;
+      border-radius: var(--radius-lg); background: var(--card-bg); border: 1px solid var(--card-border);
+      backdrop-filter: blur(12px); transition: transform 0.5s var(--spring-ease), border-color 0.4s;
+    }
+    .card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.2); background: var(--card-hover); }
+    .card h3 { margin: 0 0 0.5rem; font-size: 1.25rem; }
+    .tagline { color: var(--text-soft); font-size: 0.9rem; margin-bottom: 1rem; }
+    .meta-info { font-size: 0.8rem; color: var(--text-muted); font-family: monospace; margin-bottom: 1.2rem; }
+    .card ul { padding-left: 1.2rem; margin: 0; flex-grow: 1; color: var(--text-soft); font-size: 0.9rem; }
+    .collaborators { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem; color: var(--text-muted); }
+
+    .chip-container { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .chip { padding: 0.4rem 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.8rem; color: var(--text-soft); }
+
+    /* --- PUBLICATIONS --- */
+    .pub-item { padding: 1.5rem; border-radius: var(--radius-lg); background: var(--card-bg); border: 1px solid var(--card-border); margin-bottom: 0.8rem; font-size: 0.9rem; transition: transform 0.4s; }
+    .pub-item:hover { transform: translateX(6px); background: var(--card-hover); }
+    .badge { display: inline-block; margin-left: 0.5rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.65rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+
+    .reveal { opacity: 0; transform: translateY(20px); transition: 0.8s var(--fluid-ease); }
+    .reveal.active { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 900px) { .cards-grid.bento { grid-template-columns: 1fr; } .hero-profile-area { flex-direction: column-reverse; } }
+  </style>
+</head>
+<body>
+
+  <div class="custom-cursor" id="cursor"></div>
+  <div class="hero-ambient-glow"></div>
+  <div class="ai-game-bg" id="aiGameBg"><div class="ai-shape ai-paddle" id="paddleLeft"></div><div class="ai-shape ai-paddle" id="paddleRight"></div><div class="ai-shape ai-ball" id="pongBall"></div></div>
+
+  <div class="nav-container">
+    <nav>
+      <a href="index.html" class="nav-logo interactive">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back to CV
+      </a>
+      <div class="nav-links">
+        <a href="#about" class="interactive">About</a>
+        <a href="#education" class="interactive">Education</a>
+        <a href="#skills" class="interactive">Skills</a>
+        <a href="#experience" class="interactive">Experience</a>
+        <a href="#publications" class="interactive">Publications</a>
+      </div>
+    </nav>
+  </div>
+
+  <main class="container">
+    <section class="hero" id="about">
+      <h1>Designing the future<br>of interactive play.</h1>
+      <div class="hero-profile-area">
+        <div class="hero-copy">
+          <p>PhD student at <strong>KAIST Graduate School of Culture Technology</strong> in the <strong>Games and Life Lab</strong>[cite: 66, 67]. My research spans Human-Computer Interaction and Generative AI in games, focusing on creating intelligent agents that support diverse players[cite: 28, 88].</p>
+          <a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank" class="btn interactive" style="border:1px solid #fff; padding: 0.8rem 1.8rem; color:#fff; text-decoration:none; border-radius:4px; font-size:0.85rem; display:inline-block; margin-top:1rem;">LinkedIn Profile</a>
+        </div>
+        <div class="profile-img-wrapper interactive"><img src="jihun_chae.jpg" alt="Jihun Chae"></div>
+      </div>
+    </section>
+
+    <section class="reveal" id="education">
+      <h2>Education</h2>
+      <div class="cards-grid bento">
+        <div class="card interactive"><h3>KAIST</h3><div class="tagline">PhD, Culture Technology [cite: 67]</div><div class="meta-info">2026 – Current [cite: 68]</div></div>
+        <div class="card interactive"><h3>KAIST</h3><div class="tagline">M.S., Culture Technology [cite: 70, 71]</div><div class="meta-info">2024 – 2026 [cite: 72]</div></div>
+        <div class="card interactive"><h3>Handong Global University</h3><div class="tagline">ICT Convergence & Product Design [cite: 74]</div><div class="meta-info">2018 – 2024 [cite: 74]</div></div>
+        <div class="card interactive"><h3>Ateneo de Manila University</h3><div class="tagline">Management of Applied Chemistry [cite: 76]</div><div class="meta-info">2016 – 2018 [cite: 76]</div></div>
+      </div>
+    </section>
+
+    <section class="reveal" id="skills">
+      <h2>Technical Skills & Methods</h2>
+      <div class="cards-grid bento">
+        <div class="card interactive"><h3>AI Engineering</h3><div class="chip-container"><span class="chip">LLMs</span><span class="chip">RAG Pipelines [cite: 40]</span><span class="chip">Prompt Engineering [cite: 41]</span><span class="chip">Python</span></div></div>
+        <div class="card interactive"><h3>XR & Design</h3><div class="chip-container"><span class="chip">Unreal Engine [cite: 130]</span><span class="chip">XR Interfaces [cite: 101]</span><span class="chip">Eye-tracking [cite: 59, 134]</span><span class="chip">VR Therapeutics [cite: 79]</span></div></div>
+      </div>
+    </section>
+
+    <section class="reveal" id="experience">
+      <h2>Research Experience</h2>
+      <div class="cards-grid">
+        <div class="card interactive">
+          <h3>Inclusive Conversational AI Service (GAIA)</h3>
+          <div class="tagline">Student Researcher Lead | NRF </div>
+          <div class="meta-info">May 2024 – Apr 2027 [cite: 86]</div>
+          <ul>
+            <li>Led user research and prototype development for AI assistants supporting gamers with disabilities[cite: 88].</li>
+            <li>Conducted participatory design workshops to translate accessibility needs into AI scenarios[cite: 89].</li>
+          </ul>
+          <div class="collaborators"><strong>Collaborators:</strong> Samsung, Nexon, Smilegate, SpecialEffect (UK) [cite: 92]</div>
+        </div>
+        <div class="card interactive">
+          <h3>Preserving the Haenyeo Legacy</h3>
+          <div class="tagline">Leverhulme Trust International Fellow [cite: 93, 94]</div>
+          <div class="meta-info">Jun 2025 – Sep 2025 [cite: 93]</div>
+          <ul>
+            <li>Designed serious games for Jeju Haenyeo cultural heritage preservation[cite: 95].</li>
+            <li>Collaborated with Brunel University London and local Haenyeo communities[cite: 98].</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="reveal" id="awards">
+      <h2>Honors & Awards</h2>
+      <div class="cards-grid bento">
+        <div class="card interactive" style="border-color: rgba(255,255,255,0.2); background: rgba(20,20,20,0.8);">
+          <h3>Grand Prize – Edu4.0 Q TA</h3>
+          <div class="tagline">KAIST Education4.0 Q </div>
+          <div class="meta-info">Feb 2026 </div>
+          <ul><li>Recognized for outstanding teaching support and excellence in presenting TA activity cases[cite: 125].</li></ul>
+        </div>
+        <div class="card interactive">
+          <h3>Grand Prize (President’s Award)</h3>
+          <div class="tagline">Pohang Culture & Arts Hackathon [cite: 129]</div>
+          <div class="meta-info">Jan 2024 [cite: 129]</div>
+          <ul><li>Technical lead for an Unreal Engine media facade smart-city prototype[cite: 130].</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="reveal" id="publications">
+      <h2>Selected Publications</h2>
+      <div class="pub-item interactive"><strong>Chae, J.</strong>, et al. (2026). Design principles of Game AI Assistant (GAIA) for players with disabilities. <em>IUI '26.</em> <span class="badge">First Author [cite: 30, 31, 32]</span></div>
+      <div class="pub-item interactive">Park, E., <strong>Chae, J.</strong>, et al. (2025). Press start to continue: Iterative process of hardcore players with disabilities. <em>CHI EA '25.</em> <span class="badge">Co-first [cite: 33, 34, 35, 36]</span></div>
+      <div class="pub-item interactive"><strong>Chae, J.</strong>, et al. (2023). VR game contents on enhancing environmental awareness. <em>Journal of Korea Computer Graphics Society.</em> <span class="badge">First Author [cite: 51, 52, 53]</span></div>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (!isTouch) {
+        const cursor = document.getElementById("cursor");
+        let mx = window.innerWidth/2, my = window.innerHeight/2, cx = mx, cy = my;
+        window.addEventListener("mousemove", (e) => { mx = e.clientX; my = e.clientY; });
+        const loop = () => { cx += (mx - cx) * 0.25; cy += (my - cy) * 0.25; cursor.style.transform = `translate3d(calc(${cx}px - 50%), calc(${cy}px - 50%), 0)`; requestAnimationFrame(loop); };
+        requestAnimationFrame(loop);
+        document.querySelectorAll('.interactive').forEach(el => { el.addEventListener('mouseenter', () => cursor.classList.add('hovering')); el.addEventListener('mouseleave', () => cursor.classList.remove('hovering')); });
+      }
+
+      const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add("active"); observer.unobserve(entry.target); } }); }, { threshold: 0.1 });
+      document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
+
+      const pong = { left: document.getElementById("paddleLeft"), right: document.getElementById("paddleRight"), ball: document.getElementById("pongBall"), bx: window.innerWidth/2, by: window.innerHeight/2, vx: 2.5, vy: 1.5, ly: 100, ry: 100 };
+      if (!isTouch) {
+        const runPong = () => {
+          pong.bx += pong.vx; pong.by += pong.vy;
+          if (pong.by <= 0 || pong.by >= window.innerHeight - 10) pong.vy *= -1;
+          if (pong.bx < -50 || pong.bx > window.innerWidth + 50) { pong.bx = window.innerWidth/2; pong.vx *= -1; }
+          pong.ly += (pong.by - pong.ly - 40) * 0.03; pong.ry += (pong.by - pong.ry - 40) * 0.03;
+          pong.ball.style.transform = `translate3d(${pong.bx}px, ${pong.by}px, 0)`;
+          pong.left.style.transform = `translate3d(30px, ${pong.ly}px, 0)`;
+          pong.right.style.transform = `translate3d(${window.innerWidth - 34}px, ${pong.ry}px, 0)`;
+          requestAnimationFrame(runPong);
+        }
+        requestAnimationFrame(runPong);
+      }
+    });
+  </script>
+</body>
+</html>
