@@ -44,9 +44,9 @@
     img { display: block; max-width: 100%; }
 
     .page {
-      width: min(var(--content-max), calc(100% - 32px));
+      width: min(var(--content-max), calc(100% - 48px));
       margin: 0 auto;
-      padding: 36px 0 88px;
+      padding: 40px 0 88px;
     }
 
     .mobile-topbar {
@@ -56,13 +56,15 @@
     .layout {
       display: grid;
       grid-template-columns: 320px minmax(0, 1fr);
-      gap: 40px;
+      gap: 56px;
       align-items: start;
     }
 
     .sidebar {
       position: sticky;
       top: 28px;
+      width: 320px;
+      justify-self: start;
     }
 
     .profile-card {
@@ -198,10 +200,13 @@
 
     .content {
       min-width: 0;
+      width: 100%;
+      padding-top: 4px;
     }
 
     .hero {
-      padding: 8px 0 12px;
+      padding: 0 0 12px;
+      margin-top: 0;
     }
 
     .eyebrow {
@@ -380,6 +385,11 @@
 
       .sidebar {
         position: static;
+        width: 100%;
+      }
+
+      .content {
+        padding-top: 0;
       }
 
       .profile-image {
