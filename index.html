@@ -302,6 +302,9 @@
 
     .card {
       position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 100%; /* Forces cards to stretch */
       padding: 2.2rem;
       border-radius: var(--radius-lg);
       background: var(--card-bg);
@@ -358,7 +361,9 @@
     }
 
     .card p, .card ul { margin-top: 0; color: var(--text-soft); font-size: 0.9rem; line-height: 1.6; }
-    .card ul { padding-left: 1.2rem; margin-bottom: 0; }
+    
+    /* Flex-grow ensures the inner list takes up remaining space gracefully */
+    .card ul { padding-left: 1.2rem; margin-bottom: 0; flex-grow: 1; }
     .card li { margin-bottom: 0.5rem; }
     
     .collaborators {
@@ -728,8 +733,8 @@
       <h2>Honors &amp; Awards</h2>
       <div class="cards-grid bento">
         
-        <div class="card interactive" style="grid-column: 1 / -1; border-color: rgba(255,255,255,0.2); background: rgba(20,20,20,0.8);">
-          <h3>Grand Prize (최우수상) – Edu4.0 Q TA Activities</h3>
+        <div class="card interactive" style="border-color: rgba(255,255,255,0.2); background: rgba(20,20,20,0.8);">
+          <h3>Grand Prize (최우수상) – Edu4.0 Q TA</h3>
           <div class="tagline">KAIST Education4.0 Q</div>
           <div class="meta-info"><span>KAIST</span><span>Feb 2026</span></div>
           <ul>
@@ -748,8 +753,8 @@
         </div>
 
         <div class="card interactive">
-          <h3>Grand Prize (University President’s Award)</h3>
-          <div class="tagline">Pohang Culture &amp; Arts Factory Hackathon</div>
+          <h3>Grand Prize (President’s Award)</h3>
+          <div class="tagline">Pohang Culture &amp; Arts Hackathon</div>
           <div class="meta-info"><span>Handong Global University</span><span>Jan 2024</span></div>
           <ul>
             <li>Led the technical implementation of a large-scale Unreal Engine media facade prototype demonstrating a smart-city experience concept.</li>
@@ -766,7 +771,7 @@
         </div>
 
         <div class="card interactive">
-          <h3>Outstanding Student Research Award</h3>
+          <h3>Outstanding Student Research</h3>
           <div class="tagline">Korea Multimedia Society (KMMS)</div>
           <div class="meta-info"><span>Conference Presentation</span><span>Nov 2023</span></div>
           <ul>
@@ -784,7 +789,7 @@
         </div>
 
         <div class="card interactive">
-          <h3>Outstanding Student Research Award</h3>
+          <h3>Outstanding Student Research</h3>
           <div class="tagline">Korea Multimedia Society (KMMS)</div>
           <div class="meta-info"><span>Conference Presentation</span><span>May 2022</span></div>
           <ul>
@@ -805,7 +810,7 @@
         </div>
 
         <div class="card interactive">
-          <h3>Patent: AI-Based Technology Acceptance Prediction Method</h3>
+          <h3>Patent: AI-Based Tech Acceptance</h3>
           <p style="font-size: 0.8rem; margin-bottom: 0; margin-top: 0.5rem; color: var(--text-soft);">
             Korean Intellectual Property Office (No. 40-2022-0179493)<br>
             Co-patentor with Impactive AI Corp.<br>
