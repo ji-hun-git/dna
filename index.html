@@ -76,10 +76,44 @@
 
     /* ═══════════════════════════════════════════════════════════
        LANGUAGE TOGGLE (CSS-only visibility)
+
+       Selectors are scoped to body descendants so they NEVER match
+       the <html> element (which receives a lang attr for screen
+       readers). Explicit `display` values per element type instead
+       of `revert` — broader browser support and preserves things
+       like .side-list's `display: grid`.
        ═══════════════════════════════════════════════════════════ */
-    [lang="ko"] { display: none; }
+
+    /* Hide all Korean by default */
+    body [lang="ko"] { display: none; }
+
+    /* When body.ko is active, hide English */
     body.ko [lang="en"] { display: none; }
-    body.ko [lang="ko"] { display: revert; }
+
+    /* …and show Korean with the correct display value */
+    body.ko span[lang="ko"],
+    body.ko em[lang="ko"],
+    body.ko a[lang="ko"],
+    body.ko strong[lang="ko"],
+    body.ko code[lang="ko"]   { display: inline; }
+
+    body.ko p[lang="ko"],
+    body.ko div[lang="ko"],
+    body.ko h1[lang="ko"],
+    body.ko h2[lang="ko"],
+    body.ko h3[lang="ko"],
+    body.ko h4[lang="ko"],
+    body.ko ul[lang="ko"],
+    body.ko ol[lang="ko"],
+    body.ko section[lang="ko"] { display: block; }
+
+    body.ko li[lang="ko"]      { display: list-item; }
+
+    body.ko .side-list[lang="ko"],
+    body.ko .contact-list[lang="ko"] { display: grid; }
+
+    /* Safety net: background stays dark whatever else happens */
+    body:not(.reader) { background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); }
 
     /* ═══════════════════════════════════════════════════════════
        AMBIENT LAYERS
@@ -1269,10 +1303,10 @@
             <span lang="ko">AI가 우리의 유희 공간에 들어올 때, <em>놀이</em>는 어떻게 변하는가.</span>
           </h1>
           <p class="lead" lang="en">I research what it means to play with and against AI across games and leisure.</p>
-          <p class="lead" lang="ko">게임과 여가의 현장에서 AI와 함께, 그리고 AI에 맞서 노는 것이 무엇을 의미하는지를 연구합니다.</p>
+          <p class="lead" lang="ko">게임과 여가 전반에 걸쳐 AI와 함께, 또 AI에 맞서 노는 것이 무엇을 의미하는지를 연구합니다.</p>
 
           <p class="intro" lang="en">Currently a Ph.D. student at KAIST GSCT, my research sits at the intersection of <strong>Human-AI Interaction</strong> and <strong>play experience</strong>. I am driven by the question: <strong>What changes when intelligent autonomous agents enter our ludic space?</strong> My expertise lies in designing and developing <strong>Inclusive AI agents</strong> that support a diverse range of players, including those with disabilities.</p>
-          <p class="intro" lang="ko">현재 KAIST 문화기술대학원 박사과정 학생으로, <strong>인간-AI 상호작용</strong>과 <strong>놀이 경험</strong>의 교차점에서 연구를 진행하고 있습니다. <strong>지능적 자율 에이전트가 우리의 유희 공간에 들어왔을 때 무엇이 변하는가?</strong>라는 물음이 저의 연구를 이끕니다. 장애를 가진 플레이어를 포함한 다양한 플레이어를 지원하는 <strong>포용적 AI 에이전트</strong>의 설계와 개발이 저의 주된 전문 분야입니다.</p>
+          <p class="intro" lang="ko">현재 KAIST 문화기술대학원 박사과정생으로, <strong>인간-AI 상호작용</strong>과 <strong>놀이 경험</strong>의 교차점에서 연구를 진행하고 있습니다. <strong>지능적 자율 에이전트가 우리의 유희 공간에 들어왔을 때 무엇이 변하는가?</strong>라는 물음이 저의 연구를 이끕니다. 장애가 있는 플레이어를 포함한 다양한 플레이어를 지원하는 <strong>포용적 AI 에이전트</strong>의 설계와 개발이 저의 주된 전문 분야입니다.</p>
 
           <p class="intro" lang="en">Let's connect to discuss <strong>AI</strong>, <strong>HCI</strong>, and what <strong>the future of play</strong> will look like when autonomous agents evolve alongside us — and for those who come after.</p>
           <p class="intro" lang="ko"><strong>AI</strong>, <strong>HCI</strong>, 그리고 자율적 에이전트가 우리와 함께, 또 우리 다음 세대를 위해 진화해 갈 때 <strong>놀이의 미래</strong>가 어떤 모습일지 함께 이야기 나누고 싶습니다.</p>
@@ -1396,10 +1430,10 @@
               <p class="item-desc" lang="ko">Edu4.0 Q 모델의 TA 활동 사례 발표에서 우수한 교육 지원과 발표 능력을 인정받음.</p>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Selected Entrepreneurial Team (Climate Tech)</span><span lang="ko">선정 창업팀 (기후 테크 부문)</span></span>
+              <span class="item-title"><span lang="en">Selected Entrepreneurial Team (Climate Tech)</span><span lang="ko">기후테크 부문 선정 창업팀</span></span>
               <div class="item-meta"><span lang="en">2024.03 | Asan Nanum Foundation</span><span lang="ko">2024.03 | 아산나눔재단</span></div>
               <p class="item-desc" lang="en">Selected through Chung Ju-yung Startup Competition &amp; Asan UniverCT as a representative startup team in the climate-tech track. Secured early-stage funding and mentorship through the KAIST and Asan Nanum Foundation ecosystem.</p>
-              <p class="item-desc" lang="ko">정주영 창업경진대회 및 아산 유니버시티에서 기후테크 트랙의 대표 창업팀으로 선정. KAIST와 아산나눔재단 생태계를 통해 초기 자금과 멘토링을 확보.</p>
+              <p class="item-desc" lang="ko">정주영 창업경진대회 및 아산 UniverCT에서 기후테크 트랙의 대표 창업팀으로 선정. KAIST와 아산나눔재단 생태계를 통해 초기 자금과 멘토링을 확보.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Grand Prize (최우수상, 한동대학교 총장상) – HGU President's Award</span><span lang="ko">최우수상 (한동대학교 총장상)</span></span>
