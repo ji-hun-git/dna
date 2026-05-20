@@ -7,46 +7,82 @@
   <title>Jihun Chae | KAIST HCI & AI Researcher</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Noto+Serif+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <style>
     /* ═══════════════════════════════════════════════════════════
        TOKENS
        ═══════════════════════════════════════════════════════════ */
     :root {
-      --bg: #070709;
-      --bg2: #0b0b10;
+      --bg: #07070a;
+      --bg2: #0c0c12;
       --text: #f5f5f7;
-      --muted: #b8b8c2;
-      --soft: #8e8e99;
-      --line: rgba(255,255,255,0.10);
-      --line-strong: rgba(255,255,255,0.16);
+      --muted: #babac4;
+      --soft: #8b8b95;
+      --line: rgba(255,255,255,0.08);
+      --line-strong: rgba(255,255,255,0.14);
       --shadow: 0 20px 60px rgba(0,0,0,0.32);
-      --wrap: 1240px;
+      --wrap: 1180px;
 
-      /* Section accent colors — only revealed on interaction */
-      --c-education: 251, 191, 36;   /* amber */
-      --c-projects:  96, 165, 250;   /* sky */
-      --c-awards:    244, 114, 182;  /* rose */
-      --c-pubs:      52, 211, 153;   /* emerald */
-      --c-patents:   167, 139, 250;  /* violet */
+      /* Section accent colors */
+      --c-education: 251, 191, 36;
+      --c-projects:  96, 165, 250;
+      --c-awards:    244, 114, 182;
+      --c-pubs:      52, 211, 153;
+      --c-patents:   167, 139, 250;
     }
 
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Inter', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: var(--text);
       background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
-      line-height: 1.68;
+      line-height: 1.7;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
       overflow-x: hidden;
       position: relative;
+      font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'ss01' 1;
+    }
+    body.ko {
+      font-family: 'Pretendard', 'Inter', -apple-system, sans-serif;
+    }
+
+    /* ── Custom selection (matches aurora) ───────────────── */
+    ::selection {
+      background: rgba(96,165,250,0.32);
+      color: #fff;
+      text-shadow: none;
+    }
+
+    /* ── Accessible keyboard focus ───────────────────────── */
+    *:focus { outline: none; }
+    *:focus-visible {
+      outline: 2px solid rgba(96,165,250,0.75);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+    a:focus-visible { outline-offset: 4px; }
+
+    /* ── Typography micro-defaults ───────────────────────── */
+    h1, h2, h3, h4, .section-title, .name, .item-title {
+      text-wrap: balance;
+    }
+    p, .item-desc, .lead, .intro {
+      text-wrap: pretty;
     }
 
     /* ═══════════════════════════════════════════════════════════
-       AMBIENT LAYERS (aurora wash + cursor grid)
+       LANGUAGE TOGGLE (CSS-only visibility)
+       ═══════════════════════════════════════════════════════════ */
+    [lang="ko"] { display: none; }
+    body.ko [lang="en"] { display: none; }
+    body.ko [lang="ko"] { display: revert; }
+
+    /* ═══════════════════════════════════════════════════════════
+       AMBIENT LAYERS
        ═══════════════════════════════════════════════════════════ */
     .aurora {
       position: fixed;
@@ -54,16 +90,16 @@
       z-index: 0;
       pointer-events: none;
       background:
-        radial-gradient(circle at 12% 18%, rgba(96,165,250,0.10), transparent 35%),
-        radial-gradient(circle at 88% 25%, rgba(244,114,182,0.07), transparent 32%),
-        radial-gradient(circle at 70% 80%, rgba(52,211,153,0.07), transparent 38%),
-        radial-gradient(circle at 20% 90%, rgba(251,191,36,0.05), transparent 38%);
-      filter: blur(50px) saturate(140%);
-      animation: drift 28s ease-in-out infinite alternate;
+        radial-gradient(circle at 15% 20%, rgba(96,165,250,0.09), transparent 38%),
+        radial-gradient(circle at 85% 30%, rgba(244,114,182,0.06), transparent 35%),
+        radial-gradient(circle at 70% 85%, rgba(52,211,153,0.06), transparent 40%),
+        radial-gradient(circle at 25% 90%, rgba(251,191,36,0.04), transparent 38%);
+      filter: blur(60px) saturate(130%);
+      animation: drift 32s ease-in-out infinite alternate;
     }
     @keyframes drift {
       0%   { transform: translate3d(0, 0, 0); }
-      50%  { transform: translate3d(2%, -1%, 0); }
+      50%  { transform: translate3d(1.5%, -1%, 0); }
       100% { transform: translate3d(-1%, 1%, 0); }
     }
 
@@ -73,19 +109,28 @@
       z-index: 0;
       pointer-events: none;
       background-image:
-        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-      background-size: 56px 56px;
-      mask-image: radial-gradient(circle 360px at var(--gx, 50%) var(--gy, 30%), #000 0%, transparent 60%);
-      -webkit-mask-image: radial-gradient(circle 360px at var(--gx, 50%) var(--gy, 30%), #000 0%, transparent 60%);
-      opacity: 0.55;
+        linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(circle 380px at var(--gx, 50%) var(--gy, 30%), #000 0%, transparent 60%);
+      -webkit-mask-image: radial-gradient(circle 380px at var(--gx, 50%) var(--gy, 30%), #000 0%, transparent 60%);
+      opacity: 0.5;
       transition: opacity 0.6s ease;
     }
     body.no-cursor .ambient { opacity: 0; }
 
-    /* ═══════════════════════════════════════════════════════════
-       SCROLL PROGRESS
-       ═══════════════════════════════════════════════════════════ */
+    /* ── Subtle film grain overlay (analog warmth) ───────── */
+    .grain {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.045;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/></svg>");
+      background-size: 200px 200px;
+    }
+
     .scroll-progress {
       position: fixed;
       top: 0;
@@ -96,20 +141,24 @@
         rgba(96,165,250,0.9), rgba(244,114,182,0.9), rgba(52,211,153,0.9));
       z-index: 100;
       transition: width 0.08s linear;
-      box-shadow: 0 0 14px rgba(255,255,255,0.25);
+      box-shadow: 0 0 14px rgba(255,255,255,0.22);
     }
 
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
 
     /* ═══════════════════════════════════════════════════════════
-       READER (TTS) MODE TOGGLE
+       TOP CONTROLS (Reader + Lang)
        ═══════════════════════════════════════════════════════════ */
-    .tts-toggle {
+    .top-controls {
       position: fixed;
       top: 14px;
       right: 14px;
       z-index: 110;
+      display: inline-flex;
+      gap: 8px;
+    }
+    .pill-btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -120,24 +169,24 @@
       backdrop-filter: blur(14px) saturate(140%);
       -webkit-backdrop-filter: blur(14px) saturate(140%);
       color: var(--text);
-      font: 600 0.82rem/1 'Inter', sans-serif;
-      letter-spacing: 0.02em;
+      font: 600 0.82rem/1 'Inter', 'Pretendard', sans-serif;
+      letter-spacing: 0.01em;
       cursor: pointer;
       transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, color 0.22s ease;
     }
-    .tts-toggle:hover {
+    .pill-btn:hover {
       transform: translateY(-1px);
       border-color: var(--line-strong);
       background: rgba(20,20,26,0.92);
     }
-    .tts-toggle .icon {
+    .pill-btn .icon {
       width: 14px;
       height: 14px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
     }
-    .tts-toggle .icon svg {
+    .pill-btn .icon svg {
       width: 100%;
       height: 100%;
       stroke: currentColor;
@@ -152,7 +201,7 @@
       z-index: 1;
       width: min(var(--wrap), calc(100% - 40px));
       margin: 0 auto;
-      padding: 36px 0 80px;
+      padding: 36px 0 96px;
     }
 
     .mobile-nav { display: none; }
@@ -160,7 +209,7 @@
     .layout {
       display: grid;
       grid-template-columns: 330px minmax(0, 1fr);
-      gap: 56px;
+      gap: 68px;
       align-items: start;
     }
 
@@ -175,9 +224,9 @@
        ═══════════════════════════════════════════════════════════ */
     .profile-card {
       position: relative;
-      padding: 18px;
+      padding: 20px;
       border-radius: 28px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
       border: 1px solid var(--line);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px) saturate(140%);
@@ -192,7 +241,7 @@
       inset: 0;
       border-radius: inherit;
       padding: 1px;
-      background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(96,165,250,0.5), transparent 55%);
+      background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(96,165,250,0.45), transparent 55%);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
               mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
@@ -212,9 +261,9 @@
       overflow: hidden;
       border-radius: 20px;
       aspect-ratio: 4 / 5;
-      margin-bottom: 18px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.03);
+      margin-bottom: 20px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.025);
     }
     .profile-image img {
       width: 100%;
@@ -239,34 +288,41 @@
     }
 
     .name {
-      margin: 0 0 6px;
-      font-size: 2rem;
-      line-height: 1.03;
-      letter-spacing: -0.04em;
-      font-weight: 800;
-      background: linear-gradient(120deg, #ffffff 30%, #c8d6ff 60%, #ffffff 90%);
-      background-size: 200% 100%;
-      -webkit-background-clip: text;
-              background-clip: text;
-      -webkit-text-fill-color: transparent;
-      transition: background-position 0.8s ease;
+      margin: 0 0 8px;
+      font-size: 2.1rem;
+      line-height: 1.05;
+      letter-spacing: -0.035em;
+      font-weight: 700;
+      color: #fff;
     }
-    .profile-card:hover .name { background-position: 100% 0; }
+    body.ko .name {
+      font-family: 'Pretendard', sans-serif;
+      letter-spacing: -0.02em;
+    }
 
-    .role, .org { margin: 0; color: var(--muted); font-size: 0.98rem; }
+    .role, .org { margin: 0; color: var(--muted); font-size: 0.96rem; }
     .org { margin-top: 4px; }
 
     .divider {
       height: 1px;
-      margin: 18px 0;
-      background: rgba(255,255,255,0.08);
+      margin: 20px 0;
+      background: rgba(255,255,255,0.07);
     }
 
     .side-label {
-      margin: 0 0 8px;
-      font-size: 0.92rem;
+      margin: 0 0 10px;
+      font-size: 0.78rem;
       font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--soft);
     }
+    body.ko .side-label {
+      text-transform: none;
+      letter-spacing: 0.04em;
+      font-size: 0.85rem;
+    }
+
     .side-list {
       display: grid;
       gap: 6px;
@@ -289,7 +345,7 @@
       transition: width 0.3s ease, background 0.3s ease;
     }
     .side-list > div:hover { color: #fff; transform: translateX(2px); }
-    .side-list > div:hover::before { width: 10px; background: rgba(96,165,250,0.8); }
+    .side-list > div:hover::before { width: 10px; background: rgba(96,165,250,0.85); }
 
     .contact-list {
       list-style: none;
@@ -317,6 +373,10 @@
       transform: translateX(2px);
       color: #fff;
     }
+    .contact-list a[href*="linkedin"]:hover    { color: #4a8fcf; }
+    .contact-list a[href*="scholar"]:hover     { color: #6ba8f5; }
+    .contact-list a[href*="orcid"]:hover       { color: #b8d96c; }
+    .contact-list a[href^="mailto"]:hover      { color: #f0b365; }
     .contact-list a:hover::after {
       opacity: 1;
       transform: translate(0, 0);
@@ -328,10 +388,9 @@
       color: #9af0a4;
     }
 
-    /* Sidebar section-nav (desktop scroll-spy) */
     .section-nav {
       display: grid;
-      gap: 4px;
+      gap: 2px;
       margin: 4px 0 0;
       font-size: 0.9rem;
     }
@@ -353,7 +412,7 @@
       width: 4px;
       height: 4px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.22);
       transition: background 0.3s ease, width 0.3s ease, height 0.3s ease;
     }
     .section-nav a:hover {
@@ -377,18 +436,16 @@
       align-items: center;
       justify-content: center;
       min-height: 46px;
-      padding: 0 18px;
+      padding: 0 20px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.14);
-      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.84));
+      background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.86));
       color: #111;
       font-size: 0.93rem;
       font-weight: 700;
-      margin-top: 22px;
+      margin-top: 24px;
       box-shadow: 0 12px 28px rgba(0,0,0,0.18);
       transition: box-shadow 0.22s ease, filter 0.22s ease;
-      overflow: hidden;
-      isolation: isolate;
     }
     .button:hover {
       box-shadow: 0 16px 34px rgba(0,0,0,0.24);
@@ -401,13 +458,40 @@
     }
     .button:hover .arrow { transform: translateX(3px); }
 
+    /* ═══════════════════════════════════════════════════════════
+       MAIN CONTENT
+       ═══════════════════════════════════════════════════════════ */
     .content {
       min-width: 0;
       width: 100%;
       padding-top: 8px;
     }
 
-    .hero { margin-bottom: 40px; }
+    .hero { margin-bottom: 56px; }
+
+    /* ── Hero stagger reveal on first load ────────────────── */
+    .hero > * {
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    body.hero-loaded .hero > * {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    body.hero-loaded .hero > .eyebrow-row { transition-delay: 0.05s; }
+    body.hero-loaded .hero > h1            { transition-delay: 0.15s; }
+    body.hero-loaded .hero > p             { transition-delay: 0.30s; }
+    body.hero-loaded .hero > p:nth-of-type(n+3) { transition-delay: 0.40s; }
+    body.hero-loaded .hero > p:nth-of-type(n+5) { transition-delay: 0.50s; }
+
+    .eyebrow-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
 
     .eyebrow {
       display: inline-flex;
@@ -417,12 +501,12 @@
       border-radius: 999px;
       border: 1px solid var(--line);
       background: linear-gradient(120deg,
-        rgba(96,165,250,0.08), rgba(244,114,182,0.05), rgba(52,211,153,0.08));
+        rgba(96,165,250,0.07), rgba(244,114,182,0.04), rgba(52,211,153,0.07));
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       color: var(--muted);
-      font-size: 0.82rem;
-      margin-bottom: 18px;
+      font-size: 0.78rem;
+      letter-spacing: 0.01em;
     }
     .eyebrow .dot {
       width: 6px;
@@ -437,41 +521,117 @@
       50% { opacity: 0.35; }
     }
 
+    /* ── Live clock pill (Daejeon time) ───────────────────── */
+    .meta-clock {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--soft);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.74rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    body.ko .meta-clock {
+      text-transform: none;
+      font-family: 'Pretendard', ui-monospace, monospace;
+      letter-spacing: 0.02em;
+    }
+    .meta-clock::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--soft);
+      opacity: 0.6;
+    }
+
     .hero h1 {
-      margin: 0 0 18px;
-      font-size: clamp(1.8rem, 3.8vw, 3.2rem);
-      line-height: 1.02;
-      letter-spacing: -0.055em;
+      margin: 0 0 22px;
+      font-size: clamp(2rem, 4.2vw, 3.4rem);
+      line-height: 1.12;
+      letter-spacing: -0.025em;
       max-width: 920px;
       font-family: 'Fraunces', 'Inter', serif;
       font-weight: 500;
     }
+    body.ko .hero h1 {
+      font-family: 'Noto Serif KR', 'Fraunces', serif;
+      letter-spacing: -0.015em;
+      line-height: 1.35;
+      font-weight: 500;
+    }
+    /* FIX: italic <em> needs breathing room — relaxed letter-spacing
+       and a right margin prevent descender collision with following word */
     .hero h1 em {
       font-style: italic;
-      background: linear-gradient(120deg, #c4b5fd, #93c5fd);
+      margin-right: 0.06em;
+      background: linear-gradient(120deg, #c4b5fd 0%, #93c5fd 55%, #c4b5fd 100%);
       -webkit-background-clip: text;
               background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+    body.ko .hero h1 em {
+      font-style: normal;
+      font-weight: 700;
+      margin-right: 0;
+      padding: 0 0.05em;
+    }
 
     .lead, .intro {
       max-width: 860px;
-      margin: 0 0 16px;
-      color: #dddddf;
+      margin: 0 0 18px;
+      color: #d9d9dc;
       font-size: 1.05rem;
     }
-    .lead strong, .intro strong { color: #fff; }
+    .lead strong, .intro strong { color: #fff; font-weight: 600; }
 
-    .section { margin-top: 44px; }
+    .section { margin-top: 68px; }
+    .section:first-of-type { margin-top: 0; }
 
+    /* Editorial section title with monospace number */
     .section-title {
       position: relative;
-      margin: 0 0 18px;
-      padding-bottom: 12px;
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
+      margin: 0 0 22px;
+      padding-bottom: 14px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
       border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-family: 'Fraunces', 'Inter', serif;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+    body.ko .section-title {
+      font-family: 'Noto Serif KR', 'Fraunces', serif;
+      font-weight: 600;
+    }
+    .section-title .num {
+      display: inline-block;
+      color: var(--soft);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.65em;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      font-style: normal;
+      font-variant-numeric: tabular-nums;
+      transition: color 1.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                  text-shadow 1.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                  transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .section.in-view .section-title .num {
+      color: rgb(var(--accent, 255 255 255));
+    }
+    /* Anchor click pulse: number briefly glows when section is navigated to */
+    .section-title.pulsed .num {
+      animation: num-pulse 1.4s ease-out;
+    }
+    @keyframes num-pulse {
+      0%   { text-shadow: 0 0 0 rgba(var(--accent), 0); transform: scale(1); }
+      18%  { text-shadow: 0 0 18px rgba(var(--accent), 0.65); transform: scale(1.08); }
+      100% { text-shadow: 0 0 0 rgba(var(--accent), 0); transform: scale(1); }
     }
     .section-title::after {
       content: "";
@@ -480,27 +640,25 @@
       bottom: -1px;
       width: 0;
       height: 1px;
-      background: linear-gradient(90deg, rgba(var(--accent, 255 255 255), 0.9), transparent);
+      background: linear-gradient(90deg, rgba(var(--accent, 255 255 255), 0.85), transparent);
       transition: width 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     .section.in-view .section-title::after { width: 80px; }
 
-    /* Section-specific accent colors (used by item hover and title underline) */
-    #education          { --accent: var(--c-education); }
-    #projects           { --accent: var(--c-projects); }
-    #awards             { --accent: var(--c-awards); }
-    #publications       { --accent: var(--c-pubs); }
-    #patents            { --accent: var(--c-patents); }
+    #education    { --accent: var(--c-education); }
+    #projects     { --accent: var(--c-projects); }
+    #awards       { --accent: var(--c-awards); }
+    #publications { --accent: var(--c-pubs); }
+    #patents      { --accent: var(--c-patents); }
 
-    /* Filter pills (publications) */
     .filter {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
-      margin: 0 0 18px;
-      padding: 6px;
+      gap: 4px;
+      margin: 0 0 22px;
+      padding: 5px;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
+      background: rgba(255,255,255,0.025);
       border-radius: 999px;
       width: fit-content;
       backdrop-filter: blur(14px);
@@ -512,7 +670,7 @@
       background: transparent;
       color: var(--muted);
       font: inherit;
-      font-size: 0.85rem;
+      font-size: 0.84rem;
       padding: 6px 12px;
       border-radius: 999px;
       cursor: pointer;
@@ -522,11 +680,11 @@
     .filter button.active {
       color: #0d1018;
       background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+      font-weight: 600;
     }
 
     .items { display: grid; gap: 14px; }
 
-    /* Reveal animation per-item */
     .reveal {
       opacity: 0;
       transform: translateY(14px);
@@ -539,13 +697,13 @@
 
     .item {
       position: relative;
-      padding: 18px 18px 18px 20px;
-      border-radius: 20px;
+      padding: 18px 20px 18px 22px;
+      border-radius: 18px;
       border: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.035));
-      backdrop-filter: blur(18px) saturate(135%);
-      -webkit-backdrop-filter: blur(18px) saturate(135%);
-      box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+      background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025));
+      backdrop-filter: blur(16px) saturate(130%);
+      -webkit-backdrop-filter: blur(16px) saturate(130%);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.10);
       overflow: hidden;
       transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
                   border-color 0.28s ease,
@@ -558,12 +716,11 @@
       left: 0;
       top: 18px;
       bottom: 18px;
-      width: 3px;
+      width: 2px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.16);
-      transition: background 0.3s ease, top 0.3s ease, bottom 0.3s ease;
+      background: rgba(255,255,255,0.14);
+      transition: background 0.3s ease, top 0.3s ease, bottom 0.3s ease, width 0.3s ease;
     }
-    /* Cursor spotlight, tinted by section accent */
     .item::after {
       content: "";
       position: absolute;
@@ -577,16 +734,17 @@
     }
     .item:hover {
       transform: translateY(-3px);
-      border-color: rgba(var(--accent, 255 255 255), 0.28);
-      background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.045));
+      border-color: rgba(var(--accent, 255 255 255), 0.25);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.035));
       box-shadow: 0 18px 42px rgba(0,0,0,0.22);
     }
     .item:hover::before {
       background: linear-gradient(180deg,
-        rgba(var(--accent, 255 255 255), 0.85),
-        rgba(var(--accent, 255 255 255), 0.15));
+        rgba(var(--accent, 255 255 255), 0.9),
+        rgba(var(--accent, 255 255 255), 0.18));
       top: 12px;
       bottom: 12px;
+      width: 3px;
     }
     .item:hover::after { opacity: 1; }
 
@@ -595,16 +753,23 @@
     .item-title {
       display: block;
       margin-bottom: 4px;
-      font-size: 1rem;
+      font-size: 1.02rem;
       line-height: 1.45;
       font-weight: 700;
-      letter-spacing: -0.015em;
+      letter-spacing: -0.012em;
+      color: #fff;
     }
     .item-meta {
       margin-bottom: 10px;
       color: var(--soft);
       font-size: 0.84rem;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: 'tnum' 1, 'kern' 1;
+    }
+    body.ko .item-meta {
+      font-family: 'Pretendard', ui-monospace, monospace;
+      font-size: 0.85rem;
     }
     .item-desc {
       margin: 0;
@@ -616,162 +781,19 @@
 
     .paper-title,
     .pub-author-me { color: #ffffff; }
-    .paper-title { font-weight: 700; }
+    .paper-title { font-weight: 600; }
     .pub-author-me {
       font-weight: 800;
       text-decoration: underline;
       text-underline-offset: 2px;
     }
     .venue { color: var(--muted); font-style: italic; }
+    body.ko .venue { font-style: normal; color: var(--soft); }
 
     .two-col {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       HINT SYSTEM (hover/tap → micro-scene popover)
-       ═══════════════════════════════════════════════════════════ */
-    .hint {
-      position: relative;
-      cursor: help;
-      border-bottom: 1px dotted rgba(255,255,255,0.22);
-      padding-bottom: 1px;
-      transition: color 0.25s ease, border-bottom-color 0.25s ease;
-    }
-    .hint:hover,
-    .hint.is-active {
-      color: #fff;
-      border-bottom-color: rgba(255,255,255,0.7);
-      border-bottom-style: solid;
-    }
-
-    .hint-popover {
-      position: fixed;
-      left: 0;
-      top: 0;
-      z-index: 90;
-      width: 200px;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(12,12,16,0.88);
-      backdrop-filter: blur(18px) saturate(150%);
-      -webkit-backdrop-filter: blur(18px) saturate(150%);
-      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-      opacity: 0;
-      transform: translate(0, 6px) scale(0.96);
-      transform-origin: top left;
-      pointer-events: none;
-      transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-    .hint-popover.show {
-      opacity: 1;
-      transform: translate(0, 0) scale(1);
-    }
-    .hint-popover .stage {
-      width: 100%;
-      aspect-ratio: 16 / 10;
-      border-radius: 10px;
-      overflow: hidden;
-      background: #000;
-      position: relative;
-    }
-    .hint-popover .stage svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    .hint-popover .meta {
-      margin-top: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      font-size: 0.78rem;
-    }
-    .hint-popover .meta .label {
-      color: #fff;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-    }
-    .hint-popover .meta .sub {
-      color: var(--soft);
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.72rem;
-    }
-
-    /* ── Vignette animations ────────────────────────────────── */
-    @keyframes fly-by {
-      0%   { transform: translateX(110%); }
-      100% { transform: translateX(-30%); }
-    }
-    @keyframes contrail-grow {
-      0% { stroke-dashoffset: 200; }
-      100% { stroke-dashoffset: 0; }
-    }
-    @keyframes wave-slide {
-      0%   { transform: translateX(0); }
-      100% { transform: translateX(-25%); }
-    }
-    @keyframes bubble-rise {
-      0% { transform: translateY(0) scale(0.6); opacity: 0; }
-      30% { opacity: 0.9; }
-      100% { transform: translateY(-50px) scale(1); opacity: 0; }
-    }
-    @keyframes z-float {
-      0%   { transform: translate(0, 0); opacity: 0; }
-      30%  { opacity: 1; }
-      100% { transform: translate(8px, -16px); opacity: 0; }
-    }
-    @keyframes spin-slow {
-      from { transform: rotate(0); }
-      to   { transform: rotate(360deg); }
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 0.3; r: 2; }
-      50%      { opacity: 1; r: 3.5; }
-    }
-    @keyframes sound-wave {
-      0%   { transform: scale(0.6); opacity: 0.8; }
-      100% { transform: scale(2.4); opacity: 0; }
-    }
-    @keyframes tail-wag {
-      0%, 100% { transform: rotate(8deg); }
-      50%      { transform: rotate(-8deg); }
-    }
-    @keyframes smoke-drift {
-      0%   { transform: translate(0, 0) scale(0.9); opacity: 0.7; }
-      100% { transform: translate(14px, -28px) scale(1.4); opacity: 0; }
-    }
-    @keyframes sun-pulse {
-      0%, 100% { transform: scale(1); }
-      50%      { transform: scale(1.06); }
-    }
-    @keyframes pixel-idle {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-2px); }
-    }
-    @keyframes blink-eye {
-      0%, 90%, 100% { transform: scaleY(1); }
-      95%           { transform: scaleY(0.1); }
-    }
-    @keyframes scan-line {
-      0% { transform: translateY(-100%); }
-      100% { transform: translateY(200%); }
-    }
-    @keyframes ribbon-flow {
-      0% { stroke-dashoffset: 0; }
-      100% { stroke-dashoffset: -100; }
-    }
-    @keyframes float-y {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-3px); }
-    }
-    @keyframes orbit {
-      from { transform: rotate(0deg) translateX(14px) rotate(0deg); }
-      to   { transform: rotate(360deg) translateX(14px) rotate(-360deg); }
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -815,7 +837,7 @@
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       color: var(--soft);
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       z-index: 50;
       opacity: 0;
       transform: translateY(8px);
@@ -844,7 +866,7 @@
       }
       .layout {
         grid-template-columns: 1fr;
-        gap: 28px;
+        gap: 32px;
       }
       .sidebar {
         position: static;
@@ -854,10 +876,12 @@
       .content { padding-top: 0; }
       .section-nav { display: none; }
       .kbd-hint { display: none; }
-      .tts-toggle {
+      .top-controls {
         top: 10px;
         right: 10px;
-        padding: 6px 12px;
+      }
+      .pill-btn {
+        padding: 7px 12px;
         font-size: 0.78rem;
       }
     }
@@ -865,7 +889,7 @@
     @media (max-width: 700px) {
       .page {
         width: calc(100% - 18px);
-        padding-bottom: 54px;
+        padding-bottom: 60px;
       }
       .mobile-nav {
         display: flex;
@@ -877,17 +901,20 @@
         z-index: 20;
         padding: 12px 4px 14px;
         margin-bottom: 8px;
-        background: rgba(7,7,9,0.78);
+        background: rgba(7,7,10,0.82);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
         border-bottom: 1px solid rgba(255,255,255,0.06);
+        -webkit-overflow-scrolling: touch;
       }
+      .mobile-nav::-webkit-scrollbar { display: none; }
       .mobile-nav a {
         position: relative;
         color: var(--muted);
         font-size: 0.88rem;
         padding-bottom: 4px;
         transition: color 0.2s ease;
+        flex-shrink: 0;
       }
       .mobile-nav a.active {
         color: #fff;
@@ -903,27 +930,29 @@
         border-radius: 2px;
       }
 
-      .hero h1 { font-size: clamp(2rem, 9vw, 2.6rem); }
+      .hero h1 { font-size: clamp(2rem, 8vw, 2.6rem); }
       .lead, .intro, .item-desc { font-size: 0.96rem; }
       .two-col { grid-template-columns: 1fr; }
       .item { padding: 16px 16px 16px 18px; }
+      .section { margin-top: 48px; }
 
-      /* Hint popover on mobile: centered, larger touch target */
-      .hint-popover {
-        width: calc(100% - 32px);
-        max-width: 320px;
-      }
-      .tts-toggle .label-text { display: none; }
-      .tts-toggle {
+      .top-controls { gap: 6px; }
+      .pill-btn .label-text { display: none; }
+      .pill-btn {
         padding: 8px;
         width: 36px;
         height: 36px;
         justify-content: center;
       }
+      .lang-toggle .label-text { display: inline !important; font-size: 0.78rem; }
+      .lang-toggle {
+        width: auto;
+        padding: 8px 12px;
+      }
     }
 
     /* ═══════════════════════════════════════════════════════════
-       READER (TTS) MODE — strips all decoration, semantic-first
+       READER (TTS) MODE
        ═══════════════════════════════════════════════════════════ */
     body.reader {
       background: #f7f4ec !important;
@@ -932,10 +961,14 @@
       font-size: 18px;
       line-height: 1.78;
     }
+    body.reader.ko {
+      font-family: 'Noto Serif KR', 'Fraunces', serif !important;
+      line-height: 1.85;
+    }
     body.reader .aurora,
     body.reader .ambient,
+    body.reader .grain,
     body.reader .scroll-progress,
-    body.reader .hint-popover,
     body.reader .kbd-hint,
     body.reader .mobile-nav,
     body.reader .filter,
@@ -956,7 +989,7 @@
     body.reader .sidebar {
       position: static;
       width: 100%;
-      margin-bottom: 32px;
+      margin-bottom: 36px;
     }
     body.reader .profile-card {
       background: transparent !important;
@@ -969,21 +1002,27 @@
     body.reader .profile-card::before { display: none !important; }
     body.reader .name {
       color: #111 !important;
-      background: none !important;
-      -webkit-text-fill-color: #111 !important;
       font-family: 'Fraunces', serif !important;
       font-size: 2.4rem !important;
       font-weight: 600;
       margin-bottom: 10px !important;
+    }
+    body.reader.ko .name {
+      font-family: 'Noto Serif KR', serif !important;
     }
     body.reader .role,
     body.reader .org {
       color: #555 !important;
       font-style: italic;
     }
+    body.reader.ko .role,
+    body.reader.ko .org { font-style: normal; }
     body.reader .side-label {
       color: #111 !important;
-      margin-top: 24px;
+      margin-top: 28px;
+      text-transform: none;
+      letter-spacing: 0.02em;
+      font-size: 0.95rem;
     }
     body.reader .side-list > div {
       padding-left: 0 !important;
@@ -1006,18 +1045,23 @@
       color: #555 !important;
       font-style: italic;
       font-size: 0.95rem !important;
-      margin-bottom: 12px !important;
+      margin-bottom: 14px !important;
     }
+    body.reader.ko .eyebrow { font-style: normal; }
     body.reader .hero h1 {
       color: #111 !important;
       font-family: 'Fraunces', serif !important;
       font-weight: 600;
       font-size: 2.2rem !important;
     }
+    body.reader.ko .hero h1 {
+      font-family: 'Noto Serif KR', serif !important;
+    }
     body.reader .hero h1 em {
       background: none !important;
       -webkit-text-fill-color: #6d28d9 !important;
       color: #6d28d9 !important;
+      margin-right: 0;
     }
     body.reader .lead,
     body.reader .intro {
@@ -1035,7 +1079,13 @@
       border-bottom: 1px solid rgba(0,0,0,0.18) !important;
       font-family: 'Fraunces', serif !important;
       font-weight: 600;
-      font-size: 1.6rem !important;
+      font-size: 1.55rem !important;
+    }
+    body.reader.ko .section-title {
+      font-family: 'Noto Serif KR', serif !important;
+    }
+    body.reader .section-title .num {
+      color: #777 !important;
     }
     body.reader .section-title::after { display: none !important; }
     body.reader .items {
@@ -1065,10 +1115,16 @@
       font-weight: 600;
       font-size: 1.1rem !important;
     }
+    body.reader.ko .item-title {
+      font-family: 'Noto Serif KR', serif !important;
+    }
     body.reader .item-meta {
       color: #555 !important;
       font-family: ui-monospace, monospace;
       font-size: 0.85rem !important;
+    }
+    body.reader.ko .item-meta {
+      font-family: 'Pretendard', monospace;
     }
     body.reader .item-desc,
     body.reader ul.item-desc {
@@ -1086,16 +1142,15 @@
     body.reader .venue {
       color: #555 !important;
     }
-    body.reader .hint {
-      border-bottom: 0 !important;
-      cursor: text;
-      color: inherit !important;
-    }
     body.reader .reveal {
       opacity: 1 !important;
       transform: none !important;
     }
-    body.reader .tts-toggle {
+    body.reader .hero > * {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    body.reader .pill-btn {
       background: rgba(255,255,255,0.95) !important;
       color: #111 !important;
       border-color: rgba(0,0,0,0.15) !important;
@@ -1112,6 +1167,7 @@
         transition: none !important;
       }
       .reveal { opacity: 1; transform: none; }
+      .hero > * { opacity: 1 !important; transform: none !important; }
       .aurora, .ambient { display: none; }
     }
   </style>
@@ -1119,31 +1175,31 @@
 <body>
   <div class="aurora" aria-hidden="true"></div>
   <div class="ambient" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
   <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 
-  <button class="tts-toggle" id="ttsToggle" aria-pressed="false" aria-label="Toggle Reader / TTS Mode">
-    <span class="icon" aria-hidden="true">
-      <svg viewBox="0 0 20 20"><path d="M4 6h12M4 10h12M4 14h7"/></svg>
-    </span>
-    <span class="label-text">Reader Mode</span>
-  </button>
+  <div class="top-controls">
+    <button class="pill-btn lang-toggle" id="langToggle" aria-label="Toggle Korean / English">
+      <span class="label-text" id="langLabel">한국어</span>
+    </button>
+    <button class="pill-btn tts-toggle" id="ttsToggle" aria-pressed="false" aria-label="Toggle Reader Mode">
+      <span class="icon" aria-hidden="true">
+        <svg viewBox="0 0 20 20"><path d="M4 6h12M4 10h12M4 14h7"/></svg>
+      </span>
+      <span class="label-text" id="ttsLabel" lang="en">Reader</span>
+      <span class="label-text" lang="ko">읽기 모드</span>
+    </button>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
-  <div class="hint-popover" id="hintPopover" role="tooltip" aria-hidden="true">
-    <div class="stage" id="hintStage"></div>
-    <div class="meta">
-      <span class="label" id="hintLabel"></span>
-      <span class="sub" id="hintSub"></span>
-    </div>
-  </div>
 
   <div class="page">
     <nav class="mobile-nav" aria-label="Sections">
-      <a href="#about">About</a>
-      <a href="#education">Education</a>
-      <a href="#projects">Projects</a>
-      <a href="#awards">Awards</a>
-      <a href="#publications">Publications</a>
+      <a href="#about"><span lang="en">About</span><span lang="ko">소개</span></a>
+      <a href="#education"><span lang="en">Education</span><span lang="ko">학력</span></a>
+      <a href="#projects"><span lang="en">Projects</span><span lang="ko">연구</span></a>
+      <a href="#awards"><span lang="en">Awards</span><span lang="ko">수상</span></a>
+      <a href="#publications"><span lang="en">Publications</span><span lang="ko">논문</span></a>
     </nav>
 
     <div class="layout">
@@ -1153,137 +1209,241 @@
             <img src="your-image.jpg" alt="Jihun Chae" onerror="this.onerror=null; this.parentElement.innerHTML='&lt;div class=&quot;profile-fallback&quot;&gt;Profile image&lt;/div&gt;';" />
           </div>
 
-          <h2 class="name">Jihun Chae</h2>
-          <p class="role">Ph.D. Student</p>
-          <p class="org">KAIST Graduate School of Culture Technology</p>
+          <h2 class="name"><span lang="en">Jihun Chae</span><span lang="ko">채지훈</span></h2>
+          <p class="role"><span lang="en">Ph.D. Student</span><span lang="ko">박사과정</span></p>
+          <p class="org"><span lang="en">KAIST Graduate School of Culture Technology</span><span lang="ko">KAIST 문화기술대학원</span></p>
 
           <div class="divider"></div>
 
-          <p class="side-label">Research Fields</p>
-          <div class="side-list">
+          <p class="side-label"><span lang="en">Research Fields</span><span lang="ko">연구 분야</span></p>
+          <div class="side-list" lang="en">
             <div>Human-AI Interaction in Games</div>
             <div>Generative AI in Games</div>
             <div>Ludic AI &amp; Game Accessibility</div>
+          </div>
+          <div class="side-list" lang="ko">
+            <div>게임에서의 인간-AI 상호작용</div>
+            <div>게임에서의 생성형 AI</div>
+            <div>루딕 AI 및 게임 접근성</div>
           </div>
 
           <div class="divider"></div>
 
           <ul class="contact-list">
-            <li><a href="mailto:chaejihun@kaist.ac.kr" data-copy="chaejihun@kaist.ac.kr">✉ Email</a></li>
+            <li><a href="mailto:chaejihun@kaist.ac.kr" data-copy="chaejihun@kaist.ac.kr">✉ <span lang="en">Email</span><span lang="ko">이메일</span></a></li>
             <li><a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
-            <li><a href="https://scholar.google.com/citations?user=OjxItRUAAAAJ&amp;hl=en" target="_blank" rel="noopener noreferrer">Google Scholar</a></li>
+            <li><a href="https://scholar.google.com/citations?user=OjxItRUAAAAJ&amp;hl=en" target="_blank" rel="noopener noreferrer"><span lang="en">Google Scholar</span><span lang="ko">구글 스칼라</span></a></li>
             <li><a href="https://orcid.org/0009-0005-7425-3806" target="_blank" rel="noopener noreferrer">ORCID</a></li>
           </ul>
 
           <div class="divider"></div>
 
-          <p class="side-label">Sections</p>
+          <p class="side-label"><span lang="en">Sections</span><span lang="ko">섹션</span></p>
           <nav class="section-nav" aria-label="Page sections">
-            <a href="#about" data-target="about">About</a>
-            <a href="#education" data-target="education">Education</a>
-            <a href="#projects" data-target="projects">Projects</a>
-            <a href="#awards" data-target="awards">Awards</a>
-            <a href="#publications" data-target="publications">Publications</a>
-            <a href="#patents" data-target="patents">Patents</a>
+            <a href="#about" data-target="about"><span lang="en">About</span><span lang="ko">소개</span></a>
+            <a href="#education" data-target="education"><span lang="en">Education</span><span lang="ko">학력</span></a>
+            <a href="#projects" data-target="projects"><span lang="en">Projects</span><span lang="ko">연구 프로젝트</span></a>
+            <a href="#awards" data-target="awards"><span lang="en">Awards</span><span lang="ko">수상</span></a>
+            <a href="#publications" data-target="publications"><span lang="en">Publications</span><span lang="ko">논문</span></a>
+            <a href="#patents" data-target="patents"><span lang="en">Patents</span><span lang="ko">특허</span></a>
           </nav>
 
           <a href="#publications" class="button" id="ctaButton">
-            Explore Publications <span class="arrow">→</span>
+            <span lang="en">Explore Publications</span><span lang="ko">논문 보기</span> <span class="arrow">→</span>
           </a>
         </div>
       </aside>
 
       <main class="content">
         <section class="hero section" id="about">
-          <div class="eyebrow"><span class="dot"></span>Human-AI Interaction • Play Experience • Inclusive AI</div>
-          <h1>Exploring what <em>play</em> becomes when AI enters our ludic space.</h1>
-          <p class="lead">I research what it means to play with and against AI across games and leisure.</p>
-          <p class="intro">Currently a PhD student at <span class="hint" data-hint="kaist">KAIST</span> GSCT, my research sits at the intersection of <strong>Human-AI Interaction</strong> and <strong>play experience</strong>. I am driven by the question: <strong>What changes when intelligent autonomous agents enter our ludic space?</strong> My expertise lies in designing and developing <strong>Inclusive AI agents</strong> that support a diverse range of players, including those with disabilities.</p>
-          <p class="intro">Let's connect to discuss <strong>AI</strong>, <strong>HCI</strong>, and what <strong>the future of play </strong>will look like when autonomous agents evolve alongside us, and for those who come after.</p>
+          <div class="eyebrow-row">
+            <div class="eyebrow">
+              <span class="dot"></span>
+              <span lang="en">Human-AI Interaction · Play Experience · Inclusive AI</span>
+              <span lang="ko">인간-AI 상호작용 · 놀이 경험 · 포용적 AI</span>
+            </div>
+            <span class="meta-clock" id="liveClock" aria-live="off"></span>
+          </div>
+          <h1>
+            <span lang="en">Exploring what <em>play</em> becomes when AI enters our ludic space.</span>
+            <span lang="ko">AI가 우리의 유희 공간에 들어올 때, <em>놀이</em>는 어떻게 변하는가.</span>
+          </h1>
+          <p class="lead" lang="en">I research what it means to play with and against AI across games and leisure.</p>
+          <p class="lead" lang="ko">게임과 여가의 현장에서 AI와 함께, 그리고 AI에 맞서 노는 것이 무엇을 의미하는지를 연구합니다.</p>
+
+          <p class="intro" lang="en">Currently a Ph.D. student at KAIST GSCT, my research sits at the intersection of <strong>Human-AI Interaction</strong> and <strong>play experience</strong>. I am driven by the question: <strong>What changes when intelligent autonomous agents enter our ludic space?</strong> My expertise lies in designing and developing <strong>Inclusive AI agents</strong> that support a diverse range of players, including those with disabilities.</p>
+          <p class="intro" lang="ko">현재 KAIST 문화기술대학원 박사과정 학생으로, <strong>인간-AI 상호작용</strong>과 <strong>놀이 경험</strong>의 교차점에서 연구를 진행하고 있습니다. <strong>지능적 자율 에이전트가 우리의 유희 공간에 들어왔을 때 무엇이 변하는가?</strong>라는 물음이 저의 연구를 이끕니다. 장애를 가진 플레이어를 포함한 다양한 플레이어를 지원하는 <strong>포용적 AI 에이전트</strong>의 설계와 개발이 저의 주된 전문 분야입니다.</p>
+
+          <p class="intro" lang="en">Let's connect to discuss <strong>AI</strong>, <strong>HCI</strong>, and what <strong>the future of play</strong> will look like when autonomous agents evolve alongside us — and for those who come after.</p>
+          <p class="intro" lang="ko"><strong>AI</strong>, <strong>HCI</strong>, 그리고 자율적 에이전트가 우리와 함께, 또 우리 다음 세대를 위해 진화해 갈 때 <strong>놀이의 미래</strong>가 어떤 모습일지 함께 이야기 나누고 싶습니다.</p>
         </section>
 
         <section class="section" id="education">
-          <h3 class="section-title">Education</h3>
+          <h3 class="section-title"><span class="num">01</span><span lang="en">Education</span><span lang="ko">학력</span></h3>
           <div class="items">
-            <div class="item reveal"><span class="item-title">Korea Advanced Institute of Science and Technology (<span class="hint" data-hint="kaist">KAIST</span>)</span><div class="item-meta"> | Ph.D. Student, Graduate School of Culture Technology</div></div>
-            <div class="item reveal"><span class="item-title">Korea Advanced Institute of Science and Technology (<span class="hint" data-hint="kaist">KAIST</span>)</span><div class="item-meta"> | M.S., Graduate School of Culture Technology</div></div>
-            <div class="item reveal"><span class="item-title"><span class="hint" data-hint="handong">Handong Global University</span></span><div class="item-meta"> | B.A. in ICT Convergence &amp; Product Design</div></div>
-            <div class="item reveal"><span class="item-title"><span class="hint" data-hint="ateneo">Ateneo de Manila University</span></span><div class="item-meta"> | Management of Applied Chemistry</div></div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Korea Advanced Institute of Science and Technology (KAIST)</span><span lang="ko">한국과학기술원 (KAIST)</span></span>
+              <div class="item-meta"><span lang="en"> | Ph.D. Student, Graduate School of Culture Technology</span><span lang="ko"> | 박사과정, 문화기술대학원</span></div>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Korea Advanced Institute of Science and Technology (KAIST)</span><span lang="ko">한국과학기술원 (KAIST)</span></span>
+              <div class="item-meta"><span lang="en"> | M.S., Graduate School of Culture Technology</span><span lang="ko"> | 석사, 문화기술대학원</span></div>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Handong Global University</span><span lang="ko">한동대학교</span></span>
+              <div class="item-meta"><span lang="en"> | B.A. in ICT Convergence &amp; Product Design</span><span lang="ko"> | ICT융합 및 제품디자인 학사</span></div>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Ateneo de Manila University</span><span lang="ko">아테네오 데 마닐라 대학교</span></span>
+              <div class="item-meta"><span lang="en"> | Management of Applied Chemistry</span><span lang="ko"> | 응용화학 경영 전공</span></div>
+            </div>
           </div>
         </section>
 
         <section class="section" id="projects">
-          <h3 class="section-title">Research Projects</h3>
+          <h3 class="section-title"><span class="num">02</span><span lang="en">Research Projects</span><span lang="ko">연구 프로젝트</span></h3>
           <div class="items">
             <div class="item reveal">
-              <span class="item-title">Development and Evaluation of the Inclusive Conversational AI Service for <span class="hint" data-hint="gaia">Game Accessibility</span> Enhancement</span>
-              <div class="item-meta">2024.05 – 2027.04 | <span class="hint" data-hint="kaist">KAIST</span> | National Research Foundation of Korea (NRF) | Student Researcher Lead</div>
-              <ul class="item-desc">
+              <span class="item-title"><span lang="en">Development and Evaluation of the Inclusive Conversational AI Service for Game Accessibility Enhancement</span><span lang="ko">게임 접근성 향상을 위한 포용적 대화형 AI 서비스의 개발 및 평가</span></span>
+              <div class="item-meta"><span lang="en">2024.05 – 2027.04 | KAIST | National Research Foundation of Korea (NRF) | Student Researcher Lead</span><span lang="ko">2024.05 ~ 2027.04 | KAIST | 한국연구재단 (NRF) | 학생연구원 (총괄)</span></div>
+              <ul class="item-desc" lang="en">
                 <li>Led user research and prototype development for an inclusive conversational AI assistant designed to support gamers with disabilities across diverse play contexts.</li>
                 <li>Conducted interviews, participatory design workshops, and iterative concept development to identify accessibility needs and translate them into AI-supported interaction scenarios.</li>
                 <li>Contributed to the design of a research and collaboration framework connecting academia, industry, and rehabilitation stakeholders to inform future accessibility guidelines and real-world deployment.</li>
-                <li>Collaborators: Samsung Electronics (Corporate Design Center), Nexon Intelligence Labs, Smilegate D&amp;I, Korea National Rehabilitation Center, and <span class="hint" data-hint="specialeffect">SpecialEffect</span> (UK).</li>
+                <li>Collaborators: Samsung Electronics (Corporate Design Center), Nexon Intelligence Labs, Smilegate D&amp;I, Korea National Rehabilitation Center, and SpecialEffect (UK).</li>
+              </ul>
+              <ul class="item-desc" lang="ko">
+                <li>다양한 플레이 맥락에서 장애 게이머를 지원하기 위해 설계된 포용적 대화형 AI 어시스턴트의 사용자 연구 및 프로토타입 개발을 주도.</li>
+                <li>인터뷰, 참여형 디자인 워크숍, 반복적 콘셉트 개발을 통해 접근성 요구를 발굴하고 이를 AI 기반 상호작용 시나리오로 발전시킴.</li>
+                <li>학계, 산업계, 재활 분야의 이해관계자를 연결하는 연구·협력 프레임워크 설계에 기여하여 향후 접근성 가이드라인과 실제 적용에 기반을 마련.</li>
+                <li>협력 기관: 삼성전자 (코퍼레이트디자인센터), 넥슨 인텔리전스 랩, 스마일게이트 D&amp;I, 국립재활원, SpecialEffect (영국).</li>
               </ul>
             </div>
+
             <div class="item reveal">
-              <span class="item-title">Preserving the <span class="hint" data-hint="haenyeo">Haenyeo</span> Legacy: Serious Games for Social Impact</span>
-              <div class="item-meta">2025.06 – 2025.09 | <span class="hint" data-hint="kaist">KAIST</span> | Leverhulme Trust International Fellow | Student Researcher</div>
-              <ul class="item-desc">
-                <li>Contributed to the design of a serious game project aimed at preserving and communicating the cultural heritage of the Jeju <span class="hint" data-hint="haenyeo">Haenyeo</span>, with a focus on intergenerational knowledge transmission.</li>
+              <span class="item-title"><span lang="en">Preserving the Haenyeo Legacy: Serious Games for Social Impact</span><span lang="ko">해녀 유산의 보존: 사회적 임팩트를 위한 시리어스 게임</span></span>
+              <div class="item-meta"><span lang="en">2025.06 – 2025.09 | KAIST | Leverhulme Trust International Fellow | Student Researcher</span><span lang="ko">2025.06 ~ 2025.09 | KAIST | Leverhulme Trust International Fellow | 학생연구원</span></div>
+              <ul class="item-desc" lang="en">
+                <li>Contributed to the design of a serious game project aimed at preserving and communicating the cultural heritage of the Jeju Haenyeo, with a focus on intergenerational knowledge transmission.</li>
                 <li>Helped develop game concepts and narrative structures that connect Haenyeo practices, environmental change, and women's community knowledge in an accessible interactive format.</li>
                 <li>Supported international research collaboration and field-based design discussions examining how serious games can contribute to cultural sustainability and community resilience.</li>
                 <li>Partners: Brunel University London (Games Research Lab), Jeju Haenyeo Museum, and the Haenyeo communities of Sinrye-ri, Daepyeong-ri, and Yeongnak-ri.</li>
               </ul>
+              <ul class="item-desc" lang="ko">
+                <li>제주 해녀의 문화 유산을 보존하고 전달하기 위한 시리어스 게임 프로젝트 설계에 기여했으며, 세대 간 지식 전달에 중점을 둠.</li>
+                <li>해녀의 실천, 환경 변화, 여성 공동체의 지식을 접근 가능한 인터랙티브 형식으로 연결하는 게임 콘셉트 및 내러티브 구조 개발에 참여.</li>
+                <li>시리어스 게임이 문화적 지속가능성과 공동체 회복력에 어떻게 기여할 수 있는지를 살펴보는 국제 공동 연구와 현장 기반 디자인 논의를 지원.</li>
+                <li>협력 기관: 브루넬 대학교 런던 (Games Research Lab), 제주 해녀박물관, 신례리·대평리·영락리 해녀 공동체.</li>
+              </ul>
             </div>
+
             <div class="item reveal">
-              <span class="item-title">Real-Time <span class="hint" data-hint="xr">XR</span> Interface Technology for Environmental Adaptation</span>
-              <div class="item-meta">2024.04 – 2025.06 | <span class="hint" data-hint="kaist">KAIST</span> | Institute for Information &amp; Communication Technology Planning &amp; Evaluation (IITP) | Student Researcher</div>
-              <ul class="item-desc">
-                <li>Participated in the development of an <span class="hint" data-hint="xr">XR</span> interface system for dynamically adapting virtual content to real-world environmental and spatial conditions.</li>
+              <span class="item-title"><span lang="en">Real-Time XR Interface Technology for Environmental Adaptation</span><span lang="ko">환경 적응을 위한 실시간 XR 인터페이스 기술</span></span>
+              <div class="item-meta"><span lang="en">2024.04 – 2025.06 | KAIST | Institute for Information &amp; Communication Technology Planning &amp; Evaluation (IITP) | Student Researcher</span><span lang="ko">2024.04 ~ 2025.06 | KAIST | 정보통신기획평가원 (IITP) | 학생연구원</span></div>
+              <ul class="item-desc" lang="en">
+                <li>Participated in the development of an XR interface system for dynamically adapting virtual content to real-world environmental and spatial conditions.</li>
                 <li>Contributed to the design and implementation of interaction concepts involving adaptive virtual objects and multimodal interface behavior in mixed-reality settings.</li>
                 <li>Supported research on immersive visual-haptic feedback to improve presence and environmental responsiveness in XR experiences.</li>
                 <li>Partners: Fraunhofer Institute (Germany), NYU, UniSA, Anipen, and bHaptics.</li>
               </ul>
+              <ul class="item-desc" lang="ko">
+                <li>현실 환경 및 공간 조건에 가상 콘텐츠를 동적으로 적응시키는 XR 인터페이스 시스템 개발에 참여.</li>
+                <li>혼합현실 환경에서 적응형 가상 오브젝트와 멀티모달 인터페이스 행동을 포함하는 상호작용 콘셉트의 설계 및 구현에 기여.</li>
+                <li>XR 경험에서 현존감과 환경 반응성을 향상시키기 위한 몰입형 시각-햅틱 피드백 연구를 지원.</li>
+                <li>협력 기관: 프라운호퍼 연구소 (독일), NYU, UniSA, Anipen, bHaptics.</li>
+              </ul>
             </div>
+
             <div class="item reveal">
-              <span class="item-title">Defense Technology Research: Camouflage Effectiveness</span>
-              <div class="item-meta">2023.04 – 2024.02 | <span class="hint" data-hint="handong">Handong Global University</span> | Korea Aerospace Industries (KAI) | Student Researcher</div>
-              <ul class="item-desc">
-                <li>Performed computational and visual evaluation of <span class="hint" data-hint="boramae">KF-21 Boramae</span> camouflage effectiveness across altitude, terrain, and meteorological conditions to assess detectability under varied operational environments.</li>
+              <span class="item-title"><span lang="en">Defense Technology Research: Camouflage Effectiveness</span><span lang="ko">국방 기술 연구: 위장 효과성</span></span>
+              <div class="item-meta"><span lang="en">2023.04 – 2024.02 | Handong Global University | Korea Aerospace Industries (KAI) | Student Researcher</span><span lang="ko">2023.04 ~ 2024.02 | 한동대학교 | 한국항공우주산업 (KAI) | 학생연구원</span></div>
+              <ul class="item-desc" lang="en">
+                <li>Performed computational and visual evaluation of KF-21 Boramae camouflage effectiveness across altitude, terrain, and meteorological conditions to assess detectability under varied operational environments.</li>
                 <li>Processed environmental imagery and simulation-based datasets to analyze the interaction between aircraft surface patterns, background context, and visibility performance.</li>
                 <li>Developed camouflage colorways and pattern configurations for applied defense design, with selected proposals incorporated into real project outputs.</li>
               </ul>
+              <ul class="item-desc" lang="ko">
+                <li>고도, 지형, 기상 조건에 따른 KF-21 보라매의 위장 효과성에 대한 전산·시각 평가를 수행하여 다양한 운용 환경에서의 피탐성을 분석.</li>
+                <li>환경 영상과 시뮬레이션 기반 데이터를 처리하여 기체 표면 패턴, 배경 맥락, 시인성 간의 상호작용을 분석.</li>
+                <li>응용 국방 디자인을 위한 위장 컬러웨이 및 패턴 구성을 개발하였으며, 일부 제안은 실제 프로젝트 결과물에 반영됨.</li>
+              </ul>
             </div>
+
             <div class="item reveal">
-              <span class="item-title"><span class="hint" data-hint="smartcity">Smart City</span> Infrastructure &amp; AI Object Tracking</span>
-              <div class="item-meta">2023.01 – 2024.02 | <span class="hint" data-hint="handong">Handong Global University</span> | Student Researcher</div>
-              <ul class="item-desc">
+              <span class="item-title"><span lang="en">Smart City Infrastructure &amp; AI Object Tracking</span><span lang="ko">스마트시티 인프라 및 AI 객체 추적</span></span>
+              <div class="item-meta"><span lang="en">2023.01 – 2024.02 | Handong Global University | Student Researcher</span><span lang="ko">2023.01 ~ 2024.02 | 한동대학교 | 학생연구원</span></div>
+              <ul class="item-desc" lang="en">
                 <li>Engineered IoT-based roadside sensing hardware for urban data acquisition, including enclosure design and rapid prototyping through 3D-printed sensor housings.</li>
                 <li>Supported AI-driven traffic object tracking pipelines by contributing to data preprocessing, detection workflow refinement, and model-level optimization for real-world road scenes.</li>
                 <li>Improved detection robustness in dense urban environments through anchor-box optimization and applied computer vision experimentation for high-traffic conditions.</li>
+              </ul>
+              <ul class="item-desc" lang="ko">
+                <li>도시 데이터 수집을 위한 IoT 기반 도로변 센싱 하드웨어를 개발했으며, 3D 프린팅 센서 하우징을 활용한 인클로저 설계 및 신속한 프로토타이핑을 수행.</li>
+                <li>AI 기반 교통 객체 추적 파이프라인을 지원하여, 실제 도로 환경을 위한 데이터 전처리, 탐지 워크플로 개선, 모델 수준 최적화에 기여.</li>
+                <li>앵커 박스 최적화와 응용 컴퓨터 비전 실험을 통해 고밀도 도시 환경에서의 탐지 견고성을 향상.</li>
               </ul>
             </div>
           </div>
         </section>
 
         <section class="section" id="awards">
-          <h3 class="section-title">Honors &amp; Awards</h3>
+          <h3 class="section-title"><span class="num">03</span><span lang="en">Honors &amp; Awards</span><span lang="ko">명예 및 수상</span></h3>
           <div class="items">
-            <div class="item reveal"><span class="item-title">Grand Prize (최우수상) – Edu4.0 Q TA Activities</span><div class="item-meta">2026.02 | <span class="hint" data-hint="kaist">KAIST</span></div><p class="item-desc">Recognized for outstanding teaching support and excellence in presenting TA activity cases for the Edu4.0 Q model.</p></div>
-            <div class="item reveal"><span class="item-title">Selected Entrepreneurial Team (<span class="hint" data-hint="climate">Climate Tech</span>)</span><div class="item-meta">2024.03 | Asan Nanum Foundation</div><p class="item-desc">Selected through Chung Ju-yung Startup Competition &amp; Asan UniverCT as a representative startup team in the climate-tech track. Secured early-stage funding and mentorship through the <span class="hint" data-hint="kaist">KAIST</span> and Asan Nanum Foundation ecosystem.</p></div>
-            <div class="item reveal"><span class="item-title">Grand Prize (최우수상, 한동대학교 총장상) (HGU President's Award)</span><div class="item-meta">2024.01 | <span class="hint" data-hint="pohang">Pohang</span> Culture &amp; Arts Factory Hackathon</div><p class="item-desc">Led the technical implementation of a large-scale Unreal Engine media facade prototype demonstrating a smart-city experience concept. Co-hosted by <span class="hint" data-hint="pohang">Pohang</span> City, Pohang Cultural Foundation, KT, and <span class="hint" data-hint="handong">Handong Global University</span>.</p></div>
-            <div class="item reveal"><span class="item-title">Excellence Award (우수상)</span><div class="item-meta">2023.06 | National Metaverse Developer Contest (MSIT)</div><p class="item-desc">Engineered a gamified digital therapeutic for eye muscle rehabilitation utilizing <span class="hint" data-hint="vr">Meta Quest Pro's</span> advanced eye-tracking capabilities. Recognized for innovation by the Korea Metaverse Industry Association and Skonec Entertainment, and awarded by the CEO of Skonec Entertainment.</p></div>
-            <div class="item reveal"><span class="item-title">Outstanding Student Research Award (우수상)</span><div class="item-meta">2023.11 | Korea Multimedia Society (KMMS)</div><p class="item-desc">Authored and presented research on <span class="hint" data-hint="vr">eye-tracking-based VR</span> interactive games, analyzing oculomotor responses to enhance immersion and accessibility in virtual environments.</p></div>
-            <div class="item reveal"><span class="item-title"><span class="hint" data-hint="handong">Handong Global University</span> President's Award (한동대학교 총장상)</span><div class="item-meta">2022.11 | <span class="hint" data-hint="handong">Handong Global University</span></div><p class="item-desc">Startup Idea Competition. Conceptualized a high-impact startup business model integrating ESG principles with augmented reality technology, and the proposal was evaluated as the top entry for technical feasibility and social impact potential.</p></div>
-            <div class="item reveal"><span class="item-title">Outstanding Student Research Award (우수상)</span><div class="item-meta">2022.05 | Korea Multimedia Society (KMMS)</div><p class="item-desc">Conducted experimental research on VR exposure therapy for <span class="hint" data-hint="cynophobia">cynophobia</span>, proposing novel spatiotemporal design factors to increase treatment efficacy.</p></div>
-            <div class="item reveal"><span class="item-title">Top 14 Finalist</span><div class="item-meta">2021.05 | Seoul National University (SNU) Business School</div><p class="item-desc">DB-SNUbiz Global Startup Challenge. Distinguished as a Top 14 finalist in a competitive global startup challenge with a prize pool of $91,000, pitching a <span class="hint" data-hint="blockchain">blockchain-based</span> solution to a panel of venture capitalists and industry experts.</p></div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Grand Prize (최우수상) – Edu4.0 Q TA Activities</span><span lang="ko">최우수상 – Edu4.0 Q TA 활동</span></span>
+              <div class="item-meta"><span lang="en">2026.02 | KAIST</span><span lang="ko">2026.02 | KAIST</span></div>
+              <p class="item-desc" lang="en">Recognized for outstanding teaching support and excellence in presenting TA activity cases for the Edu4.0 Q model.</p>
+              <p class="item-desc" lang="ko">Edu4.0 Q 모델의 TA 활동 사례 발표에서 우수한 교육 지원과 발표 능력을 인정받음.</p>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Selected Entrepreneurial Team (Climate Tech)</span><span lang="ko">선정 창업팀 (기후 테크 부문)</span></span>
+              <div class="item-meta"><span lang="en">2024.03 | Asan Nanum Foundation</span><span lang="ko">2024.03 | 아산나눔재단</span></div>
+              <p class="item-desc" lang="en">Selected through Chung Ju-yung Startup Competition &amp; Asan UniverCT as a representative startup team in the climate-tech track. Secured early-stage funding and mentorship through the KAIST and Asan Nanum Foundation ecosystem.</p>
+              <p class="item-desc" lang="ko">정주영 창업경진대회 및 아산 유니버시티에서 기후테크 트랙의 대표 창업팀으로 선정. KAIST와 아산나눔재단 생태계를 통해 초기 자금과 멘토링을 확보.</p>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Grand Prize (최우수상, 한동대학교 총장상) – HGU President's Award</span><span lang="ko">최우수상 (한동대학교 총장상)</span></span>
+              <div class="item-meta"><span lang="en">2024.01 | Pohang Culture &amp; Arts Factory Hackathon</span><span lang="ko">2024.01 | 포항 문화예술공장 해커톤</span></div>
+              <p class="item-desc" lang="en">Led the technical implementation of a large-scale Unreal Engine media facade prototype demonstrating a smart-city experience concept. Co-hosted by Pohang City, Pohang Cultural Foundation, KT, and Handong Global University.</p>
+              <p class="item-desc" lang="ko">스마트시티 경험 콘셉트를 시연하는 대규모 언리얼 엔진 미디어 파사드 프로토타입의 기술 구현을 주도. 포항시, 포항문화재단, KT, 한동대학교 공동 주최.</p>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Excellence Award (우수상)</span><span lang="ko">우수상</span></span>
+              <div class="item-meta"><span lang="en">2023.06 | National Metaverse Developer Contest (MSIT)</span><span lang="ko">2023.06 | 국가 메타버스 개발자 콘테스트 (과학기술정보통신부)</span></div>
+              <p class="item-desc" lang="en">Engineered a gamified digital therapeutic for eye muscle rehabilitation utilizing Meta Quest Pro's advanced eye-tracking capabilities. Recognized for innovation by the Korea Metaverse Industry Association and Skonec Entertainment, and awarded by the CEO of Skonec Entertainment.</p>
+              <p class="item-desc" lang="ko">메타 퀘스트 프로의 고급 시선추적 기능을 활용하여 눈 근육 재활을 위한 게이미피케이션 디지털 치료기기를 개발. 한국메타버스산업협회 및 스코넥엔터테인먼트로부터 혁신성을 인정받았으며, 스코넥엔터테인먼트 대표이사상을 수상.</p>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Outstanding Student Research Award (우수상)</span><span lang="ko">우수 학생 연구상</span></span>
+              <div class="item-meta"><span lang="en">2023.11 | Korea Multimedia Society (KMMS)</span><span lang="ko">2023.11 | 한국멀티미디어학회 (KMMS)</span></div>
+              <p class="item-desc" lang="en">Authored and presented research on eye-tracking-based VR interactive games, analyzing oculomotor responses to enhance immersion and accessibility in virtual environments.</p>
+              <p class="item-desc" lang="ko">시선추적 기반 VR 인터랙티브 게임 연구를 저술 및 발표. 가상 환경의 몰입감과 접근성 향상을 위한 안구 운동 반응을 분석.</p>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Handong Global University President's Award (한동대학교 총장상)</span><span lang="ko">한동대학교 총장상</span></span>
+              <div class="item-meta"><span lang="en">2022.11 | Handong Global University</span><span lang="ko">2022.11 | 한동대학교</span></div>
+              <p class="item-desc" lang="en">Startup Idea Competition. Conceptualized a high-impact startup business model integrating ESG principles with augmented reality technology, and the proposal was evaluated as the top entry for technical feasibility and social impact potential.</p>
+              <p class="item-desc" lang="ko">창업 아이디어 경진대회. ESG 원칙과 증강현실 기술을 결합한 임팩트 창업 비즈니스 모델을 구상하였으며, 기술적 실현 가능성과 사회적 영향력 측면에서 최우수 출품작으로 평가됨.</p>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Outstanding Student Research Award (우수상)</span><span lang="ko">우수 학생 연구상</span></span>
+              <div class="item-meta"><span lang="en">2022.05 | Korea Multimedia Society (KMMS)</span><span lang="ko">2022.05 | 한국멀티미디어학회 (KMMS)</span></div>
+              <p class="item-desc" lang="en">Conducted experimental research on VR exposure therapy for cynophobia, proposing novel spatiotemporal design factors to increase treatment efficacy.</p>
+              <p class="item-desc" lang="ko">개공포증을 위한 VR 노출 치료에 대한 실험 연구를 수행하였으며, 치료 효과를 높이기 위한 새로운 시공간 디자인 요소를 제안.</p>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Top 14 Finalist</span><span lang="ko">상위 14팀 진출</span></span>
+              <div class="item-meta"><span lang="en">2021.05 | Seoul National University (SNU) Business School</span><span lang="ko">2021.05 | 서울대학교 경영대학</span></div>
+              <p class="item-desc" lang="en">DB-SNUbiz Global Startup Challenge. Distinguished as a Top 14 finalist in a competitive global startup challenge with a prize pool of $91,000, pitching a blockchain-based solution to a panel of venture capitalists and industry experts.</p>
+              <p class="item-desc" lang="ko">DB-SNUbiz 글로벌 창업 챌린지. 총 상금 9만 1천 달러 규모의 경쟁 챌린지에서 상위 14팀에 진출하여, 벤처캐피털리스트와 산업 전문가 패널 앞에서 블록체인 기반 솔루션을 발표.</p>
+            </div>
           </div>
         </section>
 
         <section class="section" id="publications">
-          <h3 class="section-title">Publications</h3>
+          <h3 class="section-title"><span class="num">04</span><span lang="en">Publications</span><span lang="ko">논문</span></h3>
           <div class="filter" role="tablist" aria-label="Filter publications by year" id="pubFilter">
-            <button class="active" data-year="all" role="tab">All</button>
+            <button class="active" data-year="all" role="tab"><span lang="en">All</span><span lang="ko">전체</span></button>
             <button data-year="2026" role="tab">2026</button>
             <button data-year="2025" role="tab">2025</button>
             <button data-year="2024" role="tab">2024</button>
@@ -1291,31 +1451,73 @@
             <button data-year="2022" role="tab">2022</button>
           </div>
           <div class="items" id="pubItems">
-            <div class="item reveal" data-year="2026"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). <span class="paper-title">Design principles of Game AI Assistant (<span class="hint" data-hint="gaia">GAIA</span>) for players with disabilities: Accessibility needs and ethical concerns.</span> <span class="venue">Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI '26). ACM.</span></p></div>
-            <div class="item reveal" data-year="2025"><p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). <span class="paper-title">Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties.</span> <span class="venue">Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA '25). ACM. Co-first Author.</span></p></div>
-            <div class="item reveal" data-year="2025"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2025). <span class="paper-title">The identity and role of game <span class="hint" data-hint="npc">NPCs</span>: Past, present, and future.</span> <span class="venue">Proceedings of the 1st DiGRA Korea Conference 2025.</span></p></div>
-            <div class="item reveal" data-year="2025"><p class="item-desc">Oh, H., Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). <span class="paper-title">RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of <span class="hint" data-hint="gaia">GAIA</span>.</span> <span class="venue">Korea HCI Conference 2025. Co-second Author.</span></p></div>
-            <div class="item reveal" data-year="2024"><p class="item-desc">Choi, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <span class="paper-title">Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH).</span> <span class="venue">Korean Artificial Intelligence Association Conference 2024. Co-first Author.</span></p></div>
-            <div class="item reveal" data-year="2024"><p class="item-desc">Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <span class="paper-title"><span class="hint" data-hint="gaia">GAIA</span>: A game AI assistant service framework integrating problem-solving and emotion regulation strategies.</span> <span class="venue">Korea Computer Graphics Society Conference 2024. Co-first Author.</span></p></div>
-            <div class="item reveal" data-year="2024"><p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). <span class="paper-title">Challenges and opportunities of game <span class="hint" data-hint="npc">NPC</span> research using LLM: A scoping review.</span> <span class="venue">Korean Game Society Conference 2024. Co-first Author.</span></p></div>
-            <div class="item reveal" data-year="2024"><p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">A technical literature review of distributed management structure: Focusing on the multi-label system of <span class="hint" data-hint="hybe">HYBE</span> Co., Ltd.</span> <span class="venue">Korea Technology Innovation Society Conference 2024.</span></p></div>
-            <div class="item reveal" data-year="2024"><p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">From BigHit to <span class="hint" data-hint="hybe">HYBE</span>: Sentiment analysis and strategic transition through news data.</span> <span class="venue">Korea Society for Innovation Management &amp; Economics Conference 2024.</span></p></div>
-            <div class="item reveal" data-year="2023"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Yoo, S., Lee, Y., Kim, Y., Kim, H., &amp; Han, D. (2023). <span class="paper-title">Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles.</span> <span class="venue">Journal of the Korea Computer Graphics Society, 29(3), 137–147.</span></p></div>
-            <div class="item reveal" data-year="2023"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Kim, H., Kim, Y., Kim, M., Kim, S., &amp; Han, D. (2023). <span class="paper-title">A study on the effect of group commitment on improving awareness of recycling through gamification.</span> <span class="venue">Korea HCI Conference 2023.</span></p></div>
-            <div class="item reveal" data-year="2023"><p class="item-desc">Kim, Y., <span class="pub-author-me">Chae, J.</span>, Lee, Y., Kim, H., Lee, Y., &amp; Han, D. (2023). <span class="paper-title">Enhancing participation in rehabilitation for diplopia through gamification.</span> <span class="venue">Korea Computer Graphics Society Conference 2023.</span></p></div>
-            <div class="item reveal" data-year="2023"><p class="item-desc">Lee, Y. S., Kim, Y., Kim, H., <span class="pub-author-me">Chae, J.</span>, Lee, Y., &amp; Han, D. (2023). <span class="paper-title"><span class="hint" data-hint="vr">Eye-tracking-based VR</span> interactive games for eye movements.</span> <span class="venue">Korea Multimedia Society Conference 2023.</span></p></div>
-            <div class="item reveal" data-year="2023"><p class="item-desc">Yoon, D., Park, S., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2023). <span class="paper-title">Methodology for improving the performance of demand forecasting through machine learning.</span> <span class="venue">Preprint available at Research Square.</span></p></div>
-            <div class="item reveal" data-year="2022"><p class="item-desc">Yoo, S., <span class="pub-author-me">Chae, J.</span>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). <span class="paper-title">Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for <span class="hint" data-hint="cynophobia">cynophobia</span>.</span> <span class="venue">Korea Multimedia Society Conference 2022.</span></p></div>
-            <div class="item reveal" data-year="2022"><p class="item-desc">Park, S., Yoon, D., <span class="pub-author-me">Chae, J.</span>, Song, Y., &amp; Chung, D. (2022). <span class="paper-title">Enhanced predictive model performance through clustering.</span> <span class="venue">Korea Society of Management Information Systems Conference 2022.</span></p></div>
-            <div class="item reveal" data-year="2022"><p class="item-desc">Park, S., Yoon, D., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2022). <span class="paper-title">Combined regression coefficient reduction method with clustering for performance enhancement.</span> <span class="venue">Korea Intelligent Information Systems Society Conference 2022.</span></p></div>
+            <div class="item reveal" data-year="2026">
+              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). <span class="paper-title">Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns.</span> <span class="venue">Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI '26). ACM.</span></p>
+            </div>
+            <div class="item reveal" data-year="2025">
+              <p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). <span class="paper-title">Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties.</span> <span class="venue">Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA '25). ACM.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span></p>
+            </div>
+            <div class="item reveal" data-year="2025">
+              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2025). <span class="paper-title">The identity and role of game NPCs: Past, present, and future.</span> <span class="venue">Proceedings of the 1st DiGRA Korea Conference 2025.</span></p>
+            </div>
+            <div class="item reveal" data-year="2025">
+              <p class="item-desc">Oh, H., Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). <span class="paper-title">RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA.</span> <span class="venue">Korea HCI Conference 2025.</span> <span lang="en">Co-second Author.</span><span lang="ko">공동 제2저자.</span></p>
+            </div>
+            <div class="item reveal" data-year="2024">
+              <p class="item-desc">Choi, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <span class="paper-title">Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH).</span> <span class="venue">Korean Artificial Intelligence Association Conference 2024.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span></p>
+            </div>
+            <div class="item reveal" data-year="2024">
+              <p class="item-desc">Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <span class="paper-title">GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies.</span> <span class="venue">Korea Computer Graphics Society Conference 2024.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span></p>
+            </div>
+            <div class="item reveal" data-year="2024">
+              <p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). <span class="paper-title">Challenges and opportunities of game NPC research using LLM: A scoping review.</span> <span class="venue">Korean Game Society Conference 2024.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span></p>
+            </div>
+            <div class="item reveal" data-year="2024">
+              <p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd.</span> <span class="venue">Korea Technology Innovation Society Conference 2024.</span></p>
+            </div>
+            <div class="item reveal" data-year="2024">
+              <p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">From BigHit to HYBE: Sentiment analysis and strategic transition through news data.</span> <span class="venue">Korea Society for Innovation Management &amp; Economics Conference 2024.</span></p>
+            </div>
+            <div class="item reveal" data-year="2023">
+              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Yoo, S., Lee, Y., Kim, Y., Kim, H., &amp; Han, D. (2023). <span class="paper-title">Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles.</span> <span class="venue">Journal of the Korea Computer Graphics Society, 29(3), 137–147.</span></p>
+            </div>
+            <div class="item reveal" data-year="2023">
+              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Kim, H., Kim, Y., Kim, M., Kim, S., &amp; Han, D. (2023). <span class="paper-title">A study on the effect of group commitment on improving awareness of recycling through gamification.</span> <span class="venue">Korea HCI Conference 2023.</span></p>
+            </div>
+            <div class="item reveal" data-year="2023">
+              <p class="item-desc">Kim, Y., <span class="pub-author-me">Chae, J.</span>, Lee, Y., Kim, H., Lee, Y., &amp; Han, D. (2023). <span class="paper-title">Enhancing participation in rehabilitation for diplopia through gamification.</span> <span class="venue">Korea Computer Graphics Society Conference 2023.</span></p>
+            </div>
+            <div class="item reveal" data-year="2023">
+              <p class="item-desc">Lee, Y. S., Kim, Y., Kim, H., <span class="pub-author-me">Chae, J.</span>, Lee, Y., &amp; Han, D. (2023). <span class="paper-title">Eye-tracking-based VR interactive games for eye movements.</span> <span class="venue">Korea Multimedia Society Conference 2023.</span></p>
+            </div>
+            <div class="item reveal" data-year="2023">
+              <p class="item-desc">Yoon, D., Park, S., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2023). <span class="paper-title">Methodology for improving the performance of demand forecasting through machine learning.</span> <span class="venue">Preprint available at Research Square.</span></p>
+            </div>
+            <div class="item reveal" data-year="2022">
+              <p class="item-desc">Yoo, S., <span class="pub-author-me">Chae, J.</span>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). <span class="paper-title">Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for cynophobia.</span> <span class="venue">Korea Multimedia Society Conference 2022.</span></p>
+            </div>
+            <div class="item reveal" data-year="2022">
+              <p class="item-desc">Park, S., Yoon, D., <span class="pub-author-me">Chae, J.</span>, Song, Y., &amp; Chung, D. (2022). <span class="paper-title">Enhanced predictive model performance through clustering.</span> <span class="venue">Korea Society of Management Information Systems Conference 2022.</span></p>
+            </div>
+            <div class="item reveal" data-year="2022">
+              <p class="item-desc">Park, S., Yoon, D., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2022). <span class="paper-title">Combined regression coefficient reduction method with clustering for performance enhancement.</span> <span class="venue">Korea Intelligent Information Systems Society Conference 2022.</span></p>
+            </div>
           </div>
         </section>
 
         <section class="section" id="patents">
-          <h3 class="section-title">Patents &amp; Certifications</h3>
+          <h3 class="section-title"><span class="num">05</span><span lang="en">Patents &amp; Certifications</span><span lang="ko">특허 및 자격증</span></h3>
           <div class="two-col">
-            <div class="item reveal"><span class="item-title">Artificial Intelligence-Based Technology Acceptance Prediction Method, Program, and Device</span><div class="item-meta">2022.12 | Korean Intellectual Property Office | Patent Application Publication No. 40-2022-0179493</div><p class="item-desc">Co-Patentor: Impactive AI Corp. Publication Date: December 23, 2022.</p></div>
-            <div class="item reveal"><span class="item-title">AI-900: <span class="hint" data-hint="azure">Microsoft Azure</span>, Machine Learning, and AI</span><div class="item-meta">Certification | Microsoft</div></div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Artificial Intelligence-Based Technology Acceptance Prediction Method, Program, and Device</span><span lang="ko">인공지능 기반 기술 수용 예측 방법, 프로그램 및 장치</span></span>
+              <div class="item-meta"><span lang="en">2022.12 | Korean Intellectual Property Office | Patent Application Publication No. 40-2022-0179493</span><span lang="ko">2022.12 | 특허청 | 출원 공개 번호 40-2022-0179493</span></div>
+              <p class="item-desc" lang="en">Co-Patentor: Impactive AI Corp. Publication Date: December 23, 2022.</p>
+              <p class="item-desc" lang="ko">공동 출원인: Impactive AI Corp. 공개일: 2022년 12월 23일.</p>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">AI-900: Microsoft Azure, Machine Learning, and AI</span><span lang="ko">AI-900: Microsoft Azure, 머신러닝 및 AI</span></span>
+              <div class="item-meta"><span lang="en">Certification | Microsoft</span><span lang="ko">자격증 | Microsoft</span></div>
+            </div>
           </div>
         </section>
       </main>
@@ -1323,901 +1525,10 @@
   </div>
 
   <div class="kbd-hint" id="kbdHint">
-    <kbd>J</kbd><kbd>K</kbd> sections · <kbd>R</kbd> reader
+    <kbd>J</kbd><kbd>K</kbd> sections · <kbd>L</kbd> lang · <kbd>R</kbd> reader
   </div>
 
   <script>
-    /* ═══════════════════════════════════════════════════════════
-       HOVER VIGNETTES — handcrafted micro-scenes per keyword
-       ═══════════════════════════════════════════════════════════ */
-    const HINTS = {
-      kaist: {
-        label: 'KAIST',
-        sub: 'Daejeon, KR',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="kg" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#003c87"/>
-                <stop offset="100%" stop-color="#0058c2"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#kg)"/>
-            <!-- abstract starlight -->
-            <circle cx="32" cy="22" r="0.7" fill="#9bc4ff"/>
-            <circle cx="160" cy="18" r="0.5" fill="#9bc4ff" opacity="0.7"/>
-            <circle cx="55" cy="30" r="0.4" fill="#9bc4ff" opacity="0.6"/>
-            <!-- KAIST wordmark -->
-            <text x="22" y="38" font-family="Inter" font-size="16" font-weight="800" fill="#fff" letter-spacing="3">KAIST</text>
-            <text x="22" y="52" font-family="Inter" font-size="7" font-weight="500" fill="#9bc4ff" letter-spacing="1.5">한국과학기술원</text>
-            <!-- Nubzuki: sleeping rounded creature -->
-            <g transform="translate(120, 78)">
-              <!-- body -->
-              <ellipse cx="0" cy="14" rx="26" ry="11" fill="#fff"/>
-              <!-- belly highlight -->
-              <ellipse cx="0" cy="17" rx="20" ry="6" fill="#e6f0ff"/>
-              <!-- head -->
-              <circle cx="-22" cy="8" r="11" fill="#fff"/>
-              <!-- ears -->
-              <ellipse cx="-28" cy="0" rx="3.5" ry="5" fill="#fff" transform="rotate(-20 -28 0)"/>
-              <ellipse cx="-18" cy="-2" rx="3" ry="4.5" fill="#fff" transform="rotate(15 -18 -2)"/>
-              <ellipse cx="-28" cy="0" rx="1.5" ry="2.5" fill="#ffb3c1" transform="rotate(-20 -28 0)"/>
-              <!-- closed eyes (sleeping) -->
-              <path d="M-27,7 Q-25,9 -23,7" stroke="#003c87" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-              <path d="M-20,8 Q-18,10 -16,8" stroke="#003c87" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-              <!-- cheek blush -->
-              <circle cx="-25" cy="12" r="2" fill="#ffb3c1" opacity="0.7"/>
-              <circle cx="-15" cy="12" r="2" fill="#ffb3c1" opacity="0.7"/>
-              <!-- bushy tail -->
-              <path d="M22,10 Q34,5 32,20 Q28,22 26,18" fill="#fff" stroke="#fff" stroke-width="0.5"/>
-              <!-- tiny feet -->
-              <ellipse cx="-8" cy="24" rx="3" ry="1.5" fill="#fff"/>
-              <ellipse cx="6" cy="24" rx="3" ry="1.5" fill="#fff"/>
-            </g>
-            <!-- Floating z's -->
-            <g style="animation: z-float 2.4s ease-in-out infinite">
-              <text x="105" y="60" font-family="Inter" font-size="10" font-weight="700" fill="#9bc4ff">z</text>
-            </g>
-            <g style="animation: z-float 2.4s ease-in-out infinite 0.8s">
-              <text x="113" y="50" font-family="Inter" font-size="8" font-weight="700" fill="#9bc4ff">z</text>
-            </g>
-            <g style="animation: z-float 2.4s ease-in-out infinite 1.6s">
-              <text x="120" y="42" font-family="Inter" font-size="6" font-weight="700" fill="#9bc4ff">z</text>
-            </g>
-          </svg>`
-      },
-
-      boramae: {
-        label: 'KF-21 Boramae',
-        sub: '4.5-gen fighter',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#0d1d3a"/>
-                <stop offset="60%" stop-color="#2c4a7c"/>
-                <stop offset="100%" stop-color="#5b7ba8"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#sky)"/>
-            <!-- stars -->
-            <circle cx="20" cy="20" r="0.8" fill="#fff" opacity="0.9"/>
-            <circle cx="55" cy="14" r="0.5" fill="#fff" opacity="0.7"/>
-            <circle cx="90" cy="22" r="0.7" fill="#fff" opacity="0.6"/>
-            <circle cx="140" cy="16" r="0.6" fill="#fff" opacity="0.8"/>
-            <circle cx="175" cy="28" r="0.5" fill="#fff" opacity="0.7"/>
-            <!-- distant clouds -->
-            <ellipse cx="50" cy="95" rx="40" ry="6" fill="#0a1525" opacity="0.6"/>
-            <ellipse cx="150" cy="100" rx="50" ry="5" fill="#0a1525" opacity="0.5"/>
-            <!-- contrails (long thin lines) -->
-            <line x1="200" y1="42" x2="-30" y2="42" stroke="#fff" stroke-width="0.8" opacity="0.18" stroke-dasharray="3 3"/>
-            <line x1="200" y1="62" x2="-30" y2="62" stroke="#fff" stroke-width="0.6" opacity="0.12" stroke-dasharray="2 4"/>
-            <!-- Jet 1 -->
-            <g style="animation: fly-by 3.2s linear infinite;">
-              <g transform="translate(0, 42)">
-                <!-- jet body: delta-wing fighter, side view -->
-                <path d="M-16,0 L14,0 L20,2 L14,4 L-16,4 Z" fill="#e8eef5"/>
-                <path d="M-10,-2 L10,-2 L4,-6 L-4,-6 Z" fill="#c4d0dc"/>
-                <path d="M-12,4 L-10,8 L-4,4 Z" fill="#c4d0dc"/>
-                <!-- nose -->
-                <path d="M14,1 L22,2 L14,3 Z" fill="#a8b8c8"/>
-                <!-- exhaust glow -->
-                <circle cx="-16" cy="2" r="2.5" fill="#ff7a3c" opacity="0.85"/>
-                <circle cx="-19" cy="2" r="1.5" fill="#ffd166" opacity="0.6"/>
-              </g>
-            </g>
-            <!-- Jet 2 (smaller, further) -->
-            <g style="animation: fly-by 4.5s linear infinite 1.5s;">
-              <g transform="translate(0, 62)">
-                <path d="M-12,0 L10,0 L14,1.5 L10,3 L-12,3 Z" fill="#cdd6e0"/>
-                <path d="M-8,-1.5 L8,-1.5 L3,-4 L-3,-4 Z" fill="#9ba8b8"/>
-                <circle cx="-12" cy="1.5" r="1.8" fill="#ff7a3c" opacity="0.7"/>
-              </g>
-            </g>
-            <!-- Jet 3 (third, faintest) -->
-            <g style="animation: fly-by 5.5s linear infinite 0.7s; opacity: 0.7;">
-              <g transform="translate(0, 78)">
-                <path d="M-9,0 L8,0 L11,1 L8,2 L-9,2 Z" fill="#aab4c0"/>
-                <circle cx="-9" cy="1" r="1.3" fill="#ff7a3c" opacity="0.6"/>
-              </g>
-            </g>
-            <!-- ground horizon -->
-            <rect x="0" y="115" width="200" height="10" fill="#050a14"/>
-          </svg>`
-      },
-
-      haenyeo: {
-        label: '해녀 · Haenyeo',
-        sub: 'Jeju free-divers',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#0a2e3d"/>
-                <stop offset="40%" stop-color="#134e5e"/>
-                <stop offset="100%" stop-color="#1d6c7f"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#sea)"/>
-            <!-- sun rays -->
-            <line x1="60" y1="0" x2="80" y2="50" stroke="#a8e6cf" stroke-width="0.8" opacity="0.3"/>
-            <line x1="80" y1="0" x2="90" y2="60" stroke="#a8e6cf" stroke-width="0.6" opacity="0.25"/>
-            <line x1="100" y1="0" x2="100" y2="60" stroke="#a8e6cf" stroke-width="0.7" opacity="0.3"/>
-            <!-- wave surface (animated) -->
-            <g style="animation: wave-slide 4s linear infinite;">
-              <path d="M -50,28 Q 0,22 50,28 T 150,28 T 250,28 T 350,28" stroke="#71c9c2" stroke-width="1.2" fill="none" opacity="0.7"/>
-              <path d="M -50,34 Q 0,30 50,34 T 150,34 T 250,34 T 350,34" stroke="#71c9c2" stroke-width="0.8" fill="none" opacity="0.4"/>
-            </g>
-            <!-- Diver silhouette (haenyeo with tewak float on surface) -->
-            <!-- Tewak float (orange buoy) on surface -->
-            <ellipse cx="40" cy="28" rx="9" ry="6" fill="#ff8c42"/>
-            <ellipse cx="40" cy="27" rx="9" ry="2" fill="#ffb380"/>
-            <line x1="40" y1="32" x2="44" y2="65" stroke="#1a1a1a" stroke-width="0.6" opacity="0.6"/>
-            <!-- Diver body (diving down) -->
-            <g transform="translate(110, 78) rotate(15)">
-              <!-- swim suit body -->
-              <ellipse cx="0" cy="0" rx="6" ry="14" fill="#0a0a0a"/>
-              <!-- head with cap -->
-              <circle cx="0" cy="-16" r="5" fill="#0a0a0a"/>
-              <!-- mask -->
-              <ellipse cx="0" cy="-17" rx="4" ry="2.5" fill="#71c9c2" opacity="0.7"/>
-              <!-- arms extended -->
-              <ellipse cx="-7" cy="-2" rx="8" ry="2" fill="#0a0a0a" transform="rotate(20)"/>
-              <ellipse cx="7" cy="-2" rx="8" ry="2" fill="#0a0a0a" transform="rotate(-20)"/>
-              <!-- legs/fins -->
-              <ellipse cx="-3" cy="16" rx="3" ry="9" fill="#0a0a0a"/>
-              <ellipse cx="3" cy="16" rx="3" ry="9" fill="#0a0a0a"/>
-              <!-- fins (yellow tips) -->
-              <ellipse cx="-3" cy="24" rx="4" ry="3" fill="#ffd166"/>
-              <ellipse cx="3" cy="24" rx="4" ry="3" fill="#ffd166"/>
-            </g>
-            <!-- rising bubbles -->
-            <g style="animation: bubble-rise 2.4s ease-in infinite;">
-              <circle cx="108" cy="100" r="2" fill="#a8e6cf" opacity="0.6"/>
-            </g>
-            <g style="animation: bubble-rise 2.4s ease-in infinite 0.6s;">
-              <circle cx="115" cy="100" r="1.5" fill="#a8e6cf" opacity="0.6"/>
-            </g>
-            <g style="animation: bubble-rise 2.4s ease-in infinite 1.2s;">
-              <circle cx="105" cy="100" r="1" fill="#a8e6cf" opacity="0.6"/>
-            </g>
-            <g style="animation: bubble-rise 2.4s ease-in infinite 1.8s;">
-              <circle cx="118" cy="100" r="1.8" fill="#a8e6cf" opacity="0.5"/>
-            </g>
-            <!-- distant fish silhouettes -->
-            <path d="M 165,80 Q 170,78 173,80 L 170,82 L 173,84 Q 170,82 165,84 Z" fill="#0a2e3d" opacity="0.6"/>
-            <path d="M 30,100 Q 35,98 38,100 L 35,102 L 38,104 Q 35,102 30,104 Z" fill="#0a2e3d" opacity="0.5"/>
-          </svg>`
-      },
-
-      pohang: {
-        label: '포항 · Pohang',
-        sub: 'Steel & sea',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="psky" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#3d1e3a"/>
-                <stop offset="50%" stop-color="#c0392b"/>
-                <stop offset="100%" stop-color="#e67e22"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#psky)"/>
-            <!-- sun -->
-            <circle cx="160" cy="58" r="14" fill="#ffd166" opacity="0.9"/>
-            <circle cx="160" cy="58" r="20" fill="#ffd166" opacity="0.2"/>
-            <!-- water reflection -->
-            <rect x="0" y="92" width="200" height="33" fill="#1a1a2a" opacity="0.5"/>
-            <line x1="0" y1="96" x2="200" y2="96" stroke="#ffd166" stroke-width="0.4" opacity="0.4"/>
-            <line x1="0" y1="100" x2="200" y2="100" stroke="#ffd166" stroke-width="0.3" opacity="0.3"/>
-            <!-- POSCO-inspired industrial silhouette -->
-            <g fill="#0a0a14">
-              <!-- main building -->
-              <rect x="20" y="68" width="40" height="24"/>
-              <!-- smokestacks -->
-              <rect x="32" y="48" width="4" height="44"/>
-              <rect x="42" y="42" width="4" height="50"/>
-              <rect x="52" y="52" width="4" height="40"/>
-              <!-- crane -->
-              <rect x="68" y="60" width="2" height="32"/>
-              <rect x="62" y="60" width="14" height="2"/>
-              <!-- mid factory -->
-              <rect x="80" y="72" width="30" height="20"/>
-              <rect x="86" y="58" width="3" height="34"/>
-              <rect x="98" y="62" width="3" height="30"/>
-              <!-- right structures -->
-              <polygon points="115,92 120,76 130,76 135,92"/>
-              <rect x="138" y="80" width="14" height="12"/>
-            </g>
-            <!-- Smoke drifting -->
-            <g style="animation: smoke-drift 3.5s ease-out infinite;">
-              <circle cx="34" cy="46" r="3" fill="#fff" opacity="0.4"/>
-            </g>
-            <g style="animation: smoke-drift 3.5s ease-out infinite 0.8s;">
-              <circle cx="44" cy="40" r="3.5" fill="#fff" opacity="0.5"/>
-            </g>
-            <g style="animation: smoke-drift 3.5s ease-out infinite 1.6s;">
-              <circle cx="54" cy="50" r="2.8" fill="#fff" opacity="0.45"/>
-            </g>
-            <g style="animation: smoke-drift 3.5s ease-out infinite 2.4s;">
-              <circle cx="88" cy="56" r="2.5" fill="#fff" opacity="0.4"/>
-            </g>
-            <!-- factory windows (glowing) -->
-            <rect x="24" y="74" width="2" height="2" fill="#ffd166"/>
-            <rect x="30" y="74" width="2" height="2" fill="#ffd166"/>
-            <rect x="42" y="80" width="2" height="2" fill="#ffd166" opacity="0.8"/>
-            <rect x="50" y="76" width="2" height="2" fill="#ffd166"/>
-            <rect x="84" y="78" width="2" height="2" fill="#ffd166"/>
-            <rect x="92" y="82" width="2" height="2" fill="#ffd166" opacity="0.7"/>
-            <rect x="102" y="78" width="2" height="2" fill="#ffd166"/>
-          </svg>`
-      },
-
-      vr: {
-        label: 'Eye-tracking · VR',
-        sub: 'Meta Quest Pro',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <radialGradient id="vrbg" cx="0.5" cy="0.5" r="0.7">
-                <stop offset="0%" stop-color="#1e1147"/>
-                <stop offset="100%" stop-color="#0a0220"/>
-              </radialGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#vrbg)"/>
-            <!-- scan lines (subtle) -->
-            <g opacity="0.18">
-              <line x1="0" y1="20" x2="200" y2="20" stroke="#b388ff" stroke-width="0.3"/>
-              <line x1="0" y1="40" x2="200" y2="40" stroke="#b388ff" stroke-width="0.3"/>
-              <line x1="0" y1="60" x2="200" y2="60" stroke="#b388ff" stroke-width="0.3"/>
-              <line x1="0" y1="80" x2="200" y2="80" stroke="#b388ff" stroke-width="0.3"/>
-              <line x1="0" y1="100" x2="200" y2="100" stroke="#b388ff" stroke-width="0.3"/>
-            </g>
-            <!-- moving scan line -->
-            <rect x="0" y="0" width="200" height="2" fill="#b388ff" opacity="0.6" style="animation: scan-line 3s linear infinite;"/>
-            <!-- Eye -->
-            <g transform="translate(100, 62)">
-              <!-- almond shape -->
-              <ellipse cx="0" cy="0" rx="44" ry="22" fill="#fff" opacity="0.95"/>
-              <ellipse cx="0" cy="0" rx="44" ry="22" fill="none" stroke="#c4b5fd" stroke-width="1"/>
-              <!-- iris (will be moved by JS via class) -->
-              <g class="eye-iris">
-                <circle cx="0" cy="0" r="13" fill="#5b2a86"/>
-                <circle cx="0" cy="0" r="10" fill="#7c3aed"/>
-                <circle cx="0" cy="0" r="6" fill="#0a0220"/>
-                <!-- pupil highlight -->
-                <circle cx="-2" cy="-2" r="2" fill="#fff" opacity="0.7"/>
-              </g>
-              <!-- eyelid (blinks) -->
-              <ellipse cx="0" cy="0" rx="44" ry="22" fill="#0a0220" style="transform-origin: center; animation: blink-eye 4s ease-in-out infinite;"/>
-            </g>
-            <!-- corner crosshairs -->
-            <g stroke="#b388ff" stroke-width="0.6" fill="none" opacity="0.5">
-              <path d="M 8,8 L 8,16 M 8,8 L 16,8"/>
-              <path d="M 192,8 L 192,16 M 192,8 L 184,8"/>
-              <path d="M 8,117 L 8,109 M 8,117 L 16,117"/>
-              <path d="M 192,117 L 192,109 M 192,117 L 184,117"/>
-            </g>
-            <text x="14" y="22" font-family="ui-monospace" font-size="6" fill="#b388ff" opacity="0.7">TRACK · 240 Hz</text>
-          </svg>`
-      },
-
-      xr: {
-        label: 'Mixed Reality',
-        sub: 'XR · spatial',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="xrbg" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#0a1428"/>
-                <stop offset="100%" stop-color="#1e3a8a"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#xrbg)"/>
-            <!-- grid floor in perspective -->
-            <g stroke="#60a5fa" stroke-width="0.4" opacity="0.4">
-              <line x1="0" y1="95" x2="200" y2="95"/>
-              <line x1="0" y1="105" x2="200" y2="105"/>
-              <line x1="0" y1="115" x2="200" y2="115"/>
-              <line x1="20" y1="85" x2="-20" y2="125"/>
-              <line x1="60" y1="85" x2="40" y2="125"/>
-              <line x1="100" y1="85" x2="100" y2="125"/>
-              <line x1="140" y1="85" x2="160" y2="125"/>
-              <line x1="180" y1="85" x2="220" y2="125"/>
-            </g>
-            <!-- rotating wireframe cube -->
-            <g transform="translate(100, 55)" style="animation: spin-slow 8s linear infinite; transform-origin: center;">
-              <!-- back face -->
-              <path d="M -20,-20 L 20,-20 L 20,20 L -20,20 Z" stroke="#60a5fa" fill="rgba(96,165,250,0.08)" stroke-width="1"/>
-              <!-- front face (offset) -->
-              <path d="M -12,-12 L 28,-12 L 28,28 L -12,28 Z" stroke="#93c5fd" fill="rgba(147,197,253,0.12)" stroke-width="1"/>
-              <!-- connecting edges -->
-              <line x1="-20" y1="-20" x2="-12" y2="-12" stroke="#60a5fa" stroke-width="0.8"/>
-              <line x1="20" y1="-20" x2="28" y2="-12" stroke="#60a5fa" stroke-width="0.8"/>
-              <line x1="20" y1="20" x2="28" y2="28" stroke="#60a5fa" stroke-width="0.8"/>
-              <line x1="-20" y1="20" x2="-12" y2="28" stroke="#60a5fa" stroke-width="0.8"/>
-              <!-- vertex dots -->
-              <circle cx="-20" cy="-20" r="1.5" fill="#93c5fd"/>
-              <circle cx="20" cy="-20" r="1.5" fill="#93c5fd"/>
-              <circle cx="20" cy="20" r="1.5" fill="#93c5fd"/>
-              <circle cx="-20" cy="20" r="1.5" fill="#93c5fd"/>
-            </g>
-            <!-- orbiting particle -->
-            <g transform="translate(100, 55)">
-              <circle cx="0" cy="0" r="2" fill="#fbbf24" style="animation: orbit 4s linear infinite; transform-origin: center;"/>
-            </g>
-            <!-- tracking markers -->
-            <g fill="none" stroke="#60a5fa" stroke-width="0.6" opacity="0.6">
-              <path d="M 12,12 L 12,18 L 18,18"/>
-              <path d="M 188,12 L 188,18 L 182,18"/>
-            </g>
-          </svg>`
-      },
-
-      hybe: {
-        label: 'HYBE',
-        sub: 'BigHit → HYBE',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="hbg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#190b2e"/>
-                <stop offset="100%" stop-color="#3d1466"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#hbg)"/>
-            <!-- expanding sound waves -->
-            <g transform="translate(100, 62)" fill="none" stroke="#c4b5fd">
-              <circle cx="0" cy="0" r="15" stroke-width="1.2" style="animation: sound-wave 2s ease-out infinite;"/>
-              <circle cx="0" cy="0" r="15" stroke-width="1.2" style="animation: sound-wave 2s ease-out infinite 0.5s;"/>
-              <circle cx="0" cy="0" r="15" stroke-width="1.2" style="animation: sound-wave 2s ease-out infinite 1s;"/>
-              <circle cx="0" cy="0" r="15" stroke-width="1.2" style="animation: sound-wave 2s ease-out infinite 1.5s;"/>
-            </g>
-            <!-- central speaker -->
-            <g transform="translate(100, 62)">
-              <circle cx="0" cy="0" r="12" fill="#7c3aed"/>
-              <circle cx="0" cy="0" r="9" fill="#a78bfa"/>
-              <circle cx="0" cy="0" r="5" fill="#190b2e"/>
-              <circle cx="0" cy="0" r="2" fill="#c4b5fd"/>
-            </g>
-            <!-- floating notes -->
-            <g style="animation: float-y 2s ease-in-out infinite;">
-              <text x="35" y="42" font-family="serif" font-size="18" fill="#c4b5fd" opacity="0.9">♪</text>
-            </g>
-            <g style="animation: float-y 2.5s ease-in-out infinite 0.4s;">
-              <text x="155" y="48" font-family="serif" font-size="14" fill="#a78bfa" opacity="0.8">♫</text>
-            </g>
-            <g style="animation: float-y 1.8s ease-in-out infinite 0.8s;">
-              <text x="155" y="92" font-family="serif" font-size="16" fill="#c4b5fd" opacity="0.85">♪</text>
-            </g>
-            <g style="animation: float-y 2.2s ease-in-out infinite 1.2s;">
-              <text x="30" y="98" font-family="serif" font-size="12" fill="#a78bfa" opacity="0.7">♬</text>
-            </g>
-            <!-- equalizer bars at bottom -->
-            <g fill="#c4b5fd">
-              <rect x="78" y="105" width="3" height="6" style="animation: float-y 0.6s ease-in-out infinite;"/>
-              <rect x="84" y="103" width="3" height="10" style="animation: float-y 0.7s ease-in-out infinite 0.1s;"/>
-              <rect x="90" y="101" width="3" height="14" style="animation: float-y 0.5s ease-in-out infinite 0.2s;"/>
-              <rect x="96" y="99" width="3" height="18" style="animation: float-y 0.8s ease-in-out infinite 0.15s;"/>
-              <rect x="102" y="101" width="3" height="14" style="animation: float-y 0.6s ease-in-out infinite 0.3s;"/>
-              <rect x="108" y="103" width="3" height="10" style="animation: float-y 0.7s ease-in-out infinite 0.05s;"/>
-              <rect x="114" y="105" width="3" height="6" style="animation: float-y 0.5s ease-in-out infinite 0.25s;"/>
-            </g>
-          </svg>`
-      },
-
-      smartcity: {
-        label: 'Smart City',
-        sub: 'IoT · vision',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="cbg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#0a1a2e"/>
-                <stop offset="100%" stop-color="#06283d"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#cbg)"/>
-            <!-- skyline -->
-            <g fill="#1a3a52">
-              <rect x="0" y="78" width="22" height="47"/>
-              <rect x="20" y="65" width="18" height="60"/>
-              <rect x="38" y="72" width="14" height="53"/>
-              <rect x="52" y="55" width="20" height="70"/>
-              <rect x="72" y="68" width="16" height="57"/>
-              <rect x="88" y="50" width="22" height="75"/>
-              <rect x="110" y="62" width="14" height="63"/>
-              <rect x="124" y="58" width="18" height="67"/>
-              <rect x="142" y="70" width="16" height="55"/>
-              <rect x="158" y="64" width="20" height="61"/>
-              <rect x="178" y="75" width="22" height="50"/>
-            </g>
-            <!-- windows -->
-            <g fill="#06b6d4" opacity="0.85">
-              <rect x="4" y="82" width="2" height="2"/>
-              <rect x="10" y="86" width="2" height="2"/>
-              <rect x="24" y="70" width="2" height="2"/>
-              <rect x="30" y="76" width="2" height="2"/>
-              <rect x="58" y="62" width="2" height="2"/>
-              <rect x="64" y="70" width="2" height="2"/>
-              <rect x="94" y="58" width="2" height="2"/>
-              <rect x="100" y="68" width="2" height="2"/>
-              <rect x="128" y="64" width="2" height="2"/>
-              <rect x="134" y="72" width="2" height="2"/>
-              <rect x="146" y="76" width="2" height="2"/>
-              <rect x="164" y="68" width="2" height="2"/>
-              <rect x="170" y="78" width="2" height="2"/>
-            </g>
-            <!-- IoT pulse dots on rooftops -->
-            <circle cx="29" cy="65" r="2" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite;"/>
-            <circle cx="62" cy="55" r="2" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite 0.4s;"/>
-            <circle cx="99" cy="50" r="2.5" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite 0.8s;"/>
-            <circle cx="133" cy="58" r="2" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite 1.2s;"/>
-            <circle cx="168" cy="64" r="2" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite 0.6s;"/>
-            <!-- network arcs between buildings -->
-            <path d="M 29,65 Q 65,30 99,50" stroke="#06b6d4" stroke-width="0.7" fill="none" opacity="0.5" stroke-dasharray="2 2"/>
-            <path d="M 99,50 Q 135,25 168,64" stroke="#06b6d4" stroke-width="0.7" fill="none" opacity="0.5" stroke-dasharray="2 2"/>
-            <!-- horizon line -->
-            <line x1="0" y1="125" x2="200" y2="125" stroke="#06b6d4" stroke-width="1" opacity="0.4"/>
-            <!-- "data" -->
-            <text x="10" y="20" font-family="ui-monospace" font-size="6" fill="#06b6d4" opacity="0.7">YOLOv · 30 FPS</text>
-          </svg>`
-      },
-
-      gaia: {
-        label: 'GAIA',
-        sub: 'Game AI Assistant',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="gbg" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#064e3b"/>
-                <stop offset="100%" stop-color="#0f3325"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#gbg)"/>
-            <!-- ambient sparkles -->
-            <text x="20" y="20" font-family="serif" font-size="10" fill="#6ee7b7" opacity="0.7" style="animation: float-y 2s ease-in-out infinite;">✦</text>
-            <text x="170" y="28" font-family="serif" font-size="8" fill="#6ee7b7" opacity="0.6" style="animation: float-y 2.5s ease-in-out infinite 0.3s;">✦</text>
-            <text x="175" y="98" font-family="serif" font-size="10" fill="#6ee7b7" opacity="0.7" style="animation: float-y 1.8s ease-in-out infinite 0.6s;">✦</text>
-            <text x="22" y="105" font-family="serif" font-size="7" fill="#6ee7b7" opacity="0.5" style="animation: float-y 2.2s ease-in-out infinite 0.9s;">✦</text>
-            <!-- AI orb -->
-            <g transform="translate(50, 62)">
-              <circle cx="0" cy="0" r="22" fill="#10b981" opacity="0.3"/>
-              <circle cx="0" cy="0" r="16" fill="#10b981" opacity="0.6"/>
-              <circle cx="0" cy="0" r="11" fill="#34d399"/>
-              <circle cx="-3" cy="-3" r="4" fill="#a7f3d0"/>
-              <circle cx="3" cy="3" r="2" fill="#6ee7b7" opacity="0.8"/>
-            </g>
-            <!-- chat bubble -->
-            <g transform="translate(110, 50)">
-              <path d="M 0,0 L 70,0 Q 76,0 76,6 L 76,30 Q 76,36 70,36 L 12,36 L 6,44 L 8,36 L 0,36 Q -6,36 -6,30 L -6,6 Q -6,0 0,0 Z"
-                    fill="#fff" opacity="0.95"/>
-              <!-- typing dots -->
-              <circle cx="20" cy="18" r="3" fill="#064e3b" style="animation: pulse-dot 1.2s ease-in-out infinite;"/>
-              <circle cx="35" cy="18" r="3" fill="#064e3b" style="animation: pulse-dot 1.2s ease-in-out infinite 0.2s;"/>
-              <circle cx="50" cy="18" r="3" fill="#064e3b" style="animation: pulse-dot 1.2s ease-in-out infinite 0.4s;"/>
-            </g>
-            <text x="14" y="118" font-family="ui-monospace" font-size="6" fill="#6ee7b7" opacity="0.7">RAG · LLM · accessibility</text>
-          </svg>`
-      },
-
-      npc: {
-        label: 'NPC',
-        sub: '8-bit pixel sprite',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges">
-            <rect width="200" height="125" fill="#1a1033"/>
-            <!-- background pixel stars -->
-            <rect x="20" y="18" width="2" height="2" fill="#ec4899"/>
-            <rect x="60" y="12" width="2" height="2" fill="#fbbf24"/>
-            <rect x="100" y="20" width="2" height="2" fill="#34d399"/>
-            <rect x="140" y="14" width="2" height="2" fill="#60a5fa"/>
-            <rect x="180" y="22" width="2" height="2" fill="#ec4899"/>
-            <!-- ground pixels -->
-            <g fill="#2d1b58">
-              <rect x="0" y="106" width="200" height="4"/>
-              <rect x="0" y="113" width="6" height="3"/>
-              <rect x="12" y="113" width="8" height="3"/>
-              <rect x="26" y="113" width="4" height="3"/>
-              <rect x="40" y="113" width="10" height="3"/>
-              <rect x="60" y="113" width="6" height="3"/>
-              <rect x="76" y="113" width="8" height="3"/>
-              <rect x="92" y="113" width="6" height="3"/>
-            </g>
-            <!-- pixel character (NPC, idle bobbing) -->
-            <g transform="translate(90, 60)" style="animation: pixel-idle 1.2s ease-in-out infinite;">
-              <!-- hat -->
-              <rect x="6" y="0" width="12" height="4" fill="#ec4899"/>
-              <rect x="4" y="4" width="16" height="4" fill="#ec4899"/>
-              <!-- face -->
-              <rect x="6" y="8" width="12" height="10" fill="#ffd9b3"/>
-              <!-- eyes -->
-              <rect x="9" y="12" width="2" height="2" fill="#1a1033"/>
-              <rect x="13" y="12" width="2" height="2" fill="#1a1033"/>
-              <!-- mouth -->
-              <rect x="11" y="16" width="2" height="1" fill="#1a1033"/>
-              <!-- body -->
-              <rect x="6" y="18" width="12" height="10" fill="#60a5fa"/>
-              <rect x="4" y="20" width="2" height="6" fill="#60a5fa"/>
-              <rect x="18" y="20" width="2" height="6" fill="#60a5fa"/>
-              <!-- belt -->
-              <rect x="6" y="26" width="12" height="2" fill="#fbbf24"/>
-              <!-- legs -->
-              <rect x="8" y="28" width="3" height="8" fill="#2d1b58"/>
-              <rect x="13" y="28" width="3" height="8" fill="#2d1b58"/>
-              <!-- shoes -->
-              <rect x="7" y="34" width="5" height="2" fill="#1a1033"/>
-              <rect x="12" y="34" width="5" height="2" fill="#1a1033"/>
-            </g>
-            <!-- dialogue bubble -->
-            <g transform="translate(125, 30)">
-              <rect x="0" y="0" width="50" height="20" fill="#fff"/>
-              <rect x="-2" y="2" width="2" height="16" fill="#fff"/>
-              <rect x="50" y="2" width="2" height="16" fill="#fff"/>
-              <rect x="2" y="-2" width="46" height="2" fill="#fff"/>
-              <rect x="2" y="20" width="46" height="2" fill="#fff"/>
-              <!-- pointer -->
-              <rect x="6" y="22" width="2" height="2" fill="#fff"/>
-              <rect x="8" y="24" width="2" height="2" fill="#fff"/>
-              <!-- text dots -->
-              <rect x="10" y="9" width="3" height="3" fill="#1a1033"/>
-              <rect x="18" y="9" width="3" height="3" fill="#1a1033"/>
-              <rect x="26" y="9" width="3" height="3" fill="#1a1033"/>
-            </g>
-          </svg>`
-      },
-
-      cynophobia: {
-        label: 'VR Cynophobia',
-        sub: 'Exposure therapy',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="cbgd" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#fef3c7"/>
-                <stop offset="100%" stop-color="#fbbf24"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#cbgd)"/>
-            <!-- meadow grass -->
-            <rect x="0" y="100" width="200" height="25" fill="#84cc16"/>
-            <g stroke="#65a30d" stroke-width="0.8" stroke-linecap="round">
-              <line x1="10" y1="100" x2="12" y2="92"/>
-              <line x1="22" y1="100" x2="24" y2="94"/>
-              <line x1="35" y1="100" x2="33" y2="91"/>
-              <line x1="160" y1="100" x2="162" y2="93"/>
-              <line x1="175" y1="100" x2="177" y2="92"/>
-              <line x1="188" y1="100" x2="186" y2="94"/>
-            </g>
-            <!-- sun -->
-            <circle cx="170" cy="30" r="14" fill="#fbbf24"/>
-            <g stroke="#fbbf24" stroke-width="2" stroke-linecap="round">
-              <line x1="170" y1="10" x2="170" y2="6"/>
-              <line x1="170" y1="50" x2="170" y2="54"/>
-              <line x1="150" y1="30" x2="146" y2="30"/>
-              <line x1="190" y1="30" x2="194" y2="30"/>
-              <line x1="156" y1="16" x2="153" y2="13"/>
-              <line x1="184" y1="44" x2="187" y2="47"/>
-              <line x1="184" y1="16" x2="187" y2="13"/>
-              <line x1="156" y1="44" x2="153" y2="47"/>
-            </g>
-            <!-- friendly dog (corgi-style silhouette) -->
-            <g transform="translate(80, 78)">
-              <!-- body -->
-              <ellipse cx="0" cy="0" rx="28" ry="13" fill="#a16207"/>
-              <ellipse cx="0" cy="2" rx="24" ry="9" fill="#ca8a04"/>
-              <!-- legs -->
-              <rect x="-18" y="8" width="5" height="14" rx="2" fill="#a16207"/>
-              <rect x="-8" y="8" width="5" height="14" rx="2" fill="#a16207"/>
-              <rect x="3" y="8" width="5" height="14" rx="2" fill="#a16207"/>
-              <rect x="13" y="8" width="5" height="14" rx="2" fill="#a16207"/>
-              <!-- head -->
-              <circle cx="-26" cy="-6" r="11" fill="#a16207"/>
-              <!-- snout -->
-              <ellipse cx="-34" cy="-3" rx="6" ry="4" fill="#fbbf24"/>
-              <!-- nose -->
-              <ellipse cx="-37" cy="-3" rx="2" ry="1.5" fill="#1a1a1a"/>
-              <!-- ears (perked) -->
-              <path d="M -32,-15 L -30,-22 L -25,-14 Z" fill="#a16207"/>
-              <path d="M -22,-14 L -20,-22 L -16,-13 Z" fill="#a16207"/>
-              <!-- eyes -->
-              <circle cx="-28" cy="-7" r="1.5" fill="#1a1a1a"/>
-              <!-- happy mouth -->
-              <path d="M -35,-1 Q -33,1 -31,-1" stroke="#1a1a1a" stroke-width="1" fill="none"/>
-              <!-- tongue -->
-              <ellipse cx="-32" cy="0.5" rx="2" ry="1" fill="#f472b6"/>
-              <!-- wagging tail -->
-              <path d="M 24,-2 Q 32,-8 34,-2" stroke="#a16207" stroke-width="6" fill="none" stroke-linecap="round" style="animation: tail-wag 0.5s ease-in-out infinite; transform-origin: 24px -2px;"/>
-            </g>
-            <!-- heart (representing safety/positive) -->
-            <g style="animation: float-y 1.5s ease-in-out infinite;">
-              <path d="M 130,40 C 130,36 126,34 124,38 C 122,34 118,36 118,40 C 118,44 124,48 124,48 C 124,48 130,44 130,40 Z" fill="#ec4899"/>
-            </g>
-          </svg>`
-      },
-
-      handong: {
-        label: '한동 · Handong',
-        sub: 'Pohang campus',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="hdbg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#fed7aa"/>
-                <stop offset="60%" stop-color="#fb923c"/>
-                <stop offset="100%" stop-color="#2563eb"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#hdbg)"/>
-            <!-- sun on horizon (sunrise) -->
-            <circle cx="100" cy="78" r="20" fill="#fde047"/>
-            <circle cx="100" cy="78" r="30" fill="#fde047" opacity="0.25"/>
-            <!-- distant mountain (campus hill) -->
-            <path d="M 0,95 L 30,80 L 60,88 L 90,72 L 130,82 L 170,75 L 200,90 L 200,125 L 0,125 Z" fill="#1e3a5f"/>
-            <!-- closer hill -->
-            <path d="M 0,108 L 40,98 L 80,104 L 130,96 L 170,102 L 200,98 L 200,125 L 0,125 Z" fill="#0f1d33"/>
-            <!-- sea reflection -->
-            <ellipse cx="100" cy="100" rx="60" ry="3" fill="#fde047" opacity="0.4"/>
-            <!-- birds -->
-            <g style="animation: float-y 2s ease-in-out infinite;">
-              <path d="M 40,30 Q 43,28 46,30 Q 49,28 52,30" stroke="#1a1a1a" stroke-width="1" fill="none"/>
-            </g>
-            <g style="animation: float-y 2.4s ease-in-out infinite 0.3s;">
-              <path d="M 130,22 Q 132,20 134,22 Q 136,20 138,22" stroke="#1a1a1a" stroke-width="0.8" fill="none"/>
-            </g>
-            <g style="animation: float-y 1.8s ease-in-out infinite 0.6s;">
-              <path d="M 160,38 Q 162,36 164,38 Q 166,36 168,38" stroke="#1a1a1a" stroke-width="0.8" fill="none"/>
-            </g>
-            <!-- sun rays -->
-            <g stroke="#fde047" stroke-width="0.5" opacity="0.4">
-              <line x1="100" y1="50" x2="100" y2="58"/>
-              <line x1="80" y1="60" x2="86" y2="64"/>
-              <line x1="120" y1="60" x2="114" y2="64"/>
-              <line x1="68" y1="78" x2="75" y2="78"/>
-              <line x1="132" y1="78" x2="125" y2="78"/>
-            </g>
-          </svg>`
-      },
-
-      ateneo: {
-        label: 'Ateneo de Manila',
-        sub: 'Manila, PH',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="atbg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#1e3a8a"/>
-                <stop offset="100%" stop-color="#0c1d4a"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#atbg)"/>
-            <!-- Philippine flag-inspired sun with 8 rays -->
-            <g transform="translate(100, 62)" style="animation: sun-pulse 3s ease-in-out infinite; transform-origin: center;">
-              <!-- Outer rays (8) -->
-              <g fill="#fbbf24">
-                <polygon points="0,-38 -4,-22 4,-22"/>
-                <polygon points="27,-27 13,-19 19,-13"/>
-                <polygon points="38,0 22,-4 22,4"/>
-                <polygon points="27,27 13,19 19,13" transform="rotate(180 20 16)"/>
-                <polygon points="0,38 -4,22 4,22"/>
-                <polygon points="-27,27 -13,19 -19,13" transform="rotate(180 -16 16)"/>
-                <polygon points="-38,0 -22,-4 -22,4"/>
-                <polygon points="-27,-27 -13,-19 -19,-13"/>
-              </g>
-              <!-- inner rays (smaller, between) -->
-              <g fill="#fcd34d" opacity="0.7">
-                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(22.5)"/>
-                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(67.5)"/>
-                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(112.5)"/>
-                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(157.5)"/>
-                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(202.5)"/>
-                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(247.5)"/>
-                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(292.5)"/>
-                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(337.5)"/>
-              </g>
-              <!-- center disc -->
-              <circle cx="0" cy="0" r="11" fill="#fbbf24"/>
-              <circle cx="0" cy="0" r="7" fill="#fde047"/>
-            </g>
-            <!-- 3 small stars (3 main Philippine islands) -->
-            <text x="20" y="30" font-family="serif" font-size="14" fill="#fbbf24">★</text>
-            <text x="172" y="30" font-family="serif" font-size="14" fill="#fbbf24">★</text>
-            <text x="96" y="115" font-family="serif" font-size="14" fill="#fbbf24">★</text>
-          </svg>`
-      },
-
-      climate: {
-        label: 'Climate Tech',
-        sub: 'Earth & systems',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <radialGradient id="clbg" cx="0.5" cy="0.5" r="0.7">
-                <stop offset="0%" stop-color="#064e3b"/>
-                <stop offset="100%" stop-color="#022c22"/>
-              </radialGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#clbg)"/>
-            <!-- Earth -->
-            <g transform="translate(100, 62)">
-              <!-- atmospheric glow -->
-              <circle cx="0" cy="0" r="46" fill="#10b981" opacity="0.15"/>
-              <circle cx="0" cy="0" r="40" fill="#34d399" opacity="0.2"/>
-              <!-- ocean -->
-              <circle cx="0" cy="0" r="34" fill="#0891b2"/>
-              <!-- continents (abstract green blobs, rotating) -->
-              <g style="animation: spin-slow 14s linear infinite; transform-origin: center;">
-                <ellipse cx="-12" cy="-10" rx="10" ry="6" fill="#15803d"/>
-                <ellipse cx="14" cy="-4" rx="8" ry="10" fill="#15803d"/>
-                <ellipse cx="-8" cy="14" rx="12" ry="5" fill="#15803d"/>
-                <circle cx="20" cy="12" r="5" fill="#15803d"/>
-              </g>
-              <!-- highlight -->
-              <ellipse cx="-12" cy="-14" rx="10" ry="6" fill="#fff" opacity="0.18"/>
-            </g>
-            <!-- orbiting leaf -->
-            <g transform="translate(100, 62)">
-              <g style="animation: orbit 6s linear infinite;">
-                <path d="M 0,0 Q 6,-8 0,-14 Q -4,-8 0,0 Z" fill="#a3e635" transform="translate(38, 0)"/>
-              </g>
-            </g>
-            <!-- temperature/data lines -->
-            <g stroke="#fbbf24" stroke-width="0.8" fill="none" opacity="0.7">
-              <path d="M 10,108 L 25,104 L 40,106 L 55,98 L 70,100 L 85,92 L 100,96 L 115,88 L 130,90 L 145,82 L 160,86 L 175,76 L 190,80"/>
-            </g>
-            <text x="10" y="22" font-family="ui-monospace" font-size="6" fill="#34d399" opacity="0.8">+1.5 °C TARGET</text>
-          </svg>`
-      },
-
-      blockchain: {
-        label: 'Blockchain',
-        sub: 'Distributed',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="bcbg" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#1c1917"/>
-                <stop offset="100%" stop-color="#292524"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#bcbg)"/>
-            <!-- chain of hexagons -->
-            <g stroke="#f97316" stroke-width="1.2" fill="rgba(249,115,22,0.1)">
-              <polygon points="20,62 34,54 48,62 48,78 34,86 20,78"/>
-              <polygon points="62,62 76,54 90,62 90,78 76,86 62,78"/>
-              <polygon points="104,62 118,54 132,62 132,78 118,86 104,78"/>
-              <polygon points="146,62 160,54 174,62 174,78 160,86 146,78"/>
-            </g>
-            <!-- connecting lines with data flow -->
-            <g stroke="#fb923c" stroke-width="1" stroke-dasharray="3 3" style="animation: ribbon-flow 1.5s linear infinite;">
-              <line x1="48" y1="70" x2="62" y2="70"/>
-              <line x1="90" y1="70" x2="104" y2="70"/>
-              <line x1="132" y1="70" x2="146" y2="70"/>
-            </g>
-            <!-- block "hashes" inside hexagons -->
-            <g font-family="ui-monospace" font-size="5" fill="#fb923c" text-anchor="middle">
-              <text x="34" y="72">0x4a1</text>
-              <text x="76" y="72">0xb29</text>
-              <text x="118" y="72">0xe73</text>
-              <text x="160" y="72">0xf02</text>
-            </g>
-            <!-- pulsing node dots -->
-            <circle cx="34" cy="86" r="2" fill="#f97316" style="animation: pulse-dot 1.5s ease-in-out infinite;"/>
-            <circle cx="76" cy="86" r="2" fill="#f97316" style="animation: pulse-dot 1.5s ease-in-out infinite 0.3s;"/>
-            <circle cx="118" cy="86" r="2" fill="#f97316" style="animation: pulse-dot 1.5s ease-in-out infinite 0.6s;"/>
-            <circle cx="160" cy="86" r="2" fill="#f97316" style="animation: pulse-dot 1.5s ease-in-out infinite 0.9s;"/>
-            <text x="10" y="24" font-family="ui-monospace" font-size="6" fill="#f97316" opacity="0.7">DISTRIBUTED LEDGER</text>
-          </svg>`
-      },
-
-      azure: {
-        label: 'Microsoft Azure',
-        sub: 'AI-900 Certified',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="azbg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#0078d4"/>
-                <stop offset="100%" stop-color="#003263"/>
-              </linearGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#azbg)"/>
-            <!-- subtle network grid -->
-            <g stroke="#fff" stroke-width="0.2" opacity="0.15">
-              <line x1="0" y1="40" x2="200" y2="40"/>
-              <line x1="0" y1="80" x2="200" y2="80"/>
-              <line x1="50" y1="0" x2="50" y2="125"/>
-              <line x1="100" y1="0" x2="100" y2="125"/>
-              <line x1="150" y1="0" x2="150" y2="125"/>
-            </g>
-            <!-- main cloud -->
-            <g transform="translate(70, 60)" style="animation: float-y 3s ease-in-out infinite;">
-              <ellipse cx="0" cy="10" rx="46" ry="14" fill="#fff"/>
-              <circle cx="-26" cy="0" r="14" fill="#fff"/>
-              <circle cx="-6" cy="-8" r="18" fill="#fff"/>
-              <circle cx="20" cy="-4" r="14" fill="#fff"/>
-              <circle cx="38" cy="6" r="10" fill="#fff"/>
-            </g>
-            <!-- data points orbiting cloud -->
-            <circle cx="40" cy="30" r="2" fill="#7dd3fc" style="animation: pulse-dot 2s ease-in-out infinite;"/>
-            <circle cx="155" cy="42" r="2" fill="#7dd3fc" style="animation: pulse-dot 2s ease-in-out infinite 0.4s;"/>
-            <circle cx="170" cy="78" r="2.5" fill="#7dd3fc" style="animation: pulse-dot 2s ease-in-out infinite 0.8s;"/>
-            <circle cx="30" cy="92" r="2" fill="#7dd3fc" style="animation: pulse-dot 2s ease-in-out infinite 1.2s;"/>
-            <!-- Azure-style "A" mark -->
-            <g transform="translate(155, 92)">
-              <path d="M -10,0 L 0,-16 L 10,0 L 6,0 L 0,-10 L -6,0 Z" fill="#0078d4" stroke="#fff" stroke-width="1"/>
-            </g>
-            <text x="10" y="22" font-family="ui-monospace" font-size="6" fill="#fff" opacity="0.7">AZURE · COGNITIVE</text>
-          </svg>`
-      },
-
-      specialeffect: {
-        label: 'SpecialEffect',
-        sub: 'Accessible play (UK)',
-        svg: `
-          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <radialGradient id="sebg" cx="0.5" cy="0.5" r="0.8">
-                <stop offset="0%" stop-color="#1e293b"/>
-                <stop offset="100%" stop-color="#0f172a"/>
-              </radialGradient>
-            </defs>
-            <rect width="200" height="125" fill="url(#sebg)"/>
-            <!-- game controller silhouette -->
-            <g transform="translate(100, 62)">
-              <!-- main body -->
-              <path d="M -50,-12 Q -55,-12 -55,-4 Q -60,8 -50,18 Q -42,22 -36,18 L -16,16 Q 0,14 16,16 L 36,18 Q 42,22 50,18 Q 60,8 55,-4 Q 55,-12 50,-12 L 32,-12 Q 12,-8 -12,-8 L -32,-12 Z"
-                    fill="#475569" stroke="#94a3b8" stroke-width="1"/>
-              <!-- left thumbstick -->
-              <circle cx="-30" cy="0" r="6" fill="#1e293b"/>
-              <circle cx="-30" cy="-1" r="3.5" fill="#cbd5e1"/>
-              <!-- right thumbstick -->
-              <circle cx="14" cy="6" r="6" fill="#1e293b"/>
-              <circle cx="14" cy="5" r="3.5" fill="#cbd5e1"/>
-              <!-- D-pad -->
-              <g fill="#1e293b">
-                <rect x="-18" y="2" width="10" height="3"/>
-                <rect x="-14" y="-2" width="3" height="11"/>
-              </g>
-              <!-- 4 colorful action buttons (press animation) -->
-              <circle cx="32" cy="-4" r="3" fill="#fbbf24" style="animation: pulse-dot 1.4s ease-in-out infinite;"/>
-              <circle cx="40" cy="-12" r="3" fill="#22c55e" style="animation: pulse-dot 1.4s ease-in-out infinite 0.35s;"/>
-              <circle cx="48" cy="-4" r="3" fill="#ef4444" style="animation: pulse-dot 1.4s ease-in-out infinite 0.7s;"/>
-              <circle cx="40" cy="4" r="3" fill="#3b82f6" style="animation: pulse-dot 1.4s ease-in-out infinite 1.05s;"/>
-              <!-- center logo -->
-              <circle cx="-8" cy="-4" r="2.5" fill="#94a3b8"/>
-            </g>
-            <!-- universal access ring around controller -->
-            <circle cx="100" cy="62" r="56" stroke="#34d399" stroke-width="1" fill="none" opacity="0.5" stroke-dasharray="4 4" style="animation: spin-slow 30s linear infinite; transform-origin: 100px 62px;"/>
-            <text x="10" y="22" font-family="ui-monospace" font-size="6" fill="#34d399" opacity="0.8">PLAY FOR ALL</text>
-          </svg>`
-      }
-    };
-
-    /* ═══════════════════════════════════════════════════════════
-       BEHAVIORS
-       ═══════════════════════════════════════════════════════════ */
     (function () {
       const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const isTouch = matchMedia('(hover: none)').matches;
@@ -2292,13 +1603,12 @@
       window.addEventListener('scroll', updateProgress, { passive: true });
       updateProgress();
 
-      // ── Reveal IO + Section in-view ────────────────────────
+      // ── Reveal + Section in-view ───────────────────────────
       const revealEls = document.querySelectorAll('.reveal');
       if ('IntersectionObserver' in window && !prefersReduced) {
         const revealIO = new IntersectionObserver((entries) => {
-          entries.forEach((entry, idx) => {
+          entries.forEach((entry, i) => {
             if (entry.isIntersecting) {
-              const i = Array.from(entries).indexOf(entry);
               entry.target.style.transitionDelay = (i * 60) + 'ms';
               entry.target.classList.add('visible');
               revealIO.unobserve(entry.target);
@@ -2319,7 +1629,6 @@
         }, { threshold: 0.05 });
         sections.forEach((s) => sectionIO.observe(s));
 
-        // scroll-spy
         const navLinks = document.querySelectorAll('.section-nav a, .mobile-nav a');
         const setActive = (id) => {
           navLinks.forEach((a) => {
@@ -2352,7 +1661,8 @@
             e.preventDefault();
             await navigator.clipboard.writeText(value);
             el.classList.add('copied');
-            showToast('Email copied — ' + value);
+            const isKo = document.body.classList.contains('ko');
+            showToast((isKo ? '이메일 복사됨 — ' : 'Email copied — ') + value);
             setTimeout(() => el.classList.remove('copied'), 1800);
           } catch {
             window.location.href = el.getAttribute('href');
@@ -2376,109 +1686,17 @@
         });
       }
 
-      // ── HINT POPOVERS ──────────────────────────────────────
-      const popover = document.getElementById('hintPopover');
-      const stage = document.getElementById('hintStage');
-      const labelEl = document.getElementById('hintLabel');
-      const subEl = document.getElementById('hintSub');
-      let activeHint = null;
-      let lastEyeMouseX = 0, lastEyeMouseY = 0;
-
-      const positionPopover = (clientX, clientY) => {
-        const pad = 12;
-        const pw = popover.offsetWidth;
-        const ph = popover.offsetHeight;
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        let x = clientX + 16;
-        let y = clientY - ph - 12;
-        if (x + pw > vw - pad) x = clientX - pw - 16;
-        if (x < pad) x = pad;
-        if (y < pad) y = clientY + 18;
-        if (y + ph > vh - pad) y = vh - ph - pad;
-        popover.style.left = x + 'px';
-        popover.style.top = y + 'px';
-      };
-
-      const showHint = (key, x, y) => {
-        const data = HINTS[key];
-        if (!data) return;
-        stage.innerHTML = data.svg;
-        labelEl.textContent = data.label;
-        subEl.textContent = data.sub;
-        // ensure layout pass for offsetWidth
-        popover.classList.add('show');
-        popover.setAttribute('aria-hidden', 'false');
-        positionPopover(x, y);
-      };
-
-      const hideHint = () => {
-        popover.classList.remove('show');
-        popover.setAttribute('aria-hidden', 'true');
-        if (activeHint) activeHint.classList.remove('is-active');
-        activeHint = null;
-      };
-
-      // Track interactive eye iris with cursor (across the page)
-      window.addEventListener('pointermove', (e) => {
-        lastEyeMouseX = e.clientX;
-        lastEyeMouseY = e.clientY;
-        const iris = stage.querySelector('.eye-iris');
-        if (iris && popover.classList.contains('show')) {
-          const rect = popover.getBoundingClientRect();
-          const cx = rect.left + rect.width / 2;
-          const cy = rect.top + rect.height / 2;
-          const dx = Math.max(-14, Math.min(14, (e.clientX - cx) * 0.08));
-          const dy = Math.max(-8, Math.min(8, (e.clientY - cy) * 0.08));
-          iris.setAttribute('transform', `translate(${dx} ${dy})`);
-        }
-      }, { passive: true });
-
-      document.querySelectorAll('.hint').forEach((span) => {
-        if (isTouch) {
-          // tap-to-show on touch devices
-          span.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (activeHint === span) {
-              hideHint();
-              return;
-            }
-            if (activeHint) activeHint.classList.remove('is-active');
-            activeHint = span;
-            span.classList.add('is-active');
-            const rect = span.getBoundingClientRect();
-            showHint(span.dataset.hint, rect.left + rect.width / 2, rect.top);
-          });
-        } else {
-          span.addEventListener('pointerenter', (e) => {
-            activeHint = span;
-            showHint(span.dataset.hint, e.clientX, e.clientY);
-          });
-          span.addEventListener('pointermove', (e) => {
-            if (popover.classList.contains('show')) {
-              positionPopover(e.clientX, e.clientY);
-            }
-          });
-          span.addEventListener('pointerleave', hideHint);
-        }
-      });
-
-      // Dismiss on outside tap (touch)
-      document.addEventListener('click', (e) => {
-        if (!isTouch) return;
-        if (e.target.closest('.hint')) return;
-        if (e.target.closest('.hint-popover')) return;
-        hideHint();
-      });
-
       // ── Reader / TTS toggle ────────────────────────────────
       const ttsBtn = document.getElementById('ttsToggle');
-      const ttsLabel = ttsBtn.querySelector('.label-text');
+      const ttsLabel = document.getElementById('ttsLabel');
       const setReader = (on) => {
         document.body.classList.toggle('reader', on);
         ttsBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        if (ttsLabel) ttsLabel.textContent = on ? 'Visual Mode' : 'Reader Mode';
+        // Update both EN and KO labels
+        const enLabel = ttsBtn.querySelector('[lang="en"]');
+        const koLabel = ttsBtn.querySelector('[lang="ko"]');
+        if (enLabel) enLabel.textContent = on ? 'Visual' : 'Reader';
+        if (koLabel) koLabel.textContent = on ? '시각 모드' : '읽기 모드';
         try { localStorage.setItem('reader-mode', on ? '1' : '0'); } catch {}
       };
       try {
@@ -2486,6 +1704,22 @@
       } catch {}
       ttsBtn.addEventListener('click', () => {
         setReader(!document.body.classList.contains('reader'));
+      });
+
+      // ── Language toggle ───────────────────────────────────
+      const langBtn = document.getElementById('langToggle');
+      const langLabel = document.getElementById('langLabel');
+      const setLang = (ko) => {
+        document.body.classList.toggle('ko', ko);
+        document.documentElement.lang = ko ? 'ko' : 'en';
+        langLabel.textContent = ko ? 'English' : '한국어';
+        try { localStorage.setItem('lang', ko ? 'ko' : 'en'); } catch {}
+      };
+      try {
+        if (localStorage.getItem('lang') === 'ko') setLang(true);
+      } catch {}
+      langBtn.addEventListener('click', () => {
+        setLang(!document.body.classList.contains('ko'));
       });
 
       // ── Keyboard shortcuts ─────────────────────────────────
@@ -2513,14 +1747,56 @@
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else if (k === 'r') {
           setReader(!document.body.classList.contains('reader'));
+        } else if (k === 'l') {
+          setLang(!document.body.classList.contains('ko'));
         }
       });
 
       const hint = document.getElementById('kbdHint');
       if (hint && !isTouch && window.innerWidth > 980) {
         setTimeout(() => hint.classList.add('show'), 1200);
-        setTimeout(() => hint.classList.remove('show'), 6500);
+        setTimeout(() => hint.classList.remove('show'), 6800);
       }
+
+      // ── Live Daejeon clock (updates every 30s) ─────────────
+      const clockEl = document.getElementById('liveClock');
+      const updateClock = () => {
+        const opts = { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false };
+        const time = new Date().toLocaleTimeString('en-US', opts);
+        const isKo = document.body.classList.contains('ko');
+        clockEl.textContent = (isKo ? '대전' : 'Daejeon') + ' · ' + time + (isKo ? '' : ' KST');
+      };
+      updateClock();
+      setInterval(updateClock, 30000);
+      // Also re-render the clock when language switches
+      langBtn.addEventListener('click', () => setTimeout(updateClock, 0));
+
+      // ── Hero entrance: stagger on first paint ────────────
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.body.classList.add('hero-loaded');
+        });
+      });
+
+      // ── Anchor click → pulse destination section title ────
+      document.querySelectorAll('a[href^="#"]').forEach((a) => {
+        a.addEventListener('click', () => {
+          const id = a.getAttribute('href').slice(1);
+          if (!id) return;
+          const section = document.getElementById(id);
+          if (!section) return;
+          const title = section.querySelector('.section-title');
+          if (!title) return;
+          // Wait for smooth-scroll to roughly complete, then pulse
+          setTimeout(() => {
+            title.classList.remove('pulsed');
+            // Force reflow so the animation re-triggers if pulsed twice
+            void title.offsetWidth;
+            title.classList.add('pulsed');
+            setTimeout(() => title.classList.remove('pulsed'), 1500);
+          }, 500);
+        });
+      });
     })();
   </script>
 </body>
