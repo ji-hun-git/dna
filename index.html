@@ -7,8 +7,11 @@
   <title>Jihun Chae | KAIST HCI & AI Researcher</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" />
   <style>
+    /* ═══════════════════════════════════════════════════════════
+       TOKENS
+       ═══════════════════════════════════════════════════════════ */
     :root {
       --bg: #070709;
       --bg2: #0b0b10;
@@ -17,13 +20,15 @@
       --soft: #8e8e99;
       --line: rgba(255,255,255,0.10);
       --line-strong: rgba(255,255,255,0.16);
-      --glass: rgba(255,255,255,0.06);
-      --glass-2: rgba(255,255,255,0.08);
       --shadow: 0 20px 60px rgba(0,0,0,0.32);
-      --radius: 24px;
-      --radius-sm: 16px;
       --wrap: 1240px;
-      --accent: 255, 255, 255;
+
+      /* Section accent colors — only revealed on interaction */
+      --c-education: 251, 191, 36;   /* amber */
+      --c-projects:  96, 165, 250;   /* sky */
+      --c-awards:    244, 114, 182;  /* rose */
+      --c-pubs:      52, 211, 153;   /* emerald */
+      --c-patents:   167, 139, 250;  /* violet */
     }
 
     * { box-sizing: border-box; }
@@ -32,17 +37,36 @@
       margin: 0;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(255,255,255,0.06), transparent 22%),
-        radial-gradient(circle at top right, rgba(255,255,255,0.03), transparent 18%),
-        linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+      background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
       line-height: 1.68;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
       overflow-x: hidden;
+      position: relative;
     }
 
-    /* ── Ambient cursor-aware grid ─────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════
+       AMBIENT LAYERS (aurora wash + cursor grid)
+       ═══════════════════════════════════════════════════════════ */
+    .aurora {
+      position: fixed;
+      inset: -20%;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(96,165,250,0.10), transparent 35%),
+        radial-gradient(circle at 88% 25%, rgba(244,114,182,0.07), transparent 32%),
+        radial-gradient(circle at 70% 80%, rgba(52,211,153,0.07), transparent 38%),
+        radial-gradient(circle at 20% 90%, rgba(251,191,36,0.05), transparent 38%);
+      filter: blur(50px) saturate(140%);
+      animation: drift 28s ease-in-out infinite alternate;
+    }
+    @keyframes drift {
+      0%   { transform: translate3d(0, 0, 0); }
+      50%  { transform: translate3d(2%, -1%, 0); }
+      100% { transform: translate3d(-1%, 1%, 0); }
+    }
+
     .ambient {
       position: fixed;
       inset: 0;
@@ -59,21 +83,69 @@
     }
     body.no-cursor .ambient { opacity: 0; }
 
-    /* ── Scroll progress ───────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════
+       SCROLL PROGRESS
+       ═══════════════════════════════════════════════════════════ */
     .scroll-progress {
       position: fixed;
       top: 0;
       left: 0;
       height: 2px;
       width: 0%;
-      background: linear-gradient(90deg, rgba(255,255,255,0.85), rgba(255,255,255,0.25));
+      background: linear-gradient(90deg,
+        rgba(96,165,250,0.9), rgba(244,114,182,0.9), rgba(52,211,153,0.9));
       z-index: 100;
       transition: width 0.08s linear;
-      box-shadow: 0 0 14px rgba(255,255,255,0.35);
+      box-shadow: 0 0 14px rgba(255,255,255,0.25);
     }
 
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
+
+    /* ═══════════════════════════════════════════════════════════
+       READER (TTS) MODE TOGGLE
+       ═══════════════════════════════════════════════════════════ */
+    .tts-toggle {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 110;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(12,12,16,0.78);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      color: var(--text);
+      font: 600 0.82rem/1 'Inter', sans-serif;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, color 0.22s ease;
+    }
+    .tts-toggle:hover {
+      transform: translateY(-1px);
+      border-color: var(--line-strong);
+      background: rgba(20,20,26,0.92);
+    }
+    .tts-toggle .icon {
+      width: 14px;
+      height: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tts-toggle .icon svg {
+      width: 100%;
+      height: 100%;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
 
     .page {
       position: relative;
@@ -98,7 +170,9 @@
       width: 330px;
     }
 
-    /* ── Profile card ──────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════
+       PROFILE CARD
+       ═══════════════════════════════════════════════════════════ */
     .profile-card {
       position: relative;
       padding: 18px;
@@ -118,7 +192,7 @@
       inset: 0;
       border-radius: inherit;
       padding: 1px;
-      background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.35), transparent 55%);
+      background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(96,165,250,0.5), transparent 55%);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
               mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
@@ -131,7 +205,6 @@
     .profile-card:hover {
       border-color: var(--line-strong);
       box-shadow: 0 28px 80px rgba(0,0,0,0.42);
-      background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.05));
     }
 
     .profile-image {
@@ -152,7 +225,7 @@
     }
     .profile-card:hover .profile-image img {
       transform: scale(1.025);
-      filter: grayscale(80%);
+      filter: grayscale(70%) saturate(1.05);
     }
     .profile-fallback {
       width: 100%;
@@ -171,7 +244,15 @@
       line-height: 1.03;
       letter-spacing: -0.04em;
       font-weight: 800;
+      background: linear-gradient(120deg, #ffffff 30%, #c8d6ff 60%, #ffffff 90%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
+      transition: background-position 0.8s ease;
     }
+    .profile-card:hover .name { background-position: 100% 0; }
+
     .role, .org { margin: 0; color: var(--muted); font-size: 0.98rem; }
     .org { margin-top: 4px; }
 
@@ -208,7 +289,7 @@
       transition: width 0.3s ease, background 0.3s ease;
     }
     .side-list > div:hover { color: #fff; transform: translateX(2px); }
-    .side-list > div:hover::before { width: 10px; background: rgba(255,255,255,0.6); }
+    .side-list > div:hover::before { width: 10px; background: rgba(96,165,250,0.8); }
 
     .contact-list {
       list-style: none;
@@ -217,15 +298,12 @@
       display: grid;
       gap: 10px;
     }
-    .contact-list a,
-    .mobile-nav a {
-      transition: transform 0.2s ease, opacity 0.2s ease, color 0.2s ease;
-    }
     .contact-list a {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       position: relative;
+      transition: transform 0.2s ease, color 0.2s ease;
     }
     .contact-list a::after {
       content: "↗";
@@ -237,7 +315,6 @@
     }
     .contact-list a:hover {
       transform: translateX(2px);
-      opacity: 1;
       color: #fff;
     }
     .contact-list a:hover::after {
@@ -251,7 +328,7 @@
       color: #9af0a4;
     }
 
-    /* ── Section nav (desktop scroll-spy) ──────────────────────── */
+    /* Sidebar section-nav (desktop scroll-spy) */
     .section-nav {
       display: grid;
       gap: 4px;
@@ -288,7 +365,7 @@
       padding-left: 22px;
     }
     .section-nav a.active::before {
-      background: #fff;
+      background: linear-gradient(90deg, rgba(96,165,250,1), rgba(244,114,182,1));
       width: 12px;
       height: 1.5px;
       border-radius: 2px;
@@ -309,24 +386,14 @@
       font-weight: 700;
       margin-top: 22px;
       box-shadow: 0 12px 28px rgba(0,0,0,0.18);
-      transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
+      transition: box-shadow 0.22s ease, filter 0.22s ease;
       overflow: hidden;
       isolation: isolate;
-    }
-    .button::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(120px circle at var(--mx, 50%) var(--my, 50%), rgba(0,0,0,0.08), transparent 60%);
-      opacity: 0;
-      transition: opacity 0.25s ease;
-      z-index: -1;
     }
     .button:hover {
       box-shadow: 0 16px 34px rgba(0,0,0,0.24);
       filter: brightness(1.02);
     }
-    .button:hover::before { opacity: 1; }
     .button .arrow {
       display: inline-block;
       margin-left: 8px;
@@ -346,10 +413,11 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 12px;
+      padding: 8px 14px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.04);
+      background: linear-gradient(120deg,
+        rgba(96,165,250,0.08), rgba(244,114,182,0.05), rgba(52,211,153,0.08));
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       color: var(--muted);
@@ -375,6 +443,15 @@
       line-height: 1.02;
       letter-spacing: -0.055em;
       max-width: 920px;
+      font-family: 'Fraunces', 'Inter', serif;
+      font-weight: 500;
+    }
+    .hero h1 em {
+      font-style: italic;
+      background: linear-gradient(120deg, #c4b5fd, #93c5fd);
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .lead, .intro {
@@ -403,18 +480,19 @@
       bottom: -1px;
       width: 0;
       height: 1px;
-      background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.1));
+      background: linear-gradient(90deg, rgba(var(--accent, 255 255 255), 0.9), transparent);
       transition: width 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    .section.in-view .section-title::after { width: 60px; }
+    .section.in-view .section-title::after { width: 80px; }
 
-    .section-note {
-      margin: -4px 0 18px;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
+    /* Section-specific accent colors (used by item hover and title underline) */
+    #education          { --accent: var(--c-education); }
+    #projects           { --accent: var(--c-projects); }
+    #awards             { --accent: var(--c-awards); }
+    #publications       { --accent: var(--c-pubs); }
+    #patents            { --accent: var(--c-patents); }
 
-    /* ── Filter pills (publications) ───────────────────────────── */
+    /* Filter pills (publications) */
     .filter {
       display: flex;
       flex-wrap: wrap;
@@ -442,13 +520,13 @@
     }
     .filter button:hover { color: #fff; }
     .filter button.active {
-      color: #111;
-      background: rgba(255,255,255,0.92);
+      color: #0d1018;
+      background: linear-gradient(135deg, #d1fae5, #a7f3d0);
     }
 
     .items { display: grid; gap: 14px; }
 
-    /* ── Reveal animation per-item ─────────────────────────────── */
+    /* Reveal animation per-item */
     .reveal {
       opacity: 0;
       transform: translateY(14px);
@@ -485,33 +563,34 @@
       background: rgba(255,255,255,0.16);
       transition: background 0.3s ease, top 0.3s ease, bottom 0.3s ease;
     }
-    /* Cursor spotlight overlay */
+    /* Cursor spotlight, tinted by section accent */
     .item::after {
       content: "";
       position: absolute;
       inset: 0;
       border-radius: inherit;
-      background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.08), transparent 45%);
+      background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 50%),
+        rgba(var(--accent, 255 255 255), 0.10), transparent 45%);
       opacity: 0;
       transition: opacity 0.35s ease;
       pointer-events: none;
     }
     .item:hover {
       transform: translateY(-3px);
-      border-color: var(--line-strong);
+      border-color: rgba(var(--accent, 255 255 255), 0.28);
       background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.045));
       box-shadow: 0 18px 42px rgba(0,0,0,0.22);
     }
     .item:hover::before {
-      background: rgba(255,255,255,0.35);
+      background: linear-gradient(180deg,
+        rgba(var(--accent, 255 255 255), 0.85),
+        rgba(var(--accent, 255 255 255), 0.15));
       top: 12px;
       bottom: 12px;
     }
     .item:hover::after { opacity: 1; }
 
-    .item.hidden {
-      display: none;
-    }
+    .item.hidden { display: none; }
 
     .item-title {
       display: block;
@@ -551,7 +630,153 @@
       gap: 14px;
     }
 
-    /* ── Toast ─────────────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════
+       HINT SYSTEM (hover/tap → micro-scene popover)
+       ═══════════════════════════════════════════════════════════ */
+    .hint {
+      position: relative;
+      cursor: help;
+      border-bottom: 1px dotted rgba(255,255,255,0.22);
+      padding-bottom: 1px;
+      transition: color 0.25s ease, border-bottom-color 0.25s ease;
+    }
+    .hint:hover,
+    .hint.is-active {
+      color: #fff;
+      border-bottom-color: rgba(255,255,255,0.7);
+      border-bottom-style: solid;
+    }
+
+    .hint-popover {
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 90;
+      width: 200px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(12,12,16,0.88);
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: translate(0, 6px) scale(0.96);
+      transform-origin: top left;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .hint-popover.show {
+      opacity: 1;
+      transform: translate(0, 0) scale(1);
+    }
+    .hint-popover .stage {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #000;
+      position: relative;
+    }
+    .hint-popover .stage svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .hint-popover .meta {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+    .hint-popover .meta .label {
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .hint-popover .meta .sub {
+      color: var(--soft);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.72rem;
+    }
+
+    /* ── Vignette animations ────────────────────────────────── */
+    @keyframes fly-by {
+      0%   { transform: translateX(110%); }
+      100% { transform: translateX(-30%); }
+    }
+    @keyframes contrail-grow {
+      0% { stroke-dashoffset: 200; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes wave-slide {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-25%); }
+    }
+    @keyframes bubble-rise {
+      0% { transform: translateY(0) scale(0.6); opacity: 0; }
+      30% { opacity: 0.9; }
+      100% { transform: translateY(-50px) scale(1); opacity: 0; }
+    }
+    @keyframes z-float {
+      0%   { transform: translate(0, 0); opacity: 0; }
+      30%  { opacity: 1; }
+      100% { transform: translate(8px, -16px); opacity: 0; }
+    }
+    @keyframes spin-slow {
+      from { transform: rotate(0); }
+      to   { transform: rotate(360deg); }
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 0.3; r: 2; }
+      50%      { opacity: 1; r: 3.5; }
+    }
+    @keyframes sound-wave {
+      0%   { transform: scale(0.6); opacity: 0.8; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+    @keyframes tail-wag {
+      0%, 100% { transform: rotate(8deg); }
+      50%      { transform: rotate(-8deg); }
+    }
+    @keyframes smoke-drift {
+      0%   { transform: translate(0, 0) scale(0.9); opacity: 0.7; }
+      100% { transform: translate(14px, -28px) scale(1.4); opacity: 0; }
+    }
+    @keyframes sun-pulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.06); }
+    }
+    @keyframes pixel-idle {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-2px); }
+    }
+    @keyframes blink-eye {
+      0%, 90%, 100% { transform: scaleY(1); }
+      95%           { transform: scaleY(0.1); }
+    }
+    @keyframes scan-line {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(200%); }
+    }
+    @keyframes ribbon-flow {
+      0% { stroke-dashoffset: 0; }
+      100% { stroke-dashoffset: -100; }
+    }
+    @keyframes float-y {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-3px); }
+    }
+    @keyframes orbit {
+      from { transform: rotate(0deg) translateX(14px) rotate(0deg); }
+      to   { transform: rotate(360deg) translateX(14px) rotate(-360deg); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TOAST + KBD HINT
+       ═══════════════════════════════════════════════════════════ */
     .toast {
       position: fixed;
       bottom: 24px;
@@ -576,7 +801,6 @@
       transform: translate(-50%, 0);
     }
 
-    /* ── Keyboard hint ─────────────────────────────────────────── */
     .kbd-hint {
       position: fixed;
       bottom: 18px;
@@ -595,7 +819,7 @@
       z-index: 50;
       opacity: 0;
       transform: translateY(8px);
-      transition: opacity 0.5s ease 1.5s, transform 0.5s ease 1.5s;
+      transition: opacity 0.5s ease, transform 0.5s ease;
     }
     .kbd-hint.show { opacity: 1; transform: translateY(0); }
     .kbd-hint kbd {
@@ -610,12 +834,9 @@
       line-height: 1;
     }
 
-    .footer {
-      margin-top: 28px;
-      color: var(--soft);
-      font-size: 0.88rem;
-    }
-
+    /* ═══════════════════════════════════════════════════════════
+       RESPONSIVE
+       ═══════════════════════════════════════════════════════════ */
     @media (max-width: 980px) {
       .page {
         width: min(var(--wrap), calc(100% - 24px));
@@ -629,10 +850,16 @@
         position: static;
         width: 100%;
       }
-      .profile-image { max-width: 300px; }
+      .profile-image { max-width: 280px; }
       .content { padding-top: 0; }
       .section-nav { display: none; }
       .kbd-hint { display: none; }
+      .tts-toggle {
+        top: 10px;
+        right: 10px;
+        padding: 6px 12px;
+        font-size: 0.78rem;
+      }
     }
 
     @media (max-width: 700px) {
@@ -650,7 +877,7 @@
         z-index: 20;
         padding: 12px 4px 14px;
         margin-bottom: 8px;
-        background: rgba(7,7,9,0.72);
+        background: rgba(7,7,9,0.78);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
         border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -660,6 +887,7 @@
         color: var(--muted);
         font-size: 0.88rem;
         padding-bottom: 4px;
+        transition: color 0.2s ease;
       }
       .mobile-nav a.active {
         color: #fff;
@@ -671,14 +899,210 @@
         left: 0;
         right: 0;
         height: 1.5px;
-        background: #fff;
+        background: linear-gradient(90deg, #60a5fa, #f472b6);
         border-radius: 2px;
       }
 
-      .hero h1 { font-size: clamp(2rem, 10vw, 3rem); }
+      .hero h1 { font-size: clamp(2rem, 9vw, 2.6rem); }
       .lead, .intro, .item-desc { font-size: 0.96rem; }
       .two-col { grid-template-columns: 1fr; }
       .item { padding: 16px 16px 16px 18px; }
+
+      /* Hint popover on mobile: centered, larger touch target */
+      .hint-popover {
+        width: calc(100% - 32px);
+        max-width: 320px;
+      }
+      .tts-toggle .label-text { display: none; }
+      .tts-toggle {
+        padding: 8px;
+        width: 36px;
+        height: 36px;
+        justify-content: center;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       READER (TTS) MODE — strips all decoration, semantic-first
+       ═══════════════════════════════════════════════════════════ */
+    body.reader {
+      background: #f7f4ec !important;
+      color: #1a1a1a !important;
+      font-family: 'Fraunces', Georgia, 'Times New Roman', serif !important;
+      font-size: 18px;
+      line-height: 1.78;
+    }
+    body.reader .aurora,
+    body.reader .ambient,
+    body.reader .scroll-progress,
+    body.reader .hint-popover,
+    body.reader .kbd-hint,
+    body.reader .mobile-nav,
+    body.reader .filter,
+    body.reader .section-nav,
+    body.reader .profile-image,
+    body.reader .divider,
+    body.reader .eyebrow .dot,
+    body.reader .button {
+      display: none !important;
+    }
+    body.reader .page {
+      max-width: 700px;
+      padding: 80px 20px 60px;
+    }
+    body.reader .layout {
+      display: block;
+    }
+    body.reader .sidebar {
+      position: static;
+      width: 100%;
+      margin-bottom: 32px;
+    }
+    body.reader .profile-card {
+      background: transparent !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      padding: 0 !important;
+      transform: none !important;
+    }
+    body.reader .profile-card::before { display: none !important; }
+    body.reader .name {
+      color: #111 !important;
+      background: none !important;
+      -webkit-text-fill-color: #111 !important;
+      font-family: 'Fraunces', serif !important;
+      font-size: 2.4rem !important;
+      font-weight: 600;
+      margin-bottom: 10px !important;
+    }
+    body.reader .role,
+    body.reader .org {
+      color: #555 !important;
+      font-style: italic;
+    }
+    body.reader .side-label {
+      color: #111 !important;
+      margin-top: 24px;
+    }
+    body.reader .side-list > div {
+      padding-left: 0 !important;
+      color: #333 !important;
+    }
+    body.reader .side-list > div::before { display: none !important; }
+    body.reader .contact-list {
+      gap: 4px;
+    }
+    body.reader .contact-list a {
+      color: #1a1a1a !important;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    body.reader .contact-list a::after { display: none !important; }
+    body.reader .eyebrow {
+      background: transparent !important;
+      border: 0 !important;
+      padding: 0 !important;
+      color: #555 !important;
+      font-style: italic;
+      font-size: 0.95rem !important;
+      margin-bottom: 12px !important;
+    }
+    body.reader .hero h1 {
+      color: #111 !important;
+      font-family: 'Fraunces', serif !important;
+      font-weight: 600;
+      font-size: 2.2rem !important;
+    }
+    body.reader .hero h1 em {
+      background: none !important;
+      -webkit-text-fill-color: #6d28d9 !important;
+      color: #6d28d9 !important;
+    }
+    body.reader .lead,
+    body.reader .intro {
+      color: #2a2a2a !important;
+      max-width: 100%;
+      font-size: 1.05rem !important;
+    }
+    body.reader .lead strong,
+    body.reader .intro strong {
+      color: #111 !important;
+      font-weight: 600;
+    }
+    body.reader .section-title {
+      color: #111 !important;
+      border-bottom: 1px solid rgba(0,0,0,0.18) !important;
+      font-family: 'Fraunces', serif !important;
+      font-weight: 600;
+      font-size: 1.6rem !important;
+    }
+    body.reader .section-title::after { display: none !important; }
+    body.reader .items {
+      gap: 0;
+    }
+    body.reader .item,
+    body.reader .two-col .item {
+      background: transparent !important;
+      border: 0 !important;
+      border-bottom: 1px solid rgba(0,0,0,0.10) !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      padding: 16px 0 !important;
+      transform: none !important;
+      opacity: 1 !important;
+    }
+    body.reader .two-col {
+      grid-template-columns: 1fr !important;
+      gap: 0 !important;
+    }
+    body.reader .item::before,
+    body.reader .item::after { display: none !important; }
+    body.reader .item-title {
+      color: #111 !important;
+      font-family: 'Fraunces', serif !important;
+      font-weight: 600;
+      font-size: 1.1rem !important;
+    }
+    body.reader .item-meta {
+      color: #555 !important;
+      font-family: ui-monospace, monospace;
+      font-size: 0.85rem !important;
+    }
+    body.reader .item-desc,
+    body.reader ul.item-desc {
+      color: #2a2a2a !important;
+      font-size: 1rem !important;
+    }
+    body.reader .pub-author-me,
+    body.reader .paper-title {
+      color: #111 !important;
+    }
+    body.reader .pub-author-me {
+      text-decoration: underline;
+      font-weight: 700;
+    }
+    body.reader .venue {
+      color: #555 !important;
+    }
+    body.reader .hint {
+      border-bottom: 0 !important;
+      cursor: text;
+      color: inherit !important;
+    }
+    body.reader .reveal {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    body.reader .tts-toggle {
+      background: rgba(255,255,255,0.95) !important;
+      color: #111 !important;
+      border-color: rgba(0,0,0,0.15) !important;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+    body.reader * {
+      animation: none !important;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -688,14 +1112,30 @@
         transition: none !important;
       }
       .reveal { opacity: 1; transform: none; }
-      .ambient { display: none; }
+      .aurora, .ambient { display: none; }
     }
   </style>
 </head>
 <body>
+  <div class="aurora" aria-hidden="true"></div>
   <div class="ambient" aria-hidden="true"></div>
   <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+  <button class="tts-toggle" id="ttsToggle" aria-pressed="false" aria-label="Toggle Reader / TTS Mode">
+    <span class="icon" aria-hidden="true">
+      <svg viewBox="0 0 20 20"><path d="M4 6h12M4 10h12M4 14h7"/></svg>
+    </span>
+    <span class="label-text">Reader Mode</span>
+  </button>
+
   <div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
+  <div class="hint-popover" id="hintPopover" role="tooltip" aria-hidden="true">
+    <div class="stage" id="hintStage"></div>
+    <div class="meta">
+      <span class="label" id="hintLabel"></span>
+      <span class="sub" id="hintSub"></span>
+    </div>
+  </div>
 
   <div class="page">
     <nav class="mobile-nav" aria-label="Sections">
@@ -756,19 +1196,19 @@
       <main class="content">
         <section class="hero section" id="about">
           <div class="eyebrow"><span class="dot"></span>Human-AI Interaction • Play Experience • Inclusive AI</div>
-          <h1>Exploring what play becomes when AI enters our ludic space.</h1>
+          <h1>Exploring what <em>play</em> becomes when AI enters our ludic space.</h1>
           <p class="lead">I research what it means to play with and against AI across games and leisure.</p>
-          <p class="intro">Currently a PhD student at KAIST GSCT, my research sits at the intersection of <strong>Human-AI Interaction</strong> and <strong>play experience</strong>. I am driven by the question: <strong>What changes when intelligent autonomous agents enter our ludic space?</strong> My expertise lies in designing and developing <strong>Inclusive AI agents</strong> that support a diverse range of players, including those with disabilities.</p>
+          <p class="intro">Currently a PhD student at <span class="hint" data-hint="kaist">KAIST</span> GSCT, my research sits at the intersection of <strong>Human-AI Interaction</strong> and <strong>play experience</strong>. I am driven by the question: <strong>What changes when intelligent autonomous agents enter our ludic space?</strong> My expertise lies in designing and developing <strong>Inclusive AI agents</strong> that support a diverse range of players, including those with disabilities.</p>
           <p class="intro">Let's connect to discuss <strong>AI</strong>, <strong>HCI</strong>, and what <strong>the future of play </strong>will look like when autonomous agents evolve alongside us, and for those who come after.</p>
         </section>
 
         <section class="section" id="education">
           <h3 class="section-title">Education</h3>
           <div class="items">
-            <div class="item reveal"><span class="item-title">Korea Advanced Institute of Science and Technology (KAIST)</span><div class="item-meta"> | Ph.D. Student, Graduate School of Culture Technology</div></div>
-            <div class="item reveal"><span class="item-title">Korea Advanced Institute of Science and Technology (KAIST)</span><div class="item-meta"> | M.S., Graduate School of Culture Technology</div></div>
-            <div class="item reveal"><span class="item-title">Handong Global University</span><div class="item-meta"> | B.A. in ICT Convergence &amp; Product Design</div></div>
-            <div class="item reveal"><span class="item-title">Ateneo de Manila University</span><div class="item-meta"> | Management of Applied Chemistry</div></div>
+            <div class="item reveal"><span class="item-title">Korea Advanced Institute of Science and Technology (<span class="hint" data-hint="kaist">KAIST</span>)</span><div class="item-meta"> | Ph.D. Student, Graduate School of Culture Technology</div></div>
+            <div class="item reveal"><span class="item-title">Korea Advanced Institute of Science and Technology (<span class="hint" data-hint="kaist">KAIST</span>)</span><div class="item-meta"> | M.S., Graduate School of Culture Technology</div></div>
+            <div class="item reveal"><span class="item-title"><span class="hint" data-hint="handong">Handong Global University</span></span><div class="item-meta"> | B.A. in ICT Convergence &amp; Product Design</div></div>
+            <div class="item reveal"><span class="item-title"><span class="hint" data-hint="ateneo">Ateneo de Manila University</span></span><div class="item-meta"> | Management of Applied Chemistry</div></div>
           </div>
         </section>
 
@@ -776,30 +1216,30 @@
           <h3 class="section-title">Research Projects</h3>
           <div class="items">
             <div class="item reveal">
-              <span class="item-title">Development and Evaluation of the Inclusive Conversational AI Service for Game Accessibility Enhancement</span>
-              <div class="item-meta">2024.05 – 2027.04 | KAIST | National Research Foundation of Korea (NRF) | Student Researcher Lead</div>
+              <span class="item-title">Development and Evaluation of the Inclusive Conversational AI Service for <span class="hint" data-hint="gaia">Game Accessibility</span> Enhancement</span>
+              <div class="item-meta">2024.05 – 2027.04 | <span class="hint" data-hint="kaist">KAIST</span> | National Research Foundation of Korea (NRF) | Student Researcher Lead</div>
               <ul class="item-desc">
                 <li>Led user research and prototype development for an inclusive conversational AI assistant designed to support gamers with disabilities across diverse play contexts.</li>
                 <li>Conducted interviews, participatory design workshops, and iterative concept development to identify accessibility needs and translate them into AI-supported interaction scenarios.</li>
                 <li>Contributed to the design of a research and collaboration framework connecting academia, industry, and rehabilitation stakeholders to inform future accessibility guidelines and real-world deployment.</li>
-                <li>Collaborators: Samsung Electronics (Corporate Design Center), Nexon Intelligence Labs, Smilegate D&amp;I, Korea National Rehabilitation Center, and SpecialEffect (UK).</li>
+                <li>Collaborators: Samsung Electronics (Corporate Design Center), Nexon Intelligence Labs, Smilegate D&amp;I, Korea National Rehabilitation Center, and <span class="hint" data-hint="specialeffect">SpecialEffect</span> (UK).</li>
               </ul>
             </div>
             <div class="item reveal">
-              <span class="item-title">Preserving the Haenyeo Legacy: Serious Games for Social Impact</span>
-              <div class="item-meta">2025.06 – 2025.09 | KAIST | Leverhulme Trust International Fellow | Student Researcher</div>
+              <span class="item-title">Preserving the <span class="hint" data-hint="haenyeo">Haenyeo</span> Legacy: Serious Games for Social Impact</span>
+              <div class="item-meta">2025.06 – 2025.09 | <span class="hint" data-hint="kaist">KAIST</span> | Leverhulme Trust International Fellow | Student Researcher</div>
               <ul class="item-desc">
-                <li>Contributed to the design of a serious game project aimed at preserving and communicating the cultural heritage of the Jeju Haenyeo, with a focus on intergenerational knowledge transmission.</li>
+                <li>Contributed to the design of a serious game project aimed at preserving and communicating the cultural heritage of the Jeju <span class="hint" data-hint="haenyeo">Haenyeo</span>, with a focus on intergenerational knowledge transmission.</li>
                 <li>Helped develop game concepts and narrative structures that connect Haenyeo practices, environmental change, and women's community knowledge in an accessible interactive format.</li>
                 <li>Supported international research collaboration and field-based design discussions examining how serious games can contribute to cultural sustainability and community resilience.</li>
                 <li>Partners: Brunel University London (Games Research Lab), Jeju Haenyeo Museum, and the Haenyeo communities of Sinrye-ri, Daepyeong-ri, and Yeongnak-ri.</li>
               </ul>
             </div>
             <div class="item reveal">
-              <span class="item-title">Real-Time XR Interface Technology for Environmental Adaptation</span>
-              <div class="item-meta">2024.04 – 2025.06 | KAIST | Institute for Information &amp; Communication Technology Planning &amp; Evaluation (IITP) | Student Researcher</div>
+              <span class="item-title">Real-Time <span class="hint" data-hint="xr">XR</span> Interface Technology for Environmental Adaptation</span>
+              <div class="item-meta">2024.04 – 2025.06 | <span class="hint" data-hint="kaist">KAIST</span> | Institute for Information &amp; Communication Technology Planning &amp; Evaluation (IITP) | Student Researcher</div>
               <ul class="item-desc">
-                <li>Participated in the development of an XR interface system for dynamically adapting virtual content to real-world environmental and spatial conditions.</li>
+                <li>Participated in the development of an <span class="hint" data-hint="xr">XR</span> interface system for dynamically adapting virtual content to real-world environmental and spatial conditions.</li>
                 <li>Contributed to the design and implementation of interaction concepts involving adaptive virtual objects and multimodal interface behavior in mixed-reality settings.</li>
                 <li>Supported research on immersive visual-haptic feedback to improve presence and environmental responsiveness in XR experiences.</li>
                 <li>Partners: Fraunhofer Institute (Germany), NYU, UniSA, Anipen, and bHaptics.</li>
@@ -807,16 +1247,16 @@
             </div>
             <div class="item reveal">
               <span class="item-title">Defense Technology Research: Camouflage Effectiveness</span>
-              <div class="item-meta">2023.04 – 2024.02 | Handong Global University | Korea Aerospace Industries (KAI) | Student Researcher</div>
+              <div class="item-meta">2023.04 – 2024.02 | <span class="hint" data-hint="handong">Handong Global University</span> | Korea Aerospace Industries (KAI) | Student Researcher</div>
               <ul class="item-desc">
-                <li>Performed computational and visual evaluation of KF-21 Boramae camouflage effectiveness across altitude, terrain, and meteorological conditions to assess detectability under varied operational environments.</li>
+                <li>Performed computational and visual evaluation of <span class="hint" data-hint="boramae">KF-21 Boramae</span> camouflage effectiveness across altitude, terrain, and meteorological conditions to assess detectability under varied operational environments.</li>
                 <li>Processed environmental imagery and simulation-based datasets to analyze the interaction between aircraft surface patterns, background context, and visibility performance.</li>
                 <li>Developed camouflage colorways and pattern configurations for applied defense design, with selected proposals incorporated into real project outputs.</li>
               </ul>
             </div>
             <div class="item reveal">
-              <span class="item-title">Smart City Infrastructure &amp; AI Object Tracking</span>
-              <div class="item-meta">2023.01 – 2024.02 | Handong Global University | Student Researcher</div>
+              <span class="item-title"><span class="hint" data-hint="smartcity">Smart City</span> Infrastructure &amp; AI Object Tracking</span>
+              <div class="item-meta">2023.01 – 2024.02 | <span class="hint" data-hint="handong">Handong Global University</span> | Student Researcher</div>
               <ul class="item-desc">
                 <li>Engineered IoT-based roadside sensing hardware for urban data acquisition, including enclosure design and rapid prototyping through 3D-printed sensor housings.</li>
                 <li>Supported AI-driven traffic object tracking pipelines by contributing to data preprocessing, detection workflow refinement, and model-level optimization for real-world road scenes.</li>
@@ -829,14 +1269,14 @@
         <section class="section" id="awards">
           <h3 class="section-title">Honors &amp; Awards</h3>
           <div class="items">
-            <div class="item reveal"><span class="item-title">Grand Prize (최우수상) – Edu4.0 Q TA Activities</span><div class="item-meta">2026.02 | KAIST</div><p class="item-desc">Recognized for outstanding teaching support and excellence in presenting TA activity cases for the Edu4.0 Q model.</p></div>
-            <div class="item reveal"><span class="item-title">Selected Entrepreneurial Team (Climate Tech)</span><div class="item-meta">2024.03 | Asan Nanum Foundation</div><p class="item-desc">Selected through Chung Ju-yung Startup Competition &amp; Asan UniverCT as a representative startup team in the climate-tech track. Secured early-stage funding and mentorship through the KAIST and Asan Nanum Foundation ecosystem.</p></div>
-            <div class="item reveal"><span class="item-title">Grand Prize (최우수상, 한동대학교 총장상) (HGU President's Award)</span><div class="item-meta">2024.01 | Pohang Culture &amp; Arts Factory Hackathon</div><p class="item-desc">Led the technical implementation of a large-scale Unreal Engine media facade prototype demonstrating a smart-city experience concept. Co-hosted by Pohang City, Pohang Cultural Foundation, KT, and Handong Global University.</p></div>
-            <div class="item reveal"><span class="item-title">Excellence Award (우수상)</span><div class="item-meta">2023.06 | National Metaverse Developer Contest (MSIT)</div><p class="item-desc">Engineered a gamified digital therapeutic for eye muscle rehabilitation utilizing Meta Quest Pro's advanced eye-tracking capabilities. Recognized for innovation by the Korea Metaverse Industry Association and Skonec Entertainment, and awarded by the CEO of Skonec Entertainment.</p></div>
-            <div class="item reveal"><span class="item-title">Outstanding Student Research Award (우수상)</span><div class="item-meta">2023.11 | Korea Multimedia Society (KMMS)</div><p class="item-desc">Authored and presented research on eye-tracking-based VR interactive games, analyzing oculomotor responses to enhance immersion and accessibility in virtual environments.</p></div>
-            <div class="item reveal"><span class="item-title">Handong Global University President's Award (한동대학교 총장상)</span><div class="item-meta">2022.11 | Handong Global University</div><p class="item-desc">Startup Idea Competition. Conceptualized a high-impact startup business model integrating ESG principles with augmented reality technology, and the proposal was evaluated as the top entry for technical feasibility and social impact potential.</p></div>
-            <div class="item reveal"><span class="item-title">Outstanding Student Research Award (우수상)</span><div class="item-meta">2022.05 | Korea Multimedia Society (KMMS)</div><p class="item-desc">Conducted experimental research on VR exposure therapy for cynophobia, proposing novel spatiotemporal design factors to increase treatment efficacy.</p></div>
-            <div class="item reveal"><span class="item-title">Top 14 Finalist</span><div class="item-meta">2021.05 | Seoul National University (SNU) Business School</div><p class="item-desc">DB-SNUbiz Global Startup Challenge. Distinguished as a Top 14 finalist in a competitive global startup challenge with a prize pool of $91,000, pitching a blockchain-based solution to a panel of venture capitalists and industry experts.</p></div>
+            <div class="item reveal"><span class="item-title">Grand Prize (최우수상) – Edu4.0 Q TA Activities</span><div class="item-meta">2026.02 | <span class="hint" data-hint="kaist">KAIST</span></div><p class="item-desc">Recognized for outstanding teaching support and excellence in presenting TA activity cases for the Edu4.0 Q model.</p></div>
+            <div class="item reveal"><span class="item-title">Selected Entrepreneurial Team (<span class="hint" data-hint="climate">Climate Tech</span>)</span><div class="item-meta">2024.03 | Asan Nanum Foundation</div><p class="item-desc">Selected through Chung Ju-yung Startup Competition &amp; Asan UniverCT as a representative startup team in the climate-tech track. Secured early-stage funding and mentorship through the <span class="hint" data-hint="kaist">KAIST</span> and Asan Nanum Foundation ecosystem.</p></div>
+            <div class="item reveal"><span class="item-title">Grand Prize (최우수상, 한동대학교 총장상) (HGU President's Award)</span><div class="item-meta">2024.01 | <span class="hint" data-hint="pohang">Pohang</span> Culture &amp; Arts Factory Hackathon</div><p class="item-desc">Led the technical implementation of a large-scale Unreal Engine media facade prototype demonstrating a smart-city experience concept. Co-hosted by <span class="hint" data-hint="pohang">Pohang</span> City, Pohang Cultural Foundation, KT, and <span class="hint" data-hint="handong">Handong Global University</span>.</p></div>
+            <div class="item reveal"><span class="item-title">Excellence Award (우수상)</span><div class="item-meta">2023.06 | National Metaverse Developer Contest (MSIT)</div><p class="item-desc">Engineered a gamified digital therapeutic for eye muscle rehabilitation utilizing <span class="hint" data-hint="vr">Meta Quest Pro's</span> advanced eye-tracking capabilities. Recognized for innovation by the Korea Metaverse Industry Association and Skonec Entertainment, and awarded by the CEO of Skonec Entertainment.</p></div>
+            <div class="item reveal"><span class="item-title">Outstanding Student Research Award (우수상)</span><div class="item-meta">2023.11 | Korea Multimedia Society (KMMS)</div><p class="item-desc">Authored and presented research on <span class="hint" data-hint="vr">eye-tracking-based VR</span> interactive games, analyzing oculomotor responses to enhance immersion and accessibility in virtual environments.</p></div>
+            <div class="item reveal"><span class="item-title"><span class="hint" data-hint="handong">Handong Global University</span> President's Award (한동대학교 총장상)</span><div class="item-meta">2022.11 | <span class="hint" data-hint="handong">Handong Global University</span></div><p class="item-desc">Startup Idea Competition. Conceptualized a high-impact startup business model integrating ESG principles with augmented reality technology, and the proposal was evaluated as the top entry for technical feasibility and social impact potential.</p></div>
+            <div class="item reveal"><span class="item-title">Outstanding Student Research Award (우수상)</span><div class="item-meta">2022.05 | Korea Multimedia Society (KMMS)</div><p class="item-desc">Conducted experimental research on VR exposure therapy for <span class="hint" data-hint="cynophobia">cynophobia</span>, proposing novel spatiotemporal design factors to increase treatment efficacy.</p></div>
+            <div class="item reveal"><span class="item-title">Top 14 Finalist</span><div class="item-meta">2021.05 | Seoul National University (SNU) Business School</div><p class="item-desc">DB-SNUbiz Global Startup Challenge. Distinguished as a Top 14 finalist in a competitive global startup challenge with a prize pool of $91,000, pitching a <span class="hint" data-hint="blockchain">blockchain-based</span> solution to a panel of venture capitalists and industry experts.</p></div>
           </div>
         </section>
 
@@ -851,21 +1291,21 @@
             <button data-year="2022" role="tab">2022</button>
           </div>
           <div class="items" id="pubItems">
-            <div class="item reveal" data-year="2026"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). <span class="paper-title">Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns.</span> <span class="venue">Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI '26). ACM.</span></p></div>
+            <div class="item reveal" data-year="2026"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). <span class="paper-title">Design principles of Game AI Assistant (<span class="hint" data-hint="gaia">GAIA</span>) for players with disabilities: Accessibility needs and ethical concerns.</span> <span class="venue">Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI '26). ACM.</span></p></div>
             <div class="item reveal" data-year="2025"><p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). <span class="paper-title">Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties.</span> <span class="venue">Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA '25). ACM. Co-first Author.</span></p></div>
-            <div class="item reveal" data-year="2025"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2025). <span class="paper-title">The identity and role of game NPCs: Past, present, and future.</span> <span class="venue">Proceedings of the 1st DiGRA Korea Conference 2025.</span></p></div>
-            <div class="item reveal" data-year="2025"><p class="item-desc">Oh, H., Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). <span class="paper-title">RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA.</span> <span class="venue">Korea HCI Conference 2025. Co-second Author.</span></p></div>
+            <div class="item reveal" data-year="2025"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2025). <span class="paper-title">The identity and role of game <span class="hint" data-hint="npc">NPCs</span>: Past, present, and future.</span> <span class="venue">Proceedings of the 1st DiGRA Korea Conference 2025.</span></p></div>
+            <div class="item reveal" data-year="2025"><p class="item-desc">Oh, H., Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). <span class="paper-title">RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of <span class="hint" data-hint="gaia">GAIA</span>.</span> <span class="venue">Korea HCI Conference 2025. Co-second Author.</span></p></div>
             <div class="item reveal" data-year="2024"><p class="item-desc">Choi, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <span class="paper-title">Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH).</span> <span class="venue">Korean Artificial Intelligence Association Conference 2024. Co-first Author.</span></p></div>
-            <div class="item reveal" data-year="2024"><p class="item-desc">Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <span class="paper-title">GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies.</span> <span class="venue">Korea Computer Graphics Society Conference 2024. Co-first Author.</span></p></div>
-            <div class="item reveal" data-year="2024"><p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). <span class="paper-title">Challenges and opportunities of game NPC research using LLM: A scoping review.</span> <span class="venue">Korean Game Society Conference 2024. Co-first Author.</span></p></div>
-            <div class="item reveal" data-year="2024"><p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd.</span> <span class="venue">Korea Technology Innovation Society Conference 2024.</span></p></div>
-            <div class="item reveal" data-year="2024"><p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">From BigHit to HYBE: Sentiment analysis and strategic transition through news data.</span> <span class="venue">Korea Society for Innovation Management &amp; Economics Conference 2024.</span></p></div>
+            <div class="item reveal" data-year="2024"><p class="item-desc">Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <span class="paper-title"><span class="hint" data-hint="gaia">GAIA</span>: A game AI assistant service framework integrating problem-solving and emotion regulation strategies.</span> <span class="venue">Korea Computer Graphics Society Conference 2024. Co-first Author.</span></p></div>
+            <div class="item reveal" data-year="2024"><p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). <span class="paper-title">Challenges and opportunities of game <span class="hint" data-hint="npc">NPC</span> research using LLM: A scoping review.</span> <span class="venue">Korean Game Society Conference 2024. Co-first Author.</span></p></div>
+            <div class="item reveal" data-year="2024"><p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">A technical literature review of distributed management structure: Focusing on the multi-label system of <span class="hint" data-hint="hybe">HYBE</span> Co., Ltd.</span> <span class="venue">Korea Technology Innovation Society Conference 2024.</span></p></div>
+            <div class="item reveal" data-year="2024"><p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">From BigHit to <span class="hint" data-hint="hybe">HYBE</span>: Sentiment analysis and strategic transition through news data.</span> <span class="venue">Korea Society for Innovation Management &amp; Economics Conference 2024.</span></p></div>
             <div class="item reveal" data-year="2023"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Yoo, S., Lee, Y., Kim, Y., Kim, H., &amp; Han, D. (2023). <span class="paper-title">Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles.</span> <span class="venue">Journal of the Korea Computer Graphics Society, 29(3), 137–147.</span></p></div>
             <div class="item reveal" data-year="2023"><p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Kim, H., Kim, Y., Kim, M., Kim, S., &amp; Han, D. (2023). <span class="paper-title">A study on the effect of group commitment on improving awareness of recycling through gamification.</span> <span class="venue">Korea HCI Conference 2023.</span></p></div>
             <div class="item reveal" data-year="2023"><p class="item-desc">Kim, Y., <span class="pub-author-me">Chae, J.</span>, Lee, Y., Kim, H., Lee, Y., &amp; Han, D. (2023). <span class="paper-title">Enhancing participation in rehabilitation for diplopia through gamification.</span> <span class="venue">Korea Computer Graphics Society Conference 2023.</span></p></div>
-            <div class="item reveal" data-year="2023"><p class="item-desc">Lee, Y. S., Kim, Y., Kim, H., <span class="pub-author-me">Chae, J.</span>, Lee, Y., &amp; Han, D. (2023). <span class="paper-title">Eye-tracking-based VR interactive games for eye movements.</span> <span class="venue">Korea Multimedia Society Conference 2023.</span></p></div>
+            <div class="item reveal" data-year="2023"><p class="item-desc">Lee, Y. S., Kim, Y., Kim, H., <span class="pub-author-me">Chae, J.</span>, Lee, Y., &amp; Han, D. (2023). <span class="paper-title"><span class="hint" data-hint="vr">Eye-tracking-based VR</span> interactive games for eye movements.</span> <span class="venue">Korea Multimedia Society Conference 2023.</span></p></div>
             <div class="item reveal" data-year="2023"><p class="item-desc">Yoon, D., Park, S., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2023). <span class="paper-title">Methodology for improving the performance of demand forecasting through machine learning.</span> <span class="venue">Preprint available at Research Square.</span></p></div>
-            <div class="item reveal" data-year="2022"><p class="item-desc">Yoo, S., <span class="pub-author-me">Chae, J.</span>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). <span class="paper-title">Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for cynophobia.</span> <span class="venue">Korea Multimedia Society Conference 2022.</span></p></div>
+            <div class="item reveal" data-year="2022"><p class="item-desc">Yoo, S., <span class="pub-author-me">Chae, J.</span>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). <span class="paper-title">Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for <span class="hint" data-hint="cynophobia">cynophobia</span>.</span> <span class="venue">Korea Multimedia Society Conference 2022.</span></p></div>
             <div class="item reveal" data-year="2022"><p class="item-desc">Park, S., Yoon, D., <span class="pub-author-me">Chae, J.</span>, Song, Y., &amp; Chung, D. (2022). <span class="paper-title">Enhanced predictive model performance through clustering.</span> <span class="venue">Korea Society of Management Information Systems Conference 2022.</span></p></div>
             <div class="item reveal" data-year="2022"><p class="item-desc">Park, S., Yoon, D., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2022). <span class="paper-title">Combined regression coefficient reduction method with clustering for performance enhancement.</span> <span class="venue">Korea Intelligent Information Systems Society Conference 2022.</span></p></div>
           </div>
@@ -875,7 +1315,7 @@
           <h3 class="section-title">Patents &amp; Certifications</h3>
           <div class="two-col">
             <div class="item reveal"><span class="item-title">Artificial Intelligence-Based Technology Acceptance Prediction Method, Program, and Device</span><div class="item-meta">2022.12 | Korean Intellectual Property Office | Patent Application Publication No. 40-2022-0179493</div><p class="item-desc">Co-Patentor: Impactive AI Corp. Publication Date: December 23, 2022.</p></div>
-            <div class="item reveal"><span class="item-title">AI-900: Microsoft Azure, Machine Learning, and AI</span><div class="item-meta">Certification | Microsoft</div></div>
+            <div class="item reveal"><span class="item-title">AI-900: <span class="hint" data-hint="azure">Microsoft Azure</span>, Machine Learning, and AI</span><div class="item-meta">Certification | Microsoft</div></div>
           </div>
         </section>
       </main>
@@ -883,25 +1323,916 @@
   </div>
 
   <div class="kbd-hint" id="kbdHint">
-    <kbd>J</kbd><kbd>K</kbd> to navigate sections
+    <kbd>J</kbd><kbd>K</kbd> sections · <kbd>R</kbd> reader
   </div>
 
   <script>
+    /* ═══════════════════════════════════════════════════════════
+       HOVER VIGNETTES — handcrafted micro-scenes per keyword
+       ═══════════════════════════════════════════════════════════ */
+    const HINTS = {
+      kaist: {
+        label: 'KAIST',
+        sub: 'Daejeon, KR',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="kg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#003c87"/>
+                <stop offset="100%" stop-color="#0058c2"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#kg)"/>
+            <!-- abstract starlight -->
+            <circle cx="32" cy="22" r="0.7" fill="#9bc4ff"/>
+            <circle cx="160" cy="18" r="0.5" fill="#9bc4ff" opacity="0.7"/>
+            <circle cx="55" cy="30" r="0.4" fill="#9bc4ff" opacity="0.6"/>
+            <!-- KAIST wordmark -->
+            <text x="22" y="38" font-family="Inter" font-size="16" font-weight="800" fill="#fff" letter-spacing="3">KAIST</text>
+            <text x="22" y="52" font-family="Inter" font-size="7" font-weight="500" fill="#9bc4ff" letter-spacing="1.5">한국과학기술원</text>
+            <!-- Nubzuki: sleeping rounded creature -->
+            <g transform="translate(120, 78)">
+              <!-- body -->
+              <ellipse cx="0" cy="14" rx="26" ry="11" fill="#fff"/>
+              <!-- belly highlight -->
+              <ellipse cx="0" cy="17" rx="20" ry="6" fill="#e6f0ff"/>
+              <!-- head -->
+              <circle cx="-22" cy="8" r="11" fill="#fff"/>
+              <!-- ears -->
+              <ellipse cx="-28" cy="0" rx="3.5" ry="5" fill="#fff" transform="rotate(-20 -28 0)"/>
+              <ellipse cx="-18" cy="-2" rx="3" ry="4.5" fill="#fff" transform="rotate(15 -18 -2)"/>
+              <ellipse cx="-28" cy="0" rx="1.5" ry="2.5" fill="#ffb3c1" transform="rotate(-20 -28 0)"/>
+              <!-- closed eyes (sleeping) -->
+              <path d="M-27,7 Q-25,9 -23,7" stroke="#003c87" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+              <path d="M-20,8 Q-18,10 -16,8" stroke="#003c87" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+              <!-- cheek blush -->
+              <circle cx="-25" cy="12" r="2" fill="#ffb3c1" opacity="0.7"/>
+              <circle cx="-15" cy="12" r="2" fill="#ffb3c1" opacity="0.7"/>
+              <!-- bushy tail -->
+              <path d="M22,10 Q34,5 32,20 Q28,22 26,18" fill="#fff" stroke="#fff" stroke-width="0.5"/>
+              <!-- tiny feet -->
+              <ellipse cx="-8" cy="24" rx="3" ry="1.5" fill="#fff"/>
+              <ellipse cx="6" cy="24" rx="3" ry="1.5" fill="#fff"/>
+            </g>
+            <!-- Floating z's -->
+            <g style="animation: z-float 2.4s ease-in-out infinite">
+              <text x="105" y="60" font-family="Inter" font-size="10" font-weight="700" fill="#9bc4ff">z</text>
+            </g>
+            <g style="animation: z-float 2.4s ease-in-out infinite 0.8s">
+              <text x="113" y="50" font-family="Inter" font-size="8" font-weight="700" fill="#9bc4ff">z</text>
+            </g>
+            <g style="animation: z-float 2.4s ease-in-out infinite 1.6s">
+              <text x="120" y="42" font-family="Inter" font-size="6" font-weight="700" fill="#9bc4ff">z</text>
+            </g>
+          </svg>`
+      },
+
+      boramae: {
+        label: 'KF-21 Boramae',
+        sub: '4.5-gen fighter',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#0d1d3a"/>
+                <stop offset="60%" stop-color="#2c4a7c"/>
+                <stop offset="100%" stop-color="#5b7ba8"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#sky)"/>
+            <!-- stars -->
+            <circle cx="20" cy="20" r="0.8" fill="#fff" opacity="0.9"/>
+            <circle cx="55" cy="14" r="0.5" fill="#fff" opacity="0.7"/>
+            <circle cx="90" cy="22" r="0.7" fill="#fff" opacity="0.6"/>
+            <circle cx="140" cy="16" r="0.6" fill="#fff" opacity="0.8"/>
+            <circle cx="175" cy="28" r="0.5" fill="#fff" opacity="0.7"/>
+            <!-- distant clouds -->
+            <ellipse cx="50" cy="95" rx="40" ry="6" fill="#0a1525" opacity="0.6"/>
+            <ellipse cx="150" cy="100" rx="50" ry="5" fill="#0a1525" opacity="0.5"/>
+            <!-- contrails (long thin lines) -->
+            <line x1="200" y1="42" x2="-30" y2="42" stroke="#fff" stroke-width="0.8" opacity="0.18" stroke-dasharray="3 3"/>
+            <line x1="200" y1="62" x2="-30" y2="62" stroke="#fff" stroke-width="0.6" opacity="0.12" stroke-dasharray="2 4"/>
+            <!-- Jet 1 -->
+            <g style="animation: fly-by 3.2s linear infinite;">
+              <g transform="translate(0, 42)">
+                <!-- jet body: delta-wing fighter, side view -->
+                <path d="M-16,0 L14,0 L20,2 L14,4 L-16,4 Z" fill="#e8eef5"/>
+                <path d="M-10,-2 L10,-2 L4,-6 L-4,-6 Z" fill="#c4d0dc"/>
+                <path d="M-12,4 L-10,8 L-4,4 Z" fill="#c4d0dc"/>
+                <!-- nose -->
+                <path d="M14,1 L22,2 L14,3 Z" fill="#a8b8c8"/>
+                <!-- exhaust glow -->
+                <circle cx="-16" cy="2" r="2.5" fill="#ff7a3c" opacity="0.85"/>
+                <circle cx="-19" cy="2" r="1.5" fill="#ffd166" opacity="0.6"/>
+              </g>
+            </g>
+            <!-- Jet 2 (smaller, further) -->
+            <g style="animation: fly-by 4.5s linear infinite 1.5s;">
+              <g transform="translate(0, 62)">
+                <path d="M-12,0 L10,0 L14,1.5 L10,3 L-12,3 Z" fill="#cdd6e0"/>
+                <path d="M-8,-1.5 L8,-1.5 L3,-4 L-3,-4 Z" fill="#9ba8b8"/>
+                <circle cx="-12" cy="1.5" r="1.8" fill="#ff7a3c" opacity="0.7"/>
+              </g>
+            </g>
+            <!-- Jet 3 (third, faintest) -->
+            <g style="animation: fly-by 5.5s linear infinite 0.7s; opacity: 0.7;">
+              <g transform="translate(0, 78)">
+                <path d="M-9,0 L8,0 L11,1 L8,2 L-9,2 Z" fill="#aab4c0"/>
+                <circle cx="-9" cy="1" r="1.3" fill="#ff7a3c" opacity="0.6"/>
+              </g>
+            </g>
+            <!-- ground horizon -->
+            <rect x="0" y="115" width="200" height="10" fill="#050a14"/>
+          </svg>`
+      },
+
+      haenyeo: {
+        label: '해녀 · Haenyeo',
+        sub: 'Jeju free-divers',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#0a2e3d"/>
+                <stop offset="40%" stop-color="#134e5e"/>
+                <stop offset="100%" stop-color="#1d6c7f"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#sea)"/>
+            <!-- sun rays -->
+            <line x1="60" y1="0" x2="80" y2="50" stroke="#a8e6cf" stroke-width="0.8" opacity="0.3"/>
+            <line x1="80" y1="0" x2="90" y2="60" stroke="#a8e6cf" stroke-width="0.6" opacity="0.25"/>
+            <line x1="100" y1="0" x2="100" y2="60" stroke="#a8e6cf" stroke-width="0.7" opacity="0.3"/>
+            <!-- wave surface (animated) -->
+            <g style="animation: wave-slide 4s linear infinite;">
+              <path d="M -50,28 Q 0,22 50,28 T 150,28 T 250,28 T 350,28" stroke="#71c9c2" stroke-width="1.2" fill="none" opacity="0.7"/>
+              <path d="M -50,34 Q 0,30 50,34 T 150,34 T 250,34 T 350,34" stroke="#71c9c2" stroke-width="0.8" fill="none" opacity="0.4"/>
+            </g>
+            <!-- Diver silhouette (haenyeo with tewak float on surface) -->
+            <!-- Tewak float (orange buoy) on surface -->
+            <ellipse cx="40" cy="28" rx="9" ry="6" fill="#ff8c42"/>
+            <ellipse cx="40" cy="27" rx="9" ry="2" fill="#ffb380"/>
+            <line x1="40" y1="32" x2="44" y2="65" stroke="#1a1a1a" stroke-width="0.6" opacity="0.6"/>
+            <!-- Diver body (diving down) -->
+            <g transform="translate(110, 78) rotate(15)">
+              <!-- swim suit body -->
+              <ellipse cx="0" cy="0" rx="6" ry="14" fill="#0a0a0a"/>
+              <!-- head with cap -->
+              <circle cx="0" cy="-16" r="5" fill="#0a0a0a"/>
+              <!-- mask -->
+              <ellipse cx="0" cy="-17" rx="4" ry="2.5" fill="#71c9c2" opacity="0.7"/>
+              <!-- arms extended -->
+              <ellipse cx="-7" cy="-2" rx="8" ry="2" fill="#0a0a0a" transform="rotate(20)"/>
+              <ellipse cx="7" cy="-2" rx="8" ry="2" fill="#0a0a0a" transform="rotate(-20)"/>
+              <!-- legs/fins -->
+              <ellipse cx="-3" cy="16" rx="3" ry="9" fill="#0a0a0a"/>
+              <ellipse cx="3" cy="16" rx="3" ry="9" fill="#0a0a0a"/>
+              <!-- fins (yellow tips) -->
+              <ellipse cx="-3" cy="24" rx="4" ry="3" fill="#ffd166"/>
+              <ellipse cx="3" cy="24" rx="4" ry="3" fill="#ffd166"/>
+            </g>
+            <!-- rising bubbles -->
+            <g style="animation: bubble-rise 2.4s ease-in infinite;">
+              <circle cx="108" cy="100" r="2" fill="#a8e6cf" opacity="0.6"/>
+            </g>
+            <g style="animation: bubble-rise 2.4s ease-in infinite 0.6s;">
+              <circle cx="115" cy="100" r="1.5" fill="#a8e6cf" opacity="0.6"/>
+            </g>
+            <g style="animation: bubble-rise 2.4s ease-in infinite 1.2s;">
+              <circle cx="105" cy="100" r="1" fill="#a8e6cf" opacity="0.6"/>
+            </g>
+            <g style="animation: bubble-rise 2.4s ease-in infinite 1.8s;">
+              <circle cx="118" cy="100" r="1.8" fill="#a8e6cf" opacity="0.5"/>
+            </g>
+            <!-- distant fish silhouettes -->
+            <path d="M 165,80 Q 170,78 173,80 L 170,82 L 173,84 Q 170,82 165,84 Z" fill="#0a2e3d" opacity="0.6"/>
+            <path d="M 30,100 Q 35,98 38,100 L 35,102 L 38,104 Q 35,102 30,104 Z" fill="#0a2e3d" opacity="0.5"/>
+          </svg>`
+      },
+
+      pohang: {
+        label: '포항 · Pohang',
+        sub: 'Steel & sea',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="psky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#3d1e3a"/>
+                <stop offset="50%" stop-color="#c0392b"/>
+                <stop offset="100%" stop-color="#e67e22"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#psky)"/>
+            <!-- sun -->
+            <circle cx="160" cy="58" r="14" fill="#ffd166" opacity="0.9"/>
+            <circle cx="160" cy="58" r="20" fill="#ffd166" opacity="0.2"/>
+            <!-- water reflection -->
+            <rect x="0" y="92" width="200" height="33" fill="#1a1a2a" opacity="0.5"/>
+            <line x1="0" y1="96" x2="200" y2="96" stroke="#ffd166" stroke-width="0.4" opacity="0.4"/>
+            <line x1="0" y1="100" x2="200" y2="100" stroke="#ffd166" stroke-width="0.3" opacity="0.3"/>
+            <!-- POSCO-inspired industrial silhouette -->
+            <g fill="#0a0a14">
+              <!-- main building -->
+              <rect x="20" y="68" width="40" height="24"/>
+              <!-- smokestacks -->
+              <rect x="32" y="48" width="4" height="44"/>
+              <rect x="42" y="42" width="4" height="50"/>
+              <rect x="52" y="52" width="4" height="40"/>
+              <!-- crane -->
+              <rect x="68" y="60" width="2" height="32"/>
+              <rect x="62" y="60" width="14" height="2"/>
+              <!-- mid factory -->
+              <rect x="80" y="72" width="30" height="20"/>
+              <rect x="86" y="58" width="3" height="34"/>
+              <rect x="98" y="62" width="3" height="30"/>
+              <!-- right structures -->
+              <polygon points="115,92 120,76 130,76 135,92"/>
+              <rect x="138" y="80" width="14" height="12"/>
+            </g>
+            <!-- Smoke drifting -->
+            <g style="animation: smoke-drift 3.5s ease-out infinite;">
+              <circle cx="34" cy="46" r="3" fill="#fff" opacity="0.4"/>
+            </g>
+            <g style="animation: smoke-drift 3.5s ease-out infinite 0.8s;">
+              <circle cx="44" cy="40" r="3.5" fill="#fff" opacity="0.5"/>
+            </g>
+            <g style="animation: smoke-drift 3.5s ease-out infinite 1.6s;">
+              <circle cx="54" cy="50" r="2.8" fill="#fff" opacity="0.45"/>
+            </g>
+            <g style="animation: smoke-drift 3.5s ease-out infinite 2.4s;">
+              <circle cx="88" cy="56" r="2.5" fill="#fff" opacity="0.4"/>
+            </g>
+            <!-- factory windows (glowing) -->
+            <rect x="24" y="74" width="2" height="2" fill="#ffd166"/>
+            <rect x="30" y="74" width="2" height="2" fill="#ffd166"/>
+            <rect x="42" y="80" width="2" height="2" fill="#ffd166" opacity="0.8"/>
+            <rect x="50" y="76" width="2" height="2" fill="#ffd166"/>
+            <rect x="84" y="78" width="2" height="2" fill="#ffd166"/>
+            <rect x="92" y="82" width="2" height="2" fill="#ffd166" opacity="0.7"/>
+            <rect x="102" y="78" width="2" height="2" fill="#ffd166"/>
+          </svg>`
+      },
+
+      vr: {
+        label: 'Eye-tracking · VR',
+        sub: 'Meta Quest Pro',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <radialGradient id="vrbg" cx="0.5" cy="0.5" r="0.7">
+                <stop offset="0%" stop-color="#1e1147"/>
+                <stop offset="100%" stop-color="#0a0220"/>
+              </radialGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#vrbg)"/>
+            <!-- scan lines (subtle) -->
+            <g opacity="0.18">
+              <line x1="0" y1="20" x2="200" y2="20" stroke="#b388ff" stroke-width="0.3"/>
+              <line x1="0" y1="40" x2="200" y2="40" stroke="#b388ff" stroke-width="0.3"/>
+              <line x1="0" y1="60" x2="200" y2="60" stroke="#b388ff" stroke-width="0.3"/>
+              <line x1="0" y1="80" x2="200" y2="80" stroke="#b388ff" stroke-width="0.3"/>
+              <line x1="0" y1="100" x2="200" y2="100" stroke="#b388ff" stroke-width="0.3"/>
+            </g>
+            <!-- moving scan line -->
+            <rect x="0" y="0" width="200" height="2" fill="#b388ff" opacity="0.6" style="animation: scan-line 3s linear infinite;"/>
+            <!-- Eye -->
+            <g transform="translate(100, 62)">
+              <!-- almond shape -->
+              <ellipse cx="0" cy="0" rx="44" ry="22" fill="#fff" opacity="0.95"/>
+              <ellipse cx="0" cy="0" rx="44" ry="22" fill="none" stroke="#c4b5fd" stroke-width="1"/>
+              <!-- iris (will be moved by JS via class) -->
+              <g class="eye-iris">
+                <circle cx="0" cy="0" r="13" fill="#5b2a86"/>
+                <circle cx="0" cy="0" r="10" fill="#7c3aed"/>
+                <circle cx="0" cy="0" r="6" fill="#0a0220"/>
+                <!-- pupil highlight -->
+                <circle cx="-2" cy="-2" r="2" fill="#fff" opacity="0.7"/>
+              </g>
+              <!-- eyelid (blinks) -->
+              <ellipse cx="0" cy="0" rx="44" ry="22" fill="#0a0220" style="transform-origin: center; animation: blink-eye 4s ease-in-out infinite;"/>
+            </g>
+            <!-- corner crosshairs -->
+            <g stroke="#b388ff" stroke-width="0.6" fill="none" opacity="0.5">
+              <path d="M 8,8 L 8,16 M 8,8 L 16,8"/>
+              <path d="M 192,8 L 192,16 M 192,8 L 184,8"/>
+              <path d="M 8,117 L 8,109 M 8,117 L 16,117"/>
+              <path d="M 192,117 L 192,109 M 192,117 L 184,117"/>
+            </g>
+            <text x="14" y="22" font-family="ui-monospace" font-size="6" fill="#b388ff" opacity="0.7">TRACK · 240 Hz</text>
+          </svg>`
+      },
+
+      xr: {
+        label: 'Mixed Reality',
+        sub: 'XR · spatial',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="xrbg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0a1428"/>
+                <stop offset="100%" stop-color="#1e3a8a"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#xrbg)"/>
+            <!-- grid floor in perspective -->
+            <g stroke="#60a5fa" stroke-width="0.4" opacity="0.4">
+              <line x1="0" y1="95" x2="200" y2="95"/>
+              <line x1="0" y1="105" x2="200" y2="105"/>
+              <line x1="0" y1="115" x2="200" y2="115"/>
+              <line x1="20" y1="85" x2="-20" y2="125"/>
+              <line x1="60" y1="85" x2="40" y2="125"/>
+              <line x1="100" y1="85" x2="100" y2="125"/>
+              <line x1="140" y1="85" x2="160" y2="125"/>
+              <line x1="180" y1="85" x2="220" y2="125"/>
+            </g>
+            <!-- rotating wireframe cube -->
+            <g transform="translate(100, 55)" style="animation: spin-slow 8s linear infinite; transform-origin: center;">
+              <!-- back face -->
+              <path d="M -20,-20 L 20,-20 L 20,20 L -20,20 Z" stroke="#60a5fa" fill="rgba(96,165,250,0.08)" stroke-width="1"/>
+              <!-- front face (offset) -->
+              <path d="M -12,-12 L 28,-12 L 28,28 L -12,28 Z" stroke="#93c5fd" fill="rgba(147,197,253,0.12)" stroke-width="1"/>
+              <!-- connecting edges -->
+              <line x1="-20" y1="-20" x2="-12" y2="-12" stroke="#60a5fa" stroke-width="0.8"/>
+              <line x1="20" y1="-20" x2="28" y2="-12" stroke="#60a5fa" stroke-width="0.8"/>
+              <line x1="20" y1="20" x2="28" y2="28" stroke="#60a5fa" stroke-width="0.8"/>
+              <line x1="-20" y1="20" x2="-12" y2="28" stroke="#60a5fa" stroke-width="0.8"/>
+              <!-- vertex dots -->
+              <circle cx="-20" cy="-20" r="1.5" fill="#93c5fd"/>
+              <circle cx="20" cy="-20" r="1.5" fill="#93c5fd"/>
+              <circle cx="20" cy="20" r="1.5" fill="#93c5fd"/>
+              <circle cx="-20" cy="20" r="1.5" fill="#93c5fd"/>
+            </g>
+            <!-- orbiting particle -->
+            <g transform="translate(100, 55)">
+              <circle cx="0" cy="0" r="2" fill="#fbbf24" style="animation: orbit 4s linear infinite; transform-origin: center;"/>
+            </g>
+            <!-- tracking markers -->
+            <g fill="none" stroke="#60a5fa" stroke-width="0.6" opacity="0.6">
+              <path d="M 12,12 L 12,18 L 18,18"/>
+              <path d="M 188,12 L 188,18 L 182,18"/>
+            </g>
+          </svg>`
+      },
+
+      hybe: {
+        label: 'HYBE',
+        sub: 'BigHit → HYBE',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="hbg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#190b2e"/>
+                <stop offset="100%" stop-color="#3d1466"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#hbg)"/>
+            <!-- expanding sound waves -->
+            <g transform="translate(100, 62)" fill="none" stroke="#c4b5fd">
+              <circle cx="0" cy="0" r="15" stroke-width="1.2" style="animation: sound-wave 2s ease-out infinite;"/>
+              <circle cx="0" cy="0" r="15" stroke-width="1.2" style="animation: sound-wave 2s ease-out infinite 0.5s;"/>
+              <circle cx="0" cy="0" r="15" stroke-width="1.2" style="animation: sound-wave 2s ease-out infinite 1s;"/>
+              <circle cx="0" cy="0" r="15" stroke-width="1.2" style="animation: sound-wave 2s ease-out infinite 1.5s;"/>
+            </g>
+            <!-- central speaker -->
+            <g transform="translate(100, 62)">
+              <circle cx="0" cy="0" r="12" fill="#7c3aed"/>
+              <circle cx="0" cy="0" r="9" fill="#a78bfa"/>
+              <circle cx="0" cy="0" r="5" fill="#190b2e"/>
+              <circle cx="0" cy="0" r="2" fill="#c4b5fd"/>
+            </g>
+            <!-- floating notes -->
+            <g style="animation: float-y 2s ease-in-out infinite;">
+              <text x="35" y="42" font-family="serif" font-size="18" fill="#c4b5fd" opacity="0.9">♪</text>
+            </g>
+            <g style="animation: float-y 2.5s ease-in-out infinite 0.4s;">
+              <text x="155" y="48" font-family="serif" font-size="14" fill="#a78bfa" opacity="0.8">♫</text>
+            </g>
+            <g style="animation: float-y 1.8s ease-in-out infinite 0.8s;">
+              <text x="155" y="92" font-family="serif" font-size="16" fill="#c4b5fd" opacity="0.85">♪</text>
+            </g>
+            <g style="animation: float-y 2.2s ease-in-out infinite 1.2s;">
+              <text x="30" y="98" font-family="serif" font-size="12" fill="#a78bfa" opacity="0.7">♬</text>
+            </g>
+            <!-- equalizer bars at bottom -->
+            <g fill="#c4b5fd">
+              <rect x="78" y="105" width="3" height="6" style="animation: float-y 0.6s ease-in-out infinite;"/>
+              <rect x="84" y="103" width="3" height="10" style="animation: float-y 0.7s ease-in-out infinite 0.1s;"/>
+              <rect x="90" y="101" width="3" height="14" style="animation: float-y 0.5s ease-in-out infinite 0.2s;"/>
+              <rect x="96" y="99" width="3" height="18" style="animation: float-y 0.8s ease-in-out infinite 0.15s;"/>
+              <rect x="102" y="101" width="3" height="14" style="animation: float-y 0.6s ease-in-out infinite 0.3s;"/>
+              <rect x="108" y="103" width="3" height="10" style="animation: float-y 0.7s ease-in-out infinite 0.05s;"/>
+              <rect x="114" y="105" width="3" height="6" style="animation: float-y 0.5s ease-in-out infinite 0.25s;"/>
+            </g>
+          </svg>`
+      },
+
+      smartcity: {
+        label: 'Smart City',
+        sub: 'IoT · vision',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="cbg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#0a1a2e"/>
+                <stop offset="100%" stop-color="#06283d"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#cbg)"/>
+            <!-- skyline -->
+            <g fill="#1a3a52">
+              <rect x="0" y="78" width="22" height="47"/>
+              <rect x="20" y="65" width="18" height="60"/>
+              <rect x="38" y="72" width="14" height="53"/>
+              <rect x="52" y="55" width="20" height="70"/>
+              <rect x="72" y="68" width="16" height="57"/>
+              <rect x="88" y="50" width="22" height="75"/>
+              <rect x="110" y="62" width="14" height="63"/>
+              <rect x="124" y="58" width="18" height="67"/>
+              <rect x="142" y="70" width="16" height="55"/>
+              <rect x="158" y="64" width="20" height="61"/>
+              <rect x="178" y="75" width="22" height="50"/>
+            </g>
+            <!-- windows -->
+            <g fill="#06b6d4" opacity="0.85">
+              <rect x="4" y="82" width="2" height="2"/>
+              <rect x="10" y="86" width="2" height="2"/>
+              <rect x="24" y="70" width="2" height="2"/>
+              <rect x="30" y="76" width="2" height="2"/>
+              <rect x="58" y="62" width="2" height="2"/>
+              <rect x="64" y="70" width="2" height="2"/>
+              <rect x="94" y="58" width="2" height="2"/>
+              <rect x="100" y="68" width="2" height="2"/>
+              <rect x="128" y="64" width="2" height="2"/>
+              <rect x="134" y="72" width="2" height="2"/>
+              <rect x="146" y="76" width="2" height="2"/>
+              <rect x="164" y="68" width="2" height="2"/>
+              <rect x="170" y="78" width="2" height="2"/>
+            </g>
+            <!-- IoT pulse dots on rooftops -->
+            <circle cx="29" cy="65" r="2" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite;"/>
+            <circle cx="62" cy="55" r="2" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite 0.4s;"/>
+            <circle cx="99" cy="50" r="2.5" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite 0.8s;"/>
+            <circle cx="133" cy="58" r="2" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite 1.2s;"/>
+            <circle cx="168" cy="64" r="2" fill="#06b6d4" style="animation: pulse-dot 1.6s ease-in-out infinite 0.6s;"/>
+            <!-- network arcs between buildings -->
+            <path d="M 29,65 Q 65,30 99,50" stroke="#06b6d4" stroke-width="0.7" fill="none" opacity="0.5" stroke-dasharray="2 2"/>
+            <path d="M 99,50 Q 135,25 168,64" stroke="#06b6d4" stroke-width="0.7" fill="none" opacity="0.5" stroke-dasharray="2 2"/>
+            <!-- horizon line -->
+            <line x1="0" y1="125" x2="200" y2="125" stroke="#06b6d4" stroke-width="1" opacity="0.4"/>
+            <!-- "data" -->
+            <text x="10" y="20" font-family="ui-monospace" font-size="6" fill="#06b6d4" opacity="0.7">YOLOv · 30 FPS</text>
+          </svg>`
+      },
+
+      gaia: {
+        label: 'GAIA',
+        sub: 'Game AI Assistant',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="gbg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#064e3b"/>
+                <stop offset="100%" stop-color="#0f3325"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#gbg)"/>
+            <!-- ambient sparkles -->
+            <text x="20" y="20" font-family="serif" font-size="10" fill="#6ee7b7" opacity="0.7" style="animation: float-y 2s ease-in-out infinite;">✦</text>
+            <text x="170" y="28" font-family="serif" font-size="8" fill="#6ee7b7" opacity="0.6" style="animation: float-y 2.5s ease-in-out infinite 0.3s;">✦</text>
+            <text x="175" y="98" font-family="serif" font-size="10" fill="#6ee7b7" opacity="0.7" style="animation: float-y 1.8s ease-in-out infinite 0.6s;">✦</text>
+            <text x="22" y="105" font-family="serif" font-size="7" fill="#6ee7b7" opacity="0.5" style="animation: float-y 2.2s ease-in-out infinite 0.9s;">✦</text>
+            <!-- AI orb -->
+            <g transform="translate(50, 62)">
+              <circle cx="0" cy="0" r="22" fill="#10b981" opacity="0.3"/>
+              <circle cx="0" cy="0" r="16" fill="#10b981" opacity="0.6"/>
+              <circle cx="0" cy="0" r="11" fill="#34d399"/>
+              <circle cx="-3" cy="-3" r="4" fill="#a7f3d0"/>
+              <circle cx="3" cy="3" r="2" fill="#6ee7b7" opacity="0.8"/>
+            </g>
+            <!-- chat bubble -->
+            <g transform="translate(110, 50)">
+              <path d="M 0,0 L 70,0 Q 76,0 76,6 L 76,30 Q 76,36 70,36 L 12,36 L 6,44 L 8,36 L 0,36 Q -6,36 -6,30 L -6,6 Q -6,0 0,0 Z"
+                    fill="#fff" opacity="0.95"/>
+              <!-- typing dots -->
+              <circle cx="20" cy="18" r="3" fill="#064e3b" style="animation: pulse-dot 1.2s ease-in-out infinite;"/>
+              <circle cx="35" cy="18" r="3" fill="#064e3b" style="animation: pulse-dot 1.2s ease-in-out infinite 0.2s;"/>
+              <circle cx="50" cy="18" r="3" fill="#064e3b" style="animation: pulse-dot 1.2s ease-in-out infinite 0.4s;"/>
+            </g>
+            <text x="14" y="118" font-family="ui-monospace" font-size="6" fill="#6ee7b7" opacity="0.7">RAG · LLM · accessibility</text>
+          </svg>`
+      },
+
+      npc: {
+        label: 'NPC',
+        sub: '8-bit pixel sprite',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges">
+            <rect width="200" height="125" fill="#1a1033"/>
+            <!-- background pixel stars -->
+            <rect x="20" y="18" width="2" height="2" fill="#ec4899"/>
+            <rect x="60" y="12" width="2" height="2" fill="#fbbf24"/>
+            <rect x="100" y="20" width="2" height="2" fill="#34d399"/>
+            <rect x="140" y="14" width="2" height="2" fill="#60a5fa"/>
+            <rect x="180" y="22" width="2" height="2" fill="#ec4899"/>
+            <!-- ground pixels -->
+            <g fill="#2d1b58">
+              <rect x="0" y="106" width="200" height="4"/>
+              <rect x="0" y="113" width="6" height="3"/>
+              <rect x="12" y="113" width="8" height="3"/>
+              <rect x="26" y="113" width="4" height="3"/>
+              <rect x="40" y="113" width="10" height="3"/>
+              <rect x="60" y="113" width="6" height="3"/>
+              <rect x="76" y="113" width="8" height="3"/>
+              <rect x="92" y="113" width="6" height="3"/>
+            </g>
+            <!-- pixel character (NPC, idle bobbing) -->
+            <g transform="translate(90, 60)" style="animation: pixel-idle 1.2s ease-in-out infinite;">
+              <!-- hat -->
+              <rect x="6" y="0" width="12" height="4" fill="#ec4899"/>
+              <rect x="4" y="4" width="16" height="4" fill="#ec4899"/>
+              <!-- face -->
+              <rect x="6" y="8" width="12" height="10" fill="#ffd9b3"/>
+              <!-- eyes -->
+              <rect x="9" y="12" width="2" height="2" fill="#1a1033"/>
+              <rect x="13" y="12" width="2" height="2" fill="#1a1033"/>
+              <!-- mouth -->
+              <rect x="11" y="16" width="2" height="1" fill="#1a1033"/>
+              <!-- body -->
+              <rect x="6" y="18" width="12" height="10" fill="#60a5fa"/>
+              <rect x="4" y="20" width="2" height="6" fill="#60a5fa"/>
+              <rect x="18" y="20" width="2" height="6" fill="#60a5fa"/>
+              <!-- belt -->
+              <rect x="6" y="26" width="12" height="2" fill="#fbbf24"/>
+              <!-- legs -->
+              <rect x="8" y="28" width="3" height="8" fill="#2d1b58"/>
+              <rect x="13" y="28" width="3" height="8" fill="#2d1b58"/>
+              <!-- shoes -->
+              <rect x="7" y="34" width="5" height="2" fill="#1a1033"/>
+              <rect x="12" y="34" width="5" height="2" fill="#1a1033"/>
+            </g>
+            <!-- dialogue bubble -->
+            <g transform="translate(125, 30)">
+              <rect x="0" y="0" width="50" height="20" fill="#fff"/>
+              <rect x="-2" y="2" width="2" height="16" fill="#fff"/>
+              <rect x="50" y="2" width="2" height="16" fill="#fff"/>
+              <rect x="2" y="-2" width="46" height="2" fill="#fff"/>
+              <rect x="2" y="20" width="46" height="2" fill="#fff"/>
+              <!-- pointer -->
+              <rect x="6" y="22" width="2" height="2" fill="#fff"/>
+              <rect x="8" y="24" width="2" height="2" fill="#fff"/>
+              <!-- text dots -->
+              <rect x="10" y="9" width="3" height="3" fill="#1a1033"/>
+              <rect x="18" y="9" width="3" height="3" fill="#1a1033"/>
+              <rect x="26" y="9" width="3" height="3" fill="#1a1033"/>
+            </g>
+          </svg>`
+      },
+
+      cynophobia: {
+        label: 'VR Cynophobia',
+        sub: 'Exposure therapy',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="cbgd" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#fef3c7"/>
+                <stop offset="100%" stop-color="#fbbf24"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#cbgd)"/>
+            <!-- meadow grass -->
+            <rect x="0" y="100" width="200" height="25" fill="#84cc16"/>
+            <g stroke="#65a30d" stroke-width="0.8" stroke-linecap="round">
+              <line x1="10" y1="100" x2="12" y2="92"/>
+              <line x1="22" y1="100" x2="24" y2="94"/>
+              <line x1="35" y1="100" x2="33" y2="91"/>
+              <line x1="160" y1="100" x2="162" y2="93"/>
+              <line x1="175" y1="100" x2="177" y2="92"/>
+              <line x1="188" y1="100" x2="186" y2="94"/>
+            </g>
+            <!-- sun -->
+            <circle cx="170" cy="30" r="14" fill="#fbbf24"/>
+            <g stroke="#fbbf24" stroke-width="2" stroke-linecap="round">
+              <line x1="170" y1="10" x2="170" y2="6"/>
+              <line x1="170" y1="50" x2="170" y2="54"/>
+              <line x1="150" y1="30" x2="146" y2="30"/>
+              <line x1="190" y1="30" x2="194" y2="30"/>
+              <line x1="156" y1="16" x2="153" y2="13"/>
+              <line x1="184" y1="44" x2="187" y2="47"/>
+              <line x1="184" y1="16" x2="187" y2="13"/>
+              <line x1="156" y1="44" x2="153" y2="47"/>
+            </g>
+            <!-- friendly dog (corgi-style silhouette) -->
+            <g transform="translate(80, 78)">
+              <!-- body -->
+              <ellipse cx="0" cy="0" rx="28" ry="13" fill="#a16207"/>
+              <ellipse cx="0" cy="2" rx="24" ry="9" fill="#ca8a04"/>
+              <!-- legs -->
+              <rect x="-18" y="8" width="5" height="14" rx="2" fill="#a16207"/>
+              <rect x="-8" y="8" width="5" height="14" rx="2" fill="#a16207"/>
+              <rect x="3" y="8" width="5" height="14" rx="2" fill="#a16207"/>
+              <rect x="13" y="8" width="5" height="14" rx="2" fill="#a16207"/>
+              <!-- head -->
+              <circle cx="-26" cy="-6" r="11" fill="#a16207"/>
+              <!-- snout -->
+              <ellipse cx="-34" cy="-3" rx="6" ry="4" fill="#fbbf24"/>
+              <!-- nose -->
+              <ellipse cx="-37" cy="-3" rx="2" ry="1.5" fill="#1a1a1a"/>
+              <!-- ears (perked) -->
+              <path d="M -32,-15 L -30,-22 L -25,-14 Z" fill="#a16207"/>
+              <path d="M -22,-14 L -20,-22 L -16,-13 Z" fill="#a16207"/>
+              <!-- eyes -->
+              <circle cx="-28" cy="-7" r="1.5" fill="#1a1a1a"/>
+              <!-- happy mouth -->
+              <path d="M -35,-1 Q -33,1 -31,-1" stroke="#1a1a1a" stroke-width="1" fill="none"/>
+              <!-- tongue -->
+              <ellipse cx="-32" cy="0.5" rx="2" ry="1" fill="#f472b6"/>
+              <!-- wagging tail -->
+              <path d="M 24,-2 Q 32,-8 34,-2" stroke="#a16207" stroke-width="6" fill="none" stroke-linecap="round" style="animation: tail-wag 0.5s ease-in-out infinite; transform-origin: 24px -2px;"/>
+            </g>
+            <!-- heart (representing safety/positive) -->
+            <g style="animation: float-y 1.5s ease-in-out infinite;">
+              <path d="M 130,40 C 130,36 126,34 124,38 C 122,34 118,36 118,40 C 118,44 124,48 124,48 C 124,48 130,44 130,40 Z" fill="#ec4899"/>
+            </g>
+          </svg>`
+      },
+
+      handong: {
+        label: '한동 · Handong',
+        sub: 'Pohang campus',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="hdbg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#fed7aa"/>
+                <stop offset="60%" stop-color="#fb923c"/>
+                <stop offset="100%" stop-color="#2563eb"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#hdbg)"/>
+            <!-- sun on horizon (sunrise) -->
+            <circle cx="100" cy="78" r="20" fill="#fde047"/>
+            <circle cx="100" cy="78" r="30" fill="#fde047" opacity="0.25"/>
+            <!-- distant mountain (campus hill) -->
+            <path d="M 0,95 L 30,80 L 60,88 L 90,72 L 130,82 L 170,75 L 200,90 L 200,125 L 0,125 Z" fill="#1e3a5f"/>
+            <!-- closer hill -->
+            <path d="M 0,108 L 40,98 L 80,104 L 130,96 L 170,102 L 200,98 L 200,125 L 0,125 Z" fill="#0f1d33"/>
+            <!-- sea reflection -->
+            <ellipse cx="100" cy="100" rx="60" ry="3" fill="#fde047" opacity="0.4"/>
+            <!-- birds -->
+            <g style="animation: float-y 2s ease-in-out infinite;">
+              <path d="M 40,30 Q 43,28 46,30 Q 49,28 52,30" stroke="#1a1a1a" stroke-width="1" fill="none"/>
+            </g>
+            <g style="animation: float-y 2.4s ease-in-out infinite 0.3s;">
+              <path d="M 130,22 Q 132,20 134,22 Q 136,20 138,22" stroke="#1a1a1a" stroke-width="0.8" fill="none"/>
+            </g>
+            <g style="animation: float-y 1.8s ease-in-out infinite 0.6s;">
+              <path d="M 160,38 Q 162,36 164,38 Q 166,36 168,38" stroke="#1a1a1a" stroke-width="0.8" fill="none"/>
+            </g>
+            <!-- sun rays -->
+            <g stroke="#fde047" stroke-width="0.5" opacity="0.4">
+              <line x1="100" y1="50" x2="100" y2="58"/>
+              <line x1="80" y1="60" x2="86" y2="64"/>
+              <line x1="120" y1="60" x2="114" y2="64"/>
+              <line x1="68" y1="78" x2="75" y2="78"/>
+              <line x1="132" y1="78" x2="125" y2="78"/>
+            </g>
+          </svg>`
+      },
+
+      ateneo: {
+        label: 'Ateneo de Manila',
+        sub: 'Manila, PH',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="atbg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#1e3a8a"/>
+                <stop offset="100%" stop-color="#0c1d4a"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#atbg)"/>
+            <!-- Philippine flag-inspired sun with 8 rays -->
+            <g transform="translate(100, 62)" style="animation: sun-pulse 3s ease-in-out infinite; transform-origin: center;">
+              <!-- Outer rays (8) -->
+              <g fill="#fbbf24">
+                <polygon points="0,-38 -4,-22 4,-22"/>
+                <polygon points="27,-27 13,-19 19,-13"/>
+                <polygon points="38,0 22,-4 22,4"/>
+                <polygon points="27,27 13,19 19,13" transform="rotate(180 20 16)"/>
+                <polygon points="0,38 -4,22 4,22"/>
+                <polygon points="-27,27 -13,19 -19,13" transform="rotate(180 -16 16)"/>
+                <polygon points="-38,0 -22,-4 -22,4"/>
+                <polygon points="-27,-27 -13,-19 -19,-13"/>
+              </g>
+              <!-- inner rays (smaller, between) -->
+              <g fill="#fcd34d" opacity="0.7">
+                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(22.5)"/>
+                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(67.5)"/>
+                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(112.5)"/>
+                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(157.5)"/>
+                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(202.5)"/>
+                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(247.5)"/>
+                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(292.5)"/>
+                <polygon points="14,-32 -2,-14 2,-14" transform="rotate(337.5)"/>
+              </g>
+              <!-- center disc -->
+              <circle cx="0" cy="0" r="11" fill="#fbbf24"/>
+              <circle cx="0" cy="0" r="7" fill="#fde047"/>
+            </g>
+            <!-- 3 small stars (3 main Philippine islands) -->
+            <text x="20" y="30" font-family="serif" font-size="14" fill="#fbbf24">★</text>
+            <text x="172" y="30" font-family="serif" font-size="14" fill="#fbbf24">★</text>
+            <text x="96" y="115" font-family="serif" font-size="14" fill="#fbbf24">★</text>
+          </svg>`
+      },
+
+      climate: {
+        label: 'Climate Tech',
+        sub: 'Earth & systems',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <radialGradient id="clbg" cx="0.5" cy="0.5" r="0.7">
+                <stop offset="0%" stop-color="#064e3b"/>
+                <stop offset="100%" stop-color="#022c22"/>
+              </radialGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#clbg)"/>
+            <!-- Earth -->
+            <g transform="translate(100, 62)">
+              <!-- atmospheric glow -->
+              <circle cx="0" cy="0" r="46" fill="#10b981" opacity="0.15"/>
+              <circle cx="0" cy="0" r="40" fill="#34d399" opacity="0.2"/>
+              <!-- ocean -->
+              <circle cx="0" cy="0" r="34" fill="#0891b2"/>
+              <!-- continents (abstract green blobs, rotating) -->
+              <g style="animation: spin-slow 14s linear infinite; transform-origin: center;">
+                <ellipse cx="-12" cy="-10" rx="10" ry="6" fill="#15803d"/>
+                <ellipse cx="14" cy="-4" rx="8" ry="10" fill="#15803d"/>
+                <ellipse cx="-8" cy="14" rx="12" ry="5" fill="#15803d"/>
+                <circle cx="20" cy="12" r="5" fill="#15803d"/>
+              </g>
+              <!-- highlight -->
+              <ellipse cx="-12" cy="-14" rx="10" ry="6" fill="#fff" opacity="0.18"/>
+            </g>
+            <!-- orbiting leaf -->
+            <g transform="translate(100, 62)">
+              <g style="animation: orbit 6s linear infinite;">
+                <path d="M 0,0 Q 6,-8 0,-14 Q -4,-8 0,0 Z" fill="#a3e635" transform="translate(38, 0)"/>
+              </g>
+            </g>
+            <!-- temperature/data lines -->
+            <g stroke="#fbbf24" stroke-width="0.8" fill="none" opacity="0.7">
+              <path d="M 10,108 L 25,104 L 40,106 L 55,98 L 70,100 L 85,92 L 100,96 L 115,88 L 130,90 L 145,82 L 160,86 L 175,76 L 190,80"/>
+            </g>
+            <text x="10" y="22" font-family="ui-monospace" font-size="6" fill="#34d399" opacity="0.8">+1.5 °C TARGET</text>
+          </svg>`
+      },
+
+      blockchain: {
+        label: 'Blockchain',
+        sub: 'Distributed',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="bcbg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#1c1917"/>
+                <stop offset="100%" stop-color="#292524"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#bcbg)"/>
+            <!-- chain of hexagons -->
+            <g stroke="#f97316" stroke-width="1.2" fill="rgba(249,115,22,0.1)">
+              <polygon points="20,62 34,54 48,62 48,78 34,86 20,78"/>
+              <polygon points="62,62 76,54 90,62 90,78 76,86 62,78"/>
+              <polygon points="104,62 118,54 132,62 132,78 118,86 104,78"/>
+              <polygon points="146,62 160,54 174,62 174,78 160,86 146,78"/>
+            </g>
+            <!-- connecting lines with data flow -->
+            <g stroke="#fb923c" stroke-width="1" stroke-dasharray="3 3" style="animation: ribbon-flow 1.5s linear infinite;">
+              <line x1="48" y1="70" x2="62" y2="70"/>
+              <line x1="90" y1="70" x2="104" y2="70"/>
+              <line x1="132" y1="70" x2="146" y2="70"/>
+            </g>
+            <!-- block "hashes" inside hexagons -->
+            <g font-family="ui-monospace" font-size="5" fill="#fb923c" text-anchor="middle">
+              <text x="34" y="72">0x4a1</text>
+              <text x="76" y="72">0xb29</text>
+              <text x="118" y="72">0xe73</text>
+              <text x="160" y="72">0xf02</text>
+            </g>
+            <!-- pulsing node dots -->
+            <circle cx="34" cy="86" r="2" fill="#f97316" style="animation: pulse-dot 1.5s ease-in-out infinite;"/>
+            <circle cx="76" cy="86" r="2" fill="#f97316" style="animation: pulse-dot 1.5s ease-in-out infinite 0.3s;"/>
+            <circle cx="118" cy="86" r="2" fill="#f97316" style="animation: pulse-dot 1.5s ease-in-out infinite 0.6s;"/>
+            <circle cx="160" cy="86" r="2" fill="#f97316" style="animation: pulse-dot 1.5s ease-in-out infinite 0.9s;"/>
+            <text x="10" y="24" font-family="ui-monospace" font-size="6" fill="#f97316" opacity="0.7">DISTRIBUTED LEDGER</text>
+          </svg>`
+      },
+
+      azure: {
+        label: 'Microsoft Azure',
+        sub: 'AI-900 Certified',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="azbg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#0078d4"/>
+                <stop offset="100%" stop-color="#003263"/>
+              </linearGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#azbg)"/>
+            <!-- subtle network grid -->
+            <g stroke="#fff" stroke-width="0.2" opacity="0.15">
+              <line x1="0" y1="40" x2="200" y2="40"/>
+              <line x1="0" y1="80" x2="200" y2="80"/>
+              <line x1="50" y1="0" x2="50" y2="125"/>
+              <line x1="100" y1="0" x2="100" y2="125"/>
+              <line x1="150" y1="0" x2="150" y2="125"/>
+            </g>
+            <!-- main cloud -->
+            <g transform="translate(70, 60)" style="animation: float-y 3s ease-in-out infinite;">
+              <ellipse cx="0" cy="10" rx="46" ry="14" fill="#fff"/>
+              <circle cx="-26" cy="0" r="14" fill="#fff"/>
+              <circle cx="-6" cy="-8" r="18" fill="#fff"/>
+              <circle cx="20" cy="-4" r="14" fill="#fff"/>
+              <circle cx="38" cy="6" r="10" fill="#fff"/>
+            </g>
+            <!-- data points orbiting cloud -->
+            <circle cx="40" cy="30" r="2" fill="#7dd3fc" style="animation: pulse-dot 2s ease-in-out infinite;"/>
+            <circle cx="155" cy="42" r="2" fill="#7dd3fc" style="animation: pulse-dot 2s ease-in-out infinite 0.4s;"/>
+            <circle cx="170" cy="78" r="2.5" fill="#7dd3fc" style="animation: pulse-dot 2s ease-in-out infinite 0.8s;"/>
+            <circle cx="30" cy="92" r="2" fill="#7dd3fc" style="animation: pulse-dot 2s ease-in-out infinite 1.2s;"/>
+            <!-- Azure-style "A" mark -->
+            <g transform="translate(155, 92)">
+              <path d="M -10,0 L 0,-16 L 10,0 L 6,0 L 0,-10 L -6,0 Z" fill="#0078d4" stroke="#fff" stroke-width="1"/>
+            </g>
+            <text x="10" y="22" font-family="ui-monospace" font-size="6" fill="#fff" opacity="0.7">AZURE · COGNITIVE</text>
+          </svg>`
+      },
+
+      specialeffect: {
+        label: 'SpecialEffect',
+        sub: 'Accessible play (UK)',
+        svg: `
+          <svg viewBox="0 0 200 125" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <radialGradient id="sebg" cx="0.5" cy="0.5" r="0.8">
+                <stop offset="0%" stop-color="#1e293b"/>
+                <stop offset="100%" stop-color="#0f172a"/>
+              </radialGradient>
+            </defs>
+            <rect width="200" height="125" fill="url(#sebg)"/>
+            <!-- game controller silhouette -->
+            <g transform="translate(100, 62)">
+              <!-- main body -->
+              <path d="M -50,-12 Q -55,-12 -55,-4 Q -60,8 -50,18 Q -42,22 -36,18 L -16,16 Q 0,14 16,16 L 36,18 Q 42,22 50,18 Q 60,8 55,-4 Q 55,-12 50,-12 L 32,-12 Q 12,-8 -12,-8 L -32,-12 Z"
+                    fill="#475569" stroke="#94a3b8" stroke-width="1"/>
+              <!-- left thumbstick -->
+              <circle cx="-30" cy="0" r="6" fill="#1e293b"/>
+              <circle cx="-30" cy="-1" r="3.5" fill="#cbd5e1"/>
+              <!-- right thumbstick -->
+              <circle cx="14" cy="6" r="6" fill="#1e293b"/>
+              <circle cx="14" cy="5" r="3.5" fill="#cbd5e1"/>
+              <!-- D-pad -->
+              <g fill="#1e293b">
+                <rect x="-18" y="2" width="10" height="3"/>
+                <rect x="-14" y="-2" width="3" height="11"/>
+              </g>
+              <!-- 4 colorful action buttons (press animation) -->
+              <circle cx="32" cy="-4" r="3" fill="#fbbf24" style="animation: pulse-dot 1.4s ease-in-out infinite;"/>
+              <circle cx="40" cy="-12" r="3" fill="#22c55e" style="animation: pulse-dot 1.4s ease-in-out infinite 0.35s;"/>
+              <circle cx="48" cy="-4" r="3" fill="#ef4444" style="animation: pulse-dot 1.4s ease-in-out infinite 0.7s;"/>
+              <circle cx="40" cy="4" r="3" fill="#3b82f6" style="animation: pulse-dot 1.4s ease-in-out infinite 1.05s;"/>
+              <!-- center logo -->
+              <circle cx="-8" cy="-4" r="2.5" fill="#94a3b8"/>
+            </g>
+            <!-- universal access ring around controller -->
+            <circle cx="100" cy="62" r="56" stroke="#34d399" stroke-width="1" fill="none" opacity="0.5" stroke-dasharray="4 4" style="animation: spin-slow 30s linear infinite; transform-origin: 100px 62px;"/>
+            <text x="10" y="22" font-family="ui-monospace" font-size="6" fill="#34d399" opacity="0.8">PLAY FOR ALL</text>
+          </svg>`
+      }
+    };
+
+    /* ═══════════════════════════════════════════════════════════
+       BEHAVIORS
+       ═══════════════════════════════════════════════════════════ */
     (function () {
       const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const isTouch = matchMedia('(hover: none)').matches;
 
-      // ── Ambient grid follows cursor ─────────────────────────────
-      let raf = null;
+      // ── Ambient grid follows cursor ────────────────────────
+      let rafG = null;
       window.addEventListener('pointermove', (e) => {
-        if (raf) return;
-        raf = requestAnimationFrame(() => {
+        if (rafG) return;
+        rafG = requestAnimationFrame(() => {
           document.body.style.setProperty('--gx', e.clientX + 'px');
           document.body.style.setProperty('--gy', e.clientY + 'px');
-          raf = null;
+          rafG = null;
         });
       }, { passive: true });
 
-      // Hide ambient on touch-only devices
       let usedTouch = false;
       window.addEventListener('touchstart', () => {
         if (!usedTouch) {
@@ -910,21 +2241,18 @@
         }
       }, { passive: true });
 
-      // ── Cursor spotlight on cards ───────────────────────────────
-      const spotlightTargets = document.querySelectorAll('.item, .profile-card, .button');
-      spotlightTargets.forEach((el) => {
+      // ── Cursor spotlight on cards ──────────────────────────
+      document.querySelectorAll('.item, .profile-card, .button').forEach((el) => {
         el.addEventListener('pointermove', (e) => {
           const rect = el.getBoundingClientRect();
-          const mx = ((e.clientX - rect.left) / rect.width) * 100;
-          const my = ((e.clientY - rect.top) / rect.height) * 100;
-          el.style.setProperty('--mx', mx + '%');
-          el.style.setProperty('--my', my + '%');
+          el.style.setProperty('--mx', ((e.clientX - rect.left) / rect.width) * 100 + '%');
+          el.style.setProperty('--my', ((e.clientY - rect.top) / rect.height) * 100 + '%');
         }, { passive: true });
       });
 
-      // ── Profile card subtle 3D tilt ─────────────────────────────
+      // ── 3D tilt on profile card ────────────────────────────
       const card = document.getElementById('profileCard');
-      if (card && !prefersReduced) {
+      if (card && !prefersReduced && !isTouch) {
         let pending = false;
         card.addEventListener('pointermove', (e) => {
           if (pending) return;
@@ -933,32 +2261,28 @@
             const rect = card.getBoundingClientRect();
             const px = (e.clientX - rect.left) / rect.width;
             const py = (e.clientY - rect.top) / rect.height;
-            const rx = (0.5 - py) * 4;   // -2..2 deg
+            const rx = (0.5 - py) * 4;
             const ry = (px - 0.5) * 4;
             card.style.transform = `perspective(1200px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-2px)`;
             pending = false;
           });
         });
-        card.addEventListener('pointerleave', () => {
-          card.style.transform = '';
-        });
+        card.addEventListener('pointerleave', () => { card.style.transform = ''; });
       }
 
-      // ── Magnetic CTA button ─────────────────────────────────────
+      // ── Magnetic CTA button ────────────────────────────────
       const cta = document.getElementById('ctaButton');
-      if (cta && !prefersReduced) {
+      if (cta && !prefersReduced && !isTouch) {
         cta.addEventListener('pointermove', (e) => {
           const rect = cta.getBoundingClientRect();
           const dx = (e.clientX - (rect.left + rect.width / 2)) * 0.15;
           const dy = (e.clientY - (rect.top + rect.height / 2)) * 0.25;
           cta.style.transform = `translate(${dx}px, ${dy - 2}px)`;
         });
-        cta.addEventListener('pointerleave', () => {
-          cta.style.transform = '';
-        });
+        cta.addEventListener('pointerleave', () => { cta.style.transform = ''; });
       }
 
-      // ── Scroll progress bar ─────────────────────────────────────
+      // ── Scroll progress bar ────────────────────────────────
       const progress = document.getElementById('scrollProgress');
       const updateProgress = () => {
         const h = document.documentElement;
@@ -968,13 +2292,12 @@
       window.addEventListener('scroll', updateProgress, { passive: true });
       updateProgress();
 
-      // ── IntersectionObserver: reveal individual items ───────────
+      // ── Reveal IO + Section in-view ────────────────────────
       const revealEls = document.querySelectorAll('.reveal');
       if ('IntersectionObserver' in window && !prefersReduced) {
         const revealIO = new IntersectionObserver((entries) => {
           entries.forEach((entry, idx) => {
             if (entry.isIntersecting) {
-              // small stagger when multiple appear at once
               const i = Array.from(entries).indexOf(entry);
               entry.target.style.transitionDelay = (i * 60) + 'ms';
               entry.target.classList.add('visible');
@@ -987,7 +2310,6 @@
         revealEls.forEach((el) => el.classList.add('visible'));
       }
 
-      // ── Section in-view (animates title underline) ──────────────
       const sections = document.querySelectorAll('.section');
       if ('IntersectionObserver' in window) {
         const sectionIO = new IntersectionObserver((entries) => {
@@ -996,19 +2318,16 @@
           });
         }, { threshold: 0.05 });
         sections.forEach((s) => sectionIO.observe(s));
-      }
 
-      // ── Scroll-spy: highlight active nav link ───────────────────
-      const navLinks = document.querySelectorAll('.section-nav a, .mobile-nav a');
-      const setActive = (id) => {
-        navLinks.forEach((a) => {
-          const href = a.getAttribute('href');
-          a.classList.toggle('active', href === '#' + id);
-        });
-      };
-      if ('IntersectionObserver' in window) {
+        // scroll-spy
+        const navLinks = document.querySelectorAll('.section-nav a, .mobile-nav a');
+        const setActive = (id) => {
+          navLinks.forEach((a) => {
+            const href = a.getAttribute('href');
+            a.classList.toggle('active', href === '#' + id);
+          });
+        };
         const spyIO = new IntersectionObserver((entries) => {
-          // pick the most visible section
           const visible = entries
             .filter((e) => e.isIntersecting)
             .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
@@ -1017,7 +2336,7 @@
         sections.forEach((s) => spyIO.observe(s));
       }
 
-      // ── Copy email on click + toast ─────────────────────────────
+      // ── Copy email + toast ─────────────────────────────────
       const toast = document.getElementById('toast');
       let toastTimer = null;
       const showToast = (msg) => {
@@ -1026,7 +2345,6 @@
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
       };
-
       document.querySelectorAll('[data-copy]').forEach((el) => {
         el.addEventListener('click', async (e) => {
           const value = el.getAttribute('data-copy');
@@ -1037,13 +2355,12 @@
             showToast('Email copied — ' + value);
             setTimeout(() => el.classList.remove('copied'), 1800);
           } catch {
-            // fall back to mailto if clipboard fails
             window.location.href = el.getAttribute('href');
           }
         });
       });
 
-      // ── Publication year filter ────────────────────────────────
+      // ── Publication filter ─────────────────────────────────
       const filter = document.getElementById('pubFilter');
       const pubItems = document.querySelectorAll('#pubItems .item');
       if (filter) {
@@ -1054,13 +2371,124 @@
           btn.classList.add('active');
           const year = btn.dataset.year;
           pubItems.forEach((it) => {
-            const show = year === 'all' || it.dataset.year === year;
-            it.classList.toggle('hidden', !show);
+            it.classList.toggle('hidden', !(year === 'all' || it.dataset.year === year));
           });
         });
       }
 
-      // ── Keyboard shortcuts (J/K to move between sections) ──────
+      // ── HINT POPOVERS ──────────────────────────────────────
+      const popover = document.getElementById('hintPopover');
+      const stage = document.getElementById('hintStage');
+      const labelEl = document.getElementById('hintLabel');
+      const subEl = document.getElementById('hintSub');
+      let activeHint = null;
+      let lastEyeMouseX = 0, lastEyeMouseY = 0;
+
+      const positionPopover = (clientX, clientY) => {
+        const pad = 12;
+        const pw = popover.offsetWidth;
+        const ph = popover.offsetHeight;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        let x = clientX + 16;
+        let y = clientY - ph - 12;
+        if (x + pw > vw - pad) x = clientX - pw - 16;
+        if (x < pad) x = pad;
+        if (y < pad) y = clientY + 18;
+        if (y + ph > vh - pad) y = vh - ph - pad;
+        popover.style.left = x + 'px';
+        popover.style.top = y + 'px';
+      };
+
+      const showHint = (key, x, y) => {
+        const data = HINTS[key];
+        if (!data) return;
+        stage.innerHTML = data.svg;
+        labelEl.textContent = data.label;
+        subEl.textContent = data.sub;
+        // ensure layout pass for offsetWidth
+        popover.classList.add('show');
+        popover.setAttribute('aria-hidden', 'false');
+        positionPopover(x, y);
+      };
+
+      const hideHint = () => {
+        popover.classList.remove('show');
+        popover.setAttribute('aria-hidden', 'true');
+        if (activeHint) activeHint.classList.remove('is-active');
+        activeHint = null;
+      };
+
+      // Track interactive eye iris with cursor (across the page)
+      window.addEventListener('pointermove', (e) => {
+        lastEyeMouseX = e.clientX;
+        lastEyeMouseY = e.clientY;
+        const iris = stage.querySelector('.eye-iris');
+        if (iris && popover.classList.contains('show')) {
+          const rect = popover.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          const dx = Math.max(-14, Math.min(14, (e.clientX - cx) * 0.08));
+          const dy = Math.max(-8, Math.min(8, (e.clientY - cy) * 0.08));
+          iris.setAttribute('transform', `translate(${dx} ${dy})`);
+        }
+      }, { passive: true });
+
+      document.querySelectorAll('.hint').forEach((span) => {
+        if (isTouch) {
+          // tap-to-show on touch devices
+          span.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (activeHint === span) {
+              hideHint();
+              return;
+            }
+            if (activeHint) activeHint.classList.remove('is-active');
+            activeHint = span;
+            span.classList.add('is-active');
+            const rect = span.getBoundingClientRect();
+            showHint(span.dataset.hint, rect.left + rect.width / 2, rect.top);
+          });
+        } else {
+          span.addEventListener('pointerenter', (e) => {
+            activeHint = span;
+            showHint(span.dataset.hint, e.clientX, e.clientY);
+          });
+          span.addEventListener('pointermove', (e) => {
+            if (popover.classList.contains('show')) {
+              positionPopover(e.clientX, e.clientY);
+            }
+          });
+          span.addEventListener('pointerleave', hideHint);
+        }
+      });
+
+      // Dismiss on outside tap (touch)
+      document.addEventListener('click', (e) => {
+        if (!isTouch) return;
+        if (e.target.closest('.hint')) return;
+        if (e.target.closest('.hint-popover')) return;
+        hideHint();
+      });
+
+      // ── Reader / TTS toggle ────────────────────────────────
+      const ttsBtn = document.getElementById('ttsToggle');
+      const ttsLabel = ttsBtn.querySelector('.label-text');
+      const setReader = (on) => {
+        document.body.classList.toggle('reader', on);
+        ttsBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        if (ttsLabel) ttsLabel.textContent = on ? 'Visual Mode' : 'Reader Mode';
+        try { localStorage.setItem('reader-mode', on ? '1' : '0'); } catch {}
+      };
+      try {
+        if (localStorage.getItem('reader-mode') === '1') setReader(true);
+      } catch {}
+      ttsBtn.addEventListener('click', () => {
+        setReader(!document.body.classList.contains('reader'));
+      });
+
+      // ── Keyboard shortcuts ─────────────────────────────────
       const sectionIds = ['about', 'education', 'projects', 'awards', 'publications', 'patents'];
       const currentSectionIndex = () => {
         const y = window.scrollY + window.innerHeight * 0.35;
@@ -1074,20 +2502,22 @@
       window.addEventListener('keydown', (e) => {
         const tag = (e.target.tagName || '').toLowerCase();
         if (tag === 'input' || tag === 'textarea' || e.metaKey || e.ctrlKey || e.altKey) return;
-        if (e.key === 'j' || e.key === 'J') {
+        const k = e.key.toLowerCase();
+        if (k === 'j') {
           const idx = Math.min(sectionIds.length - 1, currentSectionIndex() + 1);
           document.getElementById(sectionIds[idx]).scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else if (e.key === 'k' || e.key === 'K') {
+        } else if (k === 'k') {
           const idx = Math.max(0, currentSectionIndex() - 1);
           document.getElementById(sectionIds[idx]).scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else if (e.key === 'g' || e.key === 'G') {
+        } else if (k === 'g') {
           window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else if (k === 'r') {
+          setReader(!document.body.classList.contains('reader'));
         }
       });
 
-      // ── Keyboard hint (appears briefly on first load) ──────────
       const hint = document.getElementById('kbdHint');
-      if (hint && !('ontouchstart' in window) && window.innerWidth > 980) {
+      if (hint && !isTouch && window.innerWidth > 980) {
         setTimeout(() => hint.classList.add('show'), 1200);
         setTimeout(() => hint.classList.remove('show'), 6500);
       }
