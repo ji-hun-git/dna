@@ -7,8 +7,8 @@
   <title>Jihun Chae | KAIST HCI & AI Researcher</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Noto+Serif+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <style>
     /* ═══════════════════════════════════════════════════════════
        TOKENS
@@ -47,7 +47,7 @@
       font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'ss01' 1;
     }
     body.ko {
-      font-family: 'Pretendard', 'Inter', -apple-system, sans-serif;
+      font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
     }
 
     /* ── Custom selection (matches aurora) ───────────────── */
@@ -330,8 +330,9 @@
       color: #fff;
     }
     body.ko .name {
-      font-family: 'Pretendard', sans-serif;
-      letter-spacing: -0.02em;
+      font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.025em;
     }
 
     .role, .org { margin: 0; color: var(--muted); font-size: 0.96rem; }
@@ -584,23 +585,26 @@
     .hero h1 {
       margin: 0 0 22px;
       font-size: clamp(2rem, 4.2vw, 3.4rem);
-      line-height: 1.12;
-      letter-spacing: -0.025em;
+      line-height: 1.18;
+      letter-spacing: -0.015em;
       max-width: 920px;
       font-family: 'Fraunces', 'Inter', serif;
       font-weight: 500;
     }
     body.ko .hero h1 {
-      font-family: 'Noto Serif KR', 'Fraunces', serif;
-      letter-spacing: -0.015em;
-      line-height: 1.35;
-      font-weight: 500;
+      font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.035em;
+      line-height: 1.32;
     }
-    /* FIX: italic <em> needs breathing room — relaxed letter-spacing
-       and a right margin prevent descender collision with following word */
+    /* FIX: real italic Fraunces (loaded via Google Fonts ital axis) +
+       inline-block isolates the em box so adjacent text can never
+       kern into the descender of "y" in "play". */
     .hero h1 em {
       font-style: italic;
-      margin-right: 0.06em;
+      display: inline-block;
+      padding: 0 0.08em 0 0.04em;
+      vertical-align: baseline;
       background: linear-gradient(120deg, #c4b5fd 0%, #93c5fd 55%, #c4b5fd 100%);
       -webkit-background-clip: text;
               background-clip: text;
@@ -608,8 +612,7 @@
     }
     body.ko .hero h1 em {
       font-style: normal;
-      font-weight: 700;
-      margin-right: 0;
+      font-weight: 800;
       padding: 0 0.05em;
     }
 
@@ -639,8 +642,9 @@
       gap: 16px;
     }
     body.ko .section-title {
-      font-family: 'Noto Serif KR', 'Fraunces', serif;
-      font-weight: 600;
+      font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.025em;
     }
     .section-title .num {
       display: inline-block;
@@ -996,7 +1000,7 @@
       line-height: 1.78;
     }
     body.reader.ko {
-      font-family: 'Noto Serif KR', 'Fraunces', serif !important;
+      font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
       line-height: 1.85;
     }
     body.reader .aurora,
@@ -1042,7 +1046,7 @@
       margin-bottom: 10px !important;
     }
     body.reader.ko .name {
-      font-family: 'Noto Serif KR', serif !important;
+      font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
     }
     body.reader .role,
     body.reader .org {
@@ -1089,7 +1093,7 @@
       font-size: 2.2rem !important;
     }
     body.reader.ko .hero h1 {
-      font-family: 'Noto Serif KR', serif !important;
+      font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
     }
     body.reader .hero h1 em {
       background: none !important;
@@ -1116,7 +1120,7 @@
       font-size: 1.55rem !important;
     }
     body.reader.ko .section-title {
-      font-family: 'Noto Serif KR', serif !important;
+      font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
     }
     body.reader .section-title .num {
       color: #777 !important;
@@ -1150,7 +1154,7 @@
       font-size: 1.1rem !important;
     }
     body.reader.ko .item-title {
-      font-family: 'Noto Serif KR', serif !important;
+      font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
     }
     body.reader .item-meta {
       color: #555 !important;
@@ -1741,17 +1745,14 @@
       });
 
       // ── Language toggle ───────────────────────────────────
+      // English is always the default on first landing — no persistence.
       const langBtn = document.getElementById('langToggle');
       const langLabel = document.getElementById('langLabel');
       const setLang = (ko) => {
         document.body.classList.toggle('ko', ko);
         document.documentElement.lang = ko ? 'ko' : 'en';
         langLabel.textContent = ko ? 'English' : '한국어';
-        try { localStorage.setItem('lang', ko ? 'ko' : 'en'); } catch {}
       };
-      try {
-        if (localStorage.getItem('lang') === 'ko') setLang(true);
-      } catch {}
       langBtn.addEventListener('click', () => {
         setLang(!document.body.classList.contains('ko'));
       });
