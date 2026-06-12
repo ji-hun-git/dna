@@ -14,8 +14,8 @@
        TOKENS
        ═══════════════════════════════════════════════════════════ */
     :root {
-      --bg: #07070a;
-      --bg2: #0c0c12;
+      --bg: #07070b;
+      --bg2: #0b0b13;
       --text: #f5f5f7;
       --muted: #babac4;
       --soft: #8b8b95;
@@ -23,6 +23,8 @@
       --line-strong: rgba(255,255,255,0.14);
       --shadow: 0 20px 60px rgba(0,0,0,0.32);
       --wrap: 1180px;
+      --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+      --ease-spring: cubic-bezier(0.34, 1.4, 0.44, 1);
 
       /* Section accent colors */
       --c-education: 251, 191, 36;
@@ -50,14 +52,12 @@
       font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
     }
 
-    /* ── Custom selection (matches aurora) ───────────────── */
     ::selection {
       background: rgba(96,165,250,0.32);
       color: #fff;
       text-shadow: none;
     }
 
-    /* ── Accessible keyboard focus ───────────────────────── */
     *:focus { outline: none; }
     *:focus-visible {
       outline: 2px solid rgba(96,165,250,0.75);
@@ -66,31 +66,15 @@
     }
     a:focus-visible { outline-offset: 4px; }
 
-    /* ── Typography micro-defaults ───────────────────────── */
-    h1, h2, h3, h4, .section-title, .name, .item-title {
-      text-wrap: balance;
-    }
-    p, .item-desc, .lead, .intro {
-      text-wrap: pretty;
-    }
+    h1, h2, h3, h4, .section-title, .name, .item-title { text-wrap: balance; }
+    p, .item-desc, .lead, .intro { text-wrap: pretty; }
 
     /* ═══════════════════════════════════════════════════════════
        LANGUAGE TOGGLE (CSS-only visibility)
-
-       Selectors are scoped to body descendants so they NEVER match
-       the <html> element (which receives a lang attr for screen
-       readers). Explicit `display` values per element type instead
-       of `revert` — broader browser support and preserves things
-       like .side-list's `display: grid`.
        ═══════════════════════════════════════════════════════════ */
-
-    /* Hide all Korean by default */
     body [lang="ko"] { display: none; }
-
-    /* When body.ko is active, hide English */
     body.ko [lang="en"] { display: none; }
 
-    /* …and show Korean with the correct display value */
     body.ko span[lang="ko"],
     body.ko em[lang="ko"],
     body.ko a[lang="ko"],
@@ -112,7 +96,6 @@
     body.ko .side-list[lang="ko"],
     body.ko .contact-list[lang="ko"] { display: grid; }
 
-    /* Safety net: background stays dark whatever else happens */
     body:not(.reader) { background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); }
 
     /* ═══════════════════════════════════════════════════════════
@@ -153,7 +136,6 @@
     }
     body.no-cursor .ambient { opacity: 0; }
 
-    /* ── Subtle film grain overlay (analog warmth) ───────── */
     .grain {
       position: fixed;
       inset: 0;
@@ -206,13 +188,14 @@
       font: 600 0.82rem/1 'Inter', 'Pretendard', sans-serif;
       letter-spacing: 0.01em;
       cursor: pointer;
-      transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, color 0.22s ease;
+      transition: transform 0.25s var(--ease-spring), border-color 0.22s ease, background 0.22s ease, color 0.22s ease;
     }
     .pill-btn:hover {
       transform: translateY(-1px);
       border-color: var(--line-strong);
       background: rgba(20,20,26,0.92);
     }
+    .pill-btn:active { transform: translateY(0) scale(0.97); }
     .pill-btn .icon {
       width: 14px;
       height: 14px;
@@ -235,7 +218,7 @@
       z-index: 1;
       width: min(var(--wrap), calc(100% - 40px));
       margin: 0 auto;
-      padding: 36px 0 96px;
+      padding: 36px 0 0;
     }
 
     .mobile-nav { display: none; }
@@ -266,7 +249,7 @@
       backdrop-filter: blur(18px) saturate(140%);
       -webkit-backdrop-filter: blur(18px) saturate(140%);
       transform-style: preserve-3d;
-      transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.28s ease, box-shadow 0.28s ease, background 0.28s ease;
+      transition: transform 0.4s var(--ease-out), border-color 0.28s ease, box-shadow 0.28s ease, background 0.28s ease;
       will-change: transform;
     }
     .profile-card::before {
@@ -436,7 +419,7 @@
       padding: 6px 10px 6px 14px;
       color: var(--soft);
       border-radius: 10px;
-      transition: color 0.25s ease, background 0.25s ease, padding-left 0.3s ease;
+      transition: color 0.25s ease, background 0.25s ease, padding-left 0.3s var(--ease-spring);
     }
     .section-nav a::before {
       content: "";
@@ -481,7 +464,20 @@
       margin-top: 24px;
       box-shadow: 0 12px 28px rgba(0,0,0,0.18);
       transition: box-shadow 0.22s ease, filter 0.22s ease;
+      overflow: hidden;
     }
+    .button::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -80%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(100deg, transparent, rgba(255,255,255,0.85), transparent);
+      transform: skewX(-18deg);
+      transition: left 0.6s var(--ease-out);
+    }
+    .button:hover::before { left: 130%; }
     .button:hover {
       box-shadow: 0 16px 34px rgba(0,0,0,0.24);
       filter: brightness(1.02);
@@ -489,9 +485,9 @@
     .button .arrow {
       display: inline-block;
       margin-left: 8px;
-      transition: transform 0.25s ease;
+      transition: transform 0.25s var(--ease-spring);
     }
-    .button:hover .arrow { transform: translateX(3px); }
+    .button:hover .arrow { transform: translateX(4px); }
 
     /* ═══════════════════════════════════════════════════════════
        MAIN CONTENT
@@ -502,23 +498,52 @@
       padding-top: 8px;
     }
 
-    .hero { margin-bottom: 56px; }
-
-    /* ── Hero stagger reveal on first load ────────────────── */
-    .hero > * {
-      opacity: 0;
-      transform: translateY(8px);
-      transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+    /* ── HERO with the signature: an endless match between two
+         autonomous agents, faintly playing in the background ── */
+    .hero {
+      position: relative;
+      margin-bottom: 26px;
     }
-    body.hero-loaded .hero > * {
+    .pong-stage {
+      position: absolute;
+      inset: -12px -8px -4px;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.9;
+      -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
+              mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
+    }
+    .pong-stage canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .hero > *:not(.pong-stage) { position: relative; z-index: 1; }
+
+    /* Hero entrance: clip-reveal with focus pull */
+    .hero > .eyebrow-row,
+    .hero > h1,
+    .hero > p {
+      opacity: 0;
+      transform: translateY(18px);
+      filter: blur(6px);
+      transition:
+        opacity 0.9s var(--ease-out),
+        transform 0.9s var(--ease-out),
+        filter 0.9s var(--ease-out);
+    }
+    body.hero-loaded .hero > .eyebrow-row,
+    body.hero-loaded .hero > h1,
+    body.hero-loaded .hero > p {
       opacity: 1;
       transform: translateY(0);
+      filter: blur(0);
     }
     body.hero-loaded .hero > .eyebrow-row { transition-delay: 0.05s; }
-    body.hero-loaded .hero > h1            { transition-delay: 0.15s; }
-    body.hero-loaded .hero > p             { transition-delay: 0.30s; }
-    body.hero-loaded .hero > p:nth-of-type(n+3) { transition-delay: 0.40s; }
-    body.hero-loaded .hero > p:nth-of-type(n+5) { transition-delay: 0.50s; }
+    body.hero-loaded .hero > h1            { transition-delay: 0.18s; }
+    body.hero-loaded .hero > p             { transition-delay: 0.34s; }
+    body.hero-loaded .hero > p:nth-of-type(n+3) { transition-delay: 0.46s; }
+    body.hero-loaded .hero > p:nth-of-type(n+5) { transition-delay: 0.58s; }
 
     .eyebrow-row {
       display: flex;
@@ -556,7 +581,6 @@
       50% { opacity: 0.35; }
     }
 
-    /* ── Live clock pill (Daejeon time) ───────────────────── */
     .meta-clock {
       display: inline-flex;
       align-items: center;
@@ -597,18 +621,25 @@
       letter-spacing: -0.035em;
       line-height: 1.32;
     }
-    /* FIX: real italic Fraunces (loaded via Google Fonts ital axis) +
-       inline-block isolates the em box so adjacent text can never
-       kern into the descender of "y" in "play". */
     .hero h1 em {
+      position: relative;
       font-style: italic;
       display: inline-block;
       padding: 0 0.08em 0 0.04em;
       vertical-align: baseline;
-      background: linear-gradient(120deg, #c4b5fd 0%, #93c5fd 55%, #c4b5fd 100%);
+      background: linear-gradient(120deg, #c4b5fd 0%, #93c5fd 40%, #f0abfc 60%, #c4b5fd 100%);
+      background-size: 250% 100%;
+      background-position: 0% 50%;
       -webkit-background-clip: text;
               background-clip: text;
       -webkit-text-fill-color: transparent;
+    }
+    body.hero-loaded .hero h1 em {
+      animation: shimmer 2.6s var(--ease-out) 0.7s 1 both;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
     }
     body.ko .hero h1 em {
       font-style: normal;
@@ -624,10 +655,54 @@
     }
     .lead strong, .intro strong { color: #fff; font-weight: 600; }
 
+    /* ── Keyword ticker: a quiet stream of the research vocabulary ── */
+    .ticker {
+      position: relative;
+      margin: 8px 0 46px;
+      padding: 13px 0;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+              mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    }
+    .ticker-track {
+      display: inline-flex;
+      gap: 0;
+      white-space: nowrap;
+      will-change: transform;
+      animation: ticker 46s linear infinite;
+    }
+    .ticker:hover .ticker-track { animation-play-state: paused; }
+    .ticker-track > span {
+      display: inline-flex;
+      align-items: center;
+      color: var(--soft);
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    body.ko .ticker-track > span {
+      text-transform: none;
+      letter-spacing: 0.02em;
+      font-family: 'Pretendard', sans-serif;
+      font-size: 0.85rem;
+    }
+    .ticker-track > span::after {
+      content: "✦";
+      margin: 0 22px;
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.22);
+    }
+    @keyframes ticker {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
     .section { margin-top: 68px; }
     .section:first-of-type { margin-top: 0; }
 
-    /* Editorial section title with monospace number */
     .section-title {
       position: relative;
       margin: 0 0 22px;
@@ -655,14 +730,13 @@
       letter-spacing: 0.06em;
       font-style: normal;
       font-variant-numeric: tabular-nums;
-      transition: color 1.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-                  text-shadow 1.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-                  transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transition: color 1.2s var(--ease-out),
+                  text-shadow 1.2s var(--ease-out),
+                  transform 0.6s var(--ease-out);
     }
     .section.in-view .section-title .num {
       color: rgb(var(--accent, 255 255 255));
     }
-    /* Anchor click pulse: number briefly glows when section is navigated to */
     .section-title.pulsed .num {
       animation: num-pulse 1.4s ease-out;
     }
@@ -679,7 +753,7 @@
       width: 0;
       height: 1px;
       background: linear-gradient(90deg, rgba(var(--accent, 255 255 255), 0.85), transparent);
-      transition: width 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transition: width 1.2s var(--ease-out);
     }
     .section.in-view .section-title::after { width: 80px; }
 
@@ -712,25 +786,49 @@
       padding: 6px 12px;
       border-radius: 999px;
       cursor: pointer;
-      transition: color 0.2s ease, background 0.25s ease;
+      transition: color 0.2s ease, background 0.25s ease, transform 0.2s var(--ease-spring);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .filter button:hover { color: #fff; }
+    .filter button:active { transform: scale(0.95); }
+    .filter button .count {
+      font-size: 0.7rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-variant-numeric: tabular-nums;
+      color: var(--soft);
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      line-height: 1.5;
+      transition: color 0.2s ease, border-color 0.2s ease;
+    }
     .filter button.active {
       color: #0d1018;
       background: linear-gradient(135deg, #d1fae5, #a7f3d0);
       font-weight: 600;
+    }
+    .filter button.active .count {
+      color: #0d1018;
+      border-color: rgba(13,16,24,0.25);
     }
 
     .items { display: grid; gap: 14px; }
 
     .reveal {
       opacity: 0;
-      transform: translateY(14px);
-      transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transform: translateY(16px);
+      filter: blur(4px);
+      transition:
+        opacity 0.8s var(--ease-out),
+        transform 0.8s var(--ease-out),
+        filter 0.8s var(--ease-out);
     }
     .reveal.visible {
       opacity: 1;
       transform: translateY(0);
+      filter: blur(0);
     }
 
     .item {
@@ -743,7 +841,7 @@
       -webkit-backdrop-filter: blur(16px) saturate(130%);
       box-shadow: 0 8px 24px rgba(0,0,0,0.10);
       overflow: hidden;
-      transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+      transition: transform 0.3s var(--ease-spring),
                   border-color 0.28s ease,
                   background 0.28s ease,
                   box-shadow 0.28s ease;
@@ -835,6 +933,33 @@
     }
 
     /* ═══════════════════════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════════════════════ */
+    .site-footer {
+      margin-top: 84px;
+      padding: 26px 0 34px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      color: var(--soft);
+      font-size: 0.82rem;
+    }
+    .site-footer .ft-mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+    .site-footer a {
+      color: var(--muted);
+      border-bottom: 1px solid rgba(255,255,255,0.18);
+      transition: color 0.2s ease, border-color 0.2s ease;
+    }
+    .site-footer a:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
+
+    /* ═══════════════════════════════════════════════════════════
        TOAST + KBD HINT
        ═══════════════════════════════════════════════════════════ */
     .toast {
@@ -852,7 +977,7 @@
       font-size: 0.86rem;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.3s ease, transform 0.3s ease;
+      transition: opacity 0.3s ease, transform 0.3s var(--ease-spring);
       z-index: 200;
       box-shadow: 0 12px 36px rgba(0,0,0,0.5);
     }
@@ -927,7 +1052,6 @@
     @media (max-width: 700px) {
       .page {
         width: calc(100% - 18px);
-        padding-bottom: 60px;
       }
       .mobile-nav {
         display: flex;
@@ -973,6 +1097,9 @@
       .two-col { grid-template-columns: 1fr; }
       .item { padding: 16px 16px 16px 18px; }
       .section { margin-top: 48px; }
+      .ticker { margin-bottom: 36px; }
+      .pong-stage { display: none; }
+      .site-footer { margin-top: 56px; }
 
       .top-controls { gap: 6px; }
       .pill-btn .label-text { display: none; }
@@ -1014,6 +1141,8 @@
     body.reader .profile-image,
     body.reader .divider,
     body.reader .eyebrow .dot,
+    body.reader .pong-stage,
+    body.reader .ticker,
     body.reader .button {
       display: none !important;
     }
@@ -1140,6 +1269,7 @@
       padding: 16px 0 !important;
       transform: none !important;
       opacity: 1 !important;
+      filter: none !important;
     }
     body.reader .two-col {
       grid-template-columns: 1fr !important;
@@ -1183,11 +1313,18 @@
     body.reader .reveal {
       opacity: 1 !important;
       transform: none !important;
+      filter: none !important;
     }
     body.reader .hero > * {
       opacity: 1 !important;
       transform: none !important;
+      filter: none !important;
     }
+    body.reader .site-footer {
+      border-top-color: rgba(0,0,0,0.14);
+      color: #555 !important;
+    }
+    body.reader .site-footer a { color: #333 !important; border-color: rgba(0,0,0,0.3); }
     body.reader .pill-btn {
       background: rgba(255,255,255,0.95) !important;
       color: #111 !important;
@@ -1204,9 +1341,10 @@
         animation: none !important;
         transition: none !important;
       }
-      .reveal { opacity: 1; transform: none; }
-      .hero > * { opacity: 1 !important; transform: none !important; }
-      .aurora, .ambient { display: none; }
+      .reveal { opacity: 1; transform: none; filter: none; }
+      .hero > * { opacity: 1 !important; transform: none !important; filter: none !important; }
+      .aurora, .ambient, .pong-stage { display: none; }
+      .ticker-track { animation: none !important; }
     }
   </style>
 </head>
@@ -1294,6 +1432,9 @@
 
       <main class="content">
         <section class="hero section" id="about">
+          <div class="pong-stage" aria-hidden="true">
+            <canvas id="pongCanvas"></canvas>
+          </div>
           <div class="eyebrow-row">
             <div class="eyebrow">
               <span class="dot"></span>
@@ -1315,6 +1456,17 @@
           <p class="intro" lang="en">Let's connect to discuss <strong>AI</strong>, <strong>HCI</strong>, and what <strong>the future of play</strong> will look like when autonomous agents evolve alongside us — and for those who come after.</p>
           <p class="intro" lang="ko"><strong>AI</strong>, <strong>HCI</strong>, 그리고 자율적 에이전트가 우리와 함께, 또 우리 다음 세대를 위해 진화해 갈 때 <strong>놀이의 미래</strong>가 어떤 모습일지 함께 이야기 나누고 싶습니다.</p>
         </section>
+
+        <div class="ticker" aria-hidden="true">
+          <div class="ticker-track" lang="en">
+            <span>Human-AI Interaction</span><span>Ludic AI</span><span>Game Accessibility</span><span>Play Experience</span><span>Inclusive Design</span><span>Generative Agents</span><span>Serious Games</span><span>XR Interfaces</span>
+            <span>Human-AI Interaction</span><span>Ludic AI</span><span>Game Accessibility</span><span>Play Experience</span><span>Inclusive Design</span><span>Generative Agents</span><span>Serious Games</span><span>XR Interfaces</span>
+          </div>
+          <div class="ticker-track" lang="ko">
+            <span>인간-AI 상호작용</span><span>루딕 AI</span><span>게임 접근성</span><span>놀이 경험</span><span>포용적 디자인</span><span>생성형 에이전트</span><span>시리어스 게임</span><span>XR 인터페이스</span>
+            <span>인간-AI 상호작용</span><span>루딕 AI</span><span>게임 접근성</span><span>놀이 경험</span><span>포용적 디자인</span><span>생성형 에이전트</span><span>시리어스 게임</span><span>XR 인터페이스</span>
+          </div>
+        </div>
 
         <section class="section" id="education">
           <h3 class="section-title"><span class="num">01</span><span lang="en">Education</span><span lang="ko">학력</span></h3>
@@ -1558,6 +1710,17 @@
             </div>
           </div>
         </section>
+
+        <footer class="site-footer">
+          <span>
+            <span lang="en">© 2026 Jihun Chae · KAIST Graduate School of Culture Technology</span>
+            <span lang="ko">© 2026 채지훈 · KAIST 문화기술대학원</span>
+          </span>
+          <span class="ft-mono" id="pongScoreLine" title="Two agents have been playing in the hero since you arrived.">
+            <span lang="en">AI vs AI · 0 : 0</span>
+            <span lang="ko">AI 대 AI · 0 : 0</span>
+          </span>
+        </footer>
       </main>
     </div>
   </div>
@@ -1708,10 +1871,22 @@
         });
       });
 
-      // ── Publication filter ─────────────────────────────────
+      // ── Publication filter (+ per-year counts) ─────────────
       const filter = document.getElementById('pubFilter');
       const pubItems = document.querySelectorAll('#pubItems .item');
       if (filter) {
+        // Counts encode real information: how many entries each tab holds.
+        filter.querySelectorAll('button').forEach((btn) => {
+          const year = btn.dataset.year;
+          const n = year === 'all'
+            ? pubItems.length
+            : [...pubItems].filter((it) => it.dataset.year === year).length;
+          const badge = document.createElement('span');
+          badge.className = 'count';
+          badge.textContent = n;
+          btn.appendChild(badge);
+        });
+
         filter.addEventListener('click', (e) => {
           const btn = e.target.closest('button');
           if (!btn) return;
@@ -1726,11 +1901,9 @@
 
       // ── Reader / TTS toggle ────────────────────────────────
       const ttsBtn = document.getElementById('ttsToggle');
-      const ttsLabel = document.getElementById('ttsLabel');
       const setReader = (on) => {
         document.body.classList.toggle('reader', on);
         ttsBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        // Update both EN and KO labels
         const enLabel = ttsBtn.querySelector('[lang="en"]');
         const koLabel = ttsBtn.querySelector('[lang="ko"]');
         if (enLabel) enLabel.textContent = on ? 'Visual' : 'Reader';
@@ -1803,7 +1976,6 @@
       };
       updateClock();
       setInterval(updateClock, 30000);
-      // Also re-render the clock when language switches
       langBtn.addEventListener('click', () => setTimeout(updateClock, 0));
 
       // ── Hero entrance: stagger on first paint ────────────
@@ -1822,16 +1994,172 @@
           if (!section) return;
           const title = section.querySelector('.section-title');
           if (!title) return;
-          // Wait for smooth-scroll to roughly complete, then pulse
           setTimeout(() => {
             title.classList.remove('pulsed');
-            // Force reflow so the animation re-triggers if pulsed twice
             void title.offsetWidth;
             title.classList.add('pulsed');
             setTimeout(() => title.classList.remove('pulsed'), 1500);
           }, 500);
         });
       });
+
+      /* ═════════════════════════════════════════════════════
+         SIGNATURE: THE ENDLESS MATCH
+         Two autonomous agents quietly playing in the hero —
+         the research question, rendered: what changes when
+         agents enter our ludic space? They were here first.
+         ═════════════════════════════════════════════════════ */
+      const pongCanvas = document.getElementById('pongCanvas');
+      if (pongCanvas && !prefersReduced) {
+        const ctx = pongCanvas.getContext('2d');
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        let W = 0, H = 0, raf = null, visible = true;
+
+        const G = {
+          ball: { x: 0, y: 0, vx: 0, vy: 0, trail: [] },
+          L: { y: 0, vy: 0, err: 0 },   // left agent
+          R: { y: 0, vy: 0, err: 0 },   // right agent
+          score: [0, 0],
+          paddleH: 70,
+          serveTimer: 0
+        };
+
+        const scoreLine = document.getElementById('pongScoreLine');
+        const updateScoreLine = () => {
+          if (!scoreLine) return;
+          const en = scoreLine.querySelector('[lang="en"]');
+          const ko = scoreLine.querySelector('[lang="ko"]');
+          if (en) en.textContent = 'AI vs AI · ' + G.score[0] + ' : ' + G.score[1];
+          if (ko) ko.textContent = 'AI 대 AI · ' + G.score[0] + ' : ' + G.score[1];
+        };
+
+        const resize = () => {
+          const r = pongCanvas.parentElement.getBoundingClientRect();
+          W = r.width; H = r.height;
+          pongCanvas.width = W * dpr;
+          pongCanvas.height = H * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          G.paddleH = Math.max(54, Math.min(90, H * 0.16));
+          if (!G.ball.vx) serve(Math.random() < 0.5 ? -1 : 1);
+        };
+
+        const serve = (dir) => {
+          G.ball.x = W / 2;
+          G.ball.y = H * (0.3 + Math.random() * 0.4);
+          const speed = Math.max(2.1, W / 520);
+          const angle = (Math.random() * 0.6 - 0.3);
+          G.ball.vx = Math.cos(angle) * speed * dir;
+          G.ball.vy = Math.sin(angle) * speed + (Math.random() - 0.5) * 0.8;
+          G.ball.trail = [];
+          // each agent re-rolls its imperfection on every serve
+          G.L.err = (Math.random() - 0.5) * G.paddleH * 1.3;
+          G.R.err = (Math.random() - 0.5) * G.paddleH * 1.3;
+        };
+
+        const step = () => {
+          const b = G.ball;
+          b.x += b.vx; b.y += b.vy;
+          b.trail.push({ x: b.x, y: b.y });
+          if (b.trail.length > 14) b.trail.shift();
+
+          if (b.y < 6 || b.y > H - 6) { b.vy *= -1; b.y = Math.max(6, Math.min(H - 6, b.y)); }
+
+          // Agents: ease toward the ball with deliberate imperfection
+          const chase = (P, targetActive) => {
+            const target = targetActive ? b.y + P.err : H / 2;
+            P.vy += (target - P.y) * 0.012;
+            P.vy *= 0.88;
+            P.y += P.vy;
+            P.y = Math.max(G.paddleH / 2 + 4, Math.min(H - G.paddleH / 2 - 4, P.y));
+          };
+          chase(G.L, b.vx < 0);
+          chase(G.R, b.vx > 0);
+
+          const padX = 14;
+          const hit = (P, x, dir) => {
+            if (Math.abs(b.x - x) < 8 && b.vx * dir < 0 &&
+                Math.abs(b.y - P.y) < G.paddleH / 2 + 6) {
+              b.vx = Math.abs(b.vx) * dir * 1.03;
+              b.vy += (b.y - P.y) * 0.06;
+              b.vx = Math.max(-5.5, Math.min(5.5, b.vx));
+              P.err = (Math.random() - 0.5) * G.paddleH * 1.3;
+            }
+          };
+          hit(G.L, padX, 1);
+          hit(G.R, W - padX, -1);
+
+          if (b.x < -20) { G.score[1]++; updateScoreLine(); serve(1); }
+          if (b.x > W + 20) { G.score[0]++; updateScoreLine(); serve(-1); }
+        };
+
+        const draw = () => {
+          ctx.clearRect(0, 0, W, H);
+
+          // faint center line
+          ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+          ctx.setLineDash([3, 9]);
+          ctx.beginPath();
+          ctx.moveTo(W / 2, 8);
+          ctx.lineTo(W / 2, H - 8);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // trail
+          G.ball.trail.forEach((p, i) => {
+            const a = (i / G.ball.trail.length) * 0.10;
+            ctx.fillStyle = 'rgba(165,180,252,' + a.toFixed(3) + ')';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // ball
+          ctx.fillStyle = 'rgba(196,181,253,0.34)';
+          ctx.beginPath();
+          ctx.arc(G.ball.x, G.ball.y, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          // paddles
+          const padX = 14;
+          ctx.fillStyle = 'rgba(255,255,255,0.13)';
+          const drawPad = (x, y) => {
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(x - 1.5, y - G.paddleH / 2, 3, G.paddleH, 2);
+            else ctx.rect(x - 1.5, y - G.paddleH / 2, 3, G.paddleH);
+            ctx.fill();
+          };
+          drawPad(padX, G.L.y);
+          drawPad(W - padX, G.R.y);
+
+          // tiny score, mono
+          ctx.fillStyle = 'rgba(255,255,255,0.10)';
+          ctx.font = '600 11px ui-monospace, SFMono-Regular, Menlo, monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText(String(G.score[0]).padStart(2, '0'), W / 2 - 16, 18);
+          ctx.textAlign = 'left';
+          ctx.fillText(String(G.score[1]).padStart(2, '0'), W / 2 + 16, 18);
+        };
+
+        const loop = () => {
+          if (visible && !document.hidden && !document.body.classList.contains('reader')) {
+            step();
+            draw();
+          }
+          raf = requestAnimationFrame(loop);
+        };
+
+        // pause work when hero is off-screen
+        if ('IntersectionObserver' in window) {
+          new IntersectionObserver((entries) => {
+            visible = entries[0].isIntersecting;
+          }, { threshold: 0 }).observe(pongCanvas);
+        }
+
+        G.L.y = G.R.y = 100;
+        resize();
+        window.addEventListener('resize', resize, { passive: true });
+        loop();
+      }
     })();
   </script>
 </body>
