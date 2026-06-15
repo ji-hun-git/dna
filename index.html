@@ -213,6 +213,50 @@
       stroke-linejoin: round;
     }
 
+    /* ── Floating Laboratory entry — right edge of the screen ── */
+    .lab-fab {
+      position: fixed;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 111;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 12px 17px;
+      border-radius: 999px;
+      border: 1px solid var(--line-strong);
+      background: linear-gradient(120deg, rgba(96,165,250,0.22), rgba(167,139,250,0.16), rgba(52,211,153,0.14));
+      backdrop-filter: blur(16px) saturate(150%);
+      -webkit-backdrop-filter: blur(16px) saturate(150%);
+      color: #fff;
+      font: 700 0.86rem/1 'Inter', 'Pretendard', sans-serif;
+      letter-spacing: 0.01em;
+      box-shadow: 0 16px 38px rgba(0,0,0,0.34);
+      transition: transform 0.28s var(--ease-spring), box-shadow 0.25s ease, border-color 0.22s ease;
+    }
+    body.ko .lab-fab { font-family: 'Pretendard Variable', 'Pretendard', sans-serif; }
+    .lab-fab:hover {
+      transform: translateY(-50%) translateX(-4px);
+      border-color: rgba(96,165,250,0.6);
+      box-shadow: 0 22px 48px rgba(0,0,0,0.44);
+    }
+    .lab-fab:active { transform: translateY(-50%) translateX(-1px) scale(0.98); }
+    .lab-fab .icon { width: 16px; height: 16px; display: inline-flex; }
+    .lab-fab .icon svg {
+      width: 100%; height: 100%;
+      stroke: currentColor; fill: none;
+      stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .lab-fab .arrow { opacity: 0.7; transition: transform 0.25s var(--ease-spring); }
+    .lab-fab:hover .arrow { transform: translateX(3px); }
+    .lab-fab .dot {
+      width: 6px; height: 6px; border-radius: 999px;
+      background: #9af0a4; box-shadow: 0 0 10px rgba(154,240,164,0.85);
+      animation: blink 2.4s ease-in-out infinite;
+    }
+    @media (max-width: 980px) { .lab-fab { display: none; } }
+
     .page {
       position: relative;
       z-index: 1;
@@ -1143,6 +1187,7 @@
     body.reader .eyebrow .dot,
     body.reader .pong-stage,
     body.reader .ticker,
+    body.reader .lab-fab,
     body.reader .button {
       display: none !important;
     }
@@ -1367,6 +1412,15 @@
     </button>
   </div>
 
+  <a class="lab-fab" href="laboratory.html" aria-label="Open the Laboratory simulation hub">
+    <span class="icon" aria-hidden="true">
+      <svg viewBox="0 0 20 20"><path d="M8 2h4M9 2v5l-4.6 8.2a2 2 0 0 0 1.7 3h7.8a2 2 0 0 0 1.7-3L11 7V2"/></svg>
+    </span>
+    <span class="dot" aria-hidden="true"></span>
+    <span lang="en">Laboratory</span><span lang="ko">실험실</span>
+    <span class="arrow" aria-hidden="true">↗</span>
+  </a>
+
   <div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
 
   <div class="page">
@@ -1411,7 +1465,6 @@
             <li><a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
             <li><a href="https://scholar.google.com/citations?user=OjxItRUAAAAJ&amp;hl=en" target="_blank" rel="noopener noreferrer"><span lang="en">Google Scholar</span><span lang="ko">구글 스칼라</span></a></li>
             <li><a href="https://orcid.org/0009-0005-7425-3806" target="_blank" rel="noopener noreferrer">ORCID</a></li>
-            <li><a href="laboratory.html">Laboratory Hub</a></li>
           </ul>
 
           <div class="divider"></div>
