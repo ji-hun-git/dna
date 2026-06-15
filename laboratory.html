@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Jihun Chae Laboratory - a modular simulation hub for visual experiments, game prototypes, AI agents, and mathematical visualizations." />
-  <title>Jihun Chae | Laboratory & Simulation Hub</title>
+  <meta name="description" content="Jihun Chae Simulations - an interactive hub of AI agents, games, reinforcement learning, physics, and 3D simulations." />
+  <title>Jihun Chae | Simulations</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" />
-  <link rel="stylesheet" href="lab/lab.css?v=20260615-lab7" />
+  <link rel="stylesheet" href="lab/lab.css?v=20260615-lab8" />
 </head>
 <body>
   <div class="aurora" aria-hidden="true"></div>
@@ -19,12 +19,8 @@
     <header class="lab-nav" aria-label="Laboratory navigation">
       <a href="index.html" class="brand-link">
         <span class="brand-mark">JC</span>
-        <span>Laboratory</span>
+        <span>Simulations</span>
       </a>
-      <nav class="nav-links" aria-label="Page sections">
-        <a href="#console">Simulations</a>
-        <a href="#architecture">Architecture</a>
-      </nav>
       <div class="lab-actions">
         <a class="solid-button" href="index.html">Back to CV</a>
       </div>
@@ -41,6 +37,7 @@
               <span><strong id="metricRenderers">0</strong> renderers</span>
               <span><strong id="metricLive">0</strong> live</span>
             </div>
+            <div class="rail-filter" id="railFilter"></div>
           </div>
           <div class="project-list" id="projectCards"></div>
         </aside>
@@ -51,29 +48,6 @@
         </section>
 
         <aside class="control-panel console-controls" id="controlMount" aria-label="Controls and parameters"></aside>
-      </section>
-
-      <section id="architecture" aria-labelledby="architecture-title">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Architecture</p>
-            <h2 id="architecture-title">A static-site foundation that can become React later.</h2>
-          </div>
-          <p>
-            This version fits the current GitHub Pages site with no build step. The same
-            boundaries map cleanly to React, TypeScript, MDX, KaTeX, and worker-backed renderers.
-          </p>
-        </div>
-        <div class="architecture-grid">
-          <div class="panel">
-            <h3>Recommended folder structure</h3>
-            <pre class="code-block"><code id="architectureTree"></code></pre>
-          </div>
-          <div class="panel">
-            <h3>Adding a new simulation</h3>
-            <ol class="steps" id="addSteps"></ol>
-          </div>
-        </div>
       </section>
     </main>
 
@@ -98,6 +72,6 @@
       }, { passive: true });
     })();
   </script>
-  <script type="module" src="lab/lab.js?v=20260615-lab7"></script>
+  <script type="module" src="lab/lab.js?v=20260615-lab8"></script>
 </body>
 </html>

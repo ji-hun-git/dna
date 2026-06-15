@@ -37,6 +37,7 @@ const sharedPerformanceNotes = [
 export const labProjects = [
   {
     id: "behavior-prompt-gridworld",
+    group: "Agents",
     title: "Behavior-Prompt Gridworld",
     subtitle: "Can a prompt teach an agent the rule it cannot see?",
     description:
@@ -93,6 +94,7 @@ export const labProjects = [
   },
   {
     id: "arc-adaptive-unit",
+    group: "Physics",
     title: "ARC Adaptive Unit",
     subtitle: "A drone or mech that re-controls itself when you break it",
     description:
@@ -146,6 +148,7 @@ export const labProjects = [
   },
   {
     id: "particle-policy-field",
+    group: "Generative",
     title: "Particle Policy Field",
     subtitle: "Steering agents through a living vector field",
     description:
@@ -204,6 +207,7 @@ export const labProjects = [
   },
   {
     id: "agent-arena",
+    group: "Agents",
     title: "Agent Arena",
     subtitle: "A compact sandbox for competing policies",
     description:
@@ -260,6 +264,7 @@ export const labProjects = [
   },
   {
     id: "maze-chase",
+    group: "Games",
     title: "Maze Chase",
     subtitle: "Pursuit and evasion in a generated maze",
     description:
@@ -307,6 +312,7 @@ export const labProjects = [
   },
   {
     id: "snake-growth",
+    group: "Games",
     title: "Snake Growth",
     subtitle: "A snake AI that tries not to trap itself",
     description:
@@ -354,6 +360,7 @@ export const labProjects = [
   },
   {
     id: "light-cycle-arena",
+    group: "Games",
     title: "Light Cycle Arena",
     subtitle: "Two autonomous cycles, last wall standing",
     description:
@@ -401,6 +408,7 @@ export const labProjects = [
   },
   {
     id: "frozen-lake",
+    group: "Learning",
     title: "FrozenLake Value Iteration",
     subtitle: "Solve the MDP, watch the policy slip",
     description:
@@ -451,6 +459,7 @@ export const labProjects = [
   },
   {
     id: "cartpole-control",
+    group: "Physics",
     title: "CartPole Control",
     subtitle: "An ensemble of pole balancers",
     description:
@@ -501,6 +510,7 @@ export const labProjects = [
   },
   {
     id: "boids-3d",
+    group: "Physics",
     title: "Boids 3D",
     subtitle: "Flocking in a volume, not a plane",
     description:
@@ -551,6 +561,7 @@ export const labProjects = [
   },
   {
     id: "optimizer-landscape-3d",
+    group: "Learning",
     title: "Optimizer Landscape 3D",
     subtitle: "Agents descending a loss surface",
     description:
@@ -601,6 +612,7 @@ export const labProjects = [
   },
   {
     id: "ludic-geometry",
+    group: "Generative",
     title: "Ludic Geometry Notebook",
     subtitle: "Interactive math sketches for play and HCI research",
     description:
@@ -658,6 +670,7 @@ export const labProjects = [
   },
   {
     id: "reaction-diffusion",
+    group: "Generative",
     title: "Reaction-Diffusion",
     subtitle: "Two chemicals, one emergent skin",
     description:
@@ -709,6 +722,7 @@ export const labProjects = [
   },
   {
     id: "q-learning-gridworld",
+    group: "Learning",
     title: "Q-Learning Gridworld",
     subtitle: "A value table that learns on screen",
     description:
@@ -759,6 +773,7 @@ export const labProjects = [
   },
   {
     id: "pathfinding-search",
+    group: "Agents",
     title: "Pathfinding Search",
     subtitle: "A*, Dijkstra, Greedy, and BFS, side by side",
     description:
@@ -806,6 +821,7 @@ export const labProjects = [
   },
   {
     id: "wumpus-world",
+    group: "Agents",
     title: "Wumpus World",
     subtitle: "Reasoning under partial observation",
     description:
@@ -853,6 +869,7 @@ export const labProjects = [
   },
   {
     id: "nbody-gravity-3d",
+    group: "Physics",
     title: "N-Body Gravity 3D",
     subtitle: "Orbits, clusters, and collisions in 3D",
     description:
@@ -902,6 +919,7 @@ export const labProjects = [
   },
   {
     id: "neuroevolution-flappy",
+    group: "Learning",
     title: "Neuroevolution Flappy",
     subtitle: "A population that learns to play by evolution",
     description:
@@ -952,6 +970,7 @@ export const labProjects = [
   },
   {
     id: "connect-four",
+    group: "Games",
     title: "Connect Four - Minimax",
     subtitle: "Two adversarial agents, alpha-beta search",
     description:
@@ -1002,6 +1021,7 @@ export const labProjects = [
   },
   {
     id: "game-2048",
+    group: "Games",
     title: "2048 - Expectimax",
     subtitle: "An agent playing the tiles",
     description:
@@ -1052,6 +1072,7 @@ export const labProjects = [
   },
   {
     id: "minesweeper",
+    group: "Games",
     title: "Minesweeper - Logic Solver",
     subtitle: "Constraint propagation, then the least-risky guess",
     description:
@@ -1097,6 +1118,302 @@ export const labProjects = [
     futureWork: [
       "Add full subset/equation-solving for tank-style deductions.",
       "Compute exact frontier probabilities for optimal guessing.",
+      ...sharedPerformanceNotes
+    ]
+  },
+  {
+    id: "double-pendulum",
+    group: "Physics",
+    title: "Double Pendulum",
+    subtitle: "Deterministic chaos you can watch",
+    description:
+      "A field of double pendulums with almost identical starts. They move together briefly, then sensitive dependence on initial conditions pulls them apart.",
+    category: "Simulation",
+    tags: ["Chaos", "Dynamics", "ODE", "Physics"],
+    thumbnail: "Near-identical pendulums fan out as tiny differences blow up exponentially.",
+    route: "#double-pendulum",
+    status: "live",
+    difficulty: "intermediate",
+    createdAt: "2026-06-15",
+    mathTopics: ["Nonlinear dynamics", "Chaos", "Lyapunov divergence"],
+    simulationType: "Chaotic ODE",
+    variations: [
+      { id: "fan", label: "Fan", description: "A spread of starting angles." },
+      { id: "pair", label: "Pair", description: "Two almost-identical pendulums." },
+      { id: "storm", label: "Storm", description: "Many fast pendulums." },
+      { id: "damped", label: "Damped", description: "Energy bleeds away over time." }
+    ],
+    controlLabels: { count: "Pendulums", speed: "Sim speed", turbulence: "Start spread", attraction: "Damping", trails: "Tip trails" },
+    metricLabels: { energy: "Mean speed", order: "Divergence", spread: "Spread", fps: "FPS" },
+    overview: [
+      "Each pendulum integrates the exact double-pendulum equations of motion. With a spread of nearly identical starting angles, the cloud tracks itself for a moment and then scatters, which is the butterfly effect made visible.",
+      "The divergence line on the chart measures how fast the tips pull apart - the signature of a positive Lyapunov exponent."
+    ],
+    facts: [
+      { label: "Model", value: "Exact double-pendulum EoM" },
+      { label: "Integrator", value: "Semi-implicit Euler, substepped" },
+      { label: "Count", value: "40-260 pendulums" },
+      { label: "Signals", value: "Speed, divergence, spread" }
+    ],
+    equations: [
+      "\\ddot\\theta_1 = \\frac{-g(2m_1+m_2)\\sin\\theta_1 - \\dots}{\\ell_1(2m_1+m_2-m_2\\cos 2\\Delta)}",
+      "\\delta(t) \\approx \\delta_0\\,e^{\\lambda t}"
+    ],
+    futureWork: [
+      "Estimate the Lyapunov exponent numerically and plot it.",
+      "Add a Poincare section view.",
+      ...sharedPerformanceNotes
+    ]
+  },
+  {
+    id: "verlet-cloth",
+    group: "Physics",
+    title: "Verlet Cloth",
+    subtitle: "Mass-spring fabric you can grab and tear",
+    description:
+      "A grid of point masses joined by distance constraints, integrated with Verlet and relaxed each frame. Pinned at the top, blown by wind, and grabbable.",
+    category: "Simulation",
+    tags: ["Verlet", "Soft Body", "Constraints", "Physics"],
+    thumbnail: "Drag the cursor through the cloth to push it; stress the links until they tear.",
+    route: "#verlet-cloth",
+    status: "live",
+    difficulty: "intermediate",
+    createdAt: "2026-06-15",
+    mathTopics: ["Verlet integration", "Distance constraints", "Soft-body physics"],
+    simulationType: "Mass-spring system",
+    variations: [
+      { id: "drape", label: "Drape", description: "Calm hanging cloth." },
+      { id: "breeze", label: "Breeze", description: "A steady wind." },
+      { id: "flag", label: "Flag", description: "A strong gust that ripples it." },
+      { id: "loose", label: "Loose", description: "Fewer relaxation passes, stretchier." }
+    ],
+    controlLabels: { count: "Resolution", speed: "Sim speed", turbulence: "Wind", attraction: "Stiffness", trails: "Show nodes" },
+    metricLabels: { energy: "Motion", order: "Intact links", spread: "Drop", fps: "FPS" },
+    overview: [
+      "Verlet integration stores position history instead of velocity, so constraints can be satisfied by simply moving points back toward their rest distance. A few relaxation passes per frame make the fabric stiffer.",
+      "Drag the cursor to push the cloth around; pull hard enough and over-stretched links snap and the cloth tears."
+    ],
+    facts: [
+      { label: "Integrator", value: "Verlet (position-based)" },
+      { label: "Constraints", value: "Distance links, relaxed" },
+      { label: "Interaction", value: "Drag and tear" },
+      { label: "Signals", value: "Motion, intact links, drop" }
+    ],
+    equations: [
+      "x_{t+1} = 2x_t - x_{t-1} + a\\,\\Delta t^2",
+      "\\lVert p_i - p_j\\rVert \\to L_{ij}"
+    ],
+    futureWork: [
+      "Add self-collision and a draped sphere.",
+      "Expose tear threshold and bending constraints.",
+      ...sharedPerformanceNotes
+    ]
+  },
+  {
+    id: "falling-sand",
+    group: "Physics",
+    title: "Falling Sand",
+    subtitle: "A cellular-automaton playground",
+    description:
+      "Sand piles and slides, water flows and levels out, fire climbs wood and burns out - all from simple per-cell rules. Paint materials with the cursor.",
+    category: "Simulation",
+    tags: ["Cellular Automata", "Granular", "Fluids", "Sandbox"],
+    thumbnail: "Paint sand, water, and fire; watch local rules make global behavior.",
+    route: "#falling-sand",
+    status: "live",
+    difficulty: "intro",
+    createdAt: "2026-06-15",
+    mathTopics: ["Cellular automata", "Granular flow", "Emergence"],
+    simulationType: "Cellular Automaton",
+    variations: [
+      { id: "sand", label: "Sand", description: "Granular piling and sliding." },
+      { id: "water", label: "Water", description: "Flowing, self-leveling liquid." },
+      { id: "fire", label: "Fire", description: "Fire that spreads on wood." },
+      { id: "mixed", label: "Mixed", description: "Sand and water together." }
+    ],
+    controlLabels: { count: "Resolution", speed: "Steps/frame", turbulence: "Emit rate", attraction: "Brush size", trails: "Smooth" },
+    metricLabels: { energy: "Filled", order: "Fire", spread: "Coverage", fps: "FPS" },
+    overview: [
+      "Every cell follows a tiny rule - move down, slide diagonally, flow sideways if liquid, spread if fire - and the bulk behavior (piles, puddles, flame fronts) emerges for free.",
+      "Paint with the cursor and the simulation reacts immediately. A classic demonstration that complexity needs no central plan."
+    ],
+    facts: [
+      { label: "Model", value: "Falling-sand cellular automaton" },
+      { label: "Materials", value: "Sand / water / wood / fire / wall" },
+      { label: "Interaction", value: "Paint with the cursor" },
+      { label: "Signals", value: "Filled, fire, coverage" }
+    ],
+    equations: ["g_{t+1}(x,y) = R\\big(g_t(\\mathcal{N}(x,y))\\big)"],
+    futureWork: [
+      "Add steam, oil, acid, and plants with reaction rules.",
+      "Move the grid update into a Web Worker.",
+      ...sharedPerformanceNotes
+    ]
+  },
+  {
+    id: "plinko",
+    group: "Physics",
+    title: "Plinko / Galton Board",
+    subtitle: "The bell curve, built by bouncing",
+    description:
+      "Balls fall through a triangular peg field, deflecting at each row, and land in bins. A normal distribution emerges from pure physics.",
+    category: "Simulation",
+    tags: ["Probability", "Physics", "Central Limit", "Collisions"],
+    thumbnail: "Hundreds of independent left/right bounces add up to a bell curve.",
+    route: "#plinko",
+    status: "live",
+    difficulty: "intro",
+    createdAt: "2026-06-15",
+    mathTopics: ["Probability", "Central limit theorem", "Elastic collisions"],
+    simulationType: "Physics + statistics",
+    variations: [
+      { id: "classic", label: "Classic", description: "A standard Galton board." },
+      { id: "tall", label: "Tall", description: "More rows, sharper curve." },
+      { id: "chaotic", label: "Chaotic", description: "Noisy bounces, wider spread." },
+      { id: "gentle", label: "Gentle", description: "Low gravity, slow fall." }
+    ],
+    controlLabels: { count: "Rows / rate", speed: "Sim speed", turbulence: "Bounce noise", attraction: "Gravity", trails: "Ball trails" },
+    metricLabels: { energy: "In flight", order: "Normality", spread: "Peak", fps: "FPS" },
+    overview: [
+      "Each ball makes a sequence of near-random left/right deflections off the pegs. Summing many independent steps is exactly the setup of the central limit theorem, so the histogram of landing bins converges to a normal distribution.",
+      "More rows make the curve sharper; more bounce noise widens it."
+    ],
+    facts: [
+      { label: "Physics", value: "Gravity + peg reflection" },
+      { label: "Statistics", value: "Central limit theorem" },
+      { label: "Output", value: "Live landing histogram" },
+      { label: "Signals", value: "In flight, normality, peak" }
+    ],
+    equations: ["S_n = \\sum_{i=1}^{n} X_i \\ \\xrightarrow{d}\\ \\mathcal{N}(0,\\sigma^2)"],
+    futureWork: [
+      "Overlay the fitted Gaussian and report the fit error.",
+      "Let users bias the pegs to show skewed distributions.",
+      ...sharedPerformanceNotes
+    ]
+  },
+  {
+    id: "lunar-lander",
+    group: "Physics",
+    title: "Lunar Lander",
+    subtitle: "Autonomous soft landing",
+    description:
+      "A squad of landers fall under gravity toward a pad. Each runs a PD controller on descent rate and horizontal offset, firing thrusters on a fuel budget.",
+    category: "Simulation",
+    tags: ["Control", "Physics", "PD", "Autonomy"],
+    thumbnail: "Touch down slow and on the pad to score; come in hot and it crashes.",
+    route: "#lunar-lander",
+    status: "live",
+    difficulty: "advanced",
+    createdAt: "2026-06-15",
+    mathTopics: ["Classical control", "Newtonian motion", "PD control"],
+    simulationType: "Control + physics",
+    variations: [
+      { id: "squad", label: "Squad", description: "A group landing together." },
+      { id: "solo", label: "Solo", description: "A single lander, up close." },
+      { id: "windy", label: "Windy", description: "Lateral disturbances." },
+      { id: "lowgain", label: "Low gain", description: "A sluggish controller that overshoots." }
+    ],
+    controlLabels: { count: "Squad size", speed: "Sim speed", turbulence: "Wind", attraction: "Controller gain", trails: "Flight trails" },
+    metricLabels: { energy: "Success", order: "Upright", spread: "Fuel left", fps: "FPS" },
+    overview: [
+      "The controller targets a safe descent rate that shrinks near the ground, throttling the main engine to track it, and steers sideways toward the pad. Fuel is limited, so it cannot just hover.",
+      "Watch the success rate as you change the gain: too low and it overshoots and crashes, too high and it fights the wind cleanly."
+    ],
+    facts: [
+      { label: "Dynamics", value: "Gravity + thrust + fuel" },
+      { label: "Controller", value: "PD on descent and offset" },
+      { label: "Goal", value: "Slow, upright, on the pad" },
+      { label: "Signals", value: "Success, upright, fuel" }
+    ],
+    equations: [
+      "u = K_p(\\dot y^* - \\dot y) + K_x\\,\\Delta x",
+      "\\ddot y = g - \\tfrac{u}{m}"
+    ],
+    futureWork: [
+      "Add terrain and an optimal fuel-minimizing controller.",
+      "Compare PD against a learned landing policy.",
+      ...sharedPerformanceNotes
+    ]
+  },
+  {
+    id: "breakout-ai",
+    group: "Games",
+    title: "Breakout AI",
+    subtitle: "A paddle that reads the bounce",
+    description:
+      "The paddle predicts where the ball will cross its line, reflecting off the walls, and slides to intercept with a reaction lag. It clears the brick field as the ball speeds up.",
+    category: "Game Prototype",
+    tags: ["Game AI", "Prediction", "Physics", "Arcade"],
+    thumbnail: "The agent forecasts the ball's path and positions the paddle to meet it.",
+    route: "#breakout-ai",
+    status: "live",
+    difficulty: "intermediate",
+    createdAt: "2026-06-15",
+    mathTopics: ["Trajectory prediction", "Reflection", "Reaction control"],
+    simulationType: "Arcade game AI",
+    variations: [
+      { id: "classic", label: "Classic", description: "A balanced agent and field." },
+      { id: "wide", label: "Wide", description: "A bigger brick wall." },
+      { id: "fast", label: "Fast", description: "A quick ball that tests reactions." },
+      { id: "shaky", label: "Shaky", description: "A noisy, less accurate agent." }
+    ],
+    controlLabels: { count: "Brick wall", speed: "Ball speed", turbulence: "Aim noise", attraction: "Reaction", trails: "Ball trail" },
+    metricLabels: { energy: "Bricks", order: "Endurance", spread: "Cleared", fps: "FPS" },
+    overview: [
+      "Each step the agent forward-simulates the ball (bouncing off side walls) to find where it will reach the paddle line, then eases toward that point at a fixed reaction speed.",
+      "A faster ball and more aim noise make interception harder; a higher reaction makes the paddle snappier."
+    ],
+    facts: [
+      { label: "Agent", value: "Forward-prediction paddle" },
+      { label: "Physics", value: "Ball reflection + brick hits" },
+      { label: "Tuning", value: "Reaction speed and noise" },
+      { label: "Signals", value: "Bricks, endurance, cleared" }
+    ],
+    equations: ["x_{\\text{hit}} = \\operatorname{reflect}\\big(x + v\\,t_{\\text{paddle}}\\big)"],
+    futureWork: [
+      "Add power-ups and a learned controller comparison.",
+      "Score interception error over time.",
+      ...sharedPerformanceNotes
+    ]
+  },
+  {
+    id: "tetris-ai",
+    group: "Games",
+    title: "Tetris AI",
+    subtitle: "A heuristic stacker",
+    description:
+      "For every piece the agent tries each rotation and column, drops it, and scores the result by lines cleared, aggregate height, holes, and bumpiness, then plays the best.",
+    category: "Game Prototype",
+    tags: ["Game AI", "Heuristics", "Search", "Arcade"],
+    thumbnail: "The agent evaluates every placement and keeps the stack flat and hole-free.",
+    route: "#tetris-ai",
+    status: "live",
+    difficulty: "advanced",
+    createdAt: "2026-06-15",
+    mathTopics: ["Heuristic evaluation", "Search", "Feature weighting"],
+    simulationType: "Arcade game AI",
+    variations: [
+      { id: "classic", label: "Classic", description: "Balanced weights." },
+      { id: "fast", label: "Fast", description: "Quick placement." },
+      { id: "greedy", label: "Greedy", description: "Heavily rewards clearing lines." },
+      { id: "noisy", label: "Noisy", description: "Adds evaluation noise." }
+    ],
+    controlLabels: { count: "Restart delay", speed: "Pace", turbulence: "Eval noise", attraction: "Line weight", trails: "Ghost piece" },
+    metricLabels: { energy: "Lines", order: "Low stack", spread: "Fill", fps: "FPS" },
+    overview: [
+      "The agent enumerates every rotation and column for the current piece, simulates the drop, and scores the resulting board with a weighted sum of features. The classic Dellacherie-style weights keep the stack low, flat, and free of holes.",
+      "Raise the line weight to make it gamble on clears; add noise to watch it make mistakes."
+    ],
+    facts: [
+      { label: "Search", value: "All rotations x columns" },
+      { label: "Features", value: "Height / holes / lines / bumpiness" },
+      { label: "Board", value: "Standard 10 x 20" },
+      { label: "Signals", value: "Lines, stack height, fill" }
+    ],
+    equations: ["\\text{score} = w_\\ell L - w_h H - w_o O - w_b B"],
+    futureWork: [
+      "Add lookahead with the next piece and a hold slot.",
+      "Auto-tune the weights with evolution.",
       ...sharedPerformanceNotes
     ]
   }

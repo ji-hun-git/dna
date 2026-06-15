@@ -1,29 +1,43 @@
-import { labArchitecture, labProjects } from "./experiments.js?v=20260615-lab7";
+import { labArchitecture, labProjects } from "./experiments.js?v=20260615-lab8";
 import { mountAgentArena } from "./simulations/agent-arena.js?v=20260615-variations";
 import { mountLudicGeometry } from "./simulations/ludic-geometry.js?v=20260615-variations";
 import { mountParticleField } from "./simulations/particle-field.js?v=20260615-variations";
-import { mountGridworldPrompt } from "./simulations/gridworld-prompt.js?v=20260615-lab7";
-import { mountMazeChase } from "./simulations/maze-chase.js?v=20260615-lab7";
-import { mountSnakeSwarm } from "./simulations/snake-swarm.js?v=20260615-lab7";
-import { mountLightCycle } from "./simulations/light-cycle.js?v=20260615-lab7";
-import { mountFrozenLake } from "./simulations/frozen-lake.js?v=20260615-lab7";
-import { mountCartpole } from "./simulations/cartpole.js?v=20260615-lab7";
-import { mountBoids3d } from "./simulations/boids-3d.js?v=20260615-lab7";
-import { mountTerrainDescent3d } from "./simulations/terrain-descent-3d.js?v=20260615-lab7";
-import { mountReactionDiffusion } from "./simulations/reaction-diffusion.js?v=20260615-lab7";
-import { mountQLearning } from "./simulations/q-learning.js?v=20260615-lab7";
-import { mountPathfinding } from "./simulations/pathfinding.js?v=20260615-lab7";
-import { mountWumpus } from "./simulations/wumpus.js?v=20260615-lab7";
-import { mountNBody3d } from "./simulations/nbody-3d.js?v=20260615-lab7";
-import { mountNeuroFlappy } from "./simulations/neuroevolution-flappy.js?v=20260615-lab7";
-import { mountConnectFour } from "./simulations/connect-four.js?v=20260615-lab7";
-import { mountGame2048 } from "./simulations/game-2048.js?v=20260615-lab7";
-import { mountMinesweeper } from "./simulations/minesweeper.js?v=20260615-lab7";
-import { mountArcRobot } from "./simulations/arc-adaptive-robot.js?v=20260615-lab7";
+import { mountGridworldPrompt } from "./simulations/gridworld-prompt.js?v=20260615-lab8";
+import { mountMazeChase } from "./simulations/maze-chase.js?v=20260615-lab8";
+import { mountSnakeSwarm } from "./simulations/snake-swarm.js?v=20260615-lab8";
+import { mountLightCycle } from "./simulations/light-cycle.js?v=20260615-lab8";
+import { mountFrozenLake } from "./simulations/frozen-lake.js?v=20260615-lab8";
+import { mountCartpole } from "./simulations/cartpole.js?v=20260615-lab8";
+import { mountBoids3d } from "./simulations/boids-3d.js?v=20260615-lab8";
+import { mountTerrainDescent3d } from "./simulations/terrain-descent-3d.js?v=20260615-lab8";
+import { mountReactionDiffusion } from "./simulations/reaction-diffusion.js?v=20260615-lab8";
+import { mountQLearning } from "./simulations/q-learning.js?v=20260615-lab8";
+import { mountPathfinding } from "./simulations/pathfinding.js?v=20260615-lab8";
+import { mountWumpus } from "./simulations/wumpus.js?v=20260615-lab8";
+import { mountNBody3d } from "./simulations/nbody-3d.js?v=20260615-lab8";
+import { mountNeuroFlappy } from "./simulations/neuroevolution-flappy.js?v=20260615-lab8";
+import { mountConnectFour } from "./simulations/connect-four.js?v=20260615-lab8";
+import { mountGame2048 } from "./simulations/game-2048.js?v=20260615-lab8";
+import { mountMinesweeper } from "./simulations/minesweeper.js?v=20260615-lab8";
+import { mountArcRobot } from "./simulations/arc-adaptive-robot.js?v=20260615-lab8";
+import { mountDoublePendulum } from "./simulations/double-pendulum.js?v=20260615-lab8";
+import { mountVerletCloth } from "./simulations/verlet-cloth.js?v=20260615-lab8";
+import { mountFallingSand } from "./simulations/falling-sand.js?v=20260615-lab8";
+import { mountPlinko } from "./simulations/plinko.js?v=20260615-lab8";
+import { mountLunarLander } from "./simulations/lunar-lander.js?v=20260615-lab8";
+import { mountBreakoutAI } from "./simulations/breakout-ai.js?v=20260615-lab8";
+import { mountTetrisAI } from "./simulations/tetris-ai.js?v=20260615-lab8";
 
 const rendererRegistry = {
   "behavior-prompt-gridworld": mountGridworldPrompt,
   "arc-adaptive-unit": mountArcRobot,
+  "double-pendulum": mountDoublePendulum,
+  "verlet-cloth": mountVerletCloth,
+  "falling-sand": mountFallingSand,
+  "plinko": mountPlinko,
+  "lunar-lander": mountLunarLander,
+  "breakout-ai": mountBreakoutAI,
+  "tetris-ai": mountTetrisAI,
   "agent-arena": mountAgentArena,
   "neuroevolution-flappy": mountNeuroFlappy,
   "connect-four": mountConnectFour,
@@ -59,6 +73,11 @@ const ACCENTS = {
 };
 const accentFor = (category) => ACCENTS[category] || "96, 165, 250";
 
+// The project list is grouped and filterable so the (long) catalog stays tidy.
+const GROUP_ORDER = ["Agents", "Games", "Learning", "Physics", "Generative"];
+let currentFilter = "All";
+let currentProjectId = null;
+
 // Synced math highlight: the equation matching the simulation's current step
 // lights up. A sim sets api.stage to drive it; otherwise it auto-cycles through
 // the equations while the sim runs.
@@ -67,6 +86,7 @@ let hlIdx = 0;
 let hlAccum = 0;
 let hlLast = 0;
 const projectCards = $("#projectCards");
+const railFilter = $("#railFilter");
 const viewportMount = $("#viewportMount");
 const detailMount = $("#detailMount");
 const controlMount = $("#controlMount");
@@ -85,25 +105,56 @@ function statusLabel(status) {
   return status.replace("-", " ");
 }
 
-function renderProjectCards(selectedId) {
-  projectCards.innerHTML = labProjects
-    .map((project) => `
-      <button class="project-card ${project.id === selectedId ? "active" : ""}" type="button" data-project-id="${project.id}" data-category="${project.category}" style="--accent: ${accentFor(project.category)}">
-        <span class="status-line">
-          <span class="badge ${project.status === "live" ? "live" : ""}">${statusLabel(project.status)}</span>
-          <span class="tiny mono">${project.simulationType}</span>
-        </span>
-        <span class="card-kicker">${project.category}</span>
-        <h2>${project.title}</h2>
-        <p>${project.description}</p>
-        <div class="tags">
-          ${project.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}
-          <span class="tag">${project.variations.length} variations</span>
-        </div>
-      </button>
-    `)
-    .join("");
+function sortedProjects() {
+  return [...labProjects].sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group));
+}
 
+function cardHTML(project, selectedId) {
+  return `
+    <button class="project-card ${project.id === selectedId ? "active" : ""}" type="button" data-project-id="${project.id}" data-category="${project.category}" style="--accent: ${accentFor(project.category)}">
+      <span class="status-line">
+        <span class="badge ${project.status === "live" ? "live" : ""}">${statusLabel(project.status)}</span>
+        <span class="tiny mono">${project.simulationType}</span>
+      </span>
+      <span class="card-kicker">${project.category}</span>
+      <h2>${project.title}</h2>
+      <p>${project.description}</p>
+      <div class="tags">
+        ${project.tags.slice(0, 3).map((tag) => `<span class="tag">${tag}</span>`).join("")}
+        <span class="tag">${project.variations.length} modes</span>
+      </div>
+    </button>`;
+}
+
+function renderFilter() {
+  if (!railFilter) return;
+  const counts = {};
+  labProjects.forEach((p) => { counts[p.group] = (counts[p.group] || 0) + 1; });
+  const chips = ["All", ...GROUP_ORDER];
+  railFilter.innerHTML = chips
+    .map((g) => `<button class="chip ${g === currentFilter ? "active" : ""}" type="button" data-filter="${g}">${g}<span class="chip-n">${g === "All" ? labProjects.length : counts[g] || 0}</span></button>`)
+    .join("");
+  railFilter.querySelectorAll("[data-filter]").forEach((b) => {
+    b.addEventListener("click", () => {
+      currentFilter = b.dataset.filter;
+      renderFilter();
+      renderProjectCards(currentProjectId);
+    });
+  });
+}
+
+function renderProjectCards(selectedId) {
+  const list = sortedProjects().filter((p) => currentFilter === "All" || p.group === currentFilter);
+  let html = "";
+  let lastGroup = null;
+  for (const p of list) {
+    if (currentFilter === "All" && p.group !== lastGroup) {
+      html += `<div class="rail-group">${p.group}</div>`;
+      lastGroup = p.group;
+    }
+    html += cardHTML(p, selectedId);
+  }
+  projectCards.innerHTML = html;
   projectCards.querySelectorAll("[data-project-id]").forEach((card) => {
     card.addEventListener("click", () => selectProject(card.dataset.projectId, true));
   });
@@ -323,6 +374,7 @@ function markEquationParts() {
 
 function selectProject(id, updateHash = false) {
   const project = labProjects.find((item) => item.id === id) || labProjects[0];
+  currentProjectId = project.id;
   if (updateHash) history.replaceState(null, "", project.route);
   renderProjectCards(project.id);
   const accent = accentFor(project.category);
@@ -445,7 +497,7 @@ function boot() {
   if (heroMetrics.renderers) heroMetrics.renderers.textContent = String(Object.keys(rendererRegistry).length);
   if (heroMetrics.live) heroMetrics.live.textContent = String(labProjects.filter((project) => project.status === "live").length);
 
-  renderArchitecture();
+  renderFilter();
   if (heroCanvas) runHeroCanvas();
 
   // Cursor spotlight on project cards (matches the main site's card glow).
