@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Jihun Chae Laboratory - a modular simulation hub for visual experiments, game prototypes, AI agents, and mathematical visualizations." />
+  <title>Jihun Chae | Laboratory & Simulation Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" />
+  <link rel="stylesheet" href="lab/lab.css?v=20260615-lab3" />
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"></div>
+  <div class="ambient" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="lab-shell">
+    <header class="lab-nav" aria-label="Laboratory navigation">
+      <a href="index.html" class="brand-link">
+        <span class="brand-mark">JC</span>
+        <span>Laboratory</span>
+      </a>
+      <nav class="nav-links" aria-label="Page sections">
+        <a href="#projects">Projects</a>
+        <a href="#workspace">Workspace</a>
+        <a href="#architecture">Architecture</a>
+      </nav>
+      <div class="lab-actions">
+        <a class="ghost-button" href="interactive.html">Interactive CV</a>
+        <a class="solid-button" href="index.html">Back to CV</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Simulation Hub · Ludic AI</p>
+          <h1 id="page-title">A studio for <em>simulations</em> that play.</h1>
+          <p class="hero-lead">
+            A growing catalog of live simulations — behavior-prompt gridworlds, self-playing
+            classic games, reinforcement-learning environments, and real 3D scenes — each in the
+            same research interface with controls, runtime signals, and the math behind it.
+            Built to study what changes when agents enter our ludic space.
+          </p>
+          <div class="hero-actions">
+            <a class="solid-button" href="#workspace">Open live simulation</a>
+            <a class="ghost-button" href="#projects">Browse the catalog</a>
+          </div>
+          <div class="signal-strip" aria-label="Laboratory summary">
+            <div class="signal"><strong id="metricProjects">0</strong><span>registered projects</span></div>
+            <div class="signal"><strong id="metricRenderers">0</strong><span>live renderer</span></div>
+            <div class="signal"><strong id="metricModules">0</strong><span>modular files</span></div>
+            <div class="signal"><strong id="metricLive">0</strong><span>running simulation</span></div>
+          </div>
+        </div>
+
+        <div class="hero-instrument" aria-label="Ambient laboratory visualization">
+          <canvas id="heroCanvas"></canvas>
+          <div class="instrument-overlay">
+            <div class="instrument-top">
+              <span class="instrument-label">
+                <span class="tiny mono">Viewport</span>
+                <span class="readout">Ambient agent field</span>
+              </span>
+              <span class="badge live">online</span>
+            </div>
+            <div class="instrument-bottom">
+              <span class="instrument-label">
+                <span class="tiny mono">Template</span>
+                <span class="readout">Metadata -> docs -> controls -> analysis</span>
+              </span>
+              <span class="tiny mono">GitHub Pages ready</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="projects" aria-labelledby="projects-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Project Registry</p>
+            <h2 id="projects-title">Choose an experiment slot.</h2>
+          </div>
+          <p>
+            These cards are generated from reusable metadata. Future simulations, games,
+            and agent sandboxes can join the hub without rebuilding the main layout.
+          </p>
+        </div>
+        <div class="project-grid" id="projectCards"></div>
+      </section>
+
+      <section id="workspace" aria-labelledby="workspace-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Standardized Project Page</p>
+            <h2 id="workspace-title">Documentation, viewport, metrics, math, and controls.</h2>
+          </div>
+          <p>
+            The selected project renders into the same research interface, keeping future
+            prototypes visually consistent and easy to extend.
+          </p>
+        </div>
+        <div class="workspace" id="projectDetail"></div>
+      </section>
+
+      <section id="architecture" aria-labelledby="architecture-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Architecture</p>
+            <h2 id="architecture-title">A static-site foundation that can become React later.</h2>
+          </div>
+          <p>
+            This version fits the current GitHub Pages site with no build step. The same
+            boundaries map cleanly to React, TypeScript, MDX, KaTeX, and worker-backed renderers.
+          </p>
+        </div>
+        <div class="architecture-grid">
+          <div class="panel">
+            <h3>Recommended folder structure</h3>
+            <pre class="code-block"><code id="architectureTree"></code></pre>
+          </div>
+          <div class="panel">
+            <h3>Adding a new simulation</h3>
+            <ol class="steps" id="addSteps"></ol>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Jihun Chae Laboratory / Simulation Hub</span>
+      <span class="mono">visual simulations / games / AI agents / math</span>
+    </footer>
+  </div>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
+  <script>
+    // Ambient grid follows the cursor (mirrors the main site).
+    (function () {
+      let raf = null;
+      window.addEventListener('pointermove', (e) => {
+        if (raf) return;
+        raf = requestAnimationFrame(() => {
+          document.body.style.setProperty('--gx', e.clientX + 'px');
+          document.body.style.setProperty('--gy', e.clientY + 'px');
+          raf = null;
+        });
+      }, { passive: true });
+    })();
+  </script>
+  <script type="module" src="lab/lab.js?v=20260615-lab3"></script>
+</body>
+</html>
