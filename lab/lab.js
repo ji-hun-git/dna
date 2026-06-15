@@ -1,25 +1,25 @@
-import { labArchitecture, labProjects } from "./experiments.js?v=20260615-lab5";
+import { labArchitecture, labProjects } from "./experiments.js?v=20260615-lab7";
 import { mountAgentArena } from "./simulations/agent-arena.js?v=20260615-variations";
 import { mountLudicGeometry } from "./simulations/ludic-geometry.js?v=20260615-variations";
 import { mountParticleField } from "./simulations/particle-field.js?v=20260615-variations";
-import { mountGridworldPrompt } from "./simulations/gridworld-prompt.js?v=20260615-lab2";
-import { mountMazeChase } from "./simulations/maze-chase.js?v=20260615-lab2";
-import { mountSnakeSwarm } from "./simulations/snake-swarm.js?v=20260615-lab2";
-import { mountLightCycle } from "./simulations/light-cycle.js?v=20260615-lab2";
-import { mountFrozenLake } from "./simulations/frozen-lake.js?v=20260615-lab2";
-import { mountCartpole } from "./simulations/cartpole.js?v=20260615-lab2";
-import { mountBoids3d } from "./simulations/boids-3d.js?v=20260615-lab2";
-import { mountTerrainDescent3d } from "./simulations/terrain-descent-3d.js?v=20260615-lab2";
-import { mountReactionDiffusion } from "./simulations/reaction-diffusion.js?v=20260615-lab3";
-import { mountQLearning } from "./simulations/q-learning.js?v=20260615-lab3";
-import { mountPathfinding } from "./simulations/pathfinding.js?v=20260615-lab3";
-import { mountWumpus } from "./simulations/wumpus.js?v=20260615-lab3";
-import { mountNBody3d } from "./simulations/nbody-3d.js?v=20260615-lab3";
-import { mountNeuroFlappy } from "./simulations/neuroevolution-flappy.js?v=20260615-lab4";
-import { mountConnectFour } from "./simulations/connect-four.js?v=20260615-lab4";
-import { mountGame2048 } from "./simulations/game-2048.js?v=20260615-lab4";
-import { mountMinesweeper } from "./simulations/minesweeper.js?v=20260615-lab4";
-import { mountArcRobot } from "./simulations/arc-adaptive-robot.js?v=20260615-lab5";
+import { mountGridworldPrompt } from "./simulations/gridworld-prompt.js?v=20260615-lab7";
+import { mountMazeChase } from "./simulations/maze-chase.js?v=20260615-lab7";
+import { mountSnakeSwarm } from "./simulations/snake-swarm.js?v=20260615-lab7";
+import { mountLightCycle } from "./simulations/light-cycle.js?v=20260615-lab7";
+import { mountFrozenLake } from "./simulations/frozen-lake.js?v=20260615-lab7";
+import { mountCartpole } from "./simulations/cartpole.js?v=20260615-lab7";
+import { mountBoids3d } from "./simulations/boids-3d.js?v=20260615-lab7";
+import { mountTerrainDescent3d } from "./simulations/terrain-descent-3d.js?v=20260615-lab7";
+import { mountReactionDiffusion } from "./simulations/reaction-diffusion.js?v=20260615-lab7";
+import { mountQLearning } from "./simulations/q-learning.js?v=20260615-lab7";
+import { mountPathfinding } from "./simulations/pathfinding.js?v=20260615-lab7";
+import { mountWumpus } from "./simulations/wumpus.js?v=20260615-lab7";
+import { mountNBody3d } from "./simulations/nbody-3d.js?v=20260615-lab7";
+import { mountNeuroFlappy } from "./simulations/neuroevolution-flappy.js?v=20260615-lab7";
+import { mountConnectFour } from "./simulations/connect-four.js?v=20260615-lab7";
+import { mountGame2048 } from "./simulations/game-2048.js?v=20260615-lab7";
+import { mountMinesweeper } from "./simulations/minesweeper.js?v=20260615-lab7";
+import { mountArcRobot } from "./simulations/arc-adaptive-robot.js?v=20260615-lab7";
 
 const rendererRegistry = {
   "behavior-prompt-gridworld": mountGridworldPrompt,
@@ -109,7 +109,7 @@ function renderProjectCards(selectedId) {
   });
 }
 
-// CENTER — top: the live simulation viewport.
+// CENTER - top: the live simulation viewport.
 function viewportHTML(project) {
   const canRender = Boolean(rendererRegistry[project.id]);
   return `
@@ -131,7 +131,7 @@ function viewportHTML(project) {
   `;
 }
 
-// CENTER — bottom: live signals, the synced math, and the detail.
+// CENTER - bottom: live signals, the synced math, and the detail.
 function detailHTML(project) {
   const canRender = Boolean(rendererRegistry[project.id]);
   const metricLabels = project.metricLabels;
@@ -163,7 +163,7 @@ function detailHTML(project) {
     </section>
 
     <section class="panel panel-math" aria-labelledby="math-title">
-      <span class="tiny mono">Mathematical context — the lit step is live</span>
+      <span class="tiny mono">Mathematical context - the lit step is live</span>
       <h3 id="math-title">${project.mathTopics.join(" / ")}</h3>
       <div class="math-list">
         ${project.equations.map((equation) => `<div class="equation">\\[${equation}\\]</div>`).join("")}
@@ -191,7 +191,7 @@ function detailHTML(project) {
   `;
 }
 
-// RIGHT — controls and parameters.
+// RIGHT - controls and parameters.
 function controlHTML(project) {
   const canRender = Boolean(rendererRegistry[project.id]);
   return `
@@ -302,6 +302,25 @@ function renderMath() {
   }
 }
 
+// Tag the right-hand side of each rendered equation (everything after the main
+// relation), so the highlight lands on that sub-part instead of the whole box.
+function markEquationParts() {
+  currentEqEls.forEach((eq) => {
+    const html = eq.querySelector(".katex-html");
+    if (!html) return;
+    [...html.querySelectorAll(".eqk")].forEach((s) => s.classList.remove("eqk"));
+    const bases = [...html.children].filter((c) => c.classList && c.classList.contains("base"));
+    bases.forEach((base) => {
+      const kids = [...base.children].filter((c) => !c.classList || !c.classList.contains("strut"));
+      const relIdx = kids.findIndex((k) => k.classList && k.classList.contains("mrel"));
+      if (relIdx < 0) return;
+      for (let i = relIdx + 1; i < kids.length; i++) {
+        if (kids[i].classList) kids[i].classList.add("eqk");
+      }
+    });
+  });
+}
+
 function selectProject(id, updateHash = false) {
   const project = labProjects.find((item) => item.id === id) || labProjects[0];
   if (updateHash) history.replaceState(null, "", project.route);
@@ -316,6 +335,7 @@ function selectProject(id, updateHash = false) {
   mountSelectedSimulation(project);
   renderMath();
   currentEqEls = [...detailMount.querySelectorAll(".equation")];
+  markEquationParts();
   hlIdx = 0;
   hlAccum = 0;
   currentEqEls.forEach((el, i) => el.classList.toggle("eq-active", i === 0));

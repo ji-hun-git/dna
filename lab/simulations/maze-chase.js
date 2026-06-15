@@ -1,5 +1,5 @@
 /**
- * Maze Chase — a self-playing pursuit/evasion game in a generated maze.
+ * Maze Chase - a self-playing pursuit/evasion game in a generated maze.
  *
  * A prey agent runs a BFS toward pellets while keeping distance from hunters;
  * hunters descend a BFS distance field rooted at the prey. Maps the "Maze Chase"

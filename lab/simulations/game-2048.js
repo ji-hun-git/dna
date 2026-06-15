@@ -1,5 +1,5 @@
 /**
- * 2048 — Expectimax agent
+ * 2048 - Expectimax agent
  *
  * An agent plays 2048 by expectimax search: it maximizes over the four slides and
  * averages over the random tile spawns, scoring boards by empty cells,

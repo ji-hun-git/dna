@@ -1,10 +1,10 @@
 /**
- * CartPole Control — an ensemble of inverted-pendulum controllers.
+ * CartPole Control - an ensemble of inverted-pendulum controllers.
  *
  * Each lane runs the classic cartpole dynamics under a PD (and, for swing-up, an
  * energy-pumping) controller. The slider set scales controller gain, disturbance
  * noise, simulation speed, and ensemble size, so you can watch a population of
- * controllers stabilize — or fail — together. Maps the "CartPole Balance" template.
+ * controllers stabilize - or fail - together. Maps the "CartPole Balance" template.
  */
 
 import { createSimHarness, clamp } from "./_shared.js?v=20260615-lab2";

@@ -131,7 +131,7 @@ export function mountWumpus(refs) {
       return;
     }
 
-    // 2) No safe frontier — take the least-risky frontier guess.
+    // 2) No safe frontier - take the least-risky frontier guess.
     const frontier = [];
     const seen = new Set();
     for (const v of w.visited) {
@@ -203,7 +203,7 @@ export function mountWumpus(refs) {
 
     if (!w.plan || !w.plan.length) planMove(api);
     if (w.plan === null) {
-      api.log("Too risky — leaving this cave.");
+      api.log("Too risky - leaving this cave.");
       w.alive = false;
       return;
     }
@@ -239,7 +239,7 @@ export function mountWumpus(refs) {
     perceive(api);
     if (w.steps > w.N * w.N * 3) {
       w.alive = false;
-      api.log("Explored out — resetting cave.");
+      api.log("Explored out - resetting cave.");
     }
   }
 

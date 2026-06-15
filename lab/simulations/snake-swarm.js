@@ -1,5 +1,5 @@
 /**
- * Snake Growth — self-playing snake AI(s).
+ * Snake Growth - self-playing snake AI(s).
  *
  * Each snake picks a move with a greedy-toward-food term plus a flood-fill safety
  * term that estimates reachable free space, so it avoids trapping itself. Maps the

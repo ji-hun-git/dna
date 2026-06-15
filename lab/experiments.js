@@ -96,7 +96,7 @@ export const labProjects = [
     title: "ARC Adaptive Unit",
     subtitle: "A drone or mech that re-controls itself when you break it",
     description:
-      "Inspired by ARC Raiders' flying drones and walking mechs: a unit patrols toward targets while you shoot out its rotors or legs (hover a part) — and it re-solves its control on the fly to keep operating.",
+      "Inspired by ARC Raiders' flying drones and walking mechs: a unit patrols toward targets while you shoot out its rotors or legs (hover a part) - and it re-solves its control on the fly to keep operating.",
     category: "Game AI",
     tags: ["Fault Tolerance", "Control Allocation", "Legged Gait", "Adaptation"],
     thumbnail: "Destroy a rotor and the flyer re-allocates thrust; break a leg and the mech re-phases its gait.",
@@ -108,9 +108,9 @@ export const labProjects = [
     simulationType: "Adaptive Control",
     variations: [
       { id: "quadrotor", label: "Quadrotor", description: "Flying drone, 4 rotors." },
-      { id: "hexrotor", label: "Hexrotor", description: "Flying drone, 6 rotors — more redundancy." },
+      { id: "hexrotor", label: "Hexrotor", description: "Flying drone, 6 rotors - more redundancy." },
       { id: "quadruped", label: "Quadruped", description: "Walking mech, 4 legs." },
-      { id: "hexapod", label: "Hexapod", description: "Walking mech, 6 legs — graceful gaits." }
+      { id: "hexapod", label: "Hexapod", description: "Walking mech, 6 legs - graceful gaits." }
     ],
     controlLabels: {
       count: "Agility",
@@ -121,7 +121,7 @@ export const labProjects = [
     },
     metricLabels: { energy: "Tracking", order: "Capacity", spread: "Stability", fps: "FPS" },
     overview: [
-      "A flyer treats its rotors as a redundant thrust array. The controller computes a desired wrench to chase the target, then distributes it across the intact rotors with a least-norm pseudo-inverse. Knock a rotor out and the allocation matrix loses a column, so it re-solves and keeps tracking — degrading gracefully as redundancy runs out, exactly the fault-tolerant-control idea.",
+      "A flyer treats its rotors as a redundant thrust array. The controller computes a desired wrench to chase the target, then distributes it across the intact rotors with a least-norm pseudo-inverse. Knock a rotor out and the allocation matrix loses a column, so it re-solves and keeps tracking - degrading gracefully as redundancy runs out, exactly the fault-tolerant-control idea.",
       "A walker runs a phase-based gait. Lose a leg and it re-phases the remaining legs (and stiffens the duty factor) to keep the centre of mass inside the support polygon, switching gait the way damage-recovery robots do. When support is lost it wobbles, then re-stabilizes.",
       "Hover the cursor over a rotor or leg to disable it, or let parts fail on their own; some repair over time so you can watch it adapt both ways. The math panel highlights the live control step and flashes the adaptation equation the instant a part breaks."
     ],
@@ -658,10 +658,10 @@ export const labProjects = [
   },
   {
     id: "reaction-diffusion",
-    title: "Reaction–Diffusion",
+    title: "Reaction-Diffusion",
     subtitle: "Two chemicals, one emergent skin",
     description:
-      "A Gray–Scott reaction-diffusion system: local diffusion and reaction rules grow corals, mitosis, worms, spots, and waves. Drag on the canvas to seed reagent.",
+      "A Gray-Scott reaction-diffusion system: local diffusion and reaction rules grow corals, mitosis, worms, spots, and waves. Drag on the canvas to seed reagent.",
     category: "Simulation",
     tags: ["Generative", "PDE", "Emergence", "Canvas"],
     thumbnail: "Tiny changes to feed and kill rates flip the pattern from spots to worms to coral.",
@@ -688,11 +688,11 @@ export const labProjects = [
     metricLabels: { energy: "Mean V", order: "Peak", spread: "Active area", fps: "FPS" },
     overview: [
       "Each cell holds two reagent concentrations that diffuse at different rates and react where they meet. The feed rate f and kill rate k decide which pattern is stable, and the variation buttons jump between five classic regimes.",
-      "It is a canonical demonstration that purely local rules produce global structure — the same theme as the agent simulations, in continuous form. Drag the pointer to inject reagent and watch the field heal.",
+      "It is a canonical demonstration that purely local rules produce global structure - the same theme as the agent simulations, in continuous form. Drag the pointer to inject reagent and watch the field heal.",
       "Computed on a downsampled grid and drawn through an ImageData buffer for speed."
     ],
     facts: [
-      { label: "Model", value: "Gray–Scott, 9-point Laplacian" },
+      { label: "Model", value: "Gray-Scott, 9-point Laplacian" },
       { label: "Render", value: "ImageData buffer, scaled" },
       { label: "Interaction", value: "Pointer seeding" },
       { label: "Regimes", value: "5 feed/kill presets" }
@@ -737,7 +737,7 @@ export const labProjects = [
     },
     metricLabels: { energy: "Success", order: "Avg return", spread: "Coverage", fps: "FPS" },
     overview: [
-      "Unlike the FrozenLake project, which solves the MDP with dynamic programming, this agent has no model — it learns Q-values from experience using the temporal-difference update, with ε-greedy exploration that decays as it improves.",
+      "Unlike the FrozenLake project, which solves the MDP with dynamic programming, this agent has no model - it learns Q-values from experience using the temporal-difference update, with ε-greedy exploration that decays as it improves.",
       "The Cliff Walking and Four Rooms layouts come straight from the benchmark catalog. The chart is a live learning curve: success rate, average return, and coverage as episodes accumulate.",
       "A clean substrate for comparing exploration schedules or swapping in SARSA, Expected-SARSA, or function approximation."
     ],
@@ -762,7 +762,7 @@ export const labProjects = [
     title: "Pathfinding Search",
     subtitle: "A*, Dijkstra, Greedy, and BFS, side by side",
     description:
-      "A search visualizer that expands the open and closed sets across an obstacle field, then reconstructs the path — making the difference between informed and uninformed search visible.",
+      "A search visualizer that expands the open and closed sets across an obstacle field, then reconstructs the path - making the difference between informed and uninformed search visible.",
     category: "Math Visualization",
     tags: ["Search", "A*", "Graphs", "Heuristics"],
     thumbnail: "A* threads toward the goal while Dijkstra and BFS flood outward in rings.",
@@ -775,7 +775,7 @@ export const labProjects = [
     variations: [
       { id: "astar", label: "A*", description: "Cost-so-far plus a Manhattan heuristic." },
       { id: "dijkstra", label: "Dijkstra", description: "Uniform-cost, no heuristic." },
-      { id: "greedy", label: "Greedy", description: "Heuristic only — fast but not optimal." },
+      { id: "greedy", label: "Greedy", description: "Heuristic only - fast but not optimal." },
       { id: "bfs", label: "BFS", description: "First-in-first-out flood fill." }
     ],
     controlLabels: {
@@ -788,7 +788,7 @@ export const labProjects = [
     metricLabels: { energy: "Path quality", order: "Efficiency", spread: "Explored", fps: "FPS" },
     overview: [
       "All four strategies share one expansion loop and differ only in how they prioritize the open set, so the contrast is exact: A*'s heuristic focuses the search, Dijkstra and BFS flood outward uniformly, and greedy charges at the goal but can take long detours.",
-      "Raising the heuristic weight turns A* toward greedy behavior — fewer expansions, less optimal paths. When the field has no route, the search reports it and regenerates.",
+      "Raising the heuristic weight turns A* toward greedy behavior - fewer expansions, less optimal paths. When the field has no route, the search reports it and regenerates.",
       "A direct visual companion to the catalog's search-based environments."
     ],
     facts: [
@@ -823,7 +823,7 @@ export const labProjects = [
       { id: "classic", label: "Classic", description: "Balanced cave, moderate pits." },
       { id: "small", label: "Small", description: "A compact cave to read clearly." },
       { id: "large", label: "Large", description: "A bigger cave to explore." },
-      { id: "dense", label: "Dense", description: "Many pits — frequent hard choices." }
+      { id: "dense", label: "Dense", description: "Many pits - frequent hard choices." }
     ],
     controlLabels: {
       count: "Cave size",
@@ -835,7 +835,7 @@ export const labProjects = [
     metricLabels: { energy: "Gold", order: "Survival", spread: "Explored", fps: "FPS" },
     overview: [
       "The agent perceives only breeze (a pit is adjacent), stench (the wumpus is adjacent), and glitter (gold is here). The key inference is sound: a visited cell with neither breeze nor stench proves every neighbor safe.",
-      "It explores the reachable safe frontier first; when none remains, it takes the least-suspected gamble (or, if too cautious, abandons the cave). The knowledge overlay shows visited, proven-safe, and suspected cells — the agent's belief, not the ground truth.",
+      "It explores the reachable safe frontier first; when none remains, it takes the least-suspected gamble (or, if too cautious, abandons the cave). The knowledge overlay shows visited, proven-safe, and suspected cells - the agent's belief, not the ground truth.",
       "A compact stand-in for the catalog's POMDP environments and the social/causal inference theme."
     ],
     facts: [
@@ -856,7 +856,7 @@ export const labProjects = [
     title: "N-Body Gravity 3D",
     subtitle: "Orbits, clusters, and collisions in 3D",
     description:
-      "Softened Newtonian gravity for a population of bodies, rendered in 3D with an orbiting camera — circular orbits, gravitational clusters, binary systems, and colliding clouds.",
+      "Softened Newtonian gravity for a population of bodies, rendered in 3D with an orbiting camera - circular orbits, gravitational clusters, binary systems, and colliding clouds.",
     category: "Simulation",
     tags: ["3D", "Physics", "Gravity", "Dynamics"],
     thumbnail: "Satellites trace orbits around a heavy primary as the camera circles the scene.",
@@ -895,7 +895,7 @@ export const labProjects = [
       "\\mathbf{a}_i = G\\sum_{j\\neq i}\\frac{m_j(\\mathbf{r}_j-\\mathbf{r}_i)}{(\\lVert\\mathbf{r}_j-\\mathbf{r}_i\\rVert^2+\\epsilon)^{3/2}}"
     ],
     futureWork: [
-      "Add a Barnes–Hut tree so body counts can scale far higher.",
+      "Add a Barnes-Hut tree so body counts can scale far higher.",
       "Track total energy and momentum to show integration drift.",
       ...sharedPerformanceNotes
     ]
@@ -919,7 +919,7 @@ export const labProjects = [
       { id: "easy", label: "Easy", description: "Wide gaps, gentle pace." },
       { id: "normal", label: "Normal", description: "Standard difficulty." },
       { id: "hard", label: "Hard", description: "Narrow gaps, faster pipes." },
-      { id: "insane", label: "Insane", description: "Brutal gaps — only the best survive." }
+      { id: "insane", label: "Insane", description: "Brutal gaps - only the best survive." }
     ],
     controlLabels: {
       count: "Population",
@@ -931,7 +931,7 @@ export const labProjects = [
     metricLabels: { energy: "Mean score", order: "Best ever", spread: "Alive", fps: "FPS" },
     overview: [
       "Every generation, the whole population plays the same pipe sequence so fitness is comparable. When all birds die, the fittest are kept (elitism), and the rest of the next generation is bred by crossing over two parents' weights and mutating them.",
-      "There is no gradient and no labels — only survival. The chart tracks best fitness per generation, so you can watch learning happen as a curve.",
+      "There is no gradient and no labels - only survival. The chart tracks best fitness per generation, so you can watch learning happen as a curve.",
       "A direct, visual answer to 'can an agent learn to play a game without being told how?'"
     ],
     facts: [
@@ -952,7 +952,7 @@ export const labProjects = [
   },
   {
     id: "connect-four",
-    title: "Connect Four — Minimax",
+    title: "Connect Four - Minimax",
     subtitle: "Two adversarial agents, alpha-beta search",
     description:
       "Two game-playing agents face off with depth-limited minimax, alpha-beta pruning, and a window-scoring heuristic. Search depth sets each agent's strength.",
@@ -987,7 +987,7 @@ export const labProjects = [
     facts: [
       { label: "Search", value: "Minimax + alpha-beta" },
       { label: "Heuristic", value: "Window scoring + center bias" },
-      { label: "Depth", value: "2–7 plies" },
+      { label: "Depth", value: "2-7 plies" },
       { label: "Signals", value: "Moves, win balance, fill" }
     ],
     equations: [
@@ -1002,13 +1002,13 @@ export const labProjects = [
   },
   {
     id: "game-2048",
-    title: "2048 — Expectimax",
+    title: "2048 - Expectimax",
     subtitle: "An agent playing the tiles",
     description:
       "An expectimax agent plays 2048: it maximizes over the four slides and averages over the random tile spawns, scoring boards by empty cells, monotonicity, smoothness, and a max-tile corner.",
     category: "AI Agent",
     tags: ["Expectimax", "Search", "Heuristics", "Stochastic"],
-    thumbnail: "Empties, monotonic rows, and a pinned corner — the agent climbs toward 2048.",
+    thumbnail: "Empties, monotonic rows, and a pinned corner - the agent climbs toward 2048.",
     route: "#game-2048",
     status: "live",
     difficulty: "advanced",
@@ -1018,7 +1018,7 @@ export const labProjects = [
     variations: [
       { id: "classic", label: "Classic", description: "4×4, depth-3 expectimax." },
       { id: "deep", label: "Deep", description: "Deeper search, stronger play." },
-      { id: "greedy", label: "Greedy", description: "Depth-1 — fast and shortsighted." },
+      { id: "greedy", label: "Greedy", description: "Depth-1 - fast and shortsighted." },
       { id: "big", label: "Big", description: "A 5×5 board." }
     ],
     controlLabels: {
@@ -1037,7 +1037,7 @@ export const labProjects = [
     facts: [
       { label: "Search", value: "Expectimax (max + chance)" },
       { label: "Heuristic", value: "Empty / monotonicity / corner" },
-      { label: "Depth", value: "1–5 plies" },
+      { label: "Depth", value: "1-5 plies" },
       { label: "Signals", value: "Max tile, best tile, empties" }
     ],
     equations: [
@@ -1052,7 +1052,7 @@ export const labProjects = [
   },
   {
     id: "minesweeper",
-    title: "Minesweeper — Logic Solver",
+    title: "Minesweeper - Logic Solver",
     subtitle: "Constraint propagation, then the least-risky guess",
     description:
       "An agent plays Minesweeper by sound deduction: a number with all its mines flagged makes the rest safe; a number whose hidden neighbours equal its remaining mines flags them all. When stuck, it guesses the lowest-probability cell.",
@@ -1081,7 +1081,7 @@ export const labProjects = [
     metricLabels: { energy: "Cleared", order: "Win rate", spread: "Explored", fps: "FPS" },
     overview: [
       "Two deduction rules drive the solver: if a number equals its flagged neighbours, every other neighbour is safe; if a number's remaining mines equal its hidden neighbours, they are all mines. These cascade until no more certainty exists.",
-      "Only then does the agent guess, choosing the hidden cell with the lowest estimated mine probability — and a cautious agent will abandon a board rather than take a bad gamble. A logical-inference counterpart to Wumpus World.",
+      "Only then does the agent guess, choosing the hidden cell with the lowest estimated mine probability - and a cautious agent will abandon a board rather than take a bad gamble. A logical-inference counterpart to Wumpus World.",
       "The first reveal is always safe; mines are placed around it."
     ],
     facts: [

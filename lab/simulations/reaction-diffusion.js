@@ -1,8 +1,8 @@
 /**
- * Reaction–Diffusion (Gray–Scott)
+ * Reaction-Diffusion (Gray-Scott)
  *
  * Two virtual chemicals diffuse and react on a torus; tiny parameter changes
- * grow corals, mitosis, worms, spots, or waves. A canonical "simulation" —
+ * grow corals, mitosis, worms, spots, or waves. A canonical "simulation" -
  * pure local rules, global emergence. Click/drag to seed reagent.
  */
 

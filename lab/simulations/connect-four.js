@@ -1,5 +1,5 @@
 /**
- * Connect Four — Minimax with alpha-beta
+ * Connect Four - Minimax with alpha-beta
  *
  * Two game-playing agents face off. Each runs a depth-limited minimax search with
  * alpha-beta pruning and a window-scoring heuristic, then drops a disc. Search

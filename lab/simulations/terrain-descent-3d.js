@@ -1,10 +1,10 @@
 /**
- * Optimizer Landscape 3D — agents descending a loss surface.
+ * Optimizer Landscape 3D - agents descending a loss surface.
  *
  * A height field z = f(x, y) (a bowl plus gaussian wells) is drawn as a rotating
  * wireframe mesh with a hand-rolled pinhole camera. A population of optimizers
  * does gradient descent / momentum / SGD / annealing on the analytic gradient and
- * rolls toward minima — "agents navigating a value landscape." On-theme with the
+ * rolls toward minima - "agents navigating a value landscape." On-theme with the
  * research, and a genuine 3D scene with no external dependencies.
  */
 

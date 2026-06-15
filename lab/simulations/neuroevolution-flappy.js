@@ -4,7 +4,7 @@
  * A population of birds, each driven by a tiny neural network, learns to play a
  * Flappy-style game by genetic algorithm. Every generation plays the same pipe
  * sequence; the fittest are selected, crossed over, and mutated into the next
- * generation. Watch the swarm get better — the chart is the learning curve.
+ * generation. Watch the swarm get better - the chart is the learning curve.
  */
 
 import { createSimHarness, clamp, mulberry32 } from "./_shared.js?v=20260615-lab2";

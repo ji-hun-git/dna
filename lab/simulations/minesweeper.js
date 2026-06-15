@@ -1,5 +1,5 @@
 /**
- * Minesweeper — Logic Solver
+ * Minesweeper - Logic Solver
  *
  * An agent plays Minesweeper by constraint propagation: for every revealed
  * number, if its mines are all flagged the rest are safe; if its unflagged
@@ -156,8 +156,8 @@ export function mountMinesweeper(refs) {
     if (best < 0) return;
     const caution = api.state.attraction;
     if (bestP > 0.6 && caution > 0.7) {
-      // too risky for a cautious agent — restart
-      api.log(`No safe move (min risk ${(bestP * 100) | 0}%) — new board.`);
+      // too risky for a cautious agent - restart
+      api.log(`No safe move (min risk ${(bestP * 100) | 0}%) - new board.`);
       w.dead = true;
       w.deadCell = -1;
       return;
@@ -179,7 +179,7 @@ export function mountMinesweeper(refs) {
     if (!deduce(api)) guess(api);
     if (w.dead) {
       w.losses += 1;
-      api.log(`Hit a mine — solved ${w.revealed}/${w.W * w.H - w.mineCount} safe cells.`);
+      api.log(`Hit a mine - solved ${w.revealed}/${w.W * w.H - w.mineCount} safe cells.`);
       w.overT = clamp(Math.round(api.state.count / 6), 8, 50);
       return;
     }

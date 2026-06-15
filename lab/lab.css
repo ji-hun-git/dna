@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   Laboratory — design system shared with the main site (index.html).
+   Laboratory - design system shared with the main site (index.html).
    Dark aurora theme, Fraunces display + Inter body, glass panels,
    per-category accent colors, cursor spotlights.
    ═══════════════════════════════════════════════════════════ */
@@ -805,15 +805,22 @@ h1 em {
   background: transparent;
   transition: background 0.4s var(--ease-out);
 }
-.equation.eq-active {
-  border-color: rgba(var(--accent), 0.55);
-  background: rgba(var(--accent), 0.09);
-  box-shadow: 0 0 0 1px rgba(var(--accent), 0.28), 0 10px 32px rgba(var(--accent), 0.14);
-  transform: translateX(2px);
-}
+.equation { opacity: 0.5; transition: opacity 0.4s var(--ease-out); }
+.equation.eq-active { opacity: 1; }
 .equation.eq-active::before {
   background: rgb(var(--accent));
   box-shadow: 0 0 12px rgba(var(--accent), 0.8);
+}
+/* Highlight the live sub-part (right-hand side), not the whole equation box. */
+.eqk {
+  border-radius: 5px;
+  padding: 0.02em 0.16em;
+  transition: background 0.35s var(--ease-out), color 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
+}
+.equation.eq-active .eqk {
+  background: rgba(var(--accent), 0.22);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(var(--accent), 0.5), 0 0 14px rgba(var(--accent), 0.4);
 }
 
 .equation .katex-display {

@@ -4,12 +4,12 @@
  * A live reconstruction of the BehaviorPrompt Games thesis: can an agent infer a
  * latent prerequisite rule (procedural / causal / social) from a prompt condition?
  *
- * Three 7x7 environments — DoorKey, SwitchBridge, Ownership — each have a hidden
+ * Three 7x7 environments - DoorKey, SwitchBridge, Ownership - each have a hidden
  * rule. The agent executes a deterministic plan whose shape depends on the prompt
  * condition (none / text / behavior / hybrid). The "none" plan greedily reaches
  * the goal but violates the latent rule; text/behavior/hybrid satisfy the
  * prerequisite first. The dashboard tracks goal-reach rate vs rule-compliance
- * rate — exactly the sufficiency-vs-compliance distinction the paper sharpens.
+ * rate - exactly the sufficiency-vs-compliance distinction the paper sharpens.
  */
 
 import { createSimHarness, clamp, lerp, TAU } from "./_shared.js?v=20260615-lab2";
@@ -144,7 +144,7 @@ export function mountGridworldPrompt(refs) {
     w.pauseT = 0;
     w.heat = w.heat || {};
     w.pulse = 0;
-    api.log(`${env.name} · ${CONDITION_LABEL[api.state.variation]} — rule: ${env.rule}`);
+    api.log(`${env.name} · ${CONDITION_LABEL[api.state.variation]} - rule: ${env.rule}`);
   }
 
   function finishEpisode(api) {
@@ -194,10 +194,10 @@ export function mountGridworldPrompt(refs) {
         api.log("Picked up the key.");
       } else if (env.lever && eq(w.pos, env.lever) && !w.leverOn) {
         w.leverOn = true;
-        api.log("Activated the lever — bridge is safe.");
+        api.log("Activated the lever - bridge is safe.");
       } else if (env.owner && eq(w.pos, env.owner) && !w.permission) {
         w.permission = true;
-        api.log("Asked the owner — permission granted.");
+        api.log("Asked the owner - permission granted.");
       } else if (env.door && eq(w.pos, env.door)) {
         if (!w.hasKey) {
           w.violations += 1;

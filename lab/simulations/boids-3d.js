@@ -1,9 +1,9 @@
 /**
- * Boids 3D — flocking in a bounded cube with an orbiting camera.
+ * Boids 3D - flocking in a bounded cube with an orbiting camera.
  *
  * Reynolds' three rules (separation, alignment, cohesion) in full 3D, projected
  * to the canvas with a hand-rolled pinhole camera (no external 3D library, so it
- * stays a single static file). Depth cues — size, alpha, draw order — sell the
+ * stays a single static file). Depth cues - size, alpha, draw order - sell the
  * volume. A "predator" variation adds a chaser the flock evades.
  */
 

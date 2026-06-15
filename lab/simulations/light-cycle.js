@@ -1,10 +1,10 @@
 /**
- * Light Cycle Arena — autonomous Tron agents.
+ * Light Cycle Arena - autonomous Tron agents.
  *
  * Each cycle chooses straight / left / right by estimating reachable open space
  * (flood fill) ahead, with an optional aggression term that biases toward cutting
  * off the opponent. Last surviving cycle wins the round; the arena resets and a
- * win tally accrues. Maps the "Light Cycle Arena" template — and echoes the
+ * win tally accrues. Maps the "Light Cycle Arena" template - and echoes the
  * endless AI-vs-AI match on the main site's hero.
  */
 

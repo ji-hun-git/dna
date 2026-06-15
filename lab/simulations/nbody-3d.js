@@ -3,7 +3,7 @@
  *
  * Softened Newtonian gravity integrated for a population of bodies, rendered with
  * the hand-rolled pinhole camera (no external 3D library). Orbits, clusters,
- * binaries, and colliding clouds — depth-sorted with motion trails.
+ * binaries, and colliding clouds - depth-sorted with motion trails.
  */
 
 import { createSimHarness, clamp, project3d } from "./_shared.js?v=20260615-lab2";

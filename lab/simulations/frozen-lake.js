@@ -1,5 +1,5 @@
 /**
- * FrozenLake — value iteration, policy field, and a slipping agent.
+ * FrozenLake - value iteration, policy field, and a slipping agent.
  *
  * The classic stochastic gridworld: reach the goal without falling into a hole,
  * on ice where moves slip sideways. The renderer solves the MDP live with value
