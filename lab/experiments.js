@@ -848,157 +848,202 @@ export const labProjects = [
     ]
   },
   {
-    id: "accessibility-signal-lab",
-    title: "Accessibility Signal Lab",
-    subtitle: "Telemetry sketches for inclusive game assistance",
+    id: "neuroevolution-flappy",
+    title: "Neuroevolution Flappy",
+    subtitle: "A population that learns to play by evolution",
     description:
-      "A registered research slot for visualizing player state, intervention timing, and assistant confidence in accessibility-centered game AI.",
-    category: "Research Tool",
-    tags: ["Accessibility", "Game UX", "Telemetry", "AI Assistant"],
-    thumbnail: "Player signals, confidence bands, and intervention windows on a shared timeline.",
-    route: "#accessibility-signal-lab",
-    status: "prototype",
+      "Each bird is driven by a tiny neural network; a genetic algorithm selects, crosses over, and mutates the fittest into the next generation. Watch a random swarm become an expert flyer.",
+    category: "Game AI",
+    tags: ["Neuroevolution", "Genetic Algorithm", "Neural Net", "Self-Play"],
+    thumbnail: "Generation after generation, more birds clear the pipes as their brains improve.",
+    route: "#neuroevolution-flappy",
+    status: "live",
     difficulty: "advanced",
     createdAt: "2026-06-15",
-    mathTopics: ["Time series", "Uncertainty", "Human-AI interaction"],
-    simulationType: "Timeline / Charts",
+    mathTopics: ["Neuroevolution", "Genetic algorithms", "Neural networks"],
+    simulationType: "Game + Evolution",
     variations: [
-      { id: "confidence", label: "Confidence", description: "Assistant confidence and uncertainty bands." },
-      { id: "intervention", label: "Intervention", description: "Timing windows for help, hint, or automation." },
-      { id: "fatigue", label: "Fatigue", description: "Long-session signal drift and adaptation." }
+      { id: "easy", label: "Easy", description: "Wide gaps, gentle pace." },
+      { id: "normal", label: "Normal", description: "Standard difficulty." },
+      { id: "hard", label: "Hard", description: "Narrow gaps, faster pipes." },
+      { id: "insane", label: "Insane", description: "Brutal gaps — only the best survive." }
     ],
     controlLabels: {
-      count: "Signal density",
-      speed: "Playback speed",
-      turbulence: "Noise",
-      attraction: "Assistant weight",
-      trails: "Show history"
+      count: "Population",
+      speed: "Game speed",
+      turbulence: "Mutation rate",
+      attraction: "Elitism",
+      trails: "Show all birds"
     },
-    metricLabels: {
-      energy: "Confidence",
-      order: "Agreement",
-      spread: "Signal drift",
-      fps: "FPS"
-    },
+    metricLabels: { energy: "Mean score", order: "Best ever", spread: "Alive", fps: "FPS" },
     overview: [
-      "This slot is ready for an accessibility-focused research tool: time-series signals, confidence bands, intervention windows, and assistant decisions.",
-      "It is intentionally registered before the renderer exists, so the dashboard can scale as soon as real data or design studies are ready."
+      "Every generation, the whole population plays the same pipe sequence so fitness is comparable. When all birds die, the fittest are kept (elitism), and the rest of the next generation is bred by crossing over two parents' weights and mutating them.",
+      "There is no gradient and no labels — only survival. The chart tracks best fitness per generation, so you can watch learning happen as a curve.",
+      "A direct, visual answer to 'can an agent learn to play a game without being told how?'"
     ],
     facts: [
-      { label: "Planned renderer", value: "SVG timelines or Canvas charts" },
-      { label: "Data model", value: "Player events + assistant state" },
-      { label: "Research fit", value: "Game accessibility and GAIA studies" }
+      { label: "Brain", value: "4→6→1 neural net (tanh/sigmoid)" },
+      { label: "Optimizer", value: "Genetic algorithm" },
+      { label: "Selection", value: "Elitism + crossover + mutation" },
+      { label: "Signals", value: "Mean score, best ever, alive" }
     ],
     equations: [
-      "u_t = \\lambda u_{t-1} + (1-\\lambda)x_t",
-      "H(p)=-\\sum_i p_i\\log p_i"
+      "\\hat y = \\sigma\\!\\left(W_2\\tanh(W_1 x + b_1) + b_2\\right)",
+      "g' = \\operatorname{mutate}\\big(\\operatorname{crossover}(g_a, g_b)\\big)"
     ],
     futureWork: [
-      "Define a JSON event schema for player signals and assistant interventions.",
-      "Add event brushing, confidence intervals, and replay controls.",
+      "Add NEAT-style topology evolution and speciation.",
+      "Compare against a policy-gradient learner on the same game.",
       ...sharedPerformanceNotes
     ]
   },
   {
-    id: "procedural-playtest-board",
-    title: "Procedural Playtest Board",
-    subtitle: "Fast prototypes for level pacing and player routes",
+    id: "connect-four",
+    title: "Connect Four — Minimax",
+    subtitle: "Two adversarial agents, alpha-beta search",
     description:
-      "A future level-design workbench for testing procedural layouts, pacing curves, route pressure, and player flow.",
-    category: "Game Prototype",
-    tags: ["Level Design", "Procedural", "Playtest", "Flow"],
-    thumbnail: "Small generated boards with routes, heatmaps, and pacing markers.",
-    route: "#procedural-playtest-board",
-    status: "planned",
-    difficulty: "intermediate",
+      "Two game-playing agents face off with depth-limited minimax, alpha-beta pruning, and a window-scoring heuristic. Search depth sets each agent's strength.",
+    category: "Game AI",
+    tags: ["Minimax", "Alpha-Beta", "Adversarial", "Board Game"],
+    thumbnail: "A deeper-searching agent calmly sets up threats the shallow one never sees.",
+    route: "#connect-four",
+    status: "live",
+    difficulty: "advanced",
     createdAt: "2026-06-15",
-    mathTopics: ["Graphs", "Search", "Procedural generation"],
-    simulationType: "Grid / Heatmap",
+    mathTopics: ["Adversarial search", "Alpha-beta pruning", "Heuristic evaluation"],
+    simulationType: "Board Game AI",
     variations: [
-      { id: "maze", label: "Maze", description: "Sparse paths and controlled bottlenecks." },
-      { id: "arena", label: "Arena", description: "Open pressure spaces with local cover." },
-      { id: "quest", label: "Quest", description: "Objective chains and route pacing." }
+      { id: "easy", label: "Easy", description: "Both agents search shallow (depth 2)." },
+      { id: "medium", label: "Medium", description: "Balanced mid-depth search." },
+      { id: "hard", label: "Hard", description: "Deep search (depth 6)." },
+      { id: "mixed", label: "Mixed", description: "A strong agent vs a weak one." }
     ],
     controlLabels: {
-      count: "Room count",
-      speed: "Playback",
-      turbulence: "Generation noise",
-      attraction: "Goal pressure",
-      trails: "Route heatmap"
+      count: "Restart delay",
+      speed: "Move pace",
+      turbulence: "Move randomness",
+      attraction: "Extra lookahead",
+      trails: "Highlight last move"
     },
-    metricLabels: {
-      energy: "Pacing",
-      order: "Route clarity",
-      spread: "Coverage",
-      fps: "FPS"
-    },
+    metricLabels: { energy: "Moves", order: "Win balance", spread: "Board fill", fps: "FPS" },
     overview: [
-      "This planned project is a board-level prototype surface for procedural game ideas.",
-      "It can reuse the Agent Arena environment boundary once a formal grid API is ready."
+      "Each turn an agent runs minimax to its depth, scoring leaf positions by counting two-, three-, and four-in-a-row windows for and against it, and prunes with alpha-beta so deeper search stays cheap.",
+      "The Mixed variation pits a deep searcher against a shallow one to make the value of lookahead obvious. Move randomness lets near-equal moves vary so games don't repeat.",
+      "The canonical adversarial game-AI demo, drawn with animated disc drops."
     ],
     facts: [
-      { label: "Planned renderer", value: "Grid canvas + heatmap" },
-      { label: "Core algorithms", value: "Search, graph scoring, procedural rules" },
-      { label: "Output", value: "Playable layouts and pacing diagnostics" }
+      { label: "Search", value: "Minimax + alpha-beta" },
+      { label: "Heuristic", value: "Window scoring + center bias" },
+      { label: "Depth", value: "2–7 plies" },
+      { label: "Signals", value: "Moves, win balance, fill" }
     ],
     equations: [
-      "G=(V,E),\\quad c(P)=\\sum_{e\\in P}w(e)"
+      "\\hat v(s)=\\sum_{w\\in\\text{windows}}\\operatorname{score}(w)",
+      "\\text{prune when } \\alpha \\ge \\beta"
     ],
     futureWork: [
-      "Create a layout generator interface with seed, constraints, and scoring.",
-      "Add route heatmaps and path comparison views.",
+      "Add a transposition table and iterative deepening.",
+      "Drop in a learned value network as one of the agents.",
       ...sharedPerformanceNotes
     ]
   },
   {
-    id: "narrative-state-space",
-    title: "Narrative State Space",
-    subtitle: "Mapping story beats, choices, and agent memory",
+    id: "game-2048",
+    title: "2048 — Expectimax",
+    subtitle: "An agent playing the tiles",
     description:
-      "A planned visualization for branching narrative state, memory traces, player choices, and AI-authored story transitions.",
-    category: "Experimental Tool",
-    tags: ["Narrative AI", "State Space", "Memory", "HCI"],
-    thumbnail: "Branching story states with memory links and transition confidence.",
-    route: "#narrative-state-space",
-    status: "research",
+      "An expectimax agent plays 2048: it maximizes over the four slides and averages over the random tile spawns, scoring boards by empty cells, monotonicity, smoothness, and a max-tile corner.",
+    category: "AI Agent",
+    tags: ["Expectimax", "Search", "Heuristics", "Stochastic"],
+    thumbnail: "Empties, monotonic rows, and a pinned corner — the agent climbs toward 2048.",
+    route: "#game-2048",
+    status: "live",
     difficulty: "advanced",
     createdAt: "2026-06-15",
-    mathTopics: ["State graphs", "Embedding spaces", "Transition models"],
-    simulationType: "Graph / Embedding Map",
+    mathTopics: ["Expectimax", "Decision under chance", "Heuristics"],
+    simulationType: "Board Game AI",
     variations: [
-      { id: "branching", label: "Branching", description: "Choice trees and narrative alternatives." },
-      { id: "memory", label: "Memory", description: "Agent memory traces and recall intensity." },
-      { id: "embedding", label: "Embedding", description: "Semantic clusters for authored states." }
+      { id: "classic", label: "Classic", description: "4×4, depth-3 expectimax." },
+      { id: "deep", label: "Deep", description: "Deeper search, stronger play." },
+      { id: "greedy", label: "Greedy", description: "Depth-1 — fast and shortsighted." },
+      { id: "big", label: "Big", description: "A 5×5 board." }
     ],
     controlLabels: {
-      count: "State count",
-      speed: "Transition speed",
-      turbulence: "Semantic drift",
-      attraction: "Memory weight",
-      trails: "Show paths"
+      count: "Restart delay",
+      speed: "Move pace",
+      turbulence: "Randomness",
+      attraction: "Extra depth",
+      trails: "Show numbers"
     },
-    metricLabels: {
-      energy: "Coherence",
-      order: "Agency",
-      spread: "Branching",
-      fps: "FPS"
-    },
+    metricLabels: { energy: "Max tile", order: "Best tile", spread: "Empty", fps: "FPS" },
     overview: [
-      "This research slot is designed for future narrative-AI experiments where story states, choice consequences, and agent memory need to be seen rather than only logged.",
-      "The standardized lab shell keeps the eventual graph renderer, documentation, and math together."
+      "Slides are the agent's choices (max nodes); tile spawns are chance nodes the agent averages over, sampling empty cells to keep the tree affordable. The board score rewards open space, ordered rows, and keeping the largest tile in a corner.",
+      "Greedy (depth 1) versus Deep shows how much lookahead is worth in a stochastic game. A little randomness can be injected to vary games.",
+      "A clean expectimax demo on a game everyone knows."
     ],
     facts: [
-      { label: "Planned renderer", value: "Force graph or embedding map" },
-      { label: "Research use", value: "Narrative AI and interaction analysis" },
-      { label: "Core data", value: "States, choices, memory links" }
+      { label: "Search", value: "Expectimax (max + chance)" },
+      { label: "Heuristic", value: "Empty / monotonicity / corner" },
+      { label: "Depth", value: "1–5 plies" },
+      { label: "Signals", value: "Max tile, best tile, empties" }
     ],
     equations: [
-      "s_{t+1}\\sim P(s'\\mid s_t, a_t, m_t)",
-      "\\operatorname{sim}(x,y)=\\frac{x\\cdot y}{\\lVert x\\rVert\\lVert y\\rVert}"
+      "V(s)=\\max_a\\ \\mathbb{E}_{s'\\sim P(\\cdot\\mid s,a)}\\big[V(s')\\big]",
+      "h(s)=w_e\\,\\#\\text{empty} + w_m\\,\\text{mono}(s) + w_c\\,\\text{corner}(s)"
     ],
     futureWork: [
-      "Define a graph schema for story states, choices, and memory traces.",
-      "Add graph filtering by character, theme, branch depth, and confidence.",
+      "Add transposition caching across plies.",
+      "Compare expectimax against a learned (CNN) value function.",
+      ...sharedPerformanceNotes
+    ]
+  },
+  {
+    id: "minesweeper",
+    title: "Minesweeper — Logic Solver",
+    subtitle: "Constraint propagation, then the least-risky guess",
+    description:
+      "An agent plays Minesweeper by sound deduction: a number with all its mines flagged makes the rest safe; a number whose hidden neighbours equal its remaining mines flags them all. When stuck, it guesses the lowest-probability cell.",
+    category: "Game AI",
+    tags: ["Constraint Propagation", "Logic", "Inference", "Probability"],
+    thumbnail: "Safe reveals cascade from each satisfied number; the agent flags forced mines.",
+    route: "#minesweeper",
+    status: "live",
+    difficulty: "advanced",
+    createdAt: "2026-06-15",
+    mathTopics: ["Constraint satisfaction", "Logical inference", "Probability"],
+    simulationType: "Board Game AI",
+    variations: [
+      { id: "easy", label: "Easy", description: "Small board, low mine density." },
+      { id: "medium", label: "Medium", description: "Standard density." },
+      { id: "hard", label: "Hard", description: "Denser mines, harder deductions." },
+      { id: "expert", label: "Expert", description: "Large board, dense mines." }
+    ],
+    controlLabels: {
+      count: "Board size",
+      speed: "Pace",
+      turbulence: "Mine density",
+      attraction: "Caution",
+      trails: "Show focus"
+    },
+    metricLabels: { energy: "Cleared", order: "Win rate", spread: "Explored", fps: "FPS" },
+    overview: [
+      "Two deduction rules drive the solver: if a number equals its flagged neighbours, every other neighbour is safe; if a number's remaining mines equal its hidden neighbours, they are all mines. These cascade until no more certainty exists.",
+      "Only then does the agent guess, choosing the hidden cell with the lowest estimated mine probability — and a cautious agent will abandon a board rather than take a bad gamble. A logical-inference counterpart to Wumpus World.",
+      "The first reveal is always safe; mines are placed around it."
+    ],
+    facts: [
+      { label: "Method", value: "Constraint propagation" },
+      { label: "Fallback", value: "Lowest-probability guess" },
+      { label: "First move", value: "Guaranteed safe" },
+      { label: "Signals", value: "Cleared, win rate, explored" }
+    ],
+    equations: [
+      "n(c)-f(c)=0 \\;\\Rightarrow\\; \\text{hidden neighbours safe}",
+      "n(c)-f(c)=|H(c)| \\;\\Rightarrow\\; \\text{all are mines}"
+    ],
+    futureWork: [
+      "Add full subset/equation-solving for tank-style deductions.",
+      "Compute exact frontier probabilities for optimal guessing.",
       ...sharedPerformanceNotes
     ]
   }
@@ -1024,6 +1069,10 @@ export const labArchitecture = {
     "lab/simulations/q-learning.js         # tabular TD reinforcement learning",
     "lab/simulations/pathfinding.js        # A*/Dijkstra/Greedy/BFS visualizer",
     "lab/simulations/wumpus.js             # POMDP logical-inference explorer",
+    "lab/simulations/neuroevolution-flappy.js # GA-trained neural-net players",
+    "lab/simulations/connect-four.js       # minimax + alpha-beta board agent",
+    "lab/simulations/game-2048.js          # expectimax game agent",
+    "lab/simulations/minesweeper.js        # constraint-propagation solver",
     "lab/simulations/particle-field.js",
     "lab/simulations/agent-arena.js",
     "lab/simulations/ludic-geometry.js"

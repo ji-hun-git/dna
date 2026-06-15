@@ -1,4 +1,4 @@
-import { labArchitecture, labProjects } from "./experiments.js?v=20260615-lab3";
+import { labArchitecture, labProjects } from "./experiments.js?v=20260615-lab4";
 import { mountAgentArena } from "./simulations/agent-arena.js?v=20260615-variations";
 import { mountLudicGeometry } from "./simulations/ludic-geometry.js?v=20260615-variations";
 import { mountParticleField } from "./simulations/particle-field.js?v=20260615-variations";
@@ -15,10 +15,18 @@ import { mountQLearning } from "./simulations/q-learning.js?v=20260615-lab3";
 import { mountPathfinding } from "./simulations/pathfinding.js?v=20260615-lab3";
 import { mountWumpus } from "./simulations/wumpus.js?v=20260615-lab3";
 import { mountNBody3d } from "./simulations/nbody-3d.js?v=20260615-lab3";
+import { mountNeuroFlappy } from "./simulations/neuroevolution-flappy.js?v=20260615-lab4";
+import { mountConnectFour } from "./simulations/connect-four.js?v=20260615-lab4";
+import { mountGame2048 } from "./simulations/game-2048.js?v=20260615-lab4";
+import { mountMinesweeper } from "./simulations/minesweeper.js?v=20260615-lab4";
 
 const rendererRegistry = {
   "behavior-prompt-gridworld": mountGridworldPrompt,
   "agent-arena": mountAgentArena,
+  "neuroevolution-flappy": mountNeuroFlappy,
+  "connect-four": mountConnectFour,
+  "game-2048": mountGame2048,
+  "minesweeper": mountMinesweeper,
   "maze-chase": mountMazeChase,
   "snake-growth": mountSnakeSwarm,
   "light-cycle-arena": mountLightCycle,
