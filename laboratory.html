@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" />
-  <link rel="stylesheet" href="lab/lab.css?v=20260615-lab5" />
+  <link rel="stylesheet" href="lab/lab.css?v=20260615-lab6" />
 </head>
 <body>
   <div class="aurora" aria-hidden="true"></div>
@@ -22,8 +22,7 @@
         <span>Laboratory</span>
       </a>
       <nav class="nav-links" aria-label="Page sections">
-        <a href="#projects">Projects</a>
-        <a href="#workspace">Workspace</a>
+        <a href="#console">Simulations</a>
         <a href="#architecture">Architecture</a>
       </nav>
       <div class="lab-actions">
@@ -32,68 +31,26 @@
     </header>
 
     <main>
-      <section class="hero" aria-label="Simulation Hub">
-        <div class="hero-copy">
-          <p class="eyebrow">Simulation Hub · Ludic AI</p>
-          <div class="hero-actions">
-            <a class="solid-button" href="#workspace">Open live simulation</a>
-            <a class="ghost-button" href="#projects">Browse the catalog</a>
-          </div>
-          <div class="signal-strip" aria-label="Laboratory summary">
-            <div class="signal"><strong id="metricProjects">0</strong><span>registered projects</span></div>
-            <div class="signal"><strong id="metricRenderers">0</strong><span>live renderer</span></div>
-            <div class="signal"><strong id="metricModules">0</strong><span>modular files</span></div>
-            <div class="signal"><strong id="metricLive">0</strong><span>running simulation</span></div>
-          </div>
-        </div>
-
-        <div class="hero-instrument" aria-label="Ambient laboratory visualization">
-          <canvas id="heroCanvas"></canvas>
-          <div class="instrument-overlay">
-            <div class="instrument-top">
-              <span class="instrument-label">
-                <span class="tiny mono">Viewport</span>
-                <span class="readout">Ambient agent field</span>
-              </span>
-              <span class="badge live">online</span>
-            </div>
-            <div class="instrument-bottom">
-              <span class="instrument-label">
-                <span class="tiny mono">Template</span>
-                <span class="readout">Metadata -> docs -> controls -> analysis</span>
-              </span>
-              <span class="tiny mono">GitHub Pages ready</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="projects" aria-labelledby="projects-title">
-        <div class="section-head">
-          <div>
+      <section class="console" id="console">
+        <aside class="console-rail" aria-label="Experiment registry">
+          <div class="rail-head">
             <p class="eyebrow">Project Registry</p>
-            <h2 id="projects-title">Choose an experiment slot.</h2>
+            <h2>Choose an experiment slot</h2>
+            <div class="rail-stats">
+              <span><strong id="metricProjects">0</strong> sims</span>
+              <span><strong id="metricRenderers">0</strong> renderers</span>
+              <span><strong id="metricLive">0</strong> live</span>
+            </div>
           </div>
-          <p>
-            These cards are generated from reusable metadata. Future simulations, games,
-            and agent sandboxes can join the hub without rebuilding the main layout.
-          </p>
-        </div>
-        <div class="project-grid" id="projectCards"></div>
-      </section>
+          <div class="project-list" id="projectCards"></div>
+        </aside>
 
-      <section id="workspace" aria-labelledby="workspace-title">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Standardized Project Page</p>
-            <h2 id="workspace-title">Documentation, viewport, metrics, math, and controls.</h2>
-          </div>
-          <p>
-            The selected project renders into the same research interface, keeping future
-            prototypes visually consistent and easy to extend.
-          </p>
-        </div>
-        <div class="workspace" id="projectDetail"></div>
+        <section class="console-stage" aria-label="Simulation stage">
+          <div id="viewportMount"></div>
+          <div class="detail-grid" id="detailMount"></div>
+        </section>
+
+        <aside class="control-panel console-controls" id="controlMount" aria-label="Controls and parameters"></aside>
       </section>
 
       <section id="architecture" aria-labelledby="architecture-title">
@@ -141,6 +98,6 @@
       }, { passive: true });
     })();
   </script>
-  <script type="module" src="lab/lab.js?v=20260615-lab5"></script>
+  <script type="module" src="lab/lab.js?v=20260615-lab6"></script>
 </body>
 </html>

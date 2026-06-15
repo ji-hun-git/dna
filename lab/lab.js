@@ -67,14 +67,15 @@ let hlIdx = 0;
 let hlAccum = 0;
 let hlLast = 0;
 const projectCards = $("#projectCards");
-const projectDetail = $("#projectDetail");
+const viewportMount = $("#viewportMount");
+const detailMount = $("#detailMount");
+const controlMount = $("#controlMount");
 const architectureTree = $("#architectureTree");
 const addSteps = $("#addSteps");
 const heroCanvas = $("#heroCanvas");
 const heroMetrics = {
   projects: $("#metricProjects"),
   renderers: $("#metricRenderers"),
-  modules: $("#metricModules"),
   live: $("#metricLive")
 };
 
@@ -108,98 +109,101 @@ function renderProjectCards(selectedId) {
   });
 }
 
-function projectTemplate(project) {
+// CENTER — top: the live simulation viewport.
+function viewportHTML(project) {
+  const canRender = Boolean(rendererRegistry[project.id]);
+  return `
+    <section class="viewport-panel" aria-labelledby="viewport-title">
+      <div class="viewport-header">
+        <div>
+          <span class="tiny mono">${project.category} · ${project.simulationType}</span>
+          <h3 id="viewport-title">${project.title}</h3>
+        </div>
+        <div class="viewport-tools">
+          <button class="ghost-button" type="button" data-control="pause">Pause</button>
+          <button class="ghost-button" type="button" data-control="reset">Reset</button>
+        </div>
+      </div>
+      ${canRender
+        ? `<div class="viewport-stage"><canvas id="simulationCanvas" aria-label="${project.title} simulation viewport"></canvas></div>`
+        : `<div class="empty-stage"><div><strong>${project.title} is registered.</strong><br />Add a renderer module to turn this slot into a live experiment.</div></div>`}
+    </section>
+  `;
+}
+
+// CENTER — bottom: live signals, the synced math, and the detail.
+function detailHTML(project) {
   const canRender = Boolean(rendererRegistry[project.id]);
   const metricLabels = project.metricLabels;
   return `
-    <div class="project-layout">
-      <section class="panel" aria-labelledby="overview-title">
-        <p class="eyebrow">Project Template</p>
-        <h2 id="overview-title">${project.title}</h2>
-        <p class="hero-lead">${project.subtitle}</p>
-        <div class="overview-copy">
-          ${project.overview.map((paragraph) => `<p>${paragraph}</p>`).join("")}
-        </div>
-        <div class="facts-grid">
-          ${project.facts.map((fact) => `
-            <div class="fact">
-              <span>${fact.label}</span>
-              <strong>${fact.value}</strong>
-            </div>
-          `).join("")}
-        </div>
-      </section>
-
-      <section class="viewport-panel" aria-labelledby="viewport-title">
-        <div class="viewport-header">
-          <div>
-            <span class="tiny mono">Interactive viewport</span>
-            <h3 id="viewport-title">${project.simulationType}</h3>
-          </div>
-          <div class="viewport-tools">
-            <button class="ghost-button" type="button" data-control="pause">Pause</button>
-            <button class="ghost-button" type="button" data-control="reset">Reset</button>
-          </div>
-        </div>
-        ${canRender
-          ? `<div class="viewport-stage"><canvas id="simulationCanvas" aria-label="${project.title} simulation viewport"></canvas></div>`
-          : `<div class="empty-stage"><div><strong>${project.title} is registered.</strong><br />Add a renderer module to turn this slot into a live experiment.</div></div>`}
-      </section>
-
-      <section class="panel" aria-labelledby="analysis-title">
-        <div class="analysis-header">
-          <div>
-            <span class="tiny mono">Visual analysis / data</span>
-            <h3 id="analysis-title">Runtime Signals</h3>
-          </div>
-          <span class="badge ${project.status === "live" ? "live" : ""}">${statusLabel(project.status)}</span>
-        </div>
-        <div class="analysis-grid">
-          <div class="chart-wrap">
-            ${canRender ? `<canvas id="analysisChart" aria-label="Live metric chart"></canvas>` : `<div class="empty-stage">Metrics will mount here.</div>`}
-          </div>
-          <div>
-            <div class="metric-grid">
-              <div class="metric"><span>${metricLabels.energy}</span><strong id="metricEnergy">0.00</strong></div>
-              <div class="metric"><span>${metricLabels.order}</span><strong id="metricOrder">0.00</strong></div>
-              <div class="metric"><span>${metricLabels.spread}</span><strong id="metricSpread">0.00</strong></div>
-              <div class="metric"><span>${metricLabels.fps}</span><strong id="metricFps">0</strong></div>
-            </div>
-            <ul class="log-list" id="simulationLog" aria-live="polite">
-              <li>Simulation log is ready.</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel" aria-labelledby="math-title">
-        <span class="tiny mono">Mathematical context</span>
-        <h3 id="math-title">${project.mathTopics.join(" / ")}</h3>
-        <div class="math-list">
-          ${project.equations.map((equation) => `<div class="equation">\\[${equation}\\]</div>`).join("")}
-        </div>
-      </section>
-
-      <section class="panel" aria-labelledby="future-title">
-        <span class="tiny mono">Extension notes</span>
-        <h3 id="future-title">How this grows</h3>
-        <ol class="steps">
-          ${project.futureWork.map((item) => `<li>${item}</li>`).join("")}
-        </ol>
-      </section>
-    </div>
-
-    <aside class="control-panel" aria-labelledby="controls-title">
-      <div class="control-header">
+    <section class="panel panel-signals" aria-labelledby="analysis-title">
+      <div class="analysis-header">
         <div>
-          <span class="tiny mono">Controls / parameters</span>
-          <h3 id="controls-title">Runtime Console</h3>
+          <span class="tiny mono">Runtime signals</span>
+          <h3 id="analysis-title">Live Metrics</h3>
+        </div>
+        <span class="badge ${project.status === "live" ? "live" : ""}">${statusLabel(project.status)}</span>
+      </div>
+      <div class="analysis-grid">
+        <div class="chart-wrap">
+          ${canRender ? `<canvas id="analysisChart" aria-label="Live metric chart"></canvas>` : `<div class="empty-stage">Metrics will mount here.</div>`}
+        </div>
+        <div>
+          <div class="metric-grid">
+            <div class="metric"><span>${metricLabels.energy}</span><strong id="metricEnergy">0.00</strong></div>
+            <div class="metric"><span>${metricLabels.order}</span><strong id="metricOrder">0.00</strong></div>
+            <div class="metric"><span>${metricLabels.spread}</span><strong id="metricSpread">0.00</strong></div>
+            <div class="metric"><span>${metricLabels.fps}</span><strong id="metricFps">0</strong></div>
+          </div>
+          <ul class="log-list" id="simulationLog" aria-live="polite">
+            <li>Simulation log is ready.</li>
+          </ul>
         </div>
       </div>
-      <div class="controls">
-        ${canRender ? controlsTemplate(project) : placeholderControlsTemplate(project)}
+    </section>
+
+    <section class="panel panel-math" aria-labelledby="math-title">
+      <span class="tiny mono">Mathematical context — the lit step is live</span>
+      <h3 id="math-title">${project.mathTopics.join(" / ")}</h3>
+      <div class="math-list">
+        ${project.equations.map((equation) => `<div class="equation">\\[${equation}\\]</div>`).join("")}
       </div>
-    </aside>
+    </section>
+
+    <section class="panel panel-about" aria-labelledby="overview-title">
+      <span class="tiny mono">About this experiment</span>
+      <h3 id="overview-title">${project.subtitle}</h3>
+      <div class="overview-copy">
+        ${project.overview.map((paragraph) => `<p>${paragraph}</p>`).join("")}
+      </div>
+      <div class="facts-grid">
+        ${project.facts.map((fact) => `<div class="fact"><span>${fact.label}</span><strong>${fact.value}</strong></div>`).join("")}
+      </div>
+    </section>
+
+    <section class="panel panel-future" aria-labelledby="future-title">
+      <span class="tiny mono">Extension notes</span>
+      <h3 id="future-title">How this grows</h3>
+      <ol class="steps">
+        ${project.futureWork.map((item) => `<li>${item}</li>`).join("")}
+      </ol>
+    </section>
+  `;
+}
+
+// RIGHT — controls and parameters.
+function controlHTML(project) {
+  const canRender = Boolean(rendererRegistry[project.id]);
+  return `
+    <div class="control-header">
+      <div>
+        <span class="tiny mono">Controls / parameters</span>
+        <h3 id="controls-title">${project.title}</h3>
+      </div>
+    </div>
+    <div class="controls">
+      ${canRender ? controlsTemplate(project) : placeholderControlsTemplate(project)}
+    </div>
   `;
 }
 
@@ -302,14 +306,21 @@ function selectProject(id, updateHash = false) {
   const project = labProjects.find((item) => item.id === id) || labProjects[0];
   if (updateHash) history.replaceState(null, "", project.route);
   renderProjectCards(project.id);
-  projectDetail.style.setProperty("--accent", accentFor(project.category));
-  projectDetail.innerHTML = projectTemplate(project);
+  const accent = accentFor(project.category);
+  viewportMount.style.setProperty("--accent", accent);
+  detailMount.style.setProperty("--accent", accent);
+  controlMount.style.setProperty("--accent", accent);
+  viewportMount.innerHTML = viewportHTML(project);
+  detailMount.innerHTML = detailHTML(project);
+  controlMount.innerHTML = controlHTML(project);
   mountSelectedSimulation(project);
   renderMath();
-  currentEqEls = [...projectDetail.querySelectorAll(".equation")];
+  currentEqEls = [...detailMount.querySelectorAll(".equation")];
   hlIdx = 0;
   hlAccum = 0;
   currentEqEls.forEach((el, i) => el.classList.toggle("eq-active", i === 0));
+  const activeCard = projectCards.querySelector(".project-card.active");
+  if (activeCard && activeCard.scrollIntoView) activeCard.scrollIntoView({ block: "nearest" });
 }
 
 function highlightLoop(ts) {
@@ -410,13 +421,12 @@ function runHeroCanvas() {
 }
 
 function boot() {
-  heroMetrics.projects.textContent = String(labProjects.length);
-  heroMetrics.renderers.textContent = String(Object.keys(rendererRegistry).length);
-  heroMetrics.modules.textContent = String(5 + Object.keys(rendererRegistry).length);
-  heroMetrics.live.textContent = String(labProjects.filter((project) => project.status === "live").length);
+  if (heroMetrics.projects) heroMetrics.projects.textContent = String(labProjects.length);
+  if (heroMetrics.renderers) heroMetrics.renderers.textContent = String(Object.keys(rendererRegistry).length);
+  if (heroMetrics.live) heroMetrics.live.textContent = String(labProjects.filter((project) => project.status === "live").length);
 
   renderArchitecture();
-  runHeroCanvas();
+  if (heroCanvas) runHeroCanvas();
 
   // Cursor spotlight on project cards (matches the main site's card glow).
   document.addEventListener(
