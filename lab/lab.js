@@ -1,4 +1,4 @@
-import { labArchitecture, labProjects } from "./experiments.js?v=20260615-lab4";
+import { labArchitecture, labProjects } from "./experiments.js?v=20260615-lab5";
 import { mountAgentArena } from "./simulations/agent-arena.js?v=20260615-variations";
 import { mountLudicGeometry } from "./simulations/ludic-geometry.js?v=20260615-variations";
 import { mountParticleField } from "./simulations/particle-field.js?v=20260615-variations";
@@ -19,9 +19,11 @@ import { mountNeuroFlappy } from "./simulations/neuroevolution-flappy.js?v=20260
 import { mountConnectFour } from "./simulations/connect-four.js?v=20260615-lab4";
 import { mountGame2048 } from "./simulations/game-2048.js?v=20260615-lab4";
 import { mountMinesweeper } from "./simulations/minesweeper.js?v=20260615-lab4";
+import { mountArcRobot } from "./simulations/arc-adaptive-robot.js?v=20260615-lab5";
 
 const rendererRegistry = {
   "behavior-prompt-gridworld": mountGridworldPrompt,
+  "arc-adaptive-unit": mountArcRobot,
   "agent-arena": mountAgentArena,
   "neuroevolution-flappy": mountNeuroFlappy,
   "connect-four": mountConnectFour,
@@ -56,6 +58,14 @@ const ACCENTS = {
   "Experimental Tool": "167, 139, 250"
 };
 const accentFor = (category) => ACCENTS[category] || "96, 165, 250";
+
+// Synced math highlight: the equation matching the simulation's current step
+// lights up. A sim sets api.stage to drive it; otherwise it auto-cycles through
+// the equations while the sim runs.
+let currentEqEls = [];
+let hlIdx = 0;
+let hlAccum = 0;
+let hlLast = 0;
 const projectCards = $("#projectCards");
 const projectDetail = $("#projectDetail");
 const architectureTree = $("#architectureTree");
@@ -296,6 +306,35 @@ function selectProject(id, updateHash = false) {
   projectDetail.innerHTML = projectTemplate(project);
   mountSelectedSimulation(project);
   renderMath();
+  currentEqEls = [...projectDetail.querySelectorAll(".equation")];
+  hlIdx = 0;
+  hlAccum = 0;
+  currentEqEls.forEach((el, i) => el.classList.toggle("eq-active", i === 0));
+}
+
+function highlightLoop(ts) {
+  if (currentEqEls.length) {
+    const sim = mountedSimulation;
+    const running = sim && sim.isRunning ? sim.isRunning() : true;
+    const stage = sim && sim.getStage ? sim.getStage() : -1;
+    let idx;
+    if (typeof stage === "number" && stage >= 0) {
+      idx = stage % currentEqEls.length;
+    } else {
+      const dt = hlLast ? ts - hlLast : 0;
+      if (running) hlAccum += dt;
+      if (hlAccum > 1500) {
+        hlAccum = 0;
+        hlIdx = (hlIdx + 1) % currentEqEls.length;
+      }
+      idx = hlIdx;
+    }
+    for (let i = 0; i < currentEqEls.length; i++) {
+      currentEqEls[i].classList.toggle("eq-active", i === idx);
+    }
+  }
+  hlLast = ts;
+  requestAnimationFrame(highlightLoop);
 }
 
 function renderArchitecture() {
@@ -393,6 +432,7 @@ function boot() {
   );
 
   selectProject(location.hash.replace("#", "") || labProjects[0].id);
+  requestAnimationFrame(highlightLoop);
 
   window.addEventListener("hashchange", () => {
     selectProject(location.hash.replace("#", "") || labProjects[0].id);

@@ -129,6 +129,10 @@ export function createSimHarness(refs, config) {
     },
     series: { energy: [], order: [], spread: [] },
     custom: {},
+    // `stage` is the index of the equation that is currently most relevant.
+    // Sims set it each tick; the lab highlights that equation in sync. -1 = let
+    // the page auto-cycle through the equations while the sim runs.
+    stage: -1,
     reseed(s) {
       gen = mulberry32((s || 0) >>> 0);
     },
@@ -358,6 +362,8 @@ export function createSimHarness(refs, config) {
   raf = requestAnimationFrame(loop);
 
   return {
+    getStage: () => api.stage,
+    isRunning: () => running,
     dispose() {
       cancelAnimationFrame(raf);
       resizeObserver?.disconnect();

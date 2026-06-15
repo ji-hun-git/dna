@@ -92,6 +92,59 @@ export const labProjects = [
     ]
   },
   {
+    id: "arc-adaptive-unit",
+    title: "ARC Adaptive Unit",
+    subtitle: "A drone or mech that re-controls itself when you break it",
+    description:
+      "Inspired by ARC Raiders' flying drones and walking mechs: a unit patrols toward targets while you shoot out its rotors or legs (hover a part) — and it re-solves its control on the fly to keep operating.",
+    category: "Game AI",
+    tags: ["Fault Tolerance", "Control Allocation", "Legged Gait", "Adaptation"],
+    thumbnail: "Destroy a rotor and the flyer re-allocates thrust; break a leg and the mech re-phases its gait.",
+    route: "#arc-adaptive-unit",
+    status: "live",
+    difficulty: "advanced",
+    createdAt: "2026-06-15",
+    mathTopics: ["Control allocation", "Fault-tolerant control", "Legged stability"],
+    simulationType: "Adaptive Control",
+    variations: [
+      { id: "quadrotor", label: "Quadrotor", description: "Flying drone, 4 rotors." },
+      { id: "hexrotor", label: "Hexrotor", description: "Flying drone, 6 rotors — more redundancy." },
+      { id: "quadruped", label: "Quadruped", description: "Walking mech, 4 legs." },
+      { id: "hexapod", label: "Hexapod", description: "Walking mech, 6 legs — graceful gaits." }
+    ],
+    controlLabels: {
+      count: "Agility",
+      speed: "Sim speed",
+      turbulence: "Damage rate",
+      attraction: "Controller gain",
+      trails: "Motion trail"
+    },
+    metricLabels: { energy: "Tracking", order: "Capacity", spread: "Stability", fps: "FPS" },
+    overview: [
+      "A flyer treats its rotors as a redundant thrust array. The controller computes a desired wrench to chase the target, then distributes it across the intact rotors with a least-norm pseudo-inverse. Knock a rotor out and the allocation matrix loses a column, so it re-solves and keeps tracking — degrading gracefully as redundancy runs out, exactly the fault-tolerant-control idea.",
+      "A walker runs a phase-based gait. Lose a leg and it re-phases the remaining legs (and stiffens the duty factor) to keep the centre of mass inside the support polygon, switching gait the way damage-recovery robots do. When support is lost it wobbles, then re-stabilizes.",
+      "Hover the cursor over a rotor or leg to disable it, or let parts fail on their own; some repair over time so you can watch it adapt both ways. The math panel highlights the live control step and flashes the adaptation equation the instant a part breaks."
+    ],
+    facts: [
+      { label: "Flyer", value: "Thrust-allocation pseudo-inverse" },
+      { label: "Walker", value: "Gait re-phasing + support polygon" },
+      { label: "Damage", value: "Hover-to-disable + auto faults" },
+      { label: "Signals", value: "Tracking, capacity, stability" }
+    ],
+    equations: [
+      "w_{des}=K_p(p^{*}-p)-K_d\\,\\dot p",
+      "f = M^{\\top}\\,(MM^{\\top})^{-1}\\,w_{des}",
+      "\\varphi_i=(\\varphi_0+i\\,\\Delta\\varphi)\\bmod 1,\\quad \\Delta\\varphi=\\tfrac{1}{k}",
+      "M \\leftarrow M_{\\setminus\\mathcal{D}},\\quad k \\leftarrow |\\,\\text{intact}\\,|",
+      "w_{ach}=M f,\\quad \\mathrm{CoM}\\in\\mathrm{conv}(\\text{stance feet})"
+    ],
+    futureWork: [
+      "Add a self-model the unit relearns online (model-identification recovery).",
+      "Give the flyer real out-of-plane rotor dynamics and the walker inverse kinematics.",
+      ...sharedPerformanceNotes
+    ]
+  },
+  {
     id: "particle-policy-field",
     title: "Particle Policy Field",
     subtitle: "Steering agents through a living vector field",
@@ -1057,6 +1110,7 @@ export const labArchitecture = {
     "lab/experiments.js              # Project metadata, controls, metrics, variations",
     "lab/simulations/_shared.js      # Sim harness: control wiring, loop, 3D, dispose",
     "lab/simulations/gridworld-prompt.js   # Behavior-Prompt Gridworld (core thesis)",
+    "lab/simulations/arc-adaptive-robot.js # fault-tolerant drone/mech control",
     "lab/simulations/maze-chase.js         # BFS pursuit/evasion",
     "lab/simulations/snake-growth.js       # Flood-fill snake AI",
     "lab/simulations/light-cycle.js        # Tron space-control agents",

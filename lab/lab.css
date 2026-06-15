@@ -780,14 +780,40 @@ h1 em {
 }
 
 .equation {
+  position: relative;
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
-  padding: 14px;
+  padding: 14px 14px 14px 18px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
   color: #eef4ff;
+  transition: border-color 0.4s var(--ease-out), background 0.4s var(--ease-out),
+    box-shadow 0.4s var(--ease-out), transform 0.4s var(--ease-out);
+}
+
+/* The equation matching the simulation's current step lights up in sync. */
+.equation::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.4s var(--ease-out);
+}
+.equation.eq-active {
+  border-color: rgba(var(--accent), 0.55);
+  background: rgba(var(--accent), 0.09);
+  box-shadow: 0 0 0 1px rgba(var(--accent), 0.28), 0 10px 32px rgba(var(--accent), 0.14);
+  transform: translateX(2px);
+}
+.equation.eq-active::before {
+  background: rgb(var(--accent));
+  box-shadow: 0 0 12px rgba(var(--accent), 0.8);
 }
 
 .equation .katex-display {
