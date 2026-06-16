@@ -61,17 +61,19 @@ const rendererRegistry = {
 
 const $ = (selector, root = document) => root.querySelector(selector);
 
-// Category → accent RGB triplet, matching the main site's accent palette.
+// Category -> a muted, earthy hue (RGB triplet) used only as a small wayfinding
+// dot in the index and figure tag. All emphasis (active state, math highlight)
+// uses the single clay brand accent defined in the stylesheet.
 const ACCENTS = {
-  "Game AI": "167, 139, 250",
-  "AI Agent": "96, 165, 250",
-  "Game Prototype": "52, 211, 153",
-  Simulation: "96, 165, 250",
-  "Math Visualization": "251, 191, 36",
-  "Research Tool": "244, 114, 182",
-  "Experimental Tool": "167, 139, 250"
+  "AI Agent": "94, 122, 145",
+  "Game AI": "179, 106, 74",
+  "Game Prototype": "110, 138, 106",
+  Simulation: "124, 110, 150",
+  "Math Visualization": "176, 138, 79",
+  "Research Tool": "110, 138, 106",
+  "Experimental Tool": "124, 110, 150"
 };
-const accentFor = (category) => ACCENTS[category] || "96, 165, 250";
+const accentFor = (category) => ACCENTS[category] || "141, 137, 126";
 
 // The project list is grouped and filterable so the (long) catalog stays tidy.
 const GROUP_ORDER = ["Agents", "Games", "Learning", "Physics", "Generative"];
@@ -109,20 +111,24 @@ function sortedProjects() {
   return [...labProjects].sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group));
 }
 
+// Stable catalogue number per sim (01..N), in the grouped reading order. Used
+// both as the index entry number and the figure number, so every experiment is
+// referable by a fixed "Fig. N" the way a paper numbers its figures.
+const FIG_NUM = new Map(sortedProjects().map((p, i) => [p.id, i + 1]));
+const figNo = (project) => String(FIG_NUM.get(project.id) || 0).padStart(2, "0");
+
 function cardHTML(project, selectedId) {
   return `
     <button class="project-card ${project.id === selectedId ? "active" : ""}" type="button" data-project-id="${project.id}" data-category="${project.category}" style="--accent: ${accentFor(project.category)}">
-      <span class="status-line">
-        <span class="badge ${project.status === "live" ? "live" : ""}">${statusLabel(project.status)}</span>
-        <span class="tiny mono">${project.simulationType}</span>
+      <span class="card-index">${figNo(project)}</span>
+      <span class="card-body">
+        <span class="status-line">
+          <span class="card-kicker">${project.category}</span>
+          ${project.status === "live" ? `<span class="badge live">Live</span>` : ""}
+        </span>
+        <h2>${project.title}</h2>
+        <p>${project.description}</p>
       </span>
-      <span class="card-kicker">${project.category}</span>
-      <h2>${project.title}</h2>
-      <p>${project.description}</p>
-      <div class="tags">
-        ${project.tags.slice(0, 3).map((tag) => `<span class="tag">${tag}</span>`).join("")}
-        <span class="tag">${project.variations.length} modes</span>
-      </div>
     </button>`;
 }
 
@@ -160,25 +166,27 @@ function renderProjectCards(selectedId) {
   });
 }
 
-// CENTER - top: the live simulation viewport.
+// CENTER - top: the figure (live simulation) with a journal-style caption.
 function viewportHTML(project) {
   const canRender = Boolean(rendererRegistry[project.id]);
+  const n = figNo(project);
   return `
-    <section class="viewport-panel" aria-labelledby="viewport-title">
-      <div class="viewport-header">
+    <figure class="viewport-panel" aria-labelledby="viewport-title">
+      <figcaption class="viewport-header">
         <div>
-          <span class="tiny mono">${project.category} · ${project.simulationType}</span>
+          <span class="kicker">Figure ${n} &middot; ${project.category}</span>
           <h3 id="viewport-title">${project.title}</h3>
         </div>
         <div class="viewport-tools">
-          <button class="ghost-button" type="button" data-control="pause">Pause</button>
-          <button class="ghost-button" type="button" data-control="reset">Reset</button>
+          <button class="text-button" type="button" data-control="pause">Pause</button>
+          <button class="text-button" type="button" data-control="reset">Reset</button>
         </div>
-      </div>
+      </figcaption>
       ${canRender
-        ? `<div class="viewport-stage"><canvas id="simulationCanvas" aria-label="${project.title} simulation viewport"></canvas></div>`
-        : `<div class="empty-stage"><div><strong>${project.title} is registered.</strong><br />Add a renderer module to turn this slot into a live experiment.</div></div>`}
-    </section>
+        ? `<div class="viewport-stage"><canvas id="simulationCanvas" aria-label="${project.title} simulation"></canvas></div>
+           <p class="viewport-caption"><b>Fig. ${n}.</b> ${project.subtitle}. ${project.simulationType}; adjust parameters in the Controls panel and switch regimes with the mode buttons.</p>`
+        : `<div class="empty-stage"><div><strong>${project.title} is registered.</strong><br />A renderer module will activate this figure.</div></div>`}
+    </figure>
   `;
 }
 
@@ -190,10 +198,10 @@ function detailHTML(project) {
     <section class="panel panel-signals" aria-labelledby="analysis-title">
       <div class="analysis-header">
         <div>
-          <span class="tiny mono">Runtime signals</span>
-          <h3 id="analysis-title">Live Metrics</h3>
+          <span class="kicker">Measurements</span>
+          <h3 id="analysis-title">Runtime signals</h3>
         </div>
-        <span class="badge ${project.status === "live" ? "live" : ""}">${statusLabel(project.status)}</span>
+        <span class="badge ${project.status === "live" ? "live" : ""}">${project.status === "live" ? "Live" : statusLabel(project.status)}</span>
       </div>
       <div class="analysis-grid">
         <div class="chart-wrap">
@@ -214,15 +222,15 @@ function detailHTML(project) {
     </section>
 
     <section class="panel panel-math" aria-labelledby="math-title">
-      <span class="tiny mono">Mathematical context - the lit step is live</span>
-      <h3 id="math-title">${project.mathTopics.join(" / ")}</h3>
+      <span class="kicker">Model &middot; the lit term tracks the current step</span>
+      <h3 id="math-title">${project.mathTopics.join(" &middot; ")}</h3>
       <div class="math-list">
         ${project.equations.map((equation) => `<div class="equation">\\[${equation}\\]</div>`).join("")}
       </div>
     </section>
 
     <section class="panel panel-about" aria-labelledby="overview-title">
-      <span class="tiny mono">About this experiment</span>
+      <span class="kicker">Description</span>
       <h3 id="overview-title">${project.subtitle}</h3>
       <div class="overview-copy">
         ${project.overview.map((paragraph) => `<p>${paragraph}</p>`).join("")}
@@ -233,8 +241,8 @@ function detailHTML(project) {
     </section>
 
     <section class="panel panel-future" aria-labelledby="future-title">
-      <span class="tiny mono">Extension notes</span>
-      <h3 id="future-title">How this grows</h3>
+      <span class="kicker">Notes</span>
+      <h3 id="future-title">Extensions</h3>
       <ol class="steps">
         ${project.futureWork.map((item) => `<li>${item}</li>`).join("")}
       </ol>
@@ -248,8 +256,8 @@ function controlHTML(project) {
   return `
     <div class="control-header">
       <div>
-        <span class="tiny mono">Controls / parameters</span>
-        <h3 id="controls-title">${project.title}</h3>
+        <span class="kicker">Controls</span>
+        <h3 id="controls-title">Parameters</h3>
       </div>
     </div>
     <div class="controls">
@@ -293,14 +301,14 @@ function controlsTemplate(project) {
       <span class="control-row"><span>Seed</span><output id="seedValue">42</output></span>
       <input id="seedControl" type="number" min="1" max="999999" value="42" />
     </label>
-    <button class="solid-button" type="button" data-control="randomize">Randomize seed</button>
+    <button class="outline-button" type="button" data-control="randomize">Randomize seed</button>
   `;
 }
 
 function placeholderControlsTemplate(project) {
   return `
-    <p class="overview-copy">${project.title} already has metadata, documentation, math, and future-work sections. Add a simulation module to activate controls.</p>
-    <button class="solid-button" type="button" disabled>Renderer pending</button>
+    <p class="overview-copy">${project.title} already has its description, model, and notes. A renderer module will activate these controls.</p>
+    <button class="outline-button" type="button" disabled>Renderer pending</button>
   `;
 }
 
@@ -391,8 +399,22 @@ function selectProject(id, updateHash = false) {
   hlIdx = 0;
   hlAccum = 0;
   currentEqEls.forEach((el, i) => el.classList.toggle("eq-active", i === 0));
-  const activeCard = projectCards.querySelector(".project-card.active");
-  if (activeCard && activeCard.scrollIntoView) activeCard.scrollIntoView({ block: "nearest" });
+  revealActiveCard();
+}
+
+// Keep the active index entry in view by scrolling ONLY the rail list, never the
+// window. (Window-level scrollIntoView is what made the page jump to the top when
+// re-selecting; controls live in a non-scrollable sticky panel.)
+function revealActiveCard() {
+  const card = projectCards.querySelector(".project-card.active");
+  if (!card) return;
+  const listRect = projectCards.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+  if (cardRect.top < listRect.top) {
+    projectCards.scrollTop -= listRect.top - cardRect.top + 8;
+  } else if (cardRect.bottom > listRect.bottom) {
+    projectCards.scrollTop += cardRect.bottom - listRect.bottom + 8;
+  }
 }
 
 function highlightLoop(ts) {
@@ -499,19 +521,6 @@ function boot() {
 
   renderFilter();
   if (heroCanvas) runHeroCanvas();
-
-  // Cursor spotlight on project cards (matches the main site's card glow).
-  document.addEventListener(
-    "pointermove",
-    (event) => {
-      const card = event.target.closest?.(".project-card");
-      if (!card) return;
-      const rect = card.getBoundingClientRect();
-      card.style.setProperty("--mx", `${((event.clientX - rect.left) / rect.width) * 100}%`);
-      card.style.setProperty("--my", `${((event.clientY - rect.top) / rect.height) * 100}%`);
-    },
-    { passive: true }
-  );
 
   selectProject(location.hash.replace("#", "") || labProjects[0].id);
   requestAnimationFrame(highlightLoop);
