@@ -541,53 +541,6 @@
       padding-top: 8px;
     }
 
-    /* ── HERO with the signature: an endless match between two
-         autonomous agents, faintly playing in the background ── */
-    .hero {
-      position: relative;
-      margin-bottom: 26px;
-    }
-    .pong-stage {
-      position: absolute;
-      inset: -12px -8px -4px;
-      z-index: 0;
-      pointer-events: none;
-      opacity: 0.9;
-      -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
-              mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
-    }
-    .pong-stage canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    .hero > *:not(.pong-stage) { position: relative; z-index: 1; }
-
-    /* Hero entrance: clip-reveal with focus pull */
-    .hero > .eyebrow-row,
-    .hero > h1,
-    .hero > p {
-      opacity: 0;
-      transform: translateY(18px);
-      filter: blur(6px);
-      transition:
-        opacity 0.9s var(--ease-out),
-        transform 0.9s var(--ease-out),
-        filter 0.9s var(--ease-out);
-    }
-    body.hero-loaded .hero > .eyebrow-row,
-    body.hero-loaded .hero > h1,
-    body.hero-loaded .hero > p {
-      opacity: 1;
-      transform: translateY(0);
-      filter: blur(0);
-    }
-    body.hero-loaded .hero > .eyebrow-row { transition-delay: 0.05s; }
-    body.hero-loaded .hero > h1            { transition-delay: 0.18s; }
-    body.hero-loaded .hero > p             { transition-delay: 0.34s; }
-    body.hero-loaded .hero > p:nth-of-type(n+3) { transition-delay: 0.46s; }
-    body.hero-loaded .hero > p:nth-of-type(n+5) { transition-delay: 0.58s; }
-
     .eyebrow-row {
       display: flex;
       align-items: center;
@@ -649,45 +602,9 @@
       opacity: 0.6;
     }
 
-    .hero h1 {
-      margin: 0 0 22px;
-      font-size: clamp(2rem, 4.2vw, 3.4rem);
-      line-height: 1.18;
-      letter-spacing: -0.015em;
-      max-width: 920px;
-      font-family: 'Fraunces', 'Inter', serif;
-      font-weight: 500;
-    }
-    body.ko .hero h1 {
-      font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
-      font-weight: 700;
-      letter-spacing: -0.035em;
-      line-height: 1.32;
-    }
-    .hero h1 em {
-      position: relative;
-      font-style: italic;
-      display: inline-block;
-      padding: 0 0.08em 0 0.04em;
-      vertical-align: baseline;
-      background: linear-gradient(120deg, #c4b5fd 0%, #93c5fd 40%, #f0abfc 60%, #c4b5fd 100%);
-      background-size: 250% 100%;
-      background-position: 0% 50%;
-      -webkit-background-clip: text;
-              background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    body.hero-loaded .hero h1 em {
-      animation: shimmer 2.6s var(--ease-out) 0.7s 1 both;
-    }
     @keyframes shimmer {
       0%   { background-position: 0% 50%; }
       100% { background-position: 100% 50%; }
-    }
-    body.ko .hero h1 em {
-      font-style: normal;
-      font-weight: 800;
-      padding: 0 0.05em;
     }
 
     .lead, .intro {
@@ -698,49 +615,57 @@
     }
     .lead strong, .intro strong { color: #fff; font-weight: 600; }
 
-    /* ── Keyword ticker: a quiet stream of the research vocabulary ── */
-    .ticker {
-      position: relative;
-      margin: 8px 0 46px;
-      padding: 13px 0;
+    /* ── Capabilities: build / ship / prove, as scannable chips ── */
+    .caps {
+      margin: 0 0 46px;
+      padding: 20px 0 22px;
       border-top: 1px solid rgba(255,255,255,0.06);
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      overflow: hidden;
-      -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-              mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+      display: grid;
+      gap: 13px;
     }
-    .ticker-track {
-      display: inline-flex;
-      gap: 0;
-      white-space: nowrap;
-      will-change: transform;
-      animation: ticker 46s linear infinite;
+    .caps-row {
+      display: grid;
+      grid-template-columns: 78px 1fr;
+      gap: 18px;
+      align-items: start;
     }
-    .ticker:hover .ticker-track { animation-play-state: paused; }
-    .ticker-track > span {
-      display: inline-flex;
-      align-items: center;
-      color: var(--soft);
-      font-size: 0.82rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+    .caps-row .k {
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.66rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--soft);
+      line-height: 1;
+      padding-top: 9px;
     }
-    body.ko .ticker-track > span {
-      text-transform: none;
-      letter-spacing: 0.02em;
+    body.ko .caps-row .k {
       font-family: 'Pretendard', sans-serif;
-      font-size: 0.85rem;
+      text-transform: none;
+      letter-spacing: 0.03em;
+      font-size: 0.78rem;
+      padding-top: 7px;
     }
-    .ticker-track > span::after {
-      content: "✦";
-      margin: 0 22px;
-      font-size: 0.6rem;
-      color: rgba(255,255,255,0.22);
+    /* Specificity note: the global `body [lang="ko"] { display: none }` switch is
+       0-1-1, so the visible state has to be qualified the same way or the hidden
+       language would win the cascade and both scripts would render at once. */
+    body:not(.ko) [lang="en"].v,
+    body.ko [lang="ko"].v { display: flex; flex-wrap: wrap; gap: 7px; }
+    .caps-row .chip {
+      font-size: 0.79rem;
+      line-height: 1.5;
+      color: var(--muted);
+      padding: 3px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.02);
+      transition: color 0.2s ease, border-color 0.2s ease;
     }
-    @keyframes ticker {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
+    .caps-row .chip:hover { color: #fff; border-color: var(--line-strong); }
+    body.ko .caps-row .chip { font-size: 0.82rem; }
+    @media (max-width: 700px) {
+      .caps-row { grid-template-columns: 1fr; gap: 7px; }
+      .caps-row .k { padding-top: 0; }
     }
 
     .section { margin-top: 68px; }
@@ -1115,9 +1040,11 @@
       .mobile-nav::-webkit-scrollbar { display: none; }
       .mobile-nav a {
         position: relative;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;   /* WCAG 2.2 target size */
         color: var(--muted);
         font-size: 0.88rem;
-        padding-bottom: 4px;
         transition: color 0.2s ease;
         flex-shrink: 0;
       }
@@ -1135,13 +1062,11 @@
         border-radius: 2px;
       }
 
-      .hero h1 { font-size: clamp(2rem, 8vw, 2.6rem); }
       .lead, .intro, .item-desc { font-size: 0.96rem; }
       .two-col { grid-template-columns: 1fr; }
       .item { padding: 16px 16px 16px 18px; }
       .section { margin-top: 48px; }
-      .ticker { margin-bottom: 36px; }
-      .pong-stage { display: none; }
+      .caps { margin-bottom: 36px; }
       .site-footer { margin-top: 56px; }
 
       .top-controls { gap: 6px; }
@@ -1184,8 +1109,6 @@
     body.reader .profile-image,
     body.reader .divider,
     body.reader .eyebrow .dot,
-    body.reader .pong-stage,
-    body.reader .ticker,
     body.reader .lab-fab,
     body.reader .button {
       display: none !important;
@@ -1259,21 +1182,6 @@
       margin-bottom: 14px !important;
     }
     body.reader.ko .eyebrow { font-style: normal; }
-    body.reader .hero h1 {
-      color: #111 !important;
-      font-family: 'Fraunces', serif !important;
-      font-weight: 600;
-      font-size: 2.2rem !important;
-    }
-    body.reader.ko .hero h1 {
-      font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
-    }
-    body.reader .hero h1 em {
-      background: none !important;
-      -webkit-text-fill-color: #6d28d9 !important;
-      color: #6d28d9 !important;
-      margin-right: 0;
-    }
     body.reader .lead,
     body.reader .intro {
       color: #2a2a2a !important;
@@ -1359,11 +1267,6 @@
       transform: none !important;
       filter: none !important;
     }
-    body.reader .hero > * {
-      opacity: 1 !important;
-      transform: none !important;
-      filter: none !important;
-    }
     body.reader .site-footer {
       border-top-color: rgba(0,0,0,0.14);
       color: #555 !important;
@@ -1383,19 +1286,17 @@
     @media (max-width: 760px) {
       html { font-size: 15px; }
       .page { width: calc(100% - 22px); padding-top: 16px; }
-      .hero h1 { font-size: clamp(1.6rem, 7.2vw, 2.2rem); line-height: 1.22; margin-bottom: 16px; }
       .name { font-size: 1.7rem; }
       .lead, .intro { font-size: 0.92rem; }
       .profile-image { max-width: 200px; margin-left: auto; margin-right: auto; }
       .section { margin-top: 40px; }
-      .ticker { margin-bottom: 28px; }
+      .caps { margin-bottom: 28px; }
       .item { padding: 13px 14px 13px 16px; }
       .item-title { font-size: 0.98rem; }
       .section-title { font-size: 1.3rem; }
     }
     @media (max-width: 440px) {
       html { font-size: 13.5px; }
-      .hero h1 { font-size: clamp(1.4rem, 8vw, 1.9rem); }
       .name { font-size: 1.5rem; }
       .profile-image { max-width: 168px; }
     }
@@ -1407,9 +1308,7 @@
         transition: none !important;
       }
       .reveal { opacity: 1; transform: none; filter: none; }
-      .hero > * { opacity: 1 !important; transform: none !important; filter: none !important; }
-      .aurora, .ambient, .pong-stage { display: none; }
-      .ticker-track { animation: none !important; }
+      .aurora, .ambient { display: none; }
     }
   </style>
 </head>
@@ -1439,7 +1338,6 @@
 
   <div class="page">
     <nav class="mobile-nav" aria-label="Sections">
-      <a href="#about"><span lang="en">About</span><span lang="ko">소개</span></a>
       <a href="#projects"><span lang="en">Work</span><span lang="ko">프로젝트</span></a>
       <a href="#awards"><span lang="en">Awards</span><span lang="ko">수상</span></a>
       <a href="#education"><span lang="en">Education</span><span lang="ko">학력</span></a>
@@ -1475,22 +1373,6 @@
 
           <div class="divider"></div>
 
-          <p class="side-label"><span lang="en">Toolkit</span><span lang="ko">기술 스택</span></p>
-          <div class="side-list" lang="en">
-            <div>Python · TypeScript · LLM APIs</div>
-            <div>Agent orchestration · RAG</div>
-            <div>Evaluation design · User research</div>
-            <div>Unreal · Unity · XR · Computer Vision</div>
-          </div>
-          <div class="side-list" lang="ko">
-            <div>Python · TypeScript · LLM API</div>
-            <div>에이전트 오케스트레이션 · RAG</div>
-            <div>평가 설계 · 사용자 연구</div>
-            <div>Unreal · Unity · XR · 컴퓨터 비전</div>
-          </div>
-
-          <div class="divider"></div>
-
           <ul class="contact-list">
             <li><a href="mailto:chaejihun@kaist.ac.kr" data-copy="chaejihun@kaist.ac.kr">✉ <span lang="en">Email</span><span lang="ko">이메일</span></a></li>
             <li><a href="https://www.linkedin.com/in/jihun-chae-15457756/" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
@@ -1502,7 +1384,6 @@
 
           <p class="side-label"><span lang="en">Sections</span><span lang="ko">섹션</span></p>
           <nav class="section-nav" aria-label="Page sections">
-            <a href="#about" data-target="about"><span lang="en">About</span><span lang="ko">소개</span></a>
             <a href="#projects" data-target="projects"><span lang="en">Selected Work</span><span lang="ko">주요 프로젝트</span></a>
             <a href="#awards" data-target="awards"><span lang="en">Awards</span><span lang="ko">수상</span></a>
             <a href="#education" data-target="education"><span lang="en">Education</span><span lang="ko">학력</span></a>
@@ -1517,46 +1398,33 @@
       </aside>
 
       <main class="content">
-        <section class="hero section" id="about">
-          <div class="pong-stage" aria-hidden="true">
-            <canvas id="pongCanvas"></canvas>
+        <div class="caps" aria-label="Capabilities">
+          <div class="caps-row">
+            <span class="k"><span lang="en">Build</span><span lang="ko">구축</span></span>
+            <span class="v" lang="en">
+              <span class="chip">Multi-agent orchestration</span><span class="chip">Sequential · parallel · loop agents</span><span class="chip">MCP tool servers</span><span class="chip">A2A agent cards</span><span class="chip">RAG</span><span class="chip">Memory &amp; context design</span>
+            </span>
+            <span class="v" lang="ko">
+              <span class="chip">멀티 에이전트 오케스트레이션</span><span class="chip">순차 · 병렬 · 루프 에이전트</span><span class="chip">MCP 툴 서버</span><span class="chip">A2A 에이전트 카드</span><span class="chip">RAG</span><span class="chip">메모리 · 컨텍스트 설계</span>
+            </span>
           </div>
-          <div class="eyebrow-row">
-            <div class="eyebrow">
-              <span class="dot"></span>
-              <span lang="en">AI Transformation · Forward Deployed Engineering · Measurement</span>
-              <span lang="ko">AI 트랜스포메이션 · 포워드 디플로이드 엔지니어링 · 측정</span>
-            </div>
-            <span class="meta-clock" id="liveClock" aria-live="off"></span>
+          <div class="caps-row">
+            <span class="k"><span lang="en">Ship</span><span lang="ko">배포</span></span>
+            <span class="v" lang="en">
+              <span class="chip">Python</span><span class="chip">TypeScript</span><span class="chip">Google ADK</span><span class="chip">Cloud Run</span><span class="chip">Containerized services</span><span class="chip">Workflow automation</span>
+            </span>
+            <span class="v" lang="ko">
+              <span class="chip">Python</span><span class="chip">TypeScript</span><span class="chip">Google ADK</span><span class="chip">Cloud Run</span><span class="chip">컨테이너 서비스</span><span class="chip">업무 자동화</span>
+            </span>
           </div>
-          <h1>
-            <span lang="en">Most AI projects do not fail at the model. They fail at the <em>last mile</em>.</span>
-            <span lang="ko">AI 프로젝트는 모델에서 실패하지 않습니다. <em>마지막 1마일</em>에서 실패합니다.</span>
-          </h1>
-          <p class="lead" lang="en">I am an <strong>AI engineer</strong> who goes to where the work actually happens, finds the manual loop that is quietly costing a team its week, and ships an agent that removes it - then measures whether it really did.</p>
-          <p class="lead" lang="ko">저는 <strong>AI 엔지니어</strong>로서, 일이 실제로 벌어지는 현장으로 가서 한 팀의 일주일을 조용히 갉아먹는 반복 업무를 찾아내고, 그것을 없애는 에이전트를 만들어 배포한 뒤, 실제로 효과가 있었는지를 측정합니다.</p>
-
-          <p class="intro" lang="en"><strong>Forward deployed by instinct.</strong> Requirements are never in the ticket, they are in the room. I sit with the people doing the work, turn a vague complaint into a defined problem, build the thin slice that proves it, and iterate in front of them. At <strong>Cofathon 2026</strong>, KRAFTON and CJ Olive Young's AI Native Battlegrounds, I placed in the <strong>Top 3 of the KRAFTON Forward Deployed Engineer track</strong>: an unseen business problem, discovered through an AI scenario agent and solved end to end in under four hours.</p>
-          <p class="intro" lang="ko"><strong>현장으로 나가는 것이 기본값입니다.</strong> 요구사항은 티켓이 아니라 현장에 있습니다. 실제로 그 일을 하는 사람 옆에 앉아 막연한 불편을 정의된 문제로 바꾸고, 그것을 증명하는 얇은 슬라이스를 만들어 눈앞에서 반복 개선합니다. <strong>Cofathon 2026</strong>(크래프톤 × CJ올리브영, AI Native Battlegrounds)에서 <strong>크래프톤 FDE 트랙 3위 안</strong>에 들었습니다. 처음 보는 실무 문제를 AI 시나리오 에이전트로 발굴하고 4시간 안에 끝까지 구현하는 방식이었습니다.</p>
-
-          <p class="intro" lang="en"><strong>AI transformation is an adoption problem, not a capability problem.</strong> My doctoral research is on when people accept an AI that acts for them and when they push it away. Studying players with disabilities produced a rule that generalizes straight into the workplace: <strong>offload the labor, preserve the judgment</strong>. Automation that erases someone's contribution gets switched off, however good the model is. I design for the version people keep using.</p>
-          <p class="intro" lang="ko"><strong>AI 내재화는 성능 문제가 아니라 수용의 문제입니다.</strong> 제 박사 연구의 주제는 사람이 자신을 대신해 행동하는 AI를 언제 받아들이고 언제 밀어내는가입니다. 장애가 있는 플레이어를 연구하며 얻은 원칙은 업무 현장에 그대로 적용됩니다. <strong>수고는 덜어내되, 판단은 남길 것.</strong> 사람의 기여를 지워버리는 자동화는 모델이 아무리 좋아도 결국 꺼집니다. 저는 사람들이 계속 쓰게 되는 쪽을 설계합니다.</p>
-
-          <p class="intro" lang="en"><strong>Shipped, then measured.</strong> Building an agent is the easy half. I write the evaluation alongside it - what improved, by how much, against what baseline - because a demo that no one can verify is not a result. That habit comes from research and it is the part most AI pilots skip.</p>
-          <p class="intro" lang="ko"><strong>배포하고, 측정합니다.</strong> 에이전트를 만드는 것은 절반에 불과합니다. 저는 무엇이, 얼마나, 어떤 기준선 대비 나아졌는지를 함께 설계합니다. 검증할 수 없는 데모는 결과가 아니기 때문입니다. 연구에서 몸에 밴 습관이고, 대부분의 AI 파일럿이 건너뛰는 부분이기도 합니다.</p>
-
-          <p class="intro" lang="en">Currently a Ph.D. student at <strong>KAIST Graduate School of Culture Technology</strong>, publishing at ACM IUI and CHI on human-AI interaction. Open to conversations about <strong>AX, internal AI adoption, and forward deployed work</strong>.</p>
-          <p class="intro" lang="ko">현재 <strong>KAIST 문화기술대학원</strong> 박사과정에 재학 중이며, 인간-AI 상호작용을 주제로 ACM IUI, CHI에 논문을 발표하고 있습니다. <strong>AX, 사내 AI 내재화, 포워드 디플로이드 업무</strong>에 대한 대화는 언제든 환영합니다.</p>
-        </section>
-
-        <div class="ticker" aria-hidden="true">
-          <div class="ticker-track" lang="en">
-            <span>AI Transformation</span><span>AI Native</span><span>Forward Deployed Engineering</span><span>LLM Agents</span><span>Workflow Automation</span><span>Evaluation &amp; Measurement</span><span>Human-AI Interaction</span><span>Adoption</span>
-            <span>AI Transformation</span><span>AI Native</span><span>Forward Deployed Engineering</span><span>LLM Agents</span><span>Workflow Automation</span><span>Evaluation &amp; Measurement</span><span>Human-AI Interaction</span><span>Adoption</span>
-          </div>
-          <div class="ticker-track" lang="ko">
-            <span>AI 트랜스포메이션</span><span>AI 네이티브</span><span>포워드 디플로이드 엔지니어링</span><span>LLM 에이전트</span><span>업무 자동화</span><span>평가와 측정</span><span>인간-AI 상호작용</span><span>사내 AI 내재화</span>
-            <span>AI 트랜스포메이션</span><span>AI 네이티브</span><span>포워드 디플로이드 엔지니어링</span><span>LLM 에이전트</span><span>업무 자동화</span><span>평가와 측정</span><span>인간-AI 상호작용</span><span>사내 AI 내재화</span>
+          <div class="caps-row">
+            <span class="k"><span lang="en">Prove</span><span lang="ko">검증</span></span>
+            <span class="v" lang="en">
+              <span class="chip">Evals &amp; verifiability</span><span class="chip">Observability &amp; tracing</span><span class="chip">Baselines</span><span class="chip">User studies</span><span class="chip">Adoption measurement</span>
+            </span>
+            <span class="v" lang="ko">
+              <span class="chip">평가 체계 · 검증 가능성</span><span class="chip">관측성 · 트레이싱</span><span class="chip">기준선 비교</span><span class="chip">사용자 연구</span><span class="chip">내재화 측정</span>
+            </span>
           </div>
         </div>
 
@@ -1567,16 +1435,14 @@
               <span class="item-title"><span lang="en">Development and Evaluation of the Inclusive Conversational AI Service for Game Accessibility Enhancement</span><span lang="ko">게임 접근성 향상을 위한 포용적 대화형 AI 서비스의 개발 및 평가</span></span>
               <div class="item-meta"><span lang="en">2024.05 – 2027.04 | KAIST | National Research Foundation of Korea (NRF) | Student Researcher Lead</span><span lang="ko">2024.05 ~ 2027.04 | KAIST | 한국연구재단 (NRF) | 학생연구원 (총괄)</span></div>
               <ul class="item-desc" lang="en">
-                <li>Lead student researcher building GAIA, an LLM assistant that plays alongside gamers with disabilities: RAG over game knowledge, an agent loop over live screen and audio context, and speech in and out.</li>
-                <li>Ran the full loop from field to system - interviews and participatory design workshops with disabled players, translated into interaction requirements, shipped as working prototypes, then evaluated with the same users.</li>
-                <li>Findings published at ACM IUI '26 as design principles covering accessibility needs and the ethical limits of acting on a player's behalf.</li>
-                <li>Collaborators: Samsung Electronics (Corporate Design Center), Nexon Intelligence Labs, Smilegate D&amp;I, Korea National Rehabilitation Center, and SpecialEffect (UK).</li>
+                <li>Building GAIA: an LLM assistant with RAG over game knowledge, an agent loop over live screen and audio, and speech in and out.</li>
+                <li>Owned the full loop: field interviews and design workshops, to requirements, to shipped prototypes, to evaluation with the same users.</li>
+                <li>Published at ACM IUI '26. Partners: Samsung Electronics, Nexon Intelligence Labs, Smilegate D&amp;I, National Rehabilitation Center, SpecialEffect (UK).</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>장애 게이머와 함께 플레이하는 LLM 어시스턴트 GAIA의 개발을 주도. 게임 지식 기반 RAG, 실시간 화면·음성 맥락을 다루는 에이전트 루프, 음성 입출력을 구현.</li>
-                <li>현장에서 시스템까지 전 과정을 수행. 장애 플레이어 인터뷰와 참여형 디자인 워크숍으로 요구사항을 도출하고, 동작하는 프로토타입으로 구현한 뒤, 동일 사용자와 함께 평가.</li>
-                <li>연구 결과는 ACM IUI '26에 게재. 접근성 요구사항과 함께, 플레이어를 대신해 행동하는 것의 윤리적 한계를 다루는 설계 원칙을 제시.</li>
-                <li>협력 기관: 삼성전자 (코퍼레이트디자인센터), 넥슨 인텔리전스 랩, 스마일게이트 D&amp;I, 국립재활원, SpecialEffect (영국).</li>
+                <li>LLM 어시스턴트 GAIA 개발 주도. 게임 지식 RAG, 실시간 화면·음성 맥락 에이전트 루프, 음성 입출력 구현.</li>
+                <li>현장 인터뷰·디자인 워크숍에서 요구사항 도출, 프로토타입 구현, 동일 사용자 평가까지 전 과정 수행.</li>
+                <li>ACM IUI '26 게재. 협력: 삼성전자, 넥슨 인텔리전스 랩, 스마일게이트 D&amp;I, 국립재활원, SpecialEffect (영국).</li>
               </ul>
             </div>
 
@@ -1584,16 +1450,14 @@
               <span class="item-title"><span lang="en">Preserving the Haenyeo Legacy: Serious Games for Social Impact</span><span lang="ko">해녀 유산의 보존: 사회적 임팩트를 위한 시리어스 게임</span></span>
               <div class="item-meta"><span lang="en">2025.06 – 2025.09 | KAIST | Leverhulme Trust International Fellow | Student Researcher</span><span lang="ko">2025.06 ~ 2025.09 | KAIST | Leverhulme Trust International Fellow | 학생연구원</span></div>
               <ul class="item-desc" lang="en">
-                <li>Contributed to the design of a serious game project aimed at preserving and communicating the cultural heritage of the Jeju Haenyeo, with a focus on intergenerational knowledge transmission.</li>
-                <li>Helped develop game concepts and narrative structures that connect Haenyeo practices, environmental change, and women's community knowledge in an accessible interactive format.</li>
-                <li>Supported international research collaboration and field-based design discussions examining how serious games can contribute to cultural sustainability and community resilience.</li>
-                <li>Partners: Brunel University London (Games Research Lab), Jeju Haenyeo Museum, and the Haenyeo communities of Sinrye-ri, Daepyeong-ri, and Yeongnak-ri.</li>
+                <li>Designed game concepts and narrative structure for a serious game preserving Jeju Haenyeo heritage and intergenerational knowledge.</li>
+                <li>Ran field-based design work with the diving communities themselves.</li>
+                <li>Partners: Brunel University London (Games Research Lab), Jeju Haenyeo Museum, and the Sinrye-ri, Daepyeong-ri, and Yeongnak-ri communities.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>제주 해녀의 문화 유산을 보존하고 전달하기 위한 시리어스 게임 프로젝트 설계에 기여했으며, 세대 간 지식 전달에 중점을 둠.</li>
-                <li>해녀의 실천, 환경 변화, 여성 공동체의 지식을 접근 가능한 인터랙티브 형식으로 연결하는 게임 콘셉트 및 내러티브 구조 개발에 참여.</li>
-                <li>시리어스 게임이 문화적 지속가능성과 공동체 회복력에 어떻게 기여할 수 있는지를 살펴보는 국제 공동 연구와 현장 기반 디자인 논의를 지원.</li>
-                <li>협력 기관: 브루넬 대학교 런던 (Games Research Lab), 제주 해녀박물관, 신례리·대평리·영락리 해녀 공동체.</li>
+                <li>제주 해녀 유산과 세대 간 지식 전달을 다루는 시리어스 게임의 콘셉트·내러티브 구조 설계.</li>
+                <li>해녀 공동체와 함께하는 현장 기반 디자인 작업 수행.</li>
+                <li>협력: 브루넬 대학교 런던 (Games Research Lab), 제주 해녀박물관, 신례리·대평리·영락리 해녀 공동체.</li>
               </ul>
             </div>
 
@@ -1601,16 +1465,14 @@
               <span class="item-title"><span lang="en">Real-Time XR Interface Technology for Environmental Adaptation</span><span lang="ko">환경 적응을 위한 실시간 XR 인터페이스 기술</span></span>
               <div class="item-meta"><span lang="en">2024.04 – 2025.06 | KAIST | Institute for Information &amp; Communication Technology Planning &amp; Evaluation (IITP) | Student Researcher</span><span lang="ko">2024.04 ~ 2025.06 | KAIST | 정보통신기획평가원 (IITP) | 학생연구원</span></div>
               <ul class="item-desc" lang="en">
-                <li>Participated in the development of an XR interface system for dynamically adapting virtual content to real-world environmental and spatial conditions.</li>
-                <li>Contributed to the design and implementation of interaction concepts involving adaptive virtual objects and multimodal interface behavior in mixed-reality settings.</li>
-                <li>Supported research on immersive visual-haptic feedback to improve presence and environmental responsiveness in XR experiences.</li>
-                <li>Partners: Fraunhofer Institute (Germany), NYU, UniSA, Anipen, and bHaptics.</li>
+                <li>Built interaction concepts for an XR system that adapts virtual content to real-world spatial conditions in real time.</li>
+                <li>Worked on multimodal visual-haptic feedback for presence and environmental responsiveness.</li>
+                <li>Partners: Fraunhofer Institute (Germany), NYU, UniSA, Anipen, bHaptics.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>현실 환경 및 공간 조건에 가상 콘텐츠를 동적으로 적응시키는 XR 인터페이스 시스템 개발에 참여.</li>
-                <li>혼합현실 환경에서 적응형 가상 오브젝트와 멀티모달 인터페이스 행동을 포함하는 상호작용 콘셉트의 설계 및 구현에 기여.</li>
-                <li>XR 경험에서 현존감과 환경 반응성을 향상시키기 위한 몰입형 시각-햅틱 피드백 연구를 지원.</li>
-                <li>협력 기관: 프라운호퍼 연구소 (독일), NYU, UniSA, Anipen, bHaptics.</li>
+                <li>실시간으로 현실 공간 조건에 가상 콘텐츠를 적응시키는 XR 시스템의 상호작용 개념 설계·구현.</li>
+                <li>현존감과 환경 반응성을 위한 멀티모달 시각-햅틱 피드백 작업.</li>
+                <li>협력: 프라운호퍼 연구소 (독일), NYU, UniSA, Anipen, bHaptics.</li>
               </ul>
             </div>
 
@@ -1618,14 +1480,12 @@
               <span class="item-title"><span lang="en">Defense Technology Research: Camouflage Effectiveness</span><span lang="ko">국방 기술 연구: 위장 효과성</span></span>
               <div class="item-meta"><span lang="en">2023.04 – 2024.02 | Handong Global University | Korea Aerospace Industries (KAI) | Student Researcher</span><span lang="ko">2023.04 ~ 2024.02 | 한동대학교 | 한국항공우주산업 (KAI) | 학생연구원</span></div>
               <ul class="item-desc" lang="en">
-                <li>Performed computational and visual evaluation of KF-21 Boramae camouflage effectiveness across altitude, terrain, and meteorological conditions to assess detectability under varied operational environments.</li>
-                <li>Processed environmental imagery and simulation-based datasets to analyze the interaction between aircraft surface patterns, background context, and visibility performance.</li>
-                <li>Developed camouflage colorways and pattern configurations for applied defense design, with selected proposals incorporated into real project outputs.</li>
+                <li>Evaluated KF-21 Boramae camouflage detectability across altitude, terrain, and weather using imagery and simulation datasets.</li>
+                <li>Developed colorways and pattern configurations; selected proposals were adopted into real project outputs.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>고도, 지형, 기상 조건에 따른 KF-21 보라매의 위장 효과성에 대한 전산·시각 평가를 수행하여 다양한 운용 환경에서의 피탐성을 분석.</li>
-                <li>환경 영상과 시뮬레이션 기반 데이터를 처리하여 기체 표면 패턴, 배경 맥락, 시인성 간의 상호작용을 분석.</li>
-                <li>응용 국방 디자인을 위한 위장 컬러웨이 및 패턴 구성을 개발하였으며, 일부 제안은 실제 프로젝트 결과물에 반영됨.</li>
+                <li>영상·시뮬레이션 데이터로 고도·지형·기상 조건별 KF-21 보라매 위장 피탐성 평가.</li>
+                <li>위장 컬러웨이 및 패턴 구성 개발, 일부 제안은 실제 프로젝트 결과물에 반영.</li>
               </ul>
             </div>
 
@@ -1633,14 +1493,12 @@
               <span class="item-title"><span lang="en">Smart City Infrastructure &amp; AI Object Tracking</span><span lang="ko">스마트시티 인프라 및 AI 객체 추적</span></span>
               <div class="item-meta"><span lang="en">2023.01 – 2024.02 | Handong Global University | Student Researcher</span><span lang="ko">2023.01 ~ 2024.02 | 한동대학교 | 학생연구원</span></div>
               <ul class="item-desc" lang="en">
-                <li>Engineered IoT-based roadside sensing hardware for urban data acquisition, including enclosure design and rapid prototyping through 3D-printed sensor housings.</li>
-                <li>Supported AI-driven traffic object tracking pipelines by contributing to data preprocessing, detection workflow refinement, and model-level optimization for real-world road scenes.</li>
-                <li>Improved detection robustness in dense urban environments through anchor-box optimization and applied computer vision experimentation for high-traffic conditions.</li>
+                <li>Built IoT roadside sensing hardware for urban data acquisition, including 3D-printed enclosures.</li>
+                <li>Worked the traffic object-tracking pipeline: preprocessing, detection workflow, and anchor-box optimization for dense road scenes.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>도시 데이터 수집을 위한 IoT 기반 도로변 센싱 하드웨어를 개발했으며, 3D 프린팅 센서 하우징을 활용한 인클로저 설계 및 신속한 프로토타이핑을 수행.</li>
-                <li>AI 기반 교통 객체 추적 파이프라인을 지원하여, 실제 도로 환경을 위한 데이터 전처리, 탐지 워크플로 개선, 모델 수준 최적화에 기여.</li>
-                <li>앵커 박스 최적화와 응용 컴퓨터 비전 실험을 통해 고밀도 도시 환경에서의 탐지 견고성을 향상.</li>
+                <li>도시 데이터 수집용 IoT 도로변 센싱 하드웨어 개발, 3D 프린팅 인클로저 설계 포함.</li>
+                <li>교통 객체 추적 파이프라인의 전처리·탐지 워크플로·앵커박스 최적화 담당.</li>
               </ul>
             </div>
           </div>
@@ -1650,66 +1508,66 @@
           <h3 class="section-title"><span class="num">02</span><span lang="en">Honors &amp; Awards</span><span lang="ko">명예 및 수상</span></h3>
           <div class="items">
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Top 3, KRAFTON Forward Deployed Engineer Track – Cofathon: AI Native Battlegrounds</span><span lang="ko">크래프톤 FDE 트랙 3위 – 코파톤 (Cofathon): AI Native Battlegrounds</span></span>
+              <span class="item-title"><span lang="en">Placed within the top 3, KRAFTON Forward Deployed Engineer Track – Cofathon: AI Native Battlegrounds</span><span lang="ko">크래프톤 FDE 트랙 3위 이내 – 코파톤 (Cofathon): AI Native Battlegrounds</span></span>
               <div class="item-meta"><span lang="en">2026.07 | KRAFTON × CJ Olive Young, technology partner OpenAI</span><span lang="ko">2026.07 | 크래프톤 × CJ올리브영, 기술 파트너 OpenAI</span></div>
               <ul class="item-desc" lang="en">
-                <li>Placed in the Top 3 of the KRAFTON Forward Deployed Engineer track at a one-day hackathon built to measure "AI nativeness" rather than resumes or coding tests, with a 10M KRW prize pool and hiring fast-tracks for winners.</li>
-                <li>Worked an unseen live business problem: elicited requirements from an AI scenario agent, defined the problem, then designed, implemented, and verified a working solution end to end in under four hours.</li>
-                <li>Scored on KRAFTON's Cofa Probe framework, which evaluates not the artifact alone but problem definition, how AI is directed, iteration under constraint, verification of results, and handoff quality.</li>
+                <li>A one-day hackathon scoring "AI nativeness" instead of resumes or coding tests. 10M KRW prize pool, hiring fast-track for winners.</li>
+                <li>Unseen business problem, end to end in under four hours: requirements elicited from an AI scenario agent, then designed, built, and verified.</li>
+                <li>Judged on Cofa Probe: problem definition, how AI is directed, iteration under constraint, verification, and handoff quality.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>이력서나 코딩테스트가 아닌 'AI 네이티브 역량'을 평가하기 위해 열린 1일 해커톤에서 크래프톤 FDE(포워드 디플로이드 엔지니어) 트랙 3위 안에 입상. 총 상금 1,000만원 및 채용 전형 우대 제공.</li>
-                <li>처음 보는 실무 문제를 현장에서 수행: AI 시나리오 에이전트와의 대화로 요구사항을 끌어내 문제를 정의하고, 4시간 이내에 해결책을 설계·구현·검증까지 완료.</li>
-                <li>크래프톤의 Cofa Probe 평가 체계로 심사. 결과물뿐 아니라 문제 정의 방식, AI를 지휘하는 방법, 제약 조건 하의 반복 개선, 결과 검증, 핸드오프 품질까지 평가 대상.</li>
+                <li>이력서·코딩테스트가 아닌 'AI 네이티브 역량'을 평가한 1일 해커톤. 총 상금 1,000만원, 입상자 채용 전형 우대.</li>
+                <li>처음 보는 실무 문제를 4시간 내 완수: AI 시나리오 에이전트로 요구사항 도출, 설계·구현·검증까지.</li>
+                <li>Cofa Probe 심사 기준: 문제 정의, AI 지휘 방식, 제약 하의 반복 개선, 결과 검증, 핸드오프 품질.</li>
               </ul>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Grand Prize (최우수상) – Edu4.0 Q TA Activities</span><span lang="ko">최우수상 – Edu4.0 Q TA 활동</span></span>
               <div class="item-meta"><span lang="en">2026.02 | KAIST</span><span lang="ko">2026.02 | KAIST</span></div>
-              <p class="item-desc" lang="en">Recognized for outstanding teaching support and excellence in presenting TA activity cases for the Edu4.0 Q model.</p>
-              <p class="item-desc" lang="ko">Edu4.0 Q 모델의 TA 활동 사례 발표에서 우수한 교육 지원과 발표 능력을 인정받음.</p>
+              <p class="item-desc" lang="en">Teaching support and case presentation for the Edu4.0 Q model.</p>
+              <p class="item-desc" lang="ko">Edu4.0 Q 모델 TA 활동 사례 발표 및 교육 지원.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Selected Entrepreneurial Team (Climate Tech)</span><span lang="ko">기후테크 부문 선정 창업팀</span></span>
               <div class="item-meta"><span lang="en">2024.03 | Asan Nanum Foundation</span><span lang="ko">2024.03 | 아산나눔재단</span></div>
-              <p class="item-desc" lang="en">Selected through Chung Ju-yung Startup Competition &amp; Asan UniverCT as a representative startup team in the climate-tech track. Secured early-stage funding and mentorship through the KAIST and Asan Nanum Foundation ecosystem.</p>
-              <p class="item-desc" lang="ko">정주영 창업경진대회 및 아산 UniverCT에서 기후테크 트랙의 대표 창업팀으로 선정. KAIST와 아산나눔재단 생태계를 통해 초기 자금과 멘토링을 확보.</p>
+              <p class="item-desc" lang="en">Chung Ju-yung Startup Competition and Asan UniverCT. Secured early-stage funding and mentorship.</p>
+              <p class="item-desc" lang="ko">정주영 창업경진대회 · 아산 UniverCT 선정. 초기 자금과 멘토링 확보.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Grand Prize (최우수상, 한동대학교 총장상) – HGU President's Award</span><span lang="ko">최우수상 (한동대학교 총장상)</span></span>
               <div class="item-meta"><span lang="en">2024.01 | Pohang Culture &amp; Arts Factory Hackathon</span><span lang="ko">2024.01 | 포항 문화예술공장 해커톤</span></div>
-              <p class="item-desc" lang="en">Led the technical implementation of a large-scale Unreal Engine media facade prototype demonstrating a smart-city experience concept. Co-hosted by Pohang City, Pohang Cultural Foundation, KT, and Handong Global University.</p>
-              <p class="item-desc" lang="ko">스마트시티 경험 콘셉트를 시연하는 대규모 언리얼 엔진 미디어 파사드 프로토타입의 기술 구현을 주도. 포항시, 포항문화재단, KT, 한동대학교 공동 주최.</p>
+              <p class="item-desc" lang="en">Led the build of a large-scale Unreal Engine media facade prototype. Co-hosted by Pohang City, Pohang Cultural Foundation, KT, and HGU.</p>
+              <p class="item-desc" lang="ko">대규모 언리얼 엔진 미디어 파사드 프로토타입 기술 구현 주도. 포항시·포항문화재단·KT·한동대 공동 주최.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Excellence Award (우수상)</span><span lang="ko">우수상</span></span>
               <div class="item-meta"><span lang="en">2023.06 | National Metaverse Developer Contest (MSIT)</span><span lang="ko">2023.06 | 국가 메타버스 개발자 콘테스트 (과학기술정보통신부)</span></div>
-              <p class="item-desc" lang="en">Engineered a gamified digital therapeutic for eye muscle rehabilitation utilizing Meta Quest Pro's advanced eye-tracking capabilities. Recognized for innovation by the Korea Metaverse Industry Association and Skonec Entertainment, and awarded by the CEO of Skonec Entertainment.</p>
-              <p class="item-desc" lang="ko">메타 퀘스트 프로의 고급 시선추적 기능을 활용하여 눈 근육 재활을 위한 게이미피케이션 디지털 치료기기를 개발. 한국메타버스산업협회 및 스코넥엔터테인먼트로부터 혁신성을 인정받았으며, 스코넥엔터테인먼트 대표이사상을 수상.</p>
+              <p class="item-desc" lang="en">Built a gamified digital therapeutic for eye-muscle rehabilitation on Meta Quest Pro eye tracking. Skonec Entertainment CEO's Award.</p>
+              <p class="item-desc" lang="ko">메타 퀘스트 프로 시선추적 기반 눈 근육 재활 디지털 치료기기 개발. 스코넥엔터테인먼트 대표이사상 수상.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Outstanding Student Research Award (우수상)</span><span lang="ko">우수 학생 연구상</span></span>
               <div class="item-meta"><span lang="en">2023.11 | Korea Multimedia Society (KMMS)</span><span lang="ko">2023.11 | 한국멀티미디어학회 (KMMS)</span></div>
-              <p class="item-desc" lang="en">Authored and presented research on eye-tracking-based VR interactive games, analyzing oculomotor responses to enhance immersion and accessibility in virtual environments.</p>
-              <p class="item-desc" lang="ko">시선추적 기반 VR 인터랙티브 게임 연구를 저술 및 발표. 가상 환경의 몰입감과 접근성 향상을 위한 안구 운동 반응을 분석.</p>
+              <p class="item-desc" lang="en">Research on eye-tracking-based VR games, analyzing oculomotor response for immersion and accessibility.</p>
+              <p class="item-desc" lang="ko">시선추적 기반 VR 게임 연구. 몰입감·접근성을 위한 안구 운동 반응 분석.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Handong Global University President's Award (한동대학교 총장상)</span><span lang="ko">한동대학교 총장상</span></span>
               <div class="item-meta"><span lang="en">2022.11 | Handong Global University</span><span lang="ko">2022.11 | 한동대학교</span></div>
-              <p class="item-desc" lang="en">Startup Idea Competition. Conceptualized a high-impact startup business model integrating ESG principles with augmented reality technology, and the proposal was evaluated as the top entry for technical feasibility and social impact potential.</p>
-              <p class="item-desc" lang="ko">창업 아이디어 경진대회. ESG 원칙과 증강현실 기술을 결합한 임팩트 창업 비즈니스 모델을 구상하였으며, 기술적 실현 가능성과 사회적 영향력 측면에서 최우수 출품작으로 평가됨.</p>
+              <p class="item-desc" lang="en">Startup Idea Competition. An ESG plus augmented reality business model, ranked top entry on feasibility and social impact.</p>
+              <p class="item-desc" lang="ko">창업 아이디어 경진대회. ESG와 증강현실을 결합한 비즈니스 모델로 실현 가능성·사회적 영향력 부문 최우수 평가.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Outstanding Student Research Award (우수상)</span><span lang="ko">우수 학생 연구상</span></span>
               <div class="item-meta"><span lang="en">2022.05 | Korea Multimedia Society (KMMS)</span><span lang="ko">2022.05 | 한국멀티미디어학회 (KMMS)</span></div>
-              <p class="item-desc" lang="en">Conducted experimental research on VR exposure therapy for cynophobia, proposing novel spatiotemporal design factors to increase treatment efficacy.</p>
-              <p class="item-desc" lang="ko">개공포증을 위한 VR 노출 치료에 대한 실험 연구를 수행하였으며, 치료 효과를 높이기 위한 새로운 시공간 디자인 요소를 제안.</p>
+              <p class="item-desc" lang="en">Experimental research on VR exposure therapy for cynophobia, proposing spatiotemporal design factors for treatment efficacy.</p>
+              <p class="item-desc" lang="ko">개공포증 VR 노출 치료 실험 연구. 치료 효과를 높이는 시공간 디자인 요소 제안.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Top 14 Finalist</span><span lang="ko">상위 14팀 진출</span></span>
               <div class="item-meta"><span lang="en">2021.05 | Seoul National University (SNU) Business School</span><span lang="ko">2021.05 | 서울대학교 경영대학</span></div>
-              <p class="item-desc" lang="en">DB-SNUbiz Global Startup Challenge. Distinguished as a Top 14 finalist in a competitive global startup challenge with a prize pool of $91,000, pitching a blockchain-based solution to a panel of venture capitalists and industry experts.</p>
-              <p class="item-desc" lang="ko">DB-SNUbiz 글로벌 창업 챌린지. 총 상금 9만 1천 달러 규모의 경쟁 챌린지에서 상위 14팀에 진출하여, 벤처캐피털리스트와 산업 전문가 패널 앞에서 블록체인 기반 솔루션을 발표.</p>
+              <p class="item-desc" lang="en">DB-SNUbiz Global Startup Challenge, $91,000 prize pool. Pitched a blockchain-based solution to a VC and industry panel.</p>
+              <p class="item-desc" lang="ko">DB-SNUbiz 글로벌 창업 챌린지 (총 상금 9만 1천 달러). VC·산업 전문가 패널 대상 블록체인 솔루션 발표.</p>
             </div>
           </div>
         </section>
@@ -1828,9 +1686,9 @@
             <span lang="en">© 2026 Jihun Chae · KAIST Graduate School of Culture Technology</span>
             <span lang="ko">© 2026 채지훈 · KAIST 문화기술대학원</span>
           </span>
-          <span class="ft-mono" id="pongScoreLine" title="Two agents have been playing in the hero since you arrived.">
-            <span lang="en">AI vs AI · 0 : 0</span>
-            <span lang="ko">AI 대 AI · 0 : 0</span>
+          <span class="ft-mono">
+            <span lang="en">Daejeon, Republic of Korea</span>
+            <span lang="ko">대한민국 대전</span>
           </span>
         </footer>
       </main>
@@ -2043,7 +1901,7 @@
       });
 
       // ── Keyboard shortcuts ─────────────────────────────────
-      const sectionIds = ['about', 'projects', 'awards', 'education', 'publications', 'patents'];
+      const sectionIds = ['projects', 'awards', 'education', 'publications', 'patents'];
       const currentSectionIndex = () => {
         const y = window.scrollY + window.innerHeight * 0.35;
         let best = 0;
@@ -2078,25 +1936,6 @@
         setTimeout(() => hint.classList.remove('show'), 6800);
       }
 
-      // ── Live Daejeon clock (updates every 30s) ─────────────
-      const clockEl = document.getElementById('liveClock');
-      const updateClock = () => {
-        const opts = { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false };
-        const time = new Date().toLocaleTimeString('en-US', opts);
-        const isKo = document.body.classList.contains('ko');
-        clockEl.textContent = (isKo ? '대전' : 'Daejeon') + ' · ' + time + (isKo ? '' : ' KST');
-      };
-      updateClock();
-      setInterval(updateClock, 30000);
-      langBtn.addEventListener('click', () => setTimeout(updateClock, 0));
-
-      // ── Hero entrance: stagger on first paint ────────────
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          document.body.classList.add('hero-loaded');
-        });
-      });
-
       // ── Anchor click → pulse destination section title ────
       document.querySelectorAll('a[href^="#"]').forEach((a) => {
         a.addEventListener('click', () => {
@@ -2115,163 +1954,6 @@
         });
       });
 
-      /* ═════════════════════════════════════════════════════
-         SIGNATURE: THE ENDLESS MATCH
-         Two autonomous agents quietly playing in the hero.
-         Neither is perfect, both keep going: the working
-         premise, rendered.
-         ═════════════════════════════════════════════════════ */
-      const pongCanvas = document.getElementById('pongCanvas');
-      if (pongCanvas && !prefersReduced) {
-        const ctx = pongCanvas.getContext('2d');
-        const dpr = Math.min(2, window.devicePixelRatio || 1);
-        let W = 0, H = 0, raf = null, visible = true;
-
-        const G = {
-          ball: { x: 0, y: 0, vx: 0, vy: 0, trail: [] },
-          L: { y: 0, vy: 0, err: 0 },   // left agent
-          R: { y: 0, vy: 0, err: 0 },   // right agent
-          score: [0, 0],
-          paddleH: 70,
-          serveTimer: 0
-        };
-
-        const scoreLine = document.getElementById('pongScoreLine');
-        const updateScoreLine = () => {
-          if (!scoreLine) return;
-          const en = scoreLine.querySelector('[lang="en"]');
-          const ko = scoreLine.querySelector('[lang="ko"]');
-          if (en) en.textContent = 'AI vs AI · ' + G.score[0] + ' : ' + G.score[1];
-          if (ko) ko.textContent = 'AI 대 AI · ' + G.score[0] + ' : ' + G.score[1];
-        };
-
-        const resize = () => {
-          const r = pongCanvas.parentElement.getBoundingClientRect();
-          W = r.width; H = r.height;
-          pongCanvas.width = W * dpr;
-          pongCanvas.height = H * dpr;
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          G.paddleH = Math.max(54, Math.min(90, H * 0.16));
-          if (!G.ball.vx) serve(Math.random() < 0.5 ? -1 : 1);
-        };
-
-        const serve = (dir) => {
-          G.ball.x = W / 2;
-          G.ball.y = H * (0.3 + Math.random() * 0.4);
-          const speed = Math.max(2.1, W / 520);
-          const angle = (Math.random() * 0.6 - 0.3);
-          G.ball.vx = Math.cos(angle) * speed * dir;
-          G.ball.vy = Math.sin(angle) * speed + (Math.random() - 0.5) * 0.8;
-          G.ball.trail = [];
-          // each agent re-rolls its imperfection on every serve
-          G.L.err = (Math.random() - 0.5) * G.paddleH * 1.3;
-          G.R.err = (Math.random() - 0.5) * G.paddleH * 1.3;
-        };
-
-        const step = () => {
-          const b = G.ball;
-          b.x += b.vx; b.y += b.vy;
-          b.trail.push({ x: b.x, y: b.y });
-          if (b.trail.length > 14) b.trail.shift();
-
-          if (b.y < 6 || b.y > H - 6) { b.vy *= -1; b.y = Math.max(6, Math.min(H - 6, b.y)); }
-
-          // Agents: ease toward the ball with deliberate imperfection
-          const chase = (P, targetActive) => {
-            const target = targetActive ? b.y + P.err : H / 2;
-            P.vy += (target - P.y) * 0.012;
-            P.vy *= 0.88;
-            P.y += P.vy;
-            P.y = Math.max(G.paddleH / 2 + 4, Math.min(H - G.paddleH / 2 - 4, P.y));
-          };
-          chase(G.L, b.vx < 0);
-          chase(G.R, b.vx > 0);
-
-          const padX = 14;
-          const hit = (P, x, dir) => {
-            if (Math.abs(b.x - x) < 8 && b.vx * dir < 0 &&
-                Math.abs(b.y - P.y) < G.paddleH / 2 + 6) {
-              b.vx = Math.abs(b.vx) * dir * 1.03;
-              b.vy += (b.y - P.y) * 0.06;
-              b.vx = Math.max(-5.5, Math.min(5.5, b.vx));
-              P.err = (Math.random() - 0.5) * G.paddleH * 1.3;
-            }
-          };
-          hit(G.L, padX, 1);
-          hit(G.R, W - padX, -1);
-
-          if (b.x < -20) { G.score[1]++; updateScoreLine(); serve(1); }
-          if (b.x > W + 20) { G.score[0]++; updateScoreLine(); serve(-1); }
-        };
-
-        const draw = () => {
-          ctx.clearRect(0, 0, W, H);
-
-          // faint center line
-          ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-          ctx.setLineDash([3, 9]);
-          ctx.beginPath();
-          ctx.moveTo(W / 2, 8);
-          ctx.lineTo(W / 2, H - 8);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          // trail
-          G.ball.trail.forEach((p, i) => {
-            const a = (i / G.ball.trail.length) * 0.10;
-            ctx.fillStyle = 'rgba(165,180,252,' + a.toFixed(3) + ')';
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
-            ctx.fill();
-          });
-
-          // ball
-          ctx.fillStyle = 'rgba(196,181,253,0.34)';
-          ctx.beginPath();
-          ctx.arc(G.ball.x, G.ball.y, 3, 0, Math.PI * 2);
-          ctx.fill();
-
-          // paddles
-          const padX = 14;
-          ctx.fillStyle = 'rgba(255,255,255,0.13)';
-          const drawPad = (x, y) => {
-            ctx.beginPath();
-            if (ctx.roundRect) ctx.roundRect(x - 1.5, y - G.paddleH / 2, 3, G.paddleH, 2);
-            else ctx.rect(x - 1.5, y - G.paddleH / 2, 3, G.paddleH);
-            ctx.fill();
-          };
-          drawPad(padX, G.L.y);
-          drawPad(W - padX, G.R.y);
-
-          // tiny score, mono
-          ctx.fillStyle = 'rgba(255,255,255,0.10)';
-          ctx.font = '600 11px ui-monospace, SFMono-Regular, Menlo, monospace';
-          ctx.textAlign = 'right';
-          ctx.fillText(String(G.score[0]).padStart(2, '0'), W / 2 - 16, 18);
-          ctx.textAlign = 'left';
-          ctx.fillText(String(G.score[1]).padStart(2, '0'), W / 2 + 16, 18);
-        };
-
-        const loop = () => {
-          if (visible && !document.hidden && !document.body.classList.contains('reader')) {
-            step();
-            draw();
-          }
-          raf = requestAnimationFrame(loop);
-        };
-
-        // pause work when hero is off-screen
-        if ('IntersectionObserver' in window) {
-          new IntersectionObserver((entries) => {
-            visible = entries[0].isIntersecting;
-          }, { threshold: 0 }).observe(pongCanvas);
-        }
-
-        G.L.y = G.R.y = 100;
-        resize();
-        window.addEventListener('resize', resize, { passive: true });
-        loop();
-      }
     })();
   </script>
 </body>
