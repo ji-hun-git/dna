@@ -608,50 +608,6 @@
     }
     body.ko .featured-kicker { font-family: 'Pretendard', sans-serif; letter-spacing: 0.06em; font-size: 0.74rem; }
 
-    /* ── Fit ledger: an AX team's three missions, each with a receipt ── */
-    .fit {
-      margin: 0 0 14px;
-      padding: 18px 0 20px;
-      border-top: 1px solid var(--line);
-      display: grid;
-      gap: 12px;
-    }
-    .strip-title {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.66rem;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--soft);
-    }
-    body.ko .strip-title {
-      font-family: 'Pretendard', sans-serif;
-      text-transform: none;
-      letter-spacing: 0.04em;
-      font-size: 0.78rem;
-    }
-    .fit-row {
-      display: grid;
-      grid-template-columns: 110px 1fr;
-      gap: 18px;
-      align-items: baseline;
-    }
-    .fit-row .k {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: var(--text);
-      line-height: 1.45;
-    }
-    .fit-row .v-text {
-      font-size: 0.92rem;
-      line-height: 1.6;
-      color: var(--muted);
-      max-width: 66ch;
-    }
-    .fit-row .v-text strong { color: var(--text); font-weight: 600; }
-    @media (max-width: 700px) {
-      .fit-row { grid-template-columns: 1fr; gap: 4px; }
-    }
-
     /* ── Capabilities: build / ship / prove, as scannable chips ── */
     .caps {
       margin: 0 0 46px;
@@ -1449,18 +1405,18 @@
 
           <p class="side-label"><span lang="en">Focus</span><span lang="ko">전문 분야</span></p>
           <div class="side-list" lang="en">
+            <div>Solving business problems with AI</div>
             <div>AI transformation (AX)</div>
-            <div>Forward deployed engineering</div>
             <div>Problem-solving LLM agents</div>
-            <div>Workflow automation</div>
-            <div>Evaluation &amp; human-AI interaction</div>
+            <div>Forward deployed engineering</div>
+            <div>Evaluation &amp; adoption measurement</div>
           </div>
           <div class="side-list" lang="ko">
+            <div>AI로 업무 문제 해결</div>
             <div>AI 트랜스포메이션 (AX)</div>
-            <div>포워드 디플로이드 엔지니어링</div>
             <div>문제 해결형 LLM 에이전트</div>
-            <div>업무 프로세스 효율화</div>
-            <div>평가 및 인간-AI 상호작용</div>
+            <div>포워드 디플로이드 엔지니어링</div>
+            <div>평가 및 내재화 측정</div>
           </div>
 
           <div class="divider"></div>
@@ -1490,57 +1446,32 @@
       </aside>
 
       <main class="content">
-        <div class="fit" aria-label="Fit for an AX team">
-          <span class="strip-title"><span lang="en">What an AX team needs · what I bring</span><span lang="ko">AX 조직이 찾는 일 · 제가 해온 일</span></span>
-          <div class="fit-row">
-            <span class="k"><span lang="en">AI adoption</span><span lang="ko">사내 AI 내재화</span></span>
-            <span class="v-text">
-              <span lang="en">My doctoral research is the adoption question itself: <strong>when people accept an AI that acts for them, and when they switch it off</strong> - published at ACM IUI '26.</span>
-              <span lang="ko">박사 연구 자체가 내재화 질문입니다: <strong>사람은 자신을 대신하는 AI를 언제 받아들이고, 언제 꺼버리는가</strong> - ACM IUI '26 게재.</span>
-            </span>
-          </div>
-          <div class="fit-row">
-            <span class="k"><span lang="en">Problem-solving AI</span><span lang="ko">문제 해결형 AI</span></span>
-            <span class="v-text">
-              <span lang="en">Built <strong>GAIA</strong>, a problem-solving LLM agent for a hard domain: RAG over game knowledge, an agent loop over live screen and audio, voice in and out - evaluated with its real users.</span>
-              <span lang="ko">문제 해결형 LLM 에이전트 <strong>GAIA</strong> 구축: 게임 지식 RAG, 실시간 화면·음성 맥락 에이전트 루프, 음성 입출력 - 실사용자와 함께 평가.</span>
-            </span>
-          </div>
-          <div class="fit-row">
-            <span class="k"><span lang="en">Process efficiency</span><span lang="ko">업무 프로세스 효율화</span></span>
-            <span class="v-text">
-              <span lang="en"><strong>Top 3, KRAFTON's Forward Deployed Engineer track</strong> (Cofathon 2026): an unseen business workflow - found, automated, and verified in under four hours.</span>
-              <span lang="ko"><strong>크래프톤 FDE 트랙 Top 3</strong> (코파톤 2026): 처음 보는 실무 워크플로우를 4시간 안에 발굴·자동화·검증.</span>
-            </span>
-          </div>
-        </div>
-
         <div class="caps" aria-label="Capabilities">
           <div class="caps-row">
             <span class="k"><span lang="en">Build</span><span lang="ko">구축</span></span>
             <span class="v" lang="en">
-              <span class="chip">Multi-agent orchestration</span><span class="chip">Sequential · parallel · loop agents</span><span class="chip">MCP tool servers</span><span class="chip">A2A agent cards</span><span class="chip">RAG</span><span class="chip">Memory &amp; context design</span>
+              <span class="chip">Problem discovery &amp; scoping</span><span class="chip">Multi-agent orchestration</span><span class="chip">RAG &amp; knowledge grounding</span><span class="chip">Tool integration (MCP)</span><span class="chip">Agent-to-agent (A2A)</span><span class="chip">Context &amp; memory design</span>
             </span>
             <span class="v" lang="ko">
-              <span class="chip">멀티 에이전트 오케스트레이션</span><span class="chip">순차 · 병렬 · 루프 에이전트</span><span class="chip">MCP 툴 서버</span><span class="chip">A2A 에이전트 카드</span><span class="chip">RAG</span><span class="chip">메모리 · 컨텍스트 설계</span>
+              <span class="chip">문제 발굴 · 정의</span><span class="chip">멀티 에이전트 오케스트레이션</span><span class="chip">RAG 지식 그라운딩</span><span class="chip">툴 연동 (MCP)</span><span class="chip">에이전트 간 협업 (A2A)</span><span class="chip">컨텍스트 · 메모리 설계</span>
             </span>
           </div>
           <div class="caps-row">
             <span class="k"><span lang="en">Ship</span><span lang="ko">배포</span></span>
             <span class="v" lang="en">
-              <span class="chip">Python</span><span class="chip">TypeScript</span><span class="chip">Google ADK</span><span class="chip">Cloud Run</span><span class="chip">Containerized services</span><span class="chip">Workflow automation</span>
+              <span class="chip">Python</span><span class="chip">TypeScript</span><span class="chip">LLM APIs</span><span class="chip">Containerized services</span><span class="chip">Workflow automation</span><span class="chip">Human-in-the-loop design</span>
             </span>
             <span class="v" lang="ko">
-              <span class="chip">Python</span><span class="chip">TypeScript</span><span class="chip">Google ADK</span><span class="chip">Cloud Run</span><span class="chip">컨테이너 서비스</span><span class="chip">업무 자동화</span>
+              <span class="chip">Python</span><span class="chip">TypeScript</span><span class="chip">LLM API</span><span class="chip">컨테이너 서비스</span><span class="chip">업무 자동화</span><span class="chip">휴먼인더루프 설계</span>
             </span>
           </div>
           <div class="caps-row">
             <span class="k"><span lang="en">Prove</span><span lang="ko">검증</span></span>
             <span class="v" lang="en">
-              <span class="chip">Evals &amp; verifiability</span><span class="chip">Observability &amp; tracing</span><span class="chip">Baselines</span><span class="chip">User studies</span><span class="chip">Adoption measurement</span>
+              <span class="chip">Evaluation design</span><span class="chip">Baselines &amp; A/B</span><span class="chip">Observability &amp; tracing</span><span class="chip">Field validation</span><span class="chip">Adoption measurement</span>
             </span>
             <span class="v" lang="ko">
-              <span class="chip">평가 체계 · 검증 가능성</span><span class="chip">관측성 · 트레이싱</span><span class="chip">기준선 비교</span><span class="chip">사용자 연구</span><span class="chip">내재화 측정</span>
+              <span class="chip">평가 설계</span><span class="chip">기준선 · A/B 비교</span><span class="chip">관측성 · 트레이싱</span><span class="chip">현장 검증</span><span class="chip">내재화 측정</span>
             </span>
           </div>
         </div>
@@ -1553,13 +1484,13 @@
               <div class="item-meta"><span lang="en">2024.05 – 2027.04 | KAIST | National Research Foundation of Korea (NRF) | Lead Student Researcher</span><span lang="ko">2024.05 ~ 2027.04 | KAIST | 한국연구재단 (NRF) | 학생연구원 (총괄)</span></div>
               <div class="tags" aria-hidden="false"><span>LLM Agent</span><span>RAG</span><span>Voice UI</span><span>Accessibility</span><span>User Research</span></div>
               <ul class="item-desc" lang="en">
-                <li>Building GAIA: an LLM assistant with RAG over game knowledge, an agent loop over live screen and audio, and speech in and out.</li>
-                <li>Own the full loop: field interviews and design workshops, to requirements, to shipped prototypes, to evaluation with the same users.</li>
+                <li>Build GAIA, an LLM agent that solves problems users cannot solve alone: RAG over game knowledge, an agent loop reading live screen and audio, voice in and out.</li>
+                <li>Own the full loop from problem to proof: field interviews to locate the real barrier, then requirements, shipped prototypes, and evaluation with the same users.</li>
                 <li>Published at ACM IUI '26. Partners: Samsung Electronics, Nexon Intelligence Labs, Smilegate D&amp;I, National Rehabilitation Center, SpecialEffect (UK).</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>LLM 어시스턴트 GAIA 개발 주도. 게임 지식 RAG, 실시간 화면·음성 맥락 에이전트 루프, 음성 입출력 구현.</li>
-                <li>현장 인터뷰·디자인 워크숍에서 요구사항 도출, 프로토타입 구현, 동일 사용자 평가까지 전 과정 수행.</li>
+                <li>사용자가 혼자 해결할 수 없는 문제를 푸는 LLM 에이전트 GAIA 개발. 게임 지식 RAG, 실시간 화면·음성 맥락 에이전트 루프, 음성 입출력.</li>
+                <li>문제 발굴부터 검증까지 전 과정 수행: 현장 인터뷰로 실제 장벽을 찾고, 요구사항 정의, 프로토타입 구현, 동일 사용자 평가.</li>
                 <li>ACM IUI '26 게재. 협력: 삼성전자, 넥슨 인텔리전스 랩, 스마일게이트 D&amp;I, 국립재활원, SpecialEffect (영국).</li>
               </ul>
             </div>
@@ -1569,12 +1500,12 @@
               <div class="item-meta"><span lang="en">2025.06 – 2025.09 | KAIST | Leverhulme Trust International Fellow | Student Researcher</span><span lang="ko">2025.06 ~ 2025.09 | KAIST | Leverhulme Trust International Fellow | 학생연구원</span></div>
               <div class="tags" aria-hidden="false"><span>Serious Games</span><span>Narrative Design</span><span>Field Research</span></div>
               <ul class="item-desc" lang="en">
-                <li>Designed game concepts and narrative structure for a serious game preserving Jeju Haenyeo heritage and intergenerational knowledge.</li>
+                <li>Solved a knowledge-transfer problem by design: a serious game that carries Jeju Haenyeo practice and environmental knowledge between generations.</li>
                 <li>Ran field-based design work with the diving communities themselves.</li>
                 <li>Partners: Brunel University London (Games Research Lab), Jeju Haenyeo Museum, and the Sinrye-ri, Daepyeong-ri, and Yeongnak-ri communities.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>제주 해녀 유산과 세대 간 지식 전달을 다루는 시리어스 게임의 콘셉트·내러티브 구조 설계.</li>
+                <li>세대 간 지식 전달 문제를 설계로 해결: 제주 해녀의 실천과 환경 지식을 이어주는 시리어스 게임 설계.</li>
                 <li>해녀 공동체와 함께하는 현장 기반 디자인 작업 수행.</li>
                 <li>협력: 브루넬 대학교 런던 (Games Research Lab), 제주 해녀박물관, 신례리·대평리·영락리 해녀 공동체.</li>
               </ul>
@@ -1585,12 +1516,12 @@
               <div class="item-meta"><span lang="en">2024.04 – 2025.06 | KAIST | Institute for Information &amp; Communication Technology Planning &amp; Evaluation (IITP) | Student Researcher</span><span lang="ko">2024.04 ~ 2025.06 | KAIST | 정보통신기획평가원 (IITP) | 학생연구원</span></div>
               <div class="tags" aria-hidden="false"><span>XR</span><span>Multimodal Interaction</span><span>Haptics</span></div>
               <ul class="item-desc" lang="en">
-                <li>Built interaction concepts for an XR system that adapts virtual content to real-world spatial conditions in real time.</li>
+                <li>Solved a spatial-adaptation problem: an XR system that re-fits virtual content to real-world conditions in real time.</li>
                 <li>Worked on multimodal visual-haptic feedback for presence and environmental responsiveness.</li>
                 <li>Partners: Fraunhofer Institute (Germany), NYU, UniSA, Anipen, bHaptics.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>실시간으로 현실 공간 조건에 가상 콘텐츠를 적응시키는 XR 시스템의 상호작용 개념 설계·구현.</li>
+                <li>공간 적응 문제 해결: 현실 조건에 맞춰 가상 콘텐츠를 실시간 재배치하는 XR 시스템 설계·구현.</li>
                 <li>현존감과 환경 반응성을 위한 멀티모달 시각-햅틱 피드백 작업.</li>
                 <li>협력: 프라운호퍼 연구소 (독일), NYU, UniSA, Anipen, bHaptics.</li>
               </ul>
@@ -1601,11 +1532,11 @@
               <div class="item-meta"><span lang="en">2023.04 – 2024.02 | Handong Global University | Korea Aerospace Industries (KAI) | Student Researcher</span><span lang="ko">2023.04 ~ 2024.02 | 한동대학교 | 한국항공우주산업 (KAI) | 학생연구원</span></div>
               <div class="tags" aria-hidden="false"><span>Computer Vision</span><span>Simulation</span><span>Applied Design</span></div>
               <ul class="item-desc" lang="en">
-                <li>Evaluated KF-21 Boramae camouflage detectability across altitude, terrain, and weather using imagery and simulation datasets.</li>
+                <li>Answered a detectability problem with computer vision and simulation: how KF-21 Boramae camouflage holds up across altitude, terrain, and weather.</li>
                 <li>Developed colorways and pattern configurations; selected proposals were adopted into real project outputs.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>영상·시뮬레이션 데이터로 고도·지형·기상 조건별 KF-21 보라매 위장 피탐성 평가.</li>
+                <li>컴퓨터 비전과 시뮬레이션으로 피탐성 문제를 분석: 고도·지형·기상 조건별 KF-21 보라매 위장 성능 평가.</li>
                 <li>위장 컬러웨이 및 패턴 구성 개발, 일부 제안은 실제 프로젝트 결과물에 반영.</li>
               </ul>
             </div>
@@ -1615,12 +1546,12 @@
               <div class="item-meta"><span lang="en">2023.01 – 2024.02 | Handong Global University | Student Researcher</span><span lang="ko">2023.01 ~ 2024.02 | 한동대학교 | 학생연구원</span></div>
               <div class="tags" aria-hidden="false"><span>IoT</span><span>Object Detection</span><span>Model Optimization</span></div>
               <ul class="item-desc" lang="en">
-                <li>Built IoT roadside sensing hardware for urban data acquisition, including 3D-printed enclosures.</li>
-                <li>Worked the traffic object-tracking pipeline: preprocessing, detection workflow, and anchor-box optimization for dense road scenes.</li>
+                <li>Applied AI object tracking to a dense-traffic detection problem: preprocessing, detection workflow, and anchor-box optimization for real road scenes.</li>
+                <li>Built the IoT roadside sensing hardware that fed it, including 3D-printed enclosures.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>도시 데이터 수집용 IoT 도로변 센싱 하드웨어 개발, 3D 프린팅 인클로저 설계 포함.</li>
-                <li>교통 객체 추적 파이프라인의 전처리·탐지 워크플로·앵커박스 최적화 담당.</li>
+                <li>고밀도 교통 환경의 탐지 문제에 AI 객체 추적을 적용: 전처리·탐지 워크플로·앵커박스 최적화 담당.</li>
+                <li>이를 뒷받침하는 IoT 도로변 센싱 하드웨어 개발, 3D 프린팅 인클로저 설계 포함.</li>
               </ul>
             </div>
           </div>
@@ -1631,16 +1562,16 @@
           <div class="items">
             <div class="item reveal featured">
               <span class="featured-kicker"><span lang="en">Featured · 2026</span><span lang="ko">대표 수상 · 2026</span></span>
-              <span class="item-title"><span lang="en">Top 3, KRAFTON Forward Deployed Engineer Track – Cofathon: AI Native Battlegrounds</span><span lang="ko">크래프톤 FDE 트랙 Top 3 – 코파톤 (Cofathon): AI Native Battlegrounds</span></span>
+              <span class="item-title"><span lang="en">Within the Top 3, KRAFTON Forward Deployed Engineer Track – Cofathon: AI Native Battlegrounds</span><span lang="ko">크래프톤 FDE 트랙 Top 3 이내 – 코파톤 (Cofathon): AI Native Battlegrounds</span></span>
               <div class="item-meta"><span lang="en">2026.07 | KRAFTON × CJ Olive Young, technology partner OpenAI</span><span lang="ko">2026.07 | 크래프톤 × CJ올리브영, 기술 파트너 OpenAI</span></div>
               <ul class="item-desc" lang="en">
-                <li>Three stages: selected by written application into the roughly 25-competitor FDE final field, advanced to the Top 6, then finished in the Top 3.</li>
+                <li>Three cuts: selected by written application into the roughly 25-competitor FDE final field, then the Top 6, then within the Top 3.</li>
                 <li>A one-day hackathon scoring "AI nativeness". 10M KRW prize pool, hiring fast-track for winners.</li>
                 <li>Unseen business problem, end to end in under four hours: requirements elicited from an AI scenario agent, then designed, built, and verified.</li>
                 <li>Judged on Cofa Probe, then a live public deliberation on blind reports: problem definition, how AI is directed, iteration under constraint, verification, and handoff quality.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>3단계 선발: 서류 지원으로 FDE 트랙 본선 약 25명에 진출, 이후 Top 6를 거쳐 최종 Top 3.</li>
+                <li>3단계 선발: 서류 지원으로 FDE 트랙 본선 약 25명에 진출, 이후 Top 6를 거쳐 최종 Top 3 이내 입상.</li>
                 <li>'AI 네이티브 역량'을 평가한 1일 해커톤. 총 상금 1,000만원, 입상자 채용 전형 우대.</li>
                 <li>처음 보는 실무 문제를 4시간 내 완수: AI 시나리오 에이전트로 요구사항 도출, 설계·구현·검증까지.</li>
                 <li>Cofa Probe 심사 후 블라인드 리포트 기반 공개 토론으로 최종 선발. 평가 항목: 문제 정의, AI 지휘 방식, 제약 하의 반복 개선, 결과 검증, 핸드오프 품질.</li>
@@ -1734,13 +1665,13 @@
               <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2026). <a href="https://doi.org/10.64145/kjdgs.2026.2.1.29" target="_blank" rel="noopener noreferrer"><span class="paper-title">Toward Ludic AI: Proposing an Evaluation Framework for the Ludic Competence of Game-Playing AI.</span></a> <span class="venue">Digital Game Research, 2(1), 29–59.</span> <a href="https://doi.org/10.64145/kjdgs.2026.2.1.29" target="_blank" rel="noopener noreferrer">DOI: 10.64145/kjdgs.2026.2.1.29</a> · <a href="https://www.researchgate.net/publication/408515882_Toward_Ludic_AI_Proposing_an_Evaluation_Framework_for_the_Ludic_Competence_of_Game-Playing_AI" target="_blank" rel="noopener noreferrer">Article page ↗</a><span class="pub-note"><span lang="en">Proposes ‘ludic competence’: evaluating game AI on how it plays, not only whether it wins.</span><span lang="ko">게임 AI를 승리 여부가 아니라 '어떻게 노는가'로 평가하는 유희적 역량 프레임워크 제안.</span></span></p>
             </div>
             <div class="item reveal" data-year="2026">
-              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Lee, S., Jeong, S., &amp; Doh, Y. Y. (2026). <span class="paper-title">Patterns of Preference for AI Assistants in Game Accessibility Among Players with Disabilities: An Exploratory Analysis of Functional Barriers and Intervention Timing.</span> <span class="venue">Journal of Korea Multimedia Society, 29(6), 885–904.</span><span class="pub-note"><span lang="en">Maps when disabled players actually want AI help: which functional barriers, at which moment of play.</span><span lang="ko">장애 플레이어가 AI 도움을 원하는 기능적 장벽과 개입 시점을 탐색 분석.</span></span></p>
+              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Lee, S., Jeong, S., &amp; Doh, Y. Y. (2026). <span class="paper-title">Patterns of Preference for AI Assistants in Game Accessibility Among Players with Disabilities: An Exploratory Analysis of Functional Barriers and Intervention Timing.</span> <span class="venue">Journal of Korea Multimedia Society, 29(6), 885–904.</span><span class="pub-note"><span lang="en">Maps where AI help is actually wanted: which functional barriers, and at which moment of play.</span><span lang="ko">장애 플레이어가 AI 도움을 원하는 기능적 장벽과 개입 시점을 탐색 분석.</span></span></p>
             </div>
             <div class="item reveal" data-year="2026">
-              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). <a href="https://doi.org/10.1145/3742413.3789155" target="_blank" rel="noopener noreferrer"><span class="paper-title">Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns.</span></a> <span class="venue">Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI '26). ACM.</span><span class="pub-note"><span lang="en">Design principles for AI game assistants from interviews and co-design with disabled players, including the ethics of acting on a player's behalf.</span><span lang="ko">장애 플레이어 인터뷰·공동 설계에서 도출한 설계 원칙과 대행의 윤리.</span></span></p>
+              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). <a href="https://doi.org/10.1145/3742413.3789155" target="_blank" rel="noopener noreferrer"><span class="paper-title">Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns.</span></a> <span class="venue">Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI '26). ACM.</span><span class="pub-note"><span lang="en">Design principles for AI assistants that act on a user's behalf, drawn from interviews and co-design with the people who rely on them.</span><span lang="ko">장애 플레이어 인터뷰·공동 설계에서 도출한 설계 원칙과 대행의 윤리.</span></span></p>
             </div>
             <div class="item reveal" data-year="2025">
-              <p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). <a href="https://doi.org/10.1145/3706599.3719723" target="_blank" rel="noopener noreferrer"><span class="paper-title">Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties.</span></a> <span class="venue">Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA '25). ACM.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span><span class="pub-note"><span lang="en">How hardcore players with disabilities iteratively adapt when games refuse to adapt to them.</span><span lang="ko">게임이 맞춰주지 않을 때 하드코어 장애 플레이어가 반복 적응하는 과정 분석.</span></span></p>
+              <p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). <a href="https://doi.org/10.1145/3706599.3719723" target="_blank" rel="noopener noreferrer"><span class="paper-title">Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties.</span></a> <span class="venue">Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA '25). ACM.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span><span class="pub-note"><span lang="en">How committed players iteratively adapt when a system refuses to adapt to them.</span><span lang="ko">게임이 맞춰주지 않을 때 하드코어 장애 플레이어가 반복 적응하는 과정 분석.</span></span></p>
             </div>
             <div class="item reveal" data-year="2025">
               <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2025). <span class="paper-title">The identity and role of game NPCs: Past, present, and future.</span> <span class="venue">Proceedings of the 1st DiGRA Korea Conference 2025.</span><span class="pub-note"><span lang="en">Traces the NPC's shifting identity from scripted prop toward autonomous co-actor.</span><span lang="ko">스크립트 소품에서 자율적 행위자로 변해온 NPC의 정체성과 역할 정리.</span></span></p>
