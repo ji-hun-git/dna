@@ -608,10 +608,54 @@
     }
     body.ko .featured-kicker { font-family: 'Pretendard', sans-serif; letter-spacing: 0.06em; font-size: 0.74rem; }
 
+    /* ── Fit ledger: an AX team's three missions, each with a receipt ── */
+    .fit {
+      margin: 0 0 14px;
+      padding: 18px 0 20px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 12px;
+    }
+    .strip-title {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.66rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--soft);
+    }
+    body.ko .strip-title {
+      font-family: 'Pretendard', sans-serif;
+      text-transform: none;
+      letter-spacing: 0.04em;
+      font-size: 0.78rem;
+    }
+    .fit-row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 18px;
+      align-items: baseline;
+    }
+    .fit-row .k {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .fit-row .v-text {
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: var(--muted);
+      max-width: 66ch;
+    }
+    .fit-row .v-text strong { color: var(--text); font-weight: 600; }
+    @media (max-width: 700px) {
+      .fit-row { grid-template-columns: 1fr; gap: 4px; }
+    }
+
     /* ── Capabilities: build / ship / prove, as scannable chips ── */
     .caps {
       margin: 0 0 46px;
-      padding: 20px 0 22px;
+      padding: 18px 0 22px;
       border-top: 1px solid var(--line);
       border-bottom: 1px solid var(--line);
       display: grid;
@@ -1405,34 +1449,18 @@
 
           <p class="side-label"><span lang="en">Focus</span><span lang="ko">전문 분야</span></p>
           <div class="side-list" lang="en">
-            <div>Enterprise AI adoption (AX)</div>
+            <div>AI transformation (AX)</div>
             <div>Forward deployed engineering</div>
-            <div>Business-specific LLM agents</div>
-            <div>Work-process automation</div>
-            <div>Human-AI interaction &amp; evaluation</div>
+            <div>Problem-solving LLM agents</div>
+            <div>Workflow automation</div>
+            <div>Evaluation &amp; human-AI interaction</div>
           </div>
           <div class="side-list" lang="ko">
-            <div>사내 AI 내재화 (AX)</div>
+            <div>AI 트랜스포메이션 (AX)</div>
             <div>포워드 디플로이드 엔지니어링</div>
-            <div>비즈니스 특화 LLM 에이전트</div>
+            <div>문제 해결형 LLM 에이전트</div>
             <div>업무 프로세스 효율화</div>
-            <div>인간-AI 상호작용 및 평가</div>
-          </div>
-
-          <div class="divider"></div>
-
-          <p class="side-label"><span lang="en">How I Work</span><span lang="ko">일하는 방식</span></p>
-          <div class="side-list" lang="en">
-            <div>Prove it with data and numbers, not claims</div>
-            <div>Today's best result is tomorrow's baseline</div>
-            <div>Self-driven: define the problem, finish it</div>
-            <div>One team beats a solo genius</div>
-          </div>
-          <div class="side-list" lang="ko">
-            <div>주장이 아니라 데이터와 숫자로 증명</div>
-            <div>오늘의 최고 기록은 내일의 기준선</div>
-            <div>스스로 문제를 정의하고 끝까지 완수</div>
-            <div>혼자의 천재성보다 원팀</div>
+            <div>평가 및 인간-AI 상호작용</div>
           </div>
 
           <div class="divider"></div>
@@ -1462,6 +1490,31 @@
       </aside>
 
       <main class="content">
+        <div class="fit" aria-label="Fit for an AX team">
+          <span class="strip-title"><span lang="en">What an AX team needs · what I bring</span><span lang="ko">AX 조직이 찾는 일 · 제가 해온 일</span></span>
+          <div class="fit-row">
+            <span class="k"><span lang="en">AI adoption</span><span lang="ko">사내 AI 내재화</span></span>
+            <span class="v-text">
+              <span lang="en">My doctoral research is the adoption question itself: <strong>when people accept an AI that acts for them, and when they switch it off</strong> - published at ACM IUI '26.</span>
+              <span lang="ko">박사 연구 자체가 내재화 질문입니다: <strong>사람은 자신을 대신하는 AI를 언제 받아들이고, 언제 꺼버리는가</strong> - ACM IUI '26 게재.</span>
+            </span>
+          </div>
+          <div class="fit-row">
+            <span class="k"><span lang="en">Problem-solving AI</span><span lang="ko">문제 해결형 AI</span></span>
+            <span class="v-text">
+              <span lang="en">Built <strong>GAIA</strong>, a problem-solving LLM agent for a hard domain: RAG over game knowledge, an agent loop over live screen and audio, voice in and out - evaluated with its real users.</span>
+              <span lang="ko">문제 해결형 LLM 에이전트 <strong>GAIA</strong> 구축: 게임 지식 RAG, 실시간 화면·음성 맥락 에이전트 루프, 음성 입출력 - 실사용자와 함께 평가.</span>
+            </span>
+          </div>
+          <div class="fit-row">
+            <span class="k"><span lang="en">Process efficiency</span><span lang="ko">업무 프로세스 효율화</span></span>
+            <span class="v-text">
+              <span lang="en"><strong>Top 3, KRAFTON's Forward Deployed Engineer track</strong> (Cofathon 2026): an unseen business workflow - found, automated, and verified in under four hours.</span>
+              <span lang="ko"><strong>크래프톤 FDE 트랙 Top 3</strong> (코파톤 2026): 처음 보는 실무 워크플로우를 4시간 안에 발굴·자동화·검증.</span>
+            </span>
+          </div>
+        </div>
+
         <div class="caps" aria-label="Capabilities">
           <div class="caps-row">
             <span class="k"><span lang="en">Build</span><span lang="ko">구축</span></span>
