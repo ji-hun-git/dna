@@ -313,6 +313,8 @@
     }
 
     .role, .org { margin: 0; color: var(--muted); font-size: 0.96rem; }
+    .tagline { margin: 12px 0 0; font-size: 0.92rem; line-height: 1.55; color: var(--muted); }
+    .tagline strong { color: var(--text); font-weight: 600; }
     .org { margin-top: 4px; }
 
     .divider {
@@ -566,9 +568,54 @@
     }
     .lead strong, .intro strong { color: #fff; font-weight: 600; }
 
+    /* ── Proof strip: the numbers a recruiter scans first ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 0 0 46px;
+    }
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px 13px;
+      box-shadow: var(--shadow);
+    }
+    .stat .n {
+      display: block;
+      font-weight: 800;
+      font-size: 1.45rem;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+    .stat .l {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--soft);
+    }
+    @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+    /* ── Featured award ── */
+    .item.featured { border-color: rgba(43,75,124,0.45); }
+    .featured-kicker {
+      display: block;
+      margin-bottom: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.64rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ink-accent);
+    }
+    body.ko .featured-kicker { font-family: 'Pretendard', sans-serif; letter-spacing: 0.06em; font-size: 0.74rem; }
+
     /* ── Capabilities: build / ship / prove, as scannable chips ── */
     .caps {
-      margin: 0 0 46px;
+      margin: 0 0 14px;
       padding: 20px 0 22px;
       border-top: 1px solid var(--line);
       border-bottom: 1px solid var(--line);
@@ -1015,7 +1062,8 @@
       .two-col { grid-template-columns: 1fr; }
       .item { padding: 16px 16px 16px 18px; }
       .section { margin-top: 48px; }
-      .caps { margin-bottom: 36px; }
+      .caps { margin-bottom: 12px; }
+      .stats { margin-bottom: 36px; }
       .site-footer { margin-top: 56px; }
 
       .top-controls { gap: 6px; }
@@ -1236,7 +1284,8 @@
       .lead, .intro { font-size: 0.92rem; }
       .profile-image { max-width: 200px; margin-left: auto; margin-right: auto; }
       .section { margin-top: 40px; }
-      .caps { margin-bottom: 28px; }
+      .caps { margin-bottom: 12px; }
+      .stats { margin-bottom: 28px; }
       .item { padding: 13px 14px 13px 16px; }
       .item-title { font-size: 0.98rem; }
       .section-title { font-size: 1.3rem; }
@@ -1296,6 +1345,10 @@
           <h2 class="name"><span lang="en">Jihun Chae</span><span lang="ko">채지훈</span></h2>
           <p class="role"><span lang="en">AI Engineer · Ph.D. Student</span><span lang="ko">AI 엔지니어 · 박사과정</span></p>
           <p class="org"><span lang="en">KAIST Graduate School of Culture Technology</span><span lang="ko">KAIST 문화기술대학원</span></p>
+          <p class="tagline">
+            <span lang="en">I ship <strong>LLM agents</strong> into real workflows, then <strong>prove they worked</strong>.</span>
+            <span lang="ko"><strong>LLM 에이전트</strong>를 실제 업무에 배포하고, <strong>효과를 검증</strong>합니다.</span>
+          </p>
 
           <div class="divider"></div>
 
@@ -1367,6 +1420,25 @@
             <span class="v" lang="ko">
               <span class="chip">평가 체계 · 검증 가능성</span><span class="chip">관측성 · 트레이싱</span><span class="chip">기준선 비교</span><span class="chip">사용자 연구</span><span class="chip">내재화 측정</span>
             </span>
+          </div>
+        </div>
+
+        <div class="stats" aria-label="At a glance">
+          <div class="stat">
+            <span class="n">Top 3</span>
+            <span class="l"><span lang="en">KRAFTON FDE Track · Cofathon 2026</span><span lang="ko">크래프톤 FDE 트랙 · 코파톤 2026</span></span>
+          </div>
+          <div class="stat">
+            <span class="n">19</span>
+            <span class="l"><span lang="en">Publications incl. ACM IUI &amp; CHI</span><span lang="ko">ACM IUI · CHI 포함 논문 19편</span></span>
+          </div>
+          <div class="stat">
+            <span class="n">9</span>
+            <span class="l"><span lang="en">Competition awards &amp; honors</span><span lang="ko">공모전 수상 및 명예</span></span>
+          </div>
+          <div class="stat">
+            <span class="n">8+</span>
+            <span class="l"><span lang="en">Industry partners incl. Samsung &amp; Nexon</span><span lang="ko">삼성·넥슨 등 산업 협력사</span></span>
           </div>
         </div>
 
@@ -1449,18 +1521,19 @@
         <section class="section" id="awards">
           <h3 class="section-title"><span class="num">02</span><span lang="en">Honors &amp; Awards</span><span lang="ko">명예 및 수상</span></h3>
           <div class="items">
-            <div class="item reveal">
+            <div class="item reveal featured">
+              <span class="featured-kicker"><span lang="en">Featured · 2026</span><span lang="ko">대표 수상 · 2026</span></span>
               <span class="item-title"><span lang="en">Top 3, KRAFTON Forward Deployed Engineer Track – Cofathon: AI Native Battlegrounds</span><span lang="ko">크래프톤 FDE 트랙 Top 3 – 코파톤 (Cofathon): AI Native Battlegrounds</span></span>
               <div class="item-meta"><span lang="en">2026.07 | KRAFTON × CJ Olive Young, technology partner OpenAI</span><span lang="ko">2026.07 | 크래프톤 × CJ올리브영, 기술 파트너 OpenAI</span></div>
               <ul class="item-desc" lang="en">
                 <li>Three stages: selected by written application into the roughly 25-competitor FDE final field, advanced to the Top 6, then finished in the Top 3.</li>
-                <li>A one-day hackathon scoring "AI nativeness" instead of resumes or coding tests. 10M KRW prize pool, hiring fast-track for winners.</li>
+                <li>A one-day hackathon scoring "AI nativeness". 10M KRW prize pool, hiring fast-track for winners.</li>
                 <li>Unseen business problem, end to end in under four hours: requirements elicited from an AI scenario agent, then designed, built, and verified.</li>
                 <li>Judged on Cofa Probe, then a live public deliberation on blind reports: problem definition, how AI is directed, iteration under constraint, verification, and handoff quality.</li>
               </ul>
               <ul class="item-desc" lang="ko">
                 <li>3단계 선발: 서류 지원으로 FDE 트랙 본선 약 25명에 진출, 이후 Top 6를 거쳐 최종 Top 3.</li>
-                <li>이력서·코딩테스트가 아닌 'AI 네이티브 역량'을 평가한 1일 해커톤. 총 상금 1,000만원, 입상자 채용 전형 우대.</li>
+                <li>'AI 네이티브 역량'을 평가한 1일 해커톤. 총 상금 1,000만원, 입상자 채용 전형 우대.</li>
                 <li>처음 보는 실무 문제를 4시간 내 완수: AI 시나리오 에이전트로 요구사항 도출, 설계·구현·검증까지.</li>
                 <li>Cofa Probe 심사 후 블라인드 리포트 기반 공개 토론으로 최종 선발. 평가 항목: 문제 정의, AI 지휘 방식, 제약 하의 반복 개선, 결과 검증, 핸드오프 품질.</li>
               </ul>
@@ -1478,7 +1551,7 @@
               <p class="item-desc" lang="ko">정주영 창업경진대회 · 아산 UniverCT 선정. 초기 자금과 멘토링 확보.</p>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Grand Prize – Handong Global University President's Award</span><span lang="ko">최우수상 (한동대학교 총장상)</span></span>
+              <span class="item-title"><span lang="en">Grand Prize – University President's Award</span><span lang="ko">최우수상 (한동대학교 총장상)</span></span>
               <div class="item-meta"><span lang="en">2024.01 | Pohang Culture &amp; Arts Factory Hackathon</span><span lang="ko">2024.01 | 포항 문화예술공장 해커톤</span></div>
               <p class="item-desc" lang="en">Led the build of a large-scale Unreal Engine media facade prototype. Co-hosted by Pohang City, Pohang Cultural Foundation, KT, and HGU.</p>
               <p class="item-desc" lang="ko">대규모 언리얼 엔진 미디어 파사드 프로토타입 기술 구현 주도. 포항시·포항문화재단·KT·한동대 공동 주최.</p>
@@ -1496,7 +1569,7 @@
               <p class="item-desc" lang="ko">시선추적 기반 VR 게임 연구. 몰입감·접근성을 위한 안구 운동 반응 분석.</p>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Handong Global University President's Award</span><span lang="ko">한동대학교 총장상</span></span>
+              <span class="item-title"><span lang="en">University President's Award</span><span lang="ko">한동대학교 총장상</span></span>
               <div class="item-meta"><span lang="en">2022.11 | Handong Global University</span><span lang="ko">2022.11 | 한동대학교</span></div>
               <p class="item-desc" lang="en">Startup Idea Competition. An ESG plus augmented reality business model, ranked top entry on feasibility and social impact.</p>
               <p class="item-desc" lang="ko">창업 아이디어 경진대회. ESG와 증강현실을 결합한 비즈니스 모델로 실현 가능성·사회적 영향력 부문 최우수 평가.</p>
