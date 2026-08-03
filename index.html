@@ -302,8 +302,8 @@
       margin: 0 0 8px;
       font-size: 2.1rem;
       line-height: 1.05;
-      letter-spacing: -0.035em;
-      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-weight: 800;
       color: var(--text);
     }
     body.ko .name {
@@ -313,8 +313,6 @@
     }
 
     .role, .org { margin: 0; color: var(--muted); font-size: 0.96rem; }
-    .tagline { margin: 12px 0 0; font-size: 0.92rem; line-height: 1.55; color: var(--muted); }
-    .tagline strong { color: var(--text); font-weight: 600; }
     .org { margin-top: 4px; }
 
     .divider {
@@ -568,38 +566,6 @@
     }
     .lead strong, .intro strong { color: #fff; font-weight: 600; }
 
-    /* ── Proof strip: the numbers a recruiter scans first ── */
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin: 0 0 46px;
-    }
-    .stat {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px 16px 13px;
-      box-shadow: var(--shadow);
-    }
-    .stat .n {
-      display: block;
-      font-weight: 800;
-      font-size: 1.45rem;
-      letter-spacing: -0.02em;
-      line-height: 1.15;
-      font-variant-numeric: tabular-nums;
-      color: var(--text);
-    }
-    .stat .l {
-      display: block;
-      margin-top: 3px;
-      font-size: 0.78rem;
-      line-height: 1.45;
-      color: var(--soft);
-    }
-    @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
-
     /* ── Featured award ── */
     .item.featured { border-color: rgba(43,75,124,0.45); }
     .featured-kicker {
@@ -615,7 +581,7 @@
 
     /* ── Capabilities: build / ship / prove, as scannable chips ── */
     .caps {
-      margin: 0 0 14px;
+      margin: 0 0 46px;
       padding: 20px 0 22px;
       border-top: 1px solid var(--line);
       border-bottom: 1px solid var(--line);
@@ -799,8 +765,8 @@
 
     .item {
       position: relative;
-      padding: 18px 20px 18px 22px;
-      border-radius: 18px;
+      padding: 20px 22px;
+      border-radius: 14px;
       border: 1px solid var(--line);
       background: var(--surface);
       box-shadow: var(--shadow);
@@ -862,7 +828,8 @@
     .item-meta {
       margin-bottom: 10px;
       color: var(--soft);
-      font-size: 0.84rem;
+      font-size: 0.8rem;
+      letter-spacing: 0.01em;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-variant-numeric: tabular-nums;
       font-feature-settings: 'tnum' 1, 'kern' 1;
@@ -875,9 +842,12 @@
       margin: 0;
       color: var(--muted);
       font-size: 0.95rem;
+      line-height: 1.65;
+      max-width: 66ch;   /* keep the reading measure near 65 characters */
+      text-wrap: pretty;
     }
     ul.item-desc { padding-left: 18px; }
-    ul.item-desc li + li { margin-top: 6px; }
+    ul.item-desc li + li { margin-top: 8px; }
 
     .paper-title,
     .pub-author-me { color: var(--text); font-weight: 600; }
@@ -1062,8 +1032,7 @@
       .two-col { grid-template-columns: 1fr; }
       .item { padding: 16px 16px 16px 18px; }
       .section { margin-top: 48px; }
-      .caps { margin-bottom: 12px; }
-      .stats { margin-bottom: 36px; }
+      .caps { margin-bottom: 36px; }
       .site-footer { margin-top: 56px; }
 
       .top-controls { gap: 6px; }
@@ -1284,8 +1253,7 @@
       .lead, .intro { font-size: 0.92rem; }
       .profile-image { max-width: 200px; margin-left: auto; margin-right: auto; }
       .section { margin-top: 40px; }
-      .caps { margin-bottom: 12px; }
-      .stats { margin-bottom: 28px; }
+      .caps { margin-bottom: 28px; }
       .item { padding: 13px 14px 13px 16px; }
       .item-title { font-size: 0.98rem; }
       .section-title { font-size: 1.3rem; }
@@ -1345,10 +1313,6 @@
           <h2 class="name"><span lang="en">Jihun Chae</span><span lang="ko">채지훈</span></h2>
           <p class="role"><span lang="en">AI Engineer · Ph.D. Student</span><span lang="ko">AI 엔지니어 · 박사과정</span></p>
           <p class="org"><span lang="en">KAIST Graduate School of Culture Technology</span><span lang="ko">KAIST 문화기술대학원</span></p>
-          <p class="tagline">
-            <span lang="en">I ship <strong>LLM agents</strong> into real workflows, then <strong>prove they worked</strong>.</span>
-            <span lang="ko"><strong>LLM 에이전트</strong>를 실제 업무에 배포하고, <strong>효과를 검증</strong>합니다.</span>
-          </p>
 
           <div class="divider"></div>
 
@@ -1423,34 +1387,15 @@
           </div>
         </div>
 
-        <div class="stats" aria-label="At a glance">
-          <div class="stat">
-            <span class="n">Top 3</span>
-            <span class="l"><span lang="en">KRAFTON FDE Track · Cofathon 2026</span><span lang="ko">크래프톤 FDE 트랙 · 코파톤 2026</span></span>
-          </div>
-          <div class="stat">
-            <span class="n">19</span>
-            <span class="l"><span lang="en">Publications incl. ACM IUI &amp; CHI</span><span lang="ko">ACM IUI · CHI 포함 논문 19편</span></span>
-          </div>
-          <div class="stat">
-            <span class="n">9</span>
-            <span class="l"><span lang="en">Competition awards &amp; honors</span><span lang="ko">공모전 수상 및 명예</span></span>
-          </div>
-          <div class="stat">
-            <span class="n">8+</span>
-            <span class="l"><span lang="en">Industry partners incl. Samsung &amp; Nexon</span><span lang="ko">삼성·넥슨 등 산업 협력사</span></span>
-          </div>
-        </div>
-
         <section class="section" id="projects">
           <h3 class="section-title"><span class="num">01</span><span lang="en">Selected Work</span><span lang="ko">주요 프로젝트</span></h3>
           <div class="items">
             <div class="item reveal">
               <span class="item-title"><span lang="en">Development and Evaluation of the Inclusive Conversational AI Service for Game Accessibility Enhancement</span><span lang="ko">게임 접근성 향상을 위한 포용적 대화형 AI 서비스의 개발 및 평가</span></span>
-              <div class="item-meta"><span lang="en">2024.05 – 2027.04 | KAIST | National Research Foundation of Korea (NRF) | Student Researcher Lead</span><span lang="ko">2024.05 ~ 2027.04 | KAIST | 한국연구재단 (NRF) | 학생연구원 (총괄)</span></div>
+              <div class="item-meta"><span lang="en">2024.05 – 2027.04 | KAIST | National Research Foundation of Korea (NRF) | Lead Student Researcher</span><span lang="ko">2024.05 ~ 2027.04 | KAIST | 한국연구재단 (NRF) | 학생연구원 (총괄)</span></div>
               <ul class="item-desc" lang="en">
                 <li>Building GAIA: an LLM assistant with RAG over game knowledge, an agent loop over live screen and audio, and speech in and out.</li>
-                <li>Owned the full loop: field interviews and design workshops, to requirements, to shipped prototypes, to evaluation with the same users.</li>
+                <li>Own the full loop: field interviews and design workshops, to requirements, to shipped prototypes, to evaluation with the same users.</li>
                 <li>Published at ACM IUI '26. Partners: Samsung Electronics, Nexon Intelligence Labs, Smilegate D&amp;I, National Rehabilitation Center, SpecialEffect (UK).</li>
               </ul>
               <ul class="item-desc" lang="ko">
