@@ -7,31 +7,33 @@
   <title>Jihun Chae | AI Engineer · AX & Forward Deployed Engineering</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <style>
     /* ═══════════════════════════════════════════════════════════
        TOKENS
        ═══════════════════════════════════════════════════════════ */
     :root {
-      --bg: #07070b;
-      --bg2: #0b0b13;
-      --text: #f5f5f7;
-      --muted: #babac4;
-      --soft: #8b8b95;
-      --line: rgba(255,255,255,0.08);
-      --line-strong: rgba(255,255,255,0.14);
-      --shadow: 0 20px 60px rgba(0,0,0,0.32);
+      --bg: #f6f5f2;          /* warm off-white ground, never pure white */
+      --bg2: #fbfaf8;
+      --surface: #ffffff;
+      --text: #17181b;
+      --muted: #55575e;
+      --soft: #6a6d75;        /* darkened for AA on the light ground */
+      --line: rgba(23,24,27,0.12);
+      --line-strong: rgba(23,24,27,0.26);
+      --shadow: 0 1px 2px rgba(23,24,27,0.04), 0 6px 20px rgba(23,24,27,0.05);
+      --ink-accent: #2b4b7c;  /* the single accent: a muted steel blue */
       --wrap: 1180px;
       --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
       --ease-spring: cubic-bezier(0.34, 1.4, 0.44, 1);
 
       /* Section accent colors */
-      --c-education: 251, 191, 36;
-      --c-projects:  96, 165, 250;
-      --c-awards:    244, 114, 182;
-      --c-pubs:      52, 211, 153;
-      --c-patents:   167, 139, 250;
+      --c-education: 146, 88, 8;
+      --c-projects:  43, 75, 124;
+      --c-awards:    154, 30, 79;
+      --c-pubs:      13, 90, 68;
+      --c-patents:   82, 44, 130;
     }
 
     * { box-sizing: border-box; }
@@ -40,7 +42,7 @@
       margin: 0;
       font-family: 'Inter', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: var(--text);
-      background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+      background: var(--bg);
       line-height: 1.7;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
@@ -53,8 +55,8 @@
     }
 
     ::selection {
-      background: rgba(96,165,250,0.32);
-      color: #fff;
+      background: rgba(43,75,124,0.16);
+      color: var(--text);
       text-shadow: none;
     }
 
@@ -96,56 +98,7 @@
     body.ko .side-list[lang="ko"],
     body.ko .contact-list[lang="ko"] { display: grid; }
 
-    body:not(.reader) { background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); }
-
-    /* ═══════════════════════════════════════════════════════════
-       AMBIENT LAYERS
-       ═══════════════════════════════════════════════════════════ */
-    .aurora {
-      position: fixed;
-      inset: -20%;
-      z-index: 0;
-      pointer-events: none;
-      background:
-        radial-gradient(circle at 15% 20%, rgba(96,165,250,0.09), transparent 38%),
-        radial-gradient(circle at 85% 30%, rgba(244,114,182,0.06), transparent 35%),
-        radial-gradient(circle at 70% 85%, rgba(52,211,153,0.06), transparent 40%),
-        radial-gradient(circle at 25% 90%, rgba(251,191,36,0.04), transparent 38%);
-      filter: blur(60px) saturate(130%);
-      animation: drift 32s ease-in-out infinite alternate;
-    }
-    @keyframes drift {
-      0%   { transform: translate3d(0, 0, 0); }
-      50%  { transform: translate3d(1.5%, -1%, 0); }
-      100% { transform: translate3d(-1%, 1%, 0); }
-    }
-
-    .ambient {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
-      background-size: 64px 64px;
-      mask-image: radial-gradient(circle 380px at var(--gx, 50%) var(--gy, 30%), #000 0%, transparent 60%);
-      -webkit-mask-image: radial-gradient(circle 380px at var(--gx, 50%) var(--gy, 30%), #000 0%, transparent 60%);
-      opacity: 0.5;
-      transition: opacity 0.6s ease;
-    }
-    body.no-cursor .ambient { opacity: 0; }
-
-    .grain {
-      position: fixed;
-      inset: 0;
-      z-index: 2;
-      pointer-events: none;
-      opacity: 0.045;
-      mix-blend-mode: overlay;
-      background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/></svg>");
-      background-size: 200px 200px;
-    }
+    body:not(.reader) { background: var(--bg); }
 
     .scroll-progress {
       position: fixed;
@@ -153,11 +106,9 @@
       left: 0;
       height: 2px;
       width: 0%;
-      background: linear-gradient(90deg,
-        rgba(96,165,250,0.9), rgba(244,114,182,0.9), rgba(52,211,153,0.9));
+      background: var(--ink-accent);
       z-index: 100;
       transition: width 0.08s linear;
-      box-shadow: 0 0 14px rgba(255,255,255,0.22);
     }
 
     a { color: inherit; text-decoration: none; }
@@ -181,9 +132,9 @@
       padding: 8px 14px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(12,12,16,0.78);
-      backdrop-filter: blur(14px) saturate(140%);
-      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       color: var(--text);
       font: 600 0.82rem/1 'Inter', 'Pretendard', sans-serif;
       letter-spacing: 0.01em;
@@ -193,7 +144,7 @@
     .pill-btn:hover {
       transform: translateY(-1px);
       border-color: var(--line-strong);
-      background: rgba(20,20,26,0.92);
+      background: #ffffff;
     }
     .pill-btn:active { transform: translateY(0) scale(0.97); }
     .pill-btn .icon {
@@ -286,7 +237,7 @@
       position: relative;
       padding: 20px;
       border-radius: 28px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      background: var(--surface);
       border: 1px solid var(--line);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px) saturate(140%);
@@ -301,7 +252,7 @@
       inset: 0;
       border-radius: inherit;
       padding: 1px;
-      background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(96,165,250,0.45), transparent 55%);
+      background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(43,75,124,0.10), transparent 55%);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
               mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
@@ -313,7 +264,7 @@
     .profile-card:hover::before { opacity: 1; }
     .profile-card:hover {
       border-color: var(--line-strong);
-      box-shadow: 0 28px 80px rgba(0,0,0,0.42);
+      box-shadow: 0 2px 4px rgba(23,24,27,0.05), 0 14px 40px rgba(23,24,27,0.08);
     }
 
     .profile-image {
@@ -322,8 +273,8 @@
       border-radius: 20px;
       aspect-ratio: 4 / 5;
       margin-bottom: 20px;
-      border: 1px solid rgba(255,255,255,0.06);
-      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--line);
+      background: rgba(23,24,27,0.03);
     }
     .profile-image img {
       width: 100%;
@@ -344,7 +295,7 @@
       justify-content: center;
       color: var(--soft);
       font-size: 0.92rem;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      background: rgba(23,24,27,0.03);
     }
 
     .name {
@@ -353,7 +304,7 @@
       line-height: 1.05;
       letter-spacing: -0.035em;
       font-weight: 700;
-      color: #fff;
+      color: var(--text);
     }
     body.ko .name {
       font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
@@ -367,7 +318,7 @@
     .divider {
       height: 1px;
       margin: 20px 0;
-      background: rgba(255,255,255,0.07);
+      background: var(--line);
     }
 
     .side-label {
@@ -402,11 +353,11 @@
       top: 50%;
       width: 6px;
       height: 1px;
-      background: rgba(255,255,255,0.25);
+      background: rgba(23,24,27,0.28);
       transition: width 0.3s ease, background 0.3s ease;
     }
-    .side-list > div:hover { color: #fff; transform: translateX(2px); }
-    .side-list > div:hover::before { width: 10px; background: rgba(96,165,250,0.85); }
+    .side-list > div:hover { color: var(--text); transform: translateX(2px); }
+    .side-list > div:hover::before { width: 10px; background: var(--ink-accent); }
 
     .contact-list {
       list-style: none;
@@ -432,12 +383,12 @@
     }
     .contact-list a:hover {
       transform: translateX(2px);
-      color: #fff;
+      color: var(--text);
     }
-    .contact-list a[href*="linkedin"]:hover    { color: #4a8fcf; }
-    .contact-list a[href*="scholar"]:hover     { color: #6ba8f5; }
-    .contact-list a[href*="orcid"]:hover       { color: #b8d96c; }
-    .contact-list a[href^="mailto"]:hover      { color: #f0b365; }
+    .contact-list a[href*="linkedin"]:hover    { color: #2b4b7c; }
+    .contact-list a[href*="scholar"]:hover     { color: #1a5fa8; }
+    .contact-list a[href*="orcid"]:hover       { color: #5c7a12; }
+    .contact-list a[href^="mailto"]:hover      { color: #a05a12; }
     .contact-list a:hover::after {
       opacity: 1;
       transform: translate(0, 0);
@@ -446,7 +397,7 @@
       content: "✓";
       opacity: 1;
       transform: translate(0,0);
-      color: #9af0a4;
+      color: #17683a;
     }
 
     .section-nav {
@@ -473,19 +424,19 @@
       width: 4px;
       height: 4px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.22);
+      background: rgba(23,24,27,0.28);
       transition: background 0.3s ease, width 0.3s ease, height 0.3s ease;
     }
     .section-nav a:hover {
-      color: #fff;
-      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      background: rgba(23,24,27,0.05);
     }
     .section-nav a.active {
-      color: #fff;
+      color: var(--text);
       padding-left: 22px;
     }
     .section-nav a.active::before {
-      background: linear-gradient(90deg, rgba(96,165,250,1), rgba(244,114,182,1));
+      background: var(--ink-accent);
       width: 12px;
       height: 1.5px;
       border-radius: 2px;
@@ -499,13 +450,13 @@
       min-height: 46px;
       padding: 0 20px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.86));
-      color: #111;
+      border: 1px solid var(--text);
+      background: var(--text);
+      color: #ffffff;
       font-size: 0.93rem;
       font-weight: 700;
       margin-top: 24px;
-      box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+      box-shadow: none;
       transition: box-shadow 0.22s ease, filter 0.22s ease;
       overflow: hidden;
     }
@@ -516,13 +467,13 @@
       left: -80%;
       width: 50%;
       height: 100%;
-      background: linear-gradient(100deg, transparent, rgba(255,255,255,0.85), transparent);
+      background: linear-gradient(100deg, transparent, rgba(255,255,255,0.22), transparent);
       transform: skewX(-18deg);
       transition: left 0.6s var(--ease-out);
     }
     .button:hover::before { left: 130%; }
     .button:hover {
-      box-shadow: 0 16px 34px rgba(0,0,0,0.24);
+      box-shadow: 0 6px 18px rgba(23,24,27,0.16);
       filter: brightness(1.02);
     }
     .button .arrow {
@@ -619,8 +570,8 @@
     .caps {
       margin: 0 0 46px;
       padding: 20px 0 22px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
       display: grid;
       gap: 13px;
     }
@@ -658,10 +609,10 @@
       padding: 3px 11px;
       border: 1px solid var(--line);
       border-radius: 999px;
-      background: rgba(255,255,255,0.02);
+      background: var(--surface);
       transition: color 0.2s ease, border-color 0.2s ease;
     }
-    .caps-row .chip:hover { color: #fff; border-color: var(--line-strong); }
+    .caps-row .chip:hover { color: var(--text); border-color: var(--line-strong); }
     body.ko .caps-row .chip { font-size: 0.82rem; }
     @media (max-width: 700px) {
       .caps-row { grid-template-columns: 1fr; gap: 7px; }
@@ -678,8 +629,8 @@
       font-size: 1.5rem;
       font-weight: 700;
       letter-spacing: -0.025em;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      font-family: 'Fraunces', 'Inter', serif;
+      border-bottom: 1px solid var(--line);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       display: flex;
       align-items: baseline;
       gap: 16px;
@@ -703,7 +654,7 @@
                   transform 0.6s var(--ease-out);
     }
     .section.in-view .section-title .num {
-      color: rgb(var(--accent, 255 255 255));
+      color: rgb(var(--accent, 23 24 27));
     }
     .section-title.pulsed .num {
       animation: num-pulse 1.4s ease-out;
@@ -720,7 +671,7 @@
       bottom: -1px;
       width: 0;
       height: 1px;
-      background: linear-gradient(90deg, rgba(var(--accent, 255 255 255), 0.85), transparent);
+      background: linear-gradient(90deg, rgba(var(--accent, 23 24 27), 0.85), transparent);
       transition: width 1.2s var(--ease-out);
     }
     .section.in-view .section-title::after { width: 80px; }
@@ -738,7 +689,7 @@
       margin: 0 0 22px;
       padding: 5px;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.025);
+      background: rgba(23,24,27,0.03);
       border-radius: 999px;
       width: fit-content;
       backdrop-filter: blur(14px);
@@ -759,7 +710,7 @@
       align-items: center;
       gap: 6px;
     }
-    .filter button:hover { color: #fff; }
+    .filter button:hover { color: var(--text); }
     .filter button:active { transform: scale(0.95); }
     .filter button .count {
       font-size: 0.7rem;
@@ -768,18 +719,18 @@
       color: var(--soft);
       padding: 1px 6px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid var(--line);
       line-height: 1.5;
       transition: color 0.2s ease, border-color 0.2s ease;
     }
     .filter button.active {
-      color: #0d1018;
-      background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+      color: #ffffff;
+      background: var(--text);
       font-weight: 600;
     }
     .filter button.active .count {
-      color: #0d1018;
-      border-color: rgba(13,16,24,0.25);
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.34);
     }
 
     .items { display: grid; gap: 14px; }
@@ -804,10 +755,8 @@
       padding: 18px 20px 18px 22px;
       border-radius: 18px;
       border: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025));
-      backdrop-filter: blur(16px) saturate(130%);
-      -webkit-backdrop-filter: blur(16px) saturate(130%);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+      background: var(--surface);
+      box-shadow: var(--shadow);
       overflow: hidden;
       transition: transform 0.3s var(--ease-spring),
                   border-color 0.28s ease,
@@ -822,7 +771,7 @@
       bottom: 18px;
       width: 2px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.14);
+      background: rgba(23,24,27,0.18);
       transition: background 0.3s ease, top 0.3s ease, bottom 0.3s ease, width 0.3s ease;
     }
     .item::after {
@@ -839,8 +788,8 @@
     .item:hover {
       transform: translateY(-3px);
       border-color: rgba(var(--accent, 255 255 255), 0.25);
-      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.035));
-      box-shadow: 0 18px 42px rgba(0,0,0,0.22);
+      background: var(--surface);
+      box-shadow: 0 2px 4px rgba(23,24,27,0.05), 0 12px 30px rgba(23,24,27,0.09);
     }
     .item:hover::before {
       background: linear-gradient(180deg,
@@ -861,7 +810,7 @@
       line-height: 1.45;
       font-weight: 700;
       letter-spacing: -0.012em;
-      color: #fff;
+      color: var(--text);
     }
     .item-meta {
       margin-bottom: 10px;
@@ -884,7 +833,7 @@
     ul.item-desc li + li { margin-top: 6px; }
 
     .paper-title,
-    .pub-author-me { color: #ffffff; }
+    .pub-author-me { color: var(--text); font-weight: 600; }
     .paper-title { font-weight: 600; }
     .pub-author-me {
       font-weight: 800;
@@ -906,7 +855,7 @@
     .site-footer {
       margin-top: 84px;
       padding: 26px 0 34px;
-      border-top: 1px solid rgba(255,255,255,0.06);
+      border-top: 1px solid var(--line);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -922,10 +871,10 @@
     }
     .site-footer a {
       color: var(--muted);
-      border-bottom: 1px solid rgba(255,255,255,0.18);
+      border-bottom: 1px solid var(--line-strong);
       transition: color 0.2s ease, border-color 0.2s ease;
     }
-    .site-footer a:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
+    .site-footer a:hover { color: var(--text); border-color: var(--text); }
 
     /* ═══════════════════════════════════════════════════════════
        TOAST + KBD HINT
@@ -964,9 +913,9 @@
       padding: 8px 12px;
       border-radius: 12px;
       border: 1px solid var(--line);
-      background: rgba(12,12,16,0.7);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       color: var(--soft);
       font-size: 0.76rem;
       z-index: 50;
@@ -979,9 +928,9 @@
       display: inline-block;
       padding: 2px 6px;
       border-radius: 5px;
-      border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(255,255,255,0.05);
-      color: #fff;
+      border: 1px solid var(--line);
+      background: rgba(23,24,27,0.04);
+      color: var(--text);
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.72rem;
       line-height: 1;
@@ -1031,10 +980,10 @@
         z-index: 20;
         padding: 12px 4px 14px;
         margin-bottom: 8px;
-        background: rgba(7,7,10,0.82);
+        background: rgba(246,245,242,0.92);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+        border-bottom: 1px solid var(--line);
         -webkit-overflow-scrolling: touch;
       }
       .mobile-nav::-webkit-scrollbar { display: none; }
@@ -1049,7 +998,7 @@
         flex-shrink: 0;
       }
       .mobile-nav a.active {
-        color: #fff;
+        color: var(--text);
       }
       .mobile-nav a.active::after {
         content: "";
@@ -1058,7 +1007,7 @@
         left: 0;
         right: 0;
         height: 1.5px;
-        background: linear-gradient(90deg, #60a5fa, #f472b6);
+        background: var(--ink-accent);
         border-radius: 2px;
       }
 
@@ -1090,7 +1039,7 @@
     body.reader {
       background: #f7f4ec !important;
       color: #1a1a1a !important;
-      font-family: 'Fraunces', Georgia, 'Times New Roman', serif !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-size: 18px;
       line-height: 1.78;
     }
@@ -1098,9 +1047,6 @@
       font-family: 'Pretendard Variable', 'Pretendard', sans-serif !important;
       line-height: 1.85;
     }
-    body.reader .aurora,
-    body.reader .ambient,
-    body.reader .grain,
     body.reader .scroll-progress,
     body.reader .kbd-hint,
     body.reader .mobile-nav,
@@ -1136,7 +1082,7 @@
     body.reader .profile-card::before { display: none !important; }
     body.reader .name {
       color: #111 !important;
-      font-family: 'Fraunces', serif !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-size: 2.4rem !important;
       font-weight: 600;
       margin-bottom: 10px !important;
@@ -1196,7 +1142,7 @@
     body.reader .section-title {
       color: #111 !important;
       border-bottom: 1px solid rgba(0,0,0,0.18) !important;
-      font-family: 'Fraunces', serif !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-weight: 600;
       font-size: 1.55rem !important;
     }
@@ -1231,7 +1177,7 @@
     body.reader .item::after { display: none !important; }
     body.reader .item-title {
       color: #111 !important;
-      font-family: 'Fraunces', serif !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-weight: 600;
       font-size: 1.1rem !important;
     }
@@ -1308,14 +1254,10 @@
         transition: none !important;
       }
       .reveal { opacity: 1; transform: none; filter: none; }
-      .aurora, .ambient { display: none; }
     }
   </style>
 </head>
 <body>
-  <div class="aurora" aria-hidden="true"></div>
-  <div class="ambient" aria-hidden="true"></div>
-  <div class="grain" aria-hidden="true"></div>
   <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 
   <div class="top-controls">
@@ -1508,21 +1450,23 @@
           <h3 class="section-title"><span class="num">02</span><span lang="en">Honors &amp; Awards</span><span lang="ko">명예 및 수상</span></h3>
           <div class="items">
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Placed within the top 3, KRAFTON Forward Deployed Engineer Track – Cofathon: AI Native Battlegrounds</span><span lang="ko">크래프톤 FDE 트랙 3위 이내 – 코파톤 (Cofathon): AI Native Battlegrounds</span></span>
+              <span class="item-title"><span lang="en">Top 3, KRAFTON Forward Deployed Engineer Track – Cofathon: AI Native Battlegrounds</span><span lang="ko">크래프톤 FDE 트랙 Top 3 – 코파톤 (Cofathon): AI Native Battlegrounds</span></span>
               <div class="item-meta"><span lang="en">2026.07 | KRAFTON × CJ Olive Young, technology partner OpenAI</span><span lang="ko">2026.07 | 크래프톤 × CJ올리브영, 기술 파트너 OpenAI</span></div>
               <ul class="item-desc" lang="en">
+                <li>Three stages: selected by written application into the roughly 25-competitor FDE final field, advanced to the Top 6, then finished in the Top 3.</li>
                 <li>A one-day hackathon scoring "AI nativeness" instead of resumes or coding tests. 10M KRW prize pool, hiring fast-track for winners.</li>
                 <li>Unseen business problem, end to end in under four hours: requirements elicited from an AI scenario agent, then designed, built, and verified.</li>
-                <li>Judged on Cofa Probe: problem definition, how AI is directed, iteration under constraint, verification, and handoff quality.</li>
+                <li>Judged on Cofa Probe, then a live public deliberation on blind reports: problem definition, how AI is directed, iteration under constraint, verification, and handoff quality.</li>
               </ul>
               <ul class="item-desc" lang="ko">
+                <li>3단계 선발: 서류 지원으로 FDE 트랙 본선 약 25명에 진출, 이후 Top 6를 거쳐 최종 Top 3.</li>
                 <li>이력서·코딩테스트가 아닌 'AI 네이티브 역량'을 평가한 1일 해커톤. 총 상금 1,000만원, 입상자 채용 전형 우대.</li>
                 <li>처음 보는 실무 문제를 4시간 내 완수: AI 시나리오 에이전트로 요구사항 도출, 설계·구현·검증까지.</li>
-                <li>Cofa Probe 심사 기준: 문제 정의, AI 지휘 방식, 제약 하의 반복 개선, 결과 검증, 핸드오프 품질.</li>
+                <li>Cofa Probe 심사 후 블라인드 리포트 기반 공개 토론으로 최종 선발. 평가 항목: 문제 정의, AI 지휘 방식, 제약 하의 반복 개선, 결과 검증, 핸드오프 품질.</li>
               </ul>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Grand Prize (최우수상) – Edu4.0 Q TA Activities</span><span lang="ko">최우수상 – Edu4.0 Q TA 활동</span></span>
+              <span class="item-title"><span lang="en">Grand Prize – Edu4.0 Q TA Activities</span><span lang="ko">최우수상 – Edu4.0 Q TA 활동</span></span>
               <div class="item-meta"><span lang="en">2026.02 | KAIST</span><span lang="ko">2026.02 | KAIST</span></div>
               <p class="item-desc" lang="en">Teaching support and case presentation for the Edu4.0 Q model.</p>
               <p class="item-desc" lang="ko">Edu4.0 Q 모델 TA 활동 사례 발표 및 교육 지원.</p>
@@ -1534,31 +1478,31 @@
               <p class="item-desc" lang="ko">정주영 창업경진대회 · 아산 UniverCT 선정. 초기 자금과 멘토링 확보.</p>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Grand Prize (최우수상, 한동대학교 총장상) – HGU President's Award</span><span lang="ko">최우수상 (한동대학교 총장상)</span></span>
+              <span class="item-title"><span lang="en">Grand Prize – Handong Global University President's Award</span><span lang="ko">최우수상 (한동대학교 총장상)</span></span>
               <div class="item-meta"><span lang="en">2024.01 | Pohang Culture &amp; Arts Factory Hackathon</span><span lang="ko">2024.01 | 포항 문화예술공장 해커톤</span></div>
               <p class="item-desc" lang="en">Led the build of a large-scale Unreal Engine media facade prototype. Co-hosted by Pohang City, Pohang Cultural Foundation, KT, and HGU.</p>
               <p class="item-desc" lang="ko">대규모 언리얼 엔진 미디어 파사드 프로토타입 기술 구현 주도. 포항시·포항문화재단·KT·한동대 공동 주최.</p>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Excellence Award (우수상)</span><span lang="ko">우수상</span></span>
+              <span class="item-title"><span lang="en">Excellence Award</span><span lang="ko">우수상</span></span>
               <div class="item-meta"><span lang="en">2023.06 | National Metaverse Developer Contest (MSIT)</span><span lang="ko">2023.06 | 국가 메타버스 개발자 콘테스트 (과학기술정보통신부)</span></div>
               <p class="item-desc" lang="en">Built a gamified digital therapeutic for eye-muscle rehabilitation on Meta Quest Pro eye tracking. Skonec Entertainment CEO's Award.</p>
               <p class="item-desc" lang="ko">메타 퀘스트 프로 시선추적 기반 눈 근육 재활 디지털 치료기기 개발. 스코넥엔터테인먼트 대표이사상 수상.</p>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Outstanding Student Research Award (우수상)</span><span lang="ko">우수 학생 연구상</span></span>
+              <span class="item-title"><span lang="en">Outstanding Student Research Award</span><span lang="ko">우수 학생 연구상</span></span>
               <div class="item-meta"><span lang="en">2023.11 | Korea Multimedia Society (KMMS)</span><span lang="ko">2023.11 | 한국멀티미디어학회 (KMMS)</span></div>
               <p class="item-desc" lang="en">Research on eye-tracking-based VR games, analyzing oculomotor response for immersion and accessibility.</p>
               <p class="item-desc" lang="ko">시선추적 기반 VR 게임 연구. 몰입감·접근성을 위한 안구 운동 반응 분석.</p>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Handong Global University President's Award (한동대학교 총장상)</span><span lang="ko">한동대학교 총장상</span></span>
+              <span class="item-title"><span lang="en">Handong Global University President's Award</span><span lang="ko">한동대학교 총장상</span></span>
               <div class="item-meta"><span lang="en">2022.11 | Handong Global University</span><span lang="ko">2022.11 | 한동대학교</span></div>
               <p class="item-desc" lang="en">Startup Idea Competition. An ESG plus augmented reality business model, ranked top entry on feasibility and social impact.</p>
               <p class="item-desc" lang="ko">창업 아이디어 경진대회. ESG와 증강현실을 결합한 비즈니스 모델로 실현 가능성·사회적 영향력 부문 최우수 평가.</p>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Outstanding Student Research Award (우수상)</span><span lang="ko">우수 학생 연구상</span></span>
+              <span class="item-title"><span lang="en">Outstanding Student Research Award</span><span lang="ko">우수 학생 연구상</span></span>
               <div class="item-meta"><span lang="en">2022.05 | Korea Multimedia Society (KMMS)</span><span lang="ko">2022.05 | 한국멀티미디어학회 (KMMS)</span></div>
               <p class="item-desc" lang="en">Experimental research on VR exposure therapy for cynophobia, proposing spatiotemporal design factors for treatment efficacy.</p>
               <p class="item-desc" lang="ko">개공포증 VR 노출 치료 실험 연구. 치료 효과를 높이는 시공간 디자인 요소 제안.</p>
