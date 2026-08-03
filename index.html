@@ -300,7 +300,7 @@
 
     .name {
       margin: 0 0 8px;
-      font-size: 2.1rem;
+      font-size: 2.3rem;
       line-height: 1.05;
       letter-spacing: -0.03em;
       font-weight: 800;
@@ -858,6 +858,28 @@
       text-underline-offset: 2px;
     }
     .venue { color: var(--muted); font-style: italic; }
+
+    /* Publications read as an academic list, not a stack of cards */
+    #pubItems { gap: 0; }
+    #pubItems .item {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      border-bottom: 1px solid var(--line);
+      padding: 15px 6px;
+      overflow: visible;
+    }
+    #pubItems .item::before,
+    #pubItems .item::after { display: none; }
+    #pubItems .item:hover {
+      transform: none;
+      background: rgba(23,24,27,0.02);
+      border-color: var(--line);
+      box-shadow: none;
+    }
+    .item-desc a { color: var(--ink-accent); font-weight: 600; }
+    .item-desc a:hover { text-decoration: underline; text-underline-offset: 3px; }
     body.ko .venue { font-style: normal; color: var(--soft); }
 
     .two-col {
@@ -1272,6 +1294,24 @@
       }
       .reveal { opacity: 1; transform: none; filter: none; }
     }
+    /* ── Print: the page doubles as a paper CV ── */
+    @media print {
+      .top-controls, .kbd-hint, .mobile-nav, .scroll-progress,
+      .button, .filter, .section-nav, .toast { display: none !important; }
+      body, body:not(.reader) { background: #fff !important; }
+      .layout { display: block; }
+      .sidebar { position: static; width: auto; margin-bottom: 24px; }
+      .profile-card, .item {
+        box-shadow: none !important;
+        border-color: #ddd !important;
+        break-inside: avoid;
+      }
+      .section { margin-top: 28px; }
+      #pubItems .item { border-color: #ddd !important; }
+      body:not(.ko) [lang="ko"] { display: none !important; }
+      body.ko [lang="en"] { display: none !important; }
+      a::after { content: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -1297,7 +1337,7 @@
 
   <div class="page">
     <nav class="mobile-nav" aria-label="Sections">
-      <a href="#projects"><span lang="en">Work</span><span lang="ko">프로젝트</span></a>
+      <a href="#projects"><span lang="en">R&amp;D</span><span lang="ko">연구·개발</span></a>
       <a href="#awards"><span lang="en">Awards</span><span lang="ko">수상</span></a>
       <a href="#education"><span lang="en">Education</span><span lang="ko">학력</span></a>
       <a href="#publications"><span lang="en">Publications</span><span lang="ko">논문</span></a>
@@ -1343,7 +1383,7 @@
 
           <p class="side-label"><span lang="en">Sections</span><span lang="ko">섹션</span></p>
           <nav class="section-nav" aria-label="Page sections">
-            <a href="#projects" data-target="projects"><span lang="en">Selected Work</span><span lang="ko">주요 프로젝트</span></a>
+            <a href="#projects" data-target="projects"><span lang="en">R&amp;D Projects</span><span lang="ko">연구·개발</span></a>
             <a href="#awards" data-target="awards"><span lang="en">Awards</span><span lang="ko">수상</span></a>
             <a href="#education" data-target="education"><span lang="en">Education</span><span lang="ko">학력</span></a>
             <a href="#publications" data-target="publications"><span lang="en">Publications</span><span lang="ko">논문</span></a>
@@ -1388,7 +1428,7 @@
         </div>
 
         <section class="section" id="projects">
-          <h3 class="section-title"><span class="num">01</span><span lang="en">Selected Work</span><span lang="ko">주요 프로젝트</span></h3>
+          <h3 class="section-title"><span class="num">01</span><span lang="en">Research &amp; Development Projects</span><span lang="ko">연구·개발 프로젝트</span></h3>
           <div class="items">
             <div class="item reveal">
               <span class="item-title"><span lang="en">Development and Evaluation of the Inclusive Conversational AI Service for Game Accessibility Enhancement</span><span lang="ko">게임 접근성 향상을 위한 포용적 대화형 AI 서비스의 개발 및 평가</span></span>
@@ -1631,10 +1671,10 @@
           <h3 class="section-title"><span class="num">05</span><span lang="en">Patents &amp; Certifications</span><span lang="ko">특허 및 자격증</span></h3>
           <div class="two-col">
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Artificial Intelligence-Based Technology Acceptance Prediction Method, Program, and Device</span><span lang="ko">인공지능 기반 기술 수용 예측 방법, 프로그램 및 장치</span></span>
-              <div class="item-meta"><span lang="en">2022.12 | Korean Intellectual Property Office | Patent Application Publication No. 40-2022-0179493</span><span lang="ko">2022.12 | 특허청 | 출원 공개 번호 40-2022-0179493</span></div>
-              <p class="item-desc" lang="en">Co-Patentor: Impactive AI Corp. Publication Date: December 23, 2022.</p>
-              <p class="item-desc" lang="ko">공동 출원인: Impactive AI Corp. 공개일: 2022년 12월 23일.</p>
+              <span class="item-title"><span lang="en">Artificial Intelligence-Based Demand Prediction Method, Program, and Device</span><span lang="ko">인공지능 기반 수요 예측 방법, 프로그램 및 장치</span></span>
+              <div class="item-meta"><span lang="en">2022.11 | Korean Intellectual Property Office | Patent Application No. 10-2022-0165017</span><span lang="ko">2022.11 | 특허청 | 특허 출원번호 10-2022-0165017</span></div>
+              <p class="item-desc" lang="en">Co-inventor. Applicant: Impactive AI Corp. Filed November 30, 2022.</p>
+              <p class="item-desc" lang="ko">공동 발명자. 출원인: (주)임팩티브에이아이. 2022년 11월 30일 출원.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">AI-900: Microsoft Azure, Machine Learning, and AI</span><span lang="ko">AI-900: Microsoft Azure, 머신러닝 및 AI</span></span>
