@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Jihun Chae - AI engineer and KAIST Ph.D. student working on AI transformation (AX): forward deployed engineering, LLM agents that ship into real workflows, and the evaluation methods that prove they worked." />
-  <title>Jihun Chae | AI Engineer · AX & Forward Deployed Engineering</title>
-  <meta property="og:title" content="Jihun Chae | AI Engineer · AX & Forward Deployed Engineering" />
-  <meta property="og:description" content="Enterprise AI adoption (AX), forward deployed engineering, business-specific LLM agents - shipped, then proven with data." />
+  <meta name="description" content="Jihun Chae - human-centered AI engineer and KAIST Ph.D. student. AI transformation (AX), LLM agents that ship into real workflows, and the evaluation methods that prove they worked." />
+  <title>Jihun Chae | Human-Centered AI Engineer · AX</title>
+  <meta property="og:title" content="Jihun Chae | Human-Centered AI Engineer · AX" />
+  <meta property="og:description" content="Human-centered AI engineer. I sit with the people doing the work, turn a vague ask into a shipped agent, and prove it with data." />
   <meta property="og:type" content="profile" />
   <meta property="og:url" content="https://ji-hun-git.github.io/" />
   <meta name="twitter:card" content="summary" />
@@ -493,17 +493,17 @@
     /* ── Capabilities: build / ship / prove, as scannable chips ── */
     .caps {
       margin: 0 0 46px;
-      padding: 18px 0 22px;
+      padding: 16px 0 18px;
       border-top: 1px solid var(--line);
       border-bottom: 1px solid var(--line);
       display: grid;
-      gap: 13px;
+      gap: 6px;
     }
     .caps-row {
       display: grid;
-      grid-template-columns: 78px 1fr;
-      gap: 18px;
-      align-items: start;
+      grid-template-columns: 62px 1fr;
+      gap: 16px;
+      align-items: baseline;
     }
     .caps-row .k {
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -511,33 +511,32 @@
       letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--soft);
-      line-height: 1;
-      padding-top: 9px;
+      line-height: 1.85;
     }
     body.ko .caps-row .k {
       font-family: 'Pretendard', sans-serif;
       text-transform: none;
       letter-spacing: 0.03em;
-      font-size: 0.78rem;
-      padding-top: 7px;
+      font-size: 0.76rem;
     }
     /* Specificity note: the global `body [lang="ko"] { display: none }` switch is
        0-1-1, so the visible state has to be qualified the same way or the hidden
        language would win the cascade and both scripts would render at once. */
     body:not(.ko) [lang="en"].v,
-    body.ko [lang="ko"].v { display: flex; flex-wrap: wrap; gap: 7px; }
-    .caps-row .chip {
-      font-size: 0.79rem;
-      line-height: 1.5;
+    body.ko [lang="ko"].v { display: block; }
+    .caps-row .v {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.74rem;
+      line-height: 1.85;
+      letter-spacing: 0.01em;
       color: var(--muted);
-      padding: 3px 11px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: var(--surface);
-      transition: color 0.2s ease, border-color 0.2s ease;
     }
-    .caps-row .chip:hover { color: var(--text); border-color: var(--line-strong); }
-    body.ko .caps-row .chip { font-size: 0.82rem; }
+    body.ko .caps-row .v {
+      font-family: 'Pretendard', sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 0;
+    }
+    .caps-row .v .sep { color: var(--line-strong); margin: 0 7px; }
     @media (max-width: 700px) {
       .caps-row { grid-template-columns: 1fr; gap: 7px; }
       .caps-row .k { padding-top: 0; }
@@ -822,22 +821,6 @@
     /* ═══════════════════════════════════════════════════════════
        FOOTER
        ═══════════════════════════════════════════════════════════ */
-    /* A monospace signature: the loop every project on this page follows.
-       Decorative to a scanner, meaningful to anyone who stops. */
-    .ascii-mark {
-      margin: 64px 0 0;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.7rem;
-      line-height: 1.5;
-      letter-spacing: 0.02em;
-      color: rgba(43,75,124,0.55);
-      white-space: pre;
-      overflow-x: auto;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    @media (max-width: 560px) { .ascii-mark { font-size: 0.6rem; } }
-
     .site-footer {
       margin-top: 34px;
       padding: 26px 0 34px;
@@ -1285,16 +1268,16 @@
           <div class="side-list" lang="en">
             <div>Human-centered AI</div>
             <div>Designing agentic adaptation</div>
-            <div>Agents that solve real work problems</div>
+            <div>Embedded with the people doing the work</div>
+            <div>Vague ask to shipped solution, fast</div>
             <div>AI transformation &amp; internal adoption (AX)</div>
-            <div>Evaluating human-AI interaction</div>
           </div>
           <div class="side-list" lang="ko">
             <div>인간 중심 AI</div>
             <div>에이전트 적응 설계</div>
-            <div>실무 문제를 푸는 에이전트</div>
+            <div>현업부서에 들어가 함께 일하는 방식</div>
+            <div>모호한 요구를 빠르게 작동하는 결과물로</div>
             <div>AI 트랜스포메이션 · 사내 내재화 (AX)</div>
-            <div>인간-AI 상호작용 평가</div>
           </div>
 
           <div class="divider"></div>
@@ -1327,30 +1310,18 @@
         <div class="caps" aria-label="Capabilities">
           <div class="caps-row">
             <span class="k"><span lang="en">Build</span><span lang="ko">구축</span></span>
-            <span class="v" lang="en">
-              <span class="chip">Problem discovery &amp; scoping</span><span class="chip">Agent architecture</span><span class="chip">Multi-agent orchestration</span><span class="chip">Retrieval &amp; RAG</span><span class="chip">Context engineering</span><span class="chip">Knowledge grounding</span><span class="chip">Tool &amp; API integration</span><span class="chip">Function calling · MCP · A2A</span><span class="chip">Memory &amp; state</span><span class="chip">Multimodal I/O: voice · vision · screen</span>
-            </span>
-            <span class="v" lang="ko">
-              <span class="chip">문제 발굴 · 정의</span><span class="chip">에이전트 아키텍처</span><span class="chip">멀티 에이전트 오케스트레이션</span><span class="chip">검색 · RAG</span><span class="chip">컨텍스트 엔지니어링</span><span class="chip">지식 그라운딩</span><span class="chip">툴 · API 연동</span><span class="chip">Function calling · MCP · A2A</span><span class="chip">메모리 · 상태 관리</span><span class="chip">멀티모달 입출력: 음성 · 비전 · 화면</span>
-            </span>
+            <span class="v" lang="en">problem discovery<span class="sep">/</span>agent architecture<span class="sep">/</span>orchestration<span class="sep">/</span>retrieval &amp; context<span class="sep">/</span>tools &amp; APIs<span class="sep">/</span>memory<span class="sep">/</span>multimodal I/O</span>
+            <span class="v" lang="ko">문제 발굴<span class="sep">/</span>에이전트 설계<span class="sep">/</span>오케스트레이션<span class="sep">/</span>검색·컨텍스트<span class="sep">/</span>툴·API 연동<span class="sep">/</span>메모리<span class="sep">/</span>멀티모달 입출력</span>
           </div>
           <div class="caps-row">
             <span class="k"><span lang="en">Ship</span><span lang="ko">배포</span></span>
-            <span class="v" lang="en">
-              <span class="chip">Python</span><span class="chip">TypeScript</span><span class="chip">LLM APIs &amp; model selection</span><span class="chip">Prompt &amp; context pipelines</span><span class="chip">Containerized services</span><span class="chip">Workflow automation</span><span class="chip">Human-in-the-loop &amp; fallback design</span><span class="chip">Latency &amp; cost tuning</span>
-            </span>
-            <span class="v" lang="ko">
-              <span class="chip">Python</span><span class="chip">TypeScript</span><span class="chip">LLM API · 모델 선정</span><span class="chip">프롬프트 · 컨텍스트 파이프라인</span><span class="chip">컨테이너 서비스</span><span class="chip">업무 자동화</span><span class="chip">휴먼인더루프 · 폴백 설계</span><span class="chip">응답속도 · 비용 최적화</span>
-            </span>
+            <span class="v" lang="en">Python<span class="sep">/</span>TypeScript<span class="sep">/</span>LLM APIs<span class="sep">/</span>prompt pipelines<span class="sep">/</span>containers<span class="sep">/</span>workflow automation<span class="sep">/</span>human-in-the-loop</span>
+            <span class="v" lang="ko">Python<span class="sep">/</span>TypeScript<span class="sep">/</span>LLM API<span class="sep">/</span>프롬프트 파이프라인<span class="sep">/</span>컨테이너<span class="sep">/</span>업무 자동화<span class="sep">/</span>사람 개입 설계</span>
           </div>
           <div class="caps-row">
             <span class="k"><span lang="en">Prove</span><span lang="ko">검증</span></span>
-            <span class="v" lang="en">
-              <span class="chip">Evaluation design</span><span class="chip">Rubrics &amp; scoring</span><span class="chip">Baselines &amp; A/B</span><span class="chip">Observability &amp; tracing</span><span class="chip">Field studies with real users</span><span class="chip">Adoption &amp; retention</span>
-            </span>
-            <span class="v" lang="ko">
-              <span class="chip">평가 설계</span><span class="chip">평가 기준 · 스코어링</span><span class="chip">기준선 · A/B 비교</span><span class="chip">관측성 · 트레이싱</span><span class="chip">실사용자 현장 검증</span><span class="chip">내재화 · 지속 사용률</span>
-            </span>
+            <span class="v" lang="en">evaluation design<span class="sep">/</span>baselines<span class="sep">/</span>observability<span class="sep">/</span>field studies<span class="sep">/</span>adoption &amp; retention</span>
+            <span class="v" lang="ko">평가 설계<span class="sep">/</span>기준선 비교<span class="sep">/</span>관측성<span class="sep">/</span>현장 검증<span class="sep">/</span>내재화·지속 사용률</span>
           </div>
         </div>
 
@@ -1381,7 +1352,7 @@
                 <li>Partners: Brunel University London (Games Research Lab), Jeju Haenyeo Museum, and the Sinrye-ri, Daepyeong-ri, and Yeongnak-ri communities.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>세대 간 지식 전달 문제를 설계로 해결: 제주 해녀의 실천과 환경 지식을 이어주는 시리어스 게임 설계.</li>
+                <li>세대 간 지식 전달 문제를 설계로 해결: 제주 해녀의 작업 방식과 환경 지식을 이어주는 시리어스 게임 설계.</li>
                 <li>해녀 공동체와 함께하는 현장 기반 디자인 작업 수행.</li>
                 <li>협력: 브루넬 대학교 런던 (Games Research Lab), 제주 해녀박물관, 신례리·대평리·영락리 해녀 공동체.</li>
               </ul>
@@ -1454,7 +1425,7 @@
               <span class="item-title"><span lang="en">Grand Prize – Edu4.0 Q TA Activities</span><span lang="ko">최우수상 – Edu4.0 Q TA 활동</span></span>
               <div class="item-meta"><span lang="en">2026.02 | KAIST</span><span lang="ko">2026.02 | KAIST</span></div>
               <p class="item-desc" lang="en">KAIST's top TA award: selected as the best case presentation on running a course with the Edu4.0 Q teaching model.</p>
-              <p class="item-desc" lang="ko">KAIST TA 최우수상: Edu4.0 Q 모델 수업 운영 사례 발표에서 최고 평가.</p>
+              <p class="item-desc" lang="ko">KAIST TA 최우수상: Edu4.0 Q 모델 수업 운영 사례 발표에서 최우수 평가.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Selected Entrepreneurial Team (Climate Tech)</span><span lang="ko">기후테크 부문 선정 창업팀</span></span>
@@ -1472,7 +1443,7 @@
               <span class="item-title"><span lang="en">Excellence Award</span><span lang="ko">우수상</span></span>
               <div class="item-meta"><span lang="en">2023.06 | National Metaverse Developer Contest (MSIT)</span><span lang="ko">2023.06 | 국가 메타버스 개발자 콘테스트 (과학기술정보통신부)</span></div>
               <p class="item-desc" lang="en">National contest under the Ministry of Science and ICT. Built a digital therapeutic on Meta Quest Pro eye tracking that turns eye-muscle rehabilitation into play; awarded the Skonec Entertainment CEO's Award.</p>
-              <p class="item-desc" lang="ko">과기정통부 주관 전국 대회. 메타 퀘스트 프로 시선추적으로 눈 근육 재활을 놀이로 바꾼 디지털 치료기기를 개발, 스코넥엔터테인먼트 대표이사상 수상.</p>
+              <p class="item-desc" lang="ko">과기정통부 주관 전국 대회. 메타 퀘스트 프로 시선추적으로 눈 근육 재활을 놀이처럼 만든 디지털 치료기기를 개발, 스코넥엔터테인먼트 대표이사상 수상.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Outstanding Student Research Award</span><span lang="ko">우수 학생 연구상</span></span>
@@ -1484,19 +1455,19 @@
               <span class="item-title"><span lang="en">University President's Award</span><span lang="ko">한동대학교 총장상</span></span>
               <div class="item-meta"><span lang="en">2022.11 | Handong Global University</span><span lang="ko">2022.11 | 한동대학교</span></div>
               <p class="item-desc" lang="en">Top entry of the university-wide startup idea competition: an ESG-driven augmented-reality business model, ranked first for technical feasibility and social impact.</p>
-              <p class="item-desc" lang="ko">전교 창업 아이디어 경진대회 최우수작: ESG와 증강현실을 결합한 비즈니스 모델로 실현 가능성·사회적 영향력 1위 평가.</p>
+              <p class="item-desc" lang="ko">교내 창업 아이디어 경진대회 최우수작: ESG와 증강현실을 결합한 비즈니스 모델로 실현 가능성·사회적 영향력 1위 평가.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Outstanding Student Research Award</span><span lang="ko">우수 학생 연구상</span></span>
               <div class="item-meta"><span lang="en">2022.05 | Korea Multimedia Society (KMMS)</span><span lang="ko">2022.05 | 한국멀티미디어학회 (KMMS)</span></div>
               <p class="item-desc" lang="en">Student research award for experimental work on VR exposure therapy for cynophobia, proposing spatiotemporal design factors that raise treatment efficacy.</p>
-              <p class="item-desc" lang="ko">개공포증 VR 노출 치료 실험 연구로 우수 학생 연구상: 치료 효과를 높이는 시공간 설계 요소 제안.</p>
+              <p class="item-desc" lang="ko">개 공포증 VR 노출 치료 실험 연구로 우수 학생 연구상: 치료 효과를 높이는 시공간 설계 요소 제안.</p>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Top 14 Finalist</span><span lang="ko">상위 14팀 진출</span></span>
               <div class="item-meta"><span lang="en">2021.05 | Seoul National University (SNU) Business School</span><span lang="ko">2021.05 | 서울대학교 경영대학</span></div>
               <p class="item-desc" lang="en">Top 14 finalist from a global applicant pool in the $91,000-prize DB-SNUbiz Global Startup Challenge; pitched a blockchain solution live to a panel of VCs and industry experts.</p>
-              <p class="item-desc" lang="ko">총 상금 9만 1천 달러 DB-SNUbiz 글로벌 창업 챌린지 글로벌 지원팀 중 상위 14팀 진출: VC·산업 전문가 패널 앞 블록체인 솔루션 라이브 피칭.</p>
+              <p class="item-desc" lang="ko">총 상금 9만 1천 달러 DB-SNUbiz 글로벌 창업 챌린지 전 세계 참가팀 중 상위 14팀 진출: VC·산업 전문가 패널 앞 블록체인 솔루션 라이브 피칭.</p>
             </div>
           </div>
         </section>
@@ -1609,12 +1580,6 @@
             </div>
           </div>
         </section>
-
-        <pre class="ascii-mark" aria-hidden="true">
-   observe ---> decide ---> act
-      ^                      |
-      +----- measure <-------+
-</pre>
 
         <footer class="site-footer">
           <span>
