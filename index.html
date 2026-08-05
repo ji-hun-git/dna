@@ -876,7 +876,7 @@
       color: var(--muted);
       transition: border-color 0.18s ease, color 0.18s ease;
     }
-    .p-chip::before {
+    .p-chip[data-m]::before {
       content: attr(data-m);
       display: inline-grid;
       place-items: center;
@@ -890,6 +890,16 @@
       letter-spacing: 0;
     }
     .p-chip:hover { border-color: rgba(var(--accent, 43 75 124), 0.45); color: var(--text); }
+    .p-logo {
+      width: 15px;
+      height: 15px;
+      border-radius: 4px;
+      object-fit: contain;
+      filter: grayscale(100%);
+      opacity: 0.85;
+      transition: filter 0.25s ease, opacity 0.25s ease;
+    }
+    .p-chip:hover .p-logo { filter: none; opacity: 1; }
 
 
     /* Publications read as an academic list, not a stack of cards */
@@ -1516,7 +1526,7 @@
                 <li>사용자가 혼자 해결할 수 없는 문제를 푸는 LLM 에이전트 GAIA 개발. 게임 지식 RAG, 실시간 화면·음성 맥락 에이전트 루프, 음성 입출력.</li>
                 <li>문제 발굴부터 검증까지 전 과정 수행: 현장 인터뷰로 실제 장벽을 찾고, 요구사항 정의, 프로토타입 구현, 동일 사용자 평가.</li>
               </ul>
-              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip" data-m="S">Samsung Electronics</span><span class="p-chip" data-m="N">Nexon Intelligence Labs</span><span class="p-chip" data-m="S">Smilegate D&amp;I</span><span class="p-chip" data-m="N">National Rehabilitation Center</span><span class="p-chip" data-m="S">SpecialEffect (UK)</span></span><span class="p-set" lang="ko"><span class="p-chip" data-m="삼">삼성전자</span><span class="p-chip" data-m="넥">넥슨 인텔리전스 랩</span><span class="p-chip" data-m="스">스마일게이트 D&amp;I</span><span class="p-chip" data-m="국">국립재활원</span><span class="p-chip" data-m="S">SpecialEffect (영국)</span></span></div>
+              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/samsung.png" alt="" onerror="this.remove()" />Samsung Electronics</span><span class="p-chip"><img class="p-logo" src="assets/logos/nexon.png" alt="" onerror="this.remove()" />Nexon Intelligence Labs</span><span class="p-chip"><img class="p-logo" src="assets/logos/smilegate.png" alt="" onerror="this.remove()" />Smilegate D&amp;I</span><span class="p-chip"><img class="p-logo" src="assets/logos/nrc.png" alt="" onerror="this.remove()" />National Rehabilitation Center</span><span class="p-chip"><img class="p-logo" src="assets/logos/specialeffect.png" alt="" onerror="this.remove()" />SpecialEffect (UK)</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/samsung.png" alt="" onerror="this.remove()" />삼성전자</span><span class="p-chip"><img class="p-logo" src="assets/logos/nexon.png" alt="" onerror="this.remove()" />넥슨 인텔리전스 랩</span><span class="p-chip"><img class="p-logo" src="assets/logos/smilegate.png" alt="" onerror="this.remove()" />스마일게이트 D&amp;I</span><span class="p-chip"><img class="p-logo" src="assets/logos/nrc.png" alt="" onerror="this.remove()" />국립재활원</span><span class="p-chip"><img class="p-logo" src="assets/logos/specialeffect.png" alt="" onerror="this.remove()" />SpecialEffect (영국)</span></span></div>
             </div>
 
             <div class="item reveal">
@@ -1530,7 +1540,7 @@
                 <li>세대 간 지식 전달 문제를 설계로 해결: 제주 해녀의 작업 방식과 환경 지식을 이어주는 시리어스 게임 설계.</li>
                 <li>해녀 공동체와 함께하는 현장 기반 디자인 작업 수행.</li>
               </ul>
-              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip" data-m="B">Brunel University London</span><span class="p-chip" data-m="J">Jeju Haenyeo Museum</span><span class="p-chip" data-m="H">Haenyeo communities of Sinrye · Daepyeong · Yeongnak</span></span><span class="p-set" lang="ko"><span class="p-chip" data-m="브">브루넬 대학교 런던</span><span class="p-chip" data-m="제">제주 해녀박물관</span><span class="p-chip" data-m="해">신례리·대평리·영락리 해녀 공동체</span></span></div>
+              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/brunel.png" alt="" onerror="this.remove()" />Brunel University London</span><span class="p-chip" data-m="J">Jeju Haenyeo Museum</span><span class="p-chip" data-m="H">Haenyeo communities of Sinrye · Daepyeong · Yeongnak</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/brunel.png" alt="" onerror="this.remove()" />브루넬 대학교 런던</span><span class="p-chip" data-m="제">제주 해녀박물관</span><span class="p-chip" data-m="해">신례리·대평리·영락리 해녀 공동체</span></span></div>
             </div>
 
             <div class="item reveal">
@@ -1544,7 +1554,7 @@
                 <li>공간 적응 문제 해결: 현실 조건에 맞춰 가상 콘텐츠를 실시간 재배치하는 XR 시스템 설계·구현.</li>
                 <li>현존감과 환경 반응성을 위한 멀티모달 시각-햅틱 피드백 작업.</li>
               </ul>
-              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip" data-m="F">Fraunhofer Institute</span><span class="p-chip" data-m="N">NYU</span><span class="p-chip" data-m="U">UniSA</span><span class="p-chip" data-m="A">Anipen</span><span class="p-chip" data-m="b">bHaptics</span></span><span class="p-set" lang="ko"><span class="p-chip" data-m="프">프라운호퍼 연구소</span><span class="p-chip" data-m="N">NYU</span><span class="p-chip" data-m="U">UniSA</span><span class="p-chip" data-m="A">Anipen</span><span class="p-chip" data-m="b">bHaptics</span></span></div>
+              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/fraunhofer.png" alt="" onerror="this.remove()" />Fraunhofer Institute</span><span class="p-chip"><img class="p-logo" src="assets/logos/nyu.png" alt="" onerror="this.remove()" />NYU</span><span class="p-chip"><img class="p-logo" src="assets/logos/unisa.png" alt="" onerror="this.remove()" />UniSA</span><span class="p-chip" data-m="A">Anipen</span><span class="p-chip"><img class="p-logo" src="assets/logos/bhaptics.png" alt="" onerror="this.remove()" />bHaptics</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/fraunhofer.png" alt="" onerror="this.remove()" />프라운호퍼 연구소</span><span class="p-chip"><img class="p-logo" src="assets/logos/nyu.png" alt="" onerror="this.remove()" />NYU</span><span class="p-chip"><img class="p-logo" src="assets/logos/unisa.png" alt="" onerror="this.remove()" />UniSA</span><span class="p-chip" data-m="A">Anipen</span><span class="p-chip"><img class="p-logo" src="assets/logos/bhaptics.png" alt="" onerror="this.remove()" />bHaptics</span></span></div>
             </div>
 
             <div class="item reveal">
@@ -1581,8 +1591,8 @@
           <div class="items">
             <div class="item reveal featured">
               <span class="featured-kicker"><span lang="en">Featured · 2026</span><span lang="ko">대표 수상 · 2026</span></span>
-              <span class="item-title"><span lang="en">Within the Top 3, KRAFTON Forward Deployed Engineer Track – Cofathon: AI Native Battlegrounds</span><span lang="ko">크래프톤 FDE 트랙 Top 3 이내 – 코파톤 (Cofathon): AI Native Battlegrounds</span></span>
-              <div class="item-meta"><span lang="en">2026.07 | KRAFTON × CJ Olive Young, technology partner OpenAI</span><span lang="ko">2026.07 | 크래프톤 × CJ올리브영, 기술 파트너 OpenAI</span></div>
+              <span class="item-title"><span lang="en">Within the Top 3, KRAFTON Forward Deployed Engineer Track</span><span lang="ko">크래프톤 FDE 트랙 Top 3 이내</span></span>
+              <div class="item-meta"><span lang="en">2026.07 | Cofathon: AI Native Battlegrounds</span><span lang="ko">2026.07 | 코파톤 (Cofathon): AI Native Battlegrounds</span></div>
               <ul class="item-desc" lang="en">
                 <li>Three cuts: selected by written application into the roughly 25-competitor FDE final field, then the Top 6, then within the Top 3.</li>
                 <li>A one-day hackathon scoring "AI nativeness". 10M KRW prize pool, hiring fast-track for winners.</li>
@@ -1595,54 +1605,63 @@
                 <li>처음 보는 실무 문제를 4시간 내 완수: AI 시나리오 에이전트로 요구사항 도출, 설계·구현·검증까지.</li>
                 <li>Cofa Probe 심사 후 블라인드 리포트 기반 공개 토론으로 최종 선발. 평가 항목: 문제 정의, AI 지휘 방식, 제약 하의 반복 개선, 결과 검증, 핸드오프 품질.</li>
               </ul>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/krafton.png" alt="" onerror="this.remove()" />KRAFTON</span><span class="p-chip"><img class="p-logo" src="assets/logos/oliveyoung.png" alt="" onerror="this.remove()" />CJ Olive Young</span><span class="p-chip"><img class="p-logo" src="assets/logos/openai.png" alt="" onerror="this.remove()" />OpenAI</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/krafton.png" alt="" onerror="this.remove()" />크래프톤</span><span class="p-chip"><img class="p-logo" src="assets/logos/oliveyoung.png" alt="" onerror="this.remove()" />CJ올리브영</span><span class="p-chip"><img class="p-logo" src="assets/logos/openai.png" alt="" onerror="this.remove()" />OpenAI</span></span></div>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Grand Prize – Edu4.0 Q TA Activities</span><span lang="ko">최우수상 – Edu4.0 Q TA 활동</span></span>
-              <div class="item-meta"><span lang="en">2026.02 | KAIST</span><span lang="ko">2026.02 | KAIST</span></div>
+              <div class="item-meta"><span lang="en">2026.02 | Edu4.0 Q TA Case Presentation</span><span lang="ko">2026.02 | Edu4.0 Q TA 사례 발표</span></div>
               <p class="item-desc" lang="en">KAIST's top TA award: selected as the best case presentation on running a course with the Edu4.0 Q teaching model.</p>
               <p class="item-desc" lang="ko">KAIST TA 최우수상: Edu4.0 Q 모델 수업 운영 사례 발표에서 최우수 평가.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/kaist.png" alt="" onerror="this.remove()" />KAIST</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/kaist.png" alt="" onerror="this.remove()" />KAIST</span></span></div>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Selected Entrepreneurial Team (Climate Tech)</span><span lang="ko">기후테크 부문 선정 창업팀</span></span>
-              <div class="item-meta"><span lang="en">2024.03 | Chung Ju-yung Startup Competition · Asan UniverCT | Asan Nanum Foundation</span><span lang="ko">2024.03 | 정주영 창업경진대회 · 아산 UniverCT | 아산나눔재단</span></div>
+              <div class="item-meta"><span lang="en">2024.03 | Chung Ju-yung Startup Competition · Asan UniverCT</span><span lang="ko">2024.03 | 정주영 창업경진대회 · 아산 UniverCT</span></div>
               <p class="item-desc" lang="en">Selected as a representative climate-tech startup team, winning early-stage funding and mentorship from the foundation's startup ecosystem.</p>
               <p class="item-desc" lang="ko">기후테크 대표 창업팀으로 선정, 재단 창업 생태계의 초기 자금과 멘토링 확보.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/asan.png" alt="" onerror="this.remove()" />Asan Nanum Foundation</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/asan.png" alt="" onerror="this.remove()" />아산나눔재단</span></span></div>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Grand Prize – University President's Award</span><span lang="ko">최우수상 (한동대학교 총장상)</span></span>
-              <div class="item-meta"><span lang="en">2024.01 | Pohang Culture &amp; Arts Factory Hackathon | KT · Pohang City · Pohang Cultural Foundation · Handong Global University</span><span lang="ko">2024.01 | 포항 문화예술공장 해커톤 | KT · 포항시 · 포항문화재단 · 한동대학교</span></div>
+              <div class="item-meta"><span lang="en">2024.01 | Pohang Culture &amp; Arts Factory Hackathon</span><span lang="ko">2024.01 | 포항 문화예술공장 해커톤</span></div>
               <p class="item-desc" lang="en">Won the grand prize as technical lead: built a large-scale Unreal Engine media facade that ran as a working smart-city showcase for Pohang.</p>
               <p class="item-desc" lang="ko">기술 리드로 최우수상 수상: 대규모 언리얼 엔진 미디어 파사드를 실제 구동되는 스마트시티 쇼케이스로 구현.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/kt.png" alt="" onerror="this.remove()" />KT</span><span class="p-chip" data-m="P">Pohang City</span><span class="p-chip" data-m="P">Pohang Cultural Foundation</span><span class="p-chip"><img class="p-logo" src="assets/logos/handong.png" alt="" onerror="this.remove()" />Handong Global University</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/kt.png" alt="" onerror="this.remove()" />KT</span><span class="p-chip" data-m="포">포항시</span><span class="p-chip" data-m="포">포항문화재단</span><span class="p-chip"><img class="p-logo" src="assets/logos/handong.png" alt="" onerror="this.remove()" />한동대학교</span></span></div>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Excellence Award</span><span lang="ko">우수상</span></span>
-              <div class="item-meta"><span lang="en">2023.06 | National Metaverse Developer Contest | MSIT · Korea Metaverse Industry Association · NIPA · Skonec Entertainment</span><span lang="ko">2023.06 | 메타버스 개발자 경진대회 | 과학기술정보통신부 · 한국메타버스산업협회 · 정보통신산업진흥원 · 스코넥엔터테인먼트</span></div>
+              <div class="item-meta"><span lang="en">2023.06 | National Metaverse Developer Contest</span><span lang="ko">2023.06 | 메타버스 개발자 경진대회</span></div>
               <p class="item-desc" lang="en">Built a digital therapeutic on Meta Quest Pro eye tracking that turns eye-muscle rehabilitation into play; awarded the Skonec Entertainment CEO's Award.</p>
               <p class="item-desc" lang="ko">메타 퀘스트 프로 시선추적으로 눈 근육 재활을 놀이처럼 만든 디지털 치료기기를 개발, 스코넥엔터테인먼트 대표이사상 수상.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/msit.png" alt="" onerror="this.remove()" />MSIT</span><span class="p-chip" data-m="K">Korea Metaverse Industry Association</span><span class="p-chip"><img class="p-logo" src="assets/logos/nipa.png" alt="" onerror="this.remove()" />NIPA</span><span class="p-chip"><img class="p-logo" src="assets/logos/skonec.png" alt="" onerror="this.remove()" />Skonec Entertainment</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/msit.png" alt="" onerror="this.remove()" />과학기술정보통신부</span><span class="p-chip" data-m="메">한국메타버스산업협회</span><span class="p-chip"><img class="p-logo" src="assets/logos/nipa.png" alt="" onerror="this.remove()" />정보통신산업진흥원</span><span class="p-chip"><img class="p-logo" src="assets/logos/skonec.png" alt="" onerror="this.remove()" />스코넥엔터테인먼트</span></span></div>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Outstanding Student Research Award</span><span lang="ko">우수 학생 연구상</span></span>
-              <div class="item-meta"><span lang="en">2023.11 | Korea Multimedia Society (KMMS)</span><span lang="ko">2023.11 | 한국멀티미디어학회 (KMMS)</span></div>
+              <div class="item-meta"><span lang="en">2023.11 | Autumn Conference Student Research Award</span><span lang="ko">2023.11 | 추계학술대회 학생 연구상</span></div>
               <p class="item-desc" lang="en">Society-level student research award for eye-tracking VR game studies: analyzing oculomotor response to make virtual environments more immersive and more accessible.</p>
               <p class="item-desc" lang="ko">시선추적 VR 게임 연구로 학회 우수 학생 연구상: 안구 운동 반응 분석으로 가상 환경의 몰입감과 접근성을 높임.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/kmms.png" alt="" onerror="this.remove()" />Korea Multimedia Society (KMMS)</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/kmms.png" alt="" onerror="this.remove()" />한국멀티미디어학회</span></span></div>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">University President's Award</span><span lang="ko">한동대학교 총장상</span></span>
-              <div class="item-meta"><span lang="en">2022.11 | Handong Global University</span><span lang="ko">2022.11 | 한동대학교</span></div>
+              <div class="item-meta"><span lang="en">2022.11 | Campus Startup Idea Competition</span><span lang="ko">2022.11 | 교내 창업 아이디어 경진대회</span></div>
               <p class="item-desc" lang="en">Top entry of the university-wide startup idea competition: an ESG-driven augmented-reality business model, ranked first for technical feasibility and social impact.</p>
               <p class="item-desc" lang="ko">교내 창업 아이디어 경진대회 최우수작: ESG와 증강현실을 결합한 비즈니스 모델로 실현 가능성·사회적 영향력 1위 평가.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/handong.png" alt="" onerror="this.remove()" />Handong Global University</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/handong.png" alt="" onerror="this.remove()" />한동대학교</span></span></div>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Outstanding Student Research Award</span><span lang="ko">우수 학생 연구상</span></span>
-              <div class="item-meta"><span lang="en">2022.05 | Korea Multimedia Society (KMMS)</span><span lang="ko">2022.05 | 한국멀티미디어학회 (KMMS)</span></div>
+              <div class="item-meta"><span lang="en">2022.05 | Spring Conference Student Research Award</span><span lang="ko">2022.05 | 춘계학술대회 학생 연구상</span></div>
               <p class="item-desc" lang="en">Student research award for experimental work on VR exposure therapy for cynophobia, proposing spatiotemporal design factors that raise treatment efficacy.</p>
               <p class="item-desc" lang="ko">개 공포증 VR 노출 치료 실험 연구로 우수 학생 연구상: 치료 효과를 높이는 시공간 설계 요소 제안.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/kmms.png" alt="" onerror="this.remove()" />Korea Multimedia Society (KMMS)</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/kmms.png" alt="" onerror="this.remove()" />한국멀티미디어학회</span></span></div>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Top 14 Finalist</span><span lang="ko">상위 14팀 진출</span></span>
-              <div class="item-meta"><span lang="en">2021.05 | DB-SNUbiz Global Startup Challenge | SNU Business School · DB Kim Jun-gi Culture Foundation</span><span lang="ko">2021.05 | DB-SNUbiz 글로벌 창업 챌린지 | 서울대학교 경영대학 · DB김준기문화재단</span></div>
+              <div class="item-meta"><span lang="en">2021.05 | DB-SNUbiz Global Startup Challenge</span><span lang="ko">2021.05 | DB-SNUbiz 글로벌 창업 챌린지</span></div>
               <p class="item-desc" lang="en">Top 14 from a global applicant pool ($91,000 prize pool); pitched a blockchain solution live to a panel of VCs and industry experts.</p>
               <p class="item-desc" lang="ko">전 세계 참가팀 중 상위 14팀 진출 (총 상금 9만 1천 달러): VC·산업 전문가 패널 앞 블록체인 솔루션 라이브 피칭.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/snu.png" alt="" onerror="this.remove()" />SNU Business School</span><span class="p-chip" data-m="D">DB Kim Jun-gi Culture Foundation</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/snu.png" alt="" onerror="this.remove()" />서울대학교 경영대학</span><span class="p-chip" data-m="D">DB김준기문화재단</span></span></div>
             </div>
           </div>
         </section>
@@ -1670,7 +1689,7 @@
         </section>
 
         <section class="section" id="publications">
-          <h3 class="section-title"><span class="num">04</span><span lang="en">Publications</span><span lang="ko">논문</span><a class="title-aside" href="https://scholar.google.com/citations?user=OjxItRUAAAAJ" target="_blank" rel="noopener noreferrer"><span lang="en">Full list on Google Scholar ↗</span><span lang="ko">전체 목록: Google Scholar ↗</span></a></h3>
+          <h3 class="section-title"><span class="num">04</span><span lang="en">Publications</span><span lang="ko">논문</span><a class="title-aside" href="https://scholar.google.com/citations?user=OjxItRUAAAAJ" target="_blank" rel="noopener noreferrer"><span lang="en">Google Scholar ↗</span><span lang="ko">Google Scholar ↗</span></a></h3>
           <div class="filter" role="tablist" aria-label="Filter publications by year" id="pubFilter">
             <button class="active" data-year="all" role="tab" aria-selected="true"><span lang="en">All</span><span lang="ko">전체</span></button>
             <button data-year="2026" role="tab" aria-selected="false">2026</button>

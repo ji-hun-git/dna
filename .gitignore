@@ -7,5 +7,7 @@
 !laboratory.html
 !LICENSE
 !README.md
+!assets/
+!assets/**
 !lab/
 !lab/**
