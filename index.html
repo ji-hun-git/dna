@@ -139,6 +139,16 @@
       transition: width 0.08s linear;
     }
 
+    @keyframes page-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .layout { animation: page-in 0.55s var(--ease-out) both; }
+    @media (prefers-reduced-motion: reduce) {
+      .layout { animation: none; }
+      .profile-image:hover img { transform: none; }
+    }
+
     a { color: inherit; text-decoration: none; }
     .skip-link {
       position: fixed;
@@ -271,48 +281,16 @@
       box-shadow: 0 2px 4px rgba(23,24,27,0.05), 0 14px 40px rgba(23,24,27,0.08);
     }
 
-    /* ASCII portrait: revealed on hover over the photo, follows the cursor.
-       Rendered at a legible font size then scaled down, so the glyph grid stays
-       crisp instead of relying on sub-pixel font rendering. */
     .profile-image img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       filter: grayscale(100%);
+      transition: transform 0.6s var(--ease-out), filter 0.6s ease;
     }
-    .ascii-portrait {
-      position: absolute;
-      inset: 0;
-      margin: 0;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.45s var(--ease-out);
-      background: var(--bg);
-      border-radius: inherit;
-    }
-    .profile-image:hover .ascii-portrait { opacity: 1; }
-    @media (hover: none) { .ascii-portrait { display: none; } }
-    .ascii-portrait pre {
-      margin: 0;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 7px;
-      line-height: 1.02;
-      letter-spacing: 0;
-      white-space: pre;
-      transform-origin: center center;
-      background-image: linear-gradient(135deg, #2b4b7c 0%, #7b5ea7 38%, #b4553f 68%, #2b4b7c 100%);
-      background-size: 260% 260%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      transition: transform 0.18s var(--ease-out), background-position 0.5s var(--ease-out);
-      will-change: transform, background-position;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .ascii-portrait pre { transition: none; }
+    .profile-image:hover img {
+      transform: scale(1.03);
+      filter: grayscale(70%);
     }
 
     .profile-image {
@@ -473,6 +451,9 @@
       border-radius: 2px;
     }
 
+    .button .arrow { transition: transform 0.25s var(--ease-spring); display: inline-block; }
+    .button:hover .arrow { transform: translateX(4px); }
+    .button:active { transform: scale(0.98); }
     .button {
       position: relative;
       display: inline-flex;
@@ -854,11 +835,15 @@
     }
     #pubItems .item::before,
     #pubItems .item::after { display: none; }
+    #pubItems .item {
+      transition: background 0.25s ease, padding-left 0.25s var(--ease-out);
+    }
     #pubItems .item:hover {
       transform: none;
       background: rgba(23,24,27,0.02);
       border-color: var(--line);
       box-shadow: none;
+      padding-left: 12px;
     }
     .item-desc a { color: var(--ink-accent); font-weight: 600; }
     .pub-link {
@@ -1303,9 +1288,6 @@
         background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(141,176,221,0.14), transparent 55%);
       }
       .profile-image img { filter: grayscale(100%) brightness(0.92); }
-      .ascii-portrait pre {
-        background-image: linear-gradient(135deg, #8db0dd 0%, #b39ddb 38%, #e0917a 68%, #8db0dd 100%);
-      }
       .toast { background: rgba(38,39,44,0.92); }
     }
 
@@ -1323,7 +1305,6 @@
       }
       .top-controls, .kbd-hint, .mobile-nav, .scroll-progress,
       .button, .filter, .section-nav, .toast { display: none !important; }
-      .ascii-portrait { display: none !important; }
       body, body:not(.reader) { background: #fff !important; }
       .layout { display: block; }
       .sidebar { position: static; width: auto; margin-bottom: 24px; }
@@ -1375,74 +1356,7 @@
       <aside class="sidebar">
         <div class="profile-card" id="profileCard">
           <div class="profile-image">
-            <img src="your-image.jpg" alt="Jihun Chae" />
-            <div class="ascii-portrait" aria-hidden="true"><pre id="asciiPre">                                                                                                   `
-                                                                                                  .,
-                                   ``````` `````````````                                          ` 
-                              `````                     ````                                        
-                      ```````      `,.`:~+~ohbwwmZmqbk*.    ```                                     
-                   `         `.:+hdwwwm0$$$0M8&amp;#WO$mqBBQZk~`   ```                                  
-                 `   `.~=~~abwO$BBMBBMWWMM#%B%M%M0BMMWWW%%$Od+:  ````                               
-                ` `:+o+hdpm0B%WWW&amp;MBW&amp;M%M%B%%%MMMW%WWMW&amp;W%%%BQQq+`   ``                             
-                 ,+=+odQ$%MMWWWWW&amp;MM%MMMM%$BMMMMM&amp;MM&amp;&amp;MMWWMMB$0MBOpo,   `                           
-              ``::.owQ%%%MWWWW&amp;WWWWMWWMMBBBMW&amp;WB%8&amp;MM88WM%%WM%OOB%B$w*,`  `                         
-             `` :+m%%MM%WWW&amp;&amp;WMMM%%W&amp;&amp;$M%%0$BBM&amp;8WWWM%%MMBMW%%$qQM$B$0qo~`                          
-            `  *m%WBMW%WWW&amp;WM%M%%%W&amp;&amp;WM0O0QOB%8###W%WWB$%MMM%%BQq0B%B$$Zwk~` `                      
-           ` =m%W%BM%%MMWWWMMM%M&amp;&amp;8WWWM%%WWMWW&amp;&amp;&amp;8#W%M&amp;&amp;&amp;##8WBB$OQQ$$0$$0Zpo,`                      
-          ``:BWMMQ0BBMW&amp;W%WMB0%&amp;WWM%W%%M%%MM%$MWWW&amp;&amp;MB$&amp;&amp;8##88W%$$%B$%$$$QQmh*~.``                  
-          ` b&amp;MMQmO$BB&amp;&amp;%MQmwmM%%BBMBQ00BBBMWB0$W%BMW%O$&amp;M88&amp;88WMZ0W$BB0Q$QQZpa*,``                 
-         ` ,$WM0ZQZ0%B&amp;W%OwZ$B%$$Om%mhZOm$$%WW%qb0B$$%M$MWM&amp;&amp;W&amp;&amp;WMQ$M%B$OOOwOwbaa: `                
-         ` h&amp;MMZ$Ob$B%$0QO0WB%$O0mp$OkpqoZO$%%M$hpO0B%%%%M%%W8WWMWW$B%0Zdq$0pbqdbb~ `               
-         ` q8M%%MZm$MWBO0Z0$d$QmmpdOOqkZqmkmbdqZpdqbq0QM&amp;%B%$MWMMB&amp;8WWW%wqqZwhkmwZm= `              
-         ` B8%MM%BO$%8MB00$ZkpmwpdwqdwkkmQZZa~++***+o*d$$$$0wm%B0QO%WW&amp;8W$QQQpkQmq0O.``             
-        ` .MWWWMMMB$MWMMBB$Qqabbddbdddqwpwmwwkbkahokd+hhpO0QZpm*mkkhQ%WM$mwqQ%0B%p$Mh `             
-        ``.BW&amp;MWWW%BMMWMB%$QmbkbkaooaabdqpdbdpddqpdqbbapkmmZ*ZmaOkZdpmOB0ZbqmB&amp;%00$BZ. `            
-         ` :%WWWWWWM%WM%%MB0Zdbbbko+~~::::~~~~=*akhkpQQObmmQk=qM$BBBQZwZ0QQBBB%%%B00$~ `            
-          ` %#WWWMWMMMW&amp;M%%BQmho*o+~~:...`` `````,~+hZ%%Bm0B$mp$%BQOOQQO0pm%$$%M&amp;$mQ$: `            
-          ``k@8&amp;&amp;WWM%M%Qdooo++~==*o~,.``` ```.,:::~=+op0BBZOBM%B0$QQB$mO0$0MM%M%%Z00O, `            
-           ` Z@&amp;M&amp;M$QOpao*=~==*+++==:,..```.:=*oooa*++:~obqZBMW&amp;WMMWW%%0$%W&amp;WMM$0QB%p``             
-           ``Z@88MBZwpbho==~~~=+++===~:,...,:::~==+==+==~:=odOW8W&amp;8WWWMMWMMMWW&amp;QBM&amp;M, `             
-           ``*#@8Oqddkkhhh*++~:~~=***=:,,::,~+++=~~:::~:,,,::~oqO$MW8W%B%$BWWWMMWW8B~``             
-            ` *$MbdhoadwmwokOqwka==ao*~:,::*o==~:~:..`...:,.,..,~=aq$8WMM%MWM%%&amp;@#B*``              
-             ` =Wbdhhaahaoo*ooooh+~ba*=:,:a+,:~+a*bdhh==~:=:,,,,::~+kW@#&amp;B$%%B&amp;@B+`                 
-              ` Zdbh*+=~~~~~~~:::=+da*:.`=a~.`,+hobZwwokdhohoa=:~=~~+q8@&amp;$%$%M8@* `                 
-               `bbaa=~~:,,,,,,..,,*do=,.`+a::.`.:==~~:~~~==h:,,.,:::=hQMqkdkB8@Q```                 
-             ` ,ka*+*=,........,:oa++:.``.o~..`````.,,,.. == .`..,::~b%w:,:=8#k```                  
-             ` ,ho+~~==~:.``.,~+ao==~,.```,o: `````````` :+````..,:~+dm*~:`qZ~                      
-             ` ~h*=:,,,~~~~=+++**+=~:,..`.`.++,.``    `,~~  ```.,:~=ob+,~,:b` `                     
-             ` ~h+~::,,,...,::=*~~~::,````...~**=~:,:~~:.    ``.::~=o*:,,.=, `                      
-              ` =o=~~::::::~~=oo==+~,.```` ``:~~=~:,.`   `  ``.,:~===:.`,.h=``                      
-              ` ,a*+=~~:~~==~~=+okdbo+=+*o+~~~:,:=~,.````````.,:~~==~,`.,,:                         
-                .ao*+=~~==~~~~~:~~+*oo*++=~:,.``.,++:....`..,,:~~~=~. ,,,`                          
-                `*o*+=~:~===~~~::::,..,..``````...,+*=,,,,:::::~~==oQBq`` `                         
-               ` ~o*+~:,,==ak+=+++=~::,,.````````.,,~+~::::::::~=+*O0h: `                           
-                 .o**=:,,,:*wZpo**oo***+++=+==~~**=:.:::::,,,,~=+o+.                                
-                ` ~a*+=:,,,:~ob*~,``.,,....:.:~k$b:.,,.,,,,,,:~+oo` ```                             
-                 ` +a*+=~:,:~~*oooo=:,.``...,:++:`........,,:~+oa= `                                
-                  ``*a**=~:::~=*ooo*++==++***=:.``.......,,:~*aoa~ `                                
-                    `*ho*+=:::~=+oo*+++====~:..````....,,:~=*aaoa: `                                
-                      +ho*+~:,,:~~+*oo*+=~:,.``````..,,:~~+oaao*o= ``                               
-                     ` ~ha*=~:.,,..,,,,,,..````````.,:~~=*ooo*++++`  ```                            
-                      ` ,ah*=~,....```````    ` `.,:~==*oao*+====+=*,   ``                          
-                       ` .oho=:,,..```````   ``.,:~=*ooo*++=~::~=+=kBmo.   ```                      
-                        `  ~oa*=:,..```````..,:~=*ohha*+=~:::,::~==~0#&amp;Bp=`   ``                    
-                         `  `~+**~:,,....,~=+*ohkbkao+=~:,,,,,,:~=:k&amp;&amp;W&amp;8W0p*.  ```                 
-                          ``  oQpdbkaoooakbdppdbho*=~~:,,,....,:~:*%8&amp;&amp;&amp;W&amp;&amp;88Bq=   ```              
-                      ````  ,Z@@pppdpppppppdkho+==~~:,,,,....,:,.a%8&amp;&amp;&amp;&amp;&amp;&amp;&amp;WW&amp;8WZh,   ```           
-                 `````    :pW@@#qbddbkhaaao*+===~:::,,......,,`~m&amp;8&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WW88Mmo`   ```        
-             ````     `=kO&amp;@##@8mddbbkao+===~~~~:,,,,,...... .bM#&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWW8&amp;$qo.   ``      
-         ````    `~apOM#@@@8##@&amp;Zpbbkho*+==~~~:::,,,,,,,.` ,k$8&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWWW8&amp;Bq+`   ```  
-      ```    ,opQM#@@@@#8#####@WZqbbhao+=~~~~~::::::,,.`.=p%#8&amp;&amp;&amp;&amp;&amp;&amp;WW&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWWWWW&amp;W0d=`   ``
-   ```   `=d0&amp;@@@@#############MZqdbkao+~~~~~~~~~::..,*p$&amp;#8&amp;&amp;&amp;&amp;&amp;&amp;WWW&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWWWWMMMW&amp;MQd+`  
- ``   ~hZ%#@@@########88##88#88MOqpbkha*+====~~:,,=awB&amp;##8&amp;&amp;&amp;&amp;&amp;WWWW&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWWWWWWWWMMWWW0b~
-`  .k$8@@@#88#######8#88888888&amp;Mmdpbaao*+=~:,,~opQM8##8&amp;&amp;8&amp;&amp;&amp;WWW&amp;&amp;&amp;&amp;&amp;&amp;W&amp;&amp;&amp;&amp;W&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWWWWWWWWWWMMMWW%
- :pM@@#88########8#88###8888888&amp;0qbko*+=++okqQ%8##888&amp;8&amp;&amp;&amp;WW&amp;&amp;&amp;&amp;&amp;&amp;WW&amp;&amp;W&amp;&amp;W&amp;&amp;&amp;&amp;W&amp;&amp;&amp;&amp;W&amp;&amp;&amp;WWWWWWWMMMMMM
-Z&amp;@#8888#888###888888888888888888&amp;M%B0$B%M&amp;###88&amp;888&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;W&amp;&amp;&amp;&amp;&amp;WW&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;W&amp;WWWWWWWWWMMMWMM
-#8&amp;88888#888#8##888888888888888888########8&amp;&amp;888888&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;W&amp;W&amp;&amp;&amp;&amp;&amp;&amp;&amp;W&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWWWWWWWWWWWWWW
-&amp;8888888#888888888888888888888888888&amp;888888888888&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWW&amp;&amp;WW&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWWWWWWWWWWWWWWW
-8888888#8888888888888888888888888888888888888888&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;8&amp;&amp;WW&amp;&amp;WW&amp;WW&amp;&amp;W&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;WWWWWWWWWWWWWWWWWW
-88888888888888888&amp;888888888&amp;888888888888888888&amp;&amp;&amp;&amp;&amp;8&amp;888&amp;&amp;&amp;WW&amp;WW&amp;&amp;&amp;&amp;W&amp;&amp;W&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;W&amp;&amp;WW&amp;&amp;&amp;WWWWWWWWW&amp;&amp;
-8888888888888&amp;88888&amp;88888888888##88#888888888&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;8&amp;&amp;&amp;&amp;&amp;W&amp;&amp;&amp;&amp;&amp;W&amp;&amp;&amp;W&amp;&amp;&amp;&amp;&amp;&amp;8&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;W&amp;&amp;WWW&amp;&amp;&amp;&amp;&amp;</pre></div>
+            <img src="your-image.jpg" alt="Jihun Chae" />
           </div>
 
           <h1 class="name"><span lang="en">Jihun Chae</span><span lang="ko">채지훈</span></h1>
@@ -1487,7 +1401,7 @@ Z&amp;@#8888#888###888888888888888888&amp;M%B0$B%M&amp;###88&amp;888&amp;&amp;&a
             <a href="#patents" data-target="patents"><span lang="en">Patents</span><span lang="ko">특허</span></a>
           </nav>
 
-          <a href="mailto:chaejihun@kaist.ac.kr" class="button" id="ctaButton">
+          <a href="mailto:chaejihun@kaist.ac.kr" data-copy="chaejihun@kaist.ac.kr" class="button" id="ctaButton">
             <span lang="en">Get in touch</span><span lang="ko">연락하기</span> <span class="arrow">→</span>
           </a>
         </div>
@@ -1902,50 +1816,6 @@ Z&amp;@#8888#888###888888888888888888&amp;M%B0$B%M&amp;###88&amp;888&amp;&amp;&a
         }, { rootMargin: '-30% 0px -55% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
         sections.forEach((s) => spyIO.observe(s));
       }
-
-      // ── ASCII portrait: fit to the frame, then follow the cursor ──
-      (function () {
-        const wrap = document.querySelector('.ascii-portrait');
-        const pre = document.getElementById('asciiPre');
-        if (!wrap || !pre) return;
-        let sx = 1, sy = 1;
-        const fit = () => {
-          pre.style.transform = 'scale(1)';
-          const r = wrap.getBoundingClientRect();
-          const p = pre.getBoundingClientRect();
-          if (!p.width || !p.height) return;
-          // The art was generated for the frame's 4:5 ratio, so scaling each
-          // axis to the frame is what makes the proportions correct - and it
-          // stays correct whatever monospace font the platform substitutes.
-          sx = (r.width / p.width) * 0.99;
-          sy = (r.height / p.height) * 0.99;
-          pre.style.transform = 'scale(' + sx + ', ' + sy + ')';
-        };
-        fit();
-        window.addEventListener('resize', fit, { passive: true });
-        if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
-
-        const frame = document.querySelector('.profile-image');
-        if (!frame || prefersReduced) return;
-        let pending = false;
-        frame.addEventListener('pointermove', (e) => {
-          if (pending) return;
-          pending = true;
-          requestAnimationFrame(() => {
-            const r = frame.getBoundingClientRect();
-            const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
-            const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
-            pre.style.transform =
-              'scale(' + (sx * 1.04) + ', ' + (sy * 1.04) + ') translate(' + (dx * 14).toFixed(1) + 'px, ' + (dy * 14).toFixed(1) + 'px)';
-            pre.style.backgroundPosition = (50 + dx * 45).toFixed(0) + '% ' + (50 + dy * 45).toFixed(0) + '%';
-            pending = false;
-          });
-        });
-        frame.addEventListener('pointerleave', () => {
-          pre.style.transform = 'scale(' + sx + ', ' + sy + ')';
-          pre.style.backgroundPosition = '50% 50%';
-        });
-      })();
 
       // ── Copy email + toast ─────────────────────────────────
       const toast = document.getElementById('toast');
