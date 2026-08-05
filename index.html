@@ -54,6 +54,7 @@
       --wrap: 1180px;
       --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
       --ease-spring: cubic-bezier(0.34, 1.4, 0.44, 1);
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
       /* Section accent colors */
       --c-education: 146, 88, 8;
@@ -148,6 +149,9 @@
       .layout { animation: none; }
       .profile-image:hover img { transform: none; }
     }
+
+    .page { transition: opacity 0.16s var(--ease-out); }
+    body.lang-fading .page { opacity: 0.3; }
 
     a { color: inherit; text-decoration: none; }
     .skip-link {
@@ -577,7 +581,7 @@
       .caps-row .k { padding-top: 0; }
     }
 
-    .section { margin-top: 68px; }
+    .section { margin-top: 68px; scroll-margin-top: 24px; }
     .section:first-of-type { margin-top: 0; }
 
     .section-title {
@@ -639,7 +643,7 @@
       width: 0;
       height: 2px;
       background: linear-gradient(90deg, rgba(var(--accent, 23 24 27), 0.85), transparent);
-      transition: width 1.2s var(--ease-out);
+      transition: width 0.9s var(--ease-out-expo);
     }
     .section.in-view .section-title::after { width: 120px; }
 
@@ -690,6 +694,7 @@
       line-height: 1.5;
       transition: color 0.2s ease, border-color 0.2s ease;
     }
+    .filter button:active { transform: scale(0.94); }
     .filter button.active {
       color: #ffffff;
       background: var(--text);
@@ -707,10 +712,21 @@
       transform: translateY(16px);
       filter: blur(4px);
       transition:
-        opacity 0.8s var(--ease-out),
-        transform 0.8s var(--ease-out),
-        filter 0.8s var(--ease-out);
+        opacity 0.7s var(--ease-out-expo),
+        transform 0.7s var(--ease-out-expo),
+        filter 0.7s var(--ease-out-expo);
     }
+    /* Follow-through: the card lands first, its content settles in three
+       overlapping beats just behind it. */
+    .reveal > * {
+      opacity: 0;
+      transform: translateY(7px);
+      transition: opacity 0.55s var(--ease-out-expo), transform 0.55s var(--ease-out-expo);
+    }
+    .reveal.visible > * { opacity: 1; transform: none; }
+    .reveal.visible > *:nth-child(1) { transition-delay: 0.06s; }
+    .reveal.visible > *:nth-child(2) { transition-delay: 0.13s; }
+    .reveal.visible > *:nth-child(n+3) { transition-delay: 0.2s; }
     .reveal.visible {
       opacity: 1;
       transform: translateY(0);
@@ -855,8 +871,13 @@
       border: 1px solid var(--line);
       border-radius: 999px;
       white-space: nowrap;
+      transition: border-color 0.18s ease, transform 0.18s var(--ease-out);
     }
-    .pub-link:hover { border-color: var(--ink-accent); text-decoration: none; }
+    .pub-link:hover {
+      border-color: var(--ink-accent);
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
     .item-desc a:hover { text-decoration: underline; text-underline-offset: 3px; }
     body.ko .venue { font-style: normal; color: var(--soft); }
 
@@ -900,7 +921,7 @@
       position: fixed;
       bottom: 24px;
       left: 50%;
-      transform: translate(-50%, 20px);
+      transform: translate(-50%, 14px) scale(0.96);
       padding: 10px 16px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.14);
@@ -917,7 +938,8 @@
     }
     .toast.show {
       opacity: 1;
-      transform: translate(-50%, 0);
+      transform: translate(-50%, 0) scale(1);
+      transition: opacity 0.3s ease, transform 0.4s var(--ease-spring);
     }
 
     .kbd-hint {
@@ -1248,7 +1270,7 @@
         animation: none !important;
         transition: none !important;
       }
-      .reveal { opacity: 1; transform: none; filter: none; }
+      .reveal, .reveal > * { opacity: 1; transform: none; filter: none; }
     }
     /* ── Dark theme: same design, inverted ground. Tokens carry the flip;
        the accents are lightened so they hold AA on the dark surface. ── */
@@ -1897,9 +1919,19 @@
       const langBtn = document.getElementById('langToggle');
       const langLabel = document.getElementById('langLabel');
       const setLang = (ko) => {
-        document.body.classList.toggle('ko', ko);
-        document.documentElement.lang = ko ? 'ko' : 'en';
-        langLabel.textContent = ko ? 'English' : '한국어';
+        const apply = () => {
+          document.body.classList.toggle('ko', ko);
+          document.documentElement.lang = ko ? 'ko' : 'en';
+          langLabel.textContent = ko ? 'English' : '한국어';
+        };
+        if (prefersReduced) { apply(); return; }
+        // Crossfade: dim, swap language mid-fade, restore. One shared
+        // transformation instead of a hard DOM flip.
+        document.body.classList.add('lang-fading');
+        setTimeout(() => {
+          apply();
+          document.body.classList.remove('lang-fading');
+        }, 160);
       };
       langBtn.addEventListener('click', () => {
         setLang(!document.body.classList.contains('ko'));
