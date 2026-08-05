@@ -837,6 +837,60 @@
     }
     .venue { color: var(--muted); font-style: italic; }
 
+    /* Partner row: orgs as chips with monogram dots, visually distinct
+       from the prose bullets. */
+    .partners {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding-top: 11px;
+      border-top: 1px dashed var(--line);
+    }
+    .p-label {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--soft);
+      margin-right: 6px;
+    }
+    body.ko .p-label {
+      font-family: 'Pretendard', sans-serif;
+      text-transform: none;
+      letter-spacing: 0.05em;
+      font-size: 0.72rem;
+    }
+    body:not(.ko) .p-set[lang="en"],
+    body.ko .p-set[lang="ko"] { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+    .p-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      padding: 2px 10px 2px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      transition: border-color 0.18s ease, color 0.18s ease;
+    }
+    .p-chip::before {
+      content: attr(data-m);
+      display: inline-grid;
+      place-items: center;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: rgba(var(--accent, 43 75 124), 0.14);
+      color: rgb(var(--accent, 43 75 124));
+      font-size: 0.56rem;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+    .p-chip:hover { border-color: rgba(var(--accent, 43 75 124), 0.45); color: var(--text); }
+
 
     /* Publications read as an academic list, not a stack of cards */
     #pubItems { gap: 0; }
@@ -1457,13 +1511,12 @@
               <ul class="item-desc" lang="en">
                 <li>Build GAIA, an LLM agent that solves problems users cannot solve alone: RAG over game knowledge, an agent loop reading live screen and audio, voice in and out.</li>
                 <li>Own the full loop from problem to proof: field interviews to locate the real barrier, then requirements, shipped prototypes, and evaluation with the same users.</li>
-                <li>Partners: Samsung Electronics, Nexon Intelligence Labs, Smilegate D&amp;I, National Rehabilitation Center, SpecialEffect (UK).</li>
               </ul>
               <ul class="item-desc" lang="ko">
                 <li>사용자가 혼자 해결할 수 없는 문제를 푸는 LLM 에이전트 GAIA 개발. 게임 지식 RAG, 실시간 화면·음성 맥락 에이전트 루프, 음성 입출력.</li>
                 <li>문제 발굴부터 검증까지 전 과정 수행: 현장 인터뷰로 실제 장벽을 찾고, 요구사항 정의, 프로토타입 구현, 동일 사용자 평가.</li>
-                <li>협력: 삼성전자, 넥슨 인텔리전스 랩, 스마일게이트 D&amp;I, 국립재활원, SpecialEffect (영국).</li>
               </ul>
+              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip" data-m="S">Samsung Electronics</span><span class="p-chip" data-m="N">Nexon Intelligence Labs</span><span class="p-chip" data-m="S">Smilegate D&amp;I</span><span class="p-chip" data-m="N">National Rehabilitation Center</span><span class="p-chip" data-m="S">SpecialEffect (UK)</span></span><span class="p-set" lang="ko"><span class="p-chip" data-m="삼">삼성전자</span><span class="p-chip" data-m="넥">넥슨 인텔리전스 랩</span><span class="p-chip" data-m="스">스마일게이트 D&amp;I</span><span class="p-chip" data-m="국">국립재활원</span><span class="p-chip" data-m="S">SpecialEffect (영국)</span></span></div>
             </div>
 
             <div class="item reveal">
@@ -1472,13 +1525,12 @@
               <ul class="item-desc" lang="en">
                 <li>Solved a knowledge-transfer problem by design: a serious game that carries Jeju Haenyeo practice and environmental knowledge between generations.</li>
                 <li>Ran field-based design work with the diving communities themselves.</li>
-                <li>Partners: Brunel University London (Games Research Lab), Jeju Haenyeo Museum, and the Sinrye-ri, Daepyeong-ri, and Yeongnak-ri communities.</li>
               </ul>
               <ul class="item-desc" lang="ko">
                 <li>세대 간 지식 전달 문제를 설계로 해결: 제주 해녀의 작업 방식과 환경 지식을 이어주는 시리어스 게임 설계.</li>
                 <li>해녀 공동체와 함께하는 현장 기반 디자인 작업 수행.</li>
-                <li>협력: 브루넬 대학교 런던 (Games Research Lab), 제주 해녀박물관, 신례리·대평리·영락리 해녀 공동체.</li>
               </ul>
+              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip" data-m="B">Brunel University London</span><span class="p-chip" data-m="J">Jeju Haenyeo Museum</span><span class="p-chip" data-m="H">Haenyeo communities of Sinrye · Daepyeong · Yeongnak</span></span><span class="p-set" lang="ko"><span class="p-chip" data-m="브">브루넬 대학교 런던</span><span class="p-chip" data-m="제">제주 해녀박물관</span><span class="p-chip" data-m="해">신례리·대평리·영락리 해녀 공동체</span></span></div>
             </div>
 
             <div class="item reveal">
@@ -1487,13 +1539,12 @@
               <ul class="item-desc" lang="en">
                 <li>Solved a spatial-adaptation problem: an XR system that re-fits virtual content to real-world conditions in real time.</li>
                 <li>Worked on multimodal visual-haptic feedback for presence and environmental responsiveness.</li>
-                <li>Partners: Fraunhofer Institute (Germany), NYU, UniSA, Anipen, bHaptics.</li>
               </ul>
               <ul class="item-desc" lang="ko">
                 <li>공간 적응 문제 해결: 현실 조건에 맞춰 가상 콘텐츠를 실시간 재배치하는 XR 시스템 설계·구현.</li>
                 <li>현존감과 환경 반응성을 위한 멀티모달 시각-햅틱 피드백 작업.</li>
-                <li>협력: 프라운호퍼 연구소 (독일), NYU, UniSA, Anipen, bHaptics.</li>
               </ul>
+              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip" data-m="F">Fraunhofer Institute</span><span class="p-chip" data-m="N">NYU</span><span class="p-chip" data-m="U">UniSA</span><span class="p-chip" data-m="A">Anipen</span><span class="p-chip" data-m="b">bHaptics</span></span><span class="p-set" lang="ko"><span class="p-chip" data-m="프">프라운호퍼 연구소</span><span class="p-chip" data-m="N">NYU</span><span class="p-chip" data-m="U">UniSA</span><span class="p-chip" data-m="A">Anipen</span><span class="p-chip" data-m="b">bHaptics</span></span></div>
             </div>
 
             <div class="item reveal">
@@ -1502,13 +1553,12 @@
               <ul class="item-desc" lang="en">
                 <li>Answered a detectability problem with computer vision and simulation: how KF-21 Boramae camouflage holds up across altitude, terrain, and weather.</li>
                 <li>Developed colorways and pattern configurations; selected proposals were adopted into real project outputs.</li>
-                <li>Partner: Korea Aerospace Industries (KAI).</li>
               </ul>
               <ul class="item-desc" lang="ko">
                 <li>컴퓨터 비전과 시뮬레이션으로 피탐성 문제를 분석: 고도·지형·기상 조건별 KF-21 보라매 위장 성능 평가.</li>
                 <li>위장 컬러웨이 및 패턴 구성 개발, 일부 제안은 실제 프로젝트 결과물에 반영.</li>
-                <li>협력: 한국항공우주산업 (KAI).</li>
               </ul>
+              <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip" data-m="K">Korea Aerospace Industries (KAI)</span></span><span class="p-set" lang="ko"><span class="p-chip" data-m="K">한국항공우주산업 (KAI)</span></span></div>
             </div>
 
             <div class="item reveal">
