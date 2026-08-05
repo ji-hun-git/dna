@@ -93,7 +93,7 @@
     a:focus-visible { outline-offset: 4px; }
 
     h1, h2, h3, h4, .section-title, .name, .item-title { text-wrap: balance; }
-    p, .item-desc, .lead, .intro { text-wrap: pretty; }
+    p, .item-desc { text-wrap: pretty; }
 
     /* ═══════════════════════════════════════════════════════════
        LANGUAGE TOGGLE (CSS-only visibility)
@@ -193,49 +193,6 @@
       stroke-linejoin: round;
     }
 
-    /* ── Floating Laboratory entry - right edge of the screen ── */
-    .lab-fab {
-      position: fixed;
-      right: 18px;
-      bottom: 20px;
-      z-index: 111;
-      display: inline-flex;
-      align-items: center;
-      gap: 9px;
-      padding: 12px 17px;
-      border-radius: 999px;
-      border: 1px solid var(--line-strong);
-      background: linear-gradient(120deg, rgba(96,165,250,0.22), rgba(167,139,250,0.16), rgba(52,211,153,0.14));
-      backdrop-filter: blur(16px) saturate(150%);
-      -webkit-backdrop-filter: blur(16px) saturate(150%);
-      color: #fff;
-      font: 700 0.86rem/1 'Inter', 'Pretendard', sans-serif;
-      letter-spacing: 0.01em;
-      box-shadow: 0 16px 38px rgba(0,0,0,0.34);
-      transition: transform 0.28s var(--ease-spring), box-shadow 0.25s ease, border-color 0.22s ease;
-    }
-    body.ko .lab-fab { font-family: 'Pretendard Variable', 'Pretendard', sans-serif; }
-    .lab-fab:hover {
-      transform: translateY(-3px);
-      border-color: rgba(96,165,250,0.6);
-      box-shadow: 0 22px 48px rgba(0,0,0,0.44);
-    }
-    .lab-fab:active { transform: translateY(0) scale(0.97); }
-    .lab-fab .icon { width: 16px; height: 16px; display: inline-flex; }
-    .lab-fab .icon svg {
-      width: 100%; height: 100%;
-      stroke: currentColor; fill: none;
-      stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
-    }
-    .lab-fab .arrow { opacity: 0.7; transition: transform 0.25s var(--ease-spring); }
-    .lab-fab:hover .arrow { transform: translateX(3px); }
-    .lab-fab .dot {
-      width: 6px; height: 6px; border-radius: 999px;
-      background: #9af0a4; box-shadow: 0 0 10px rgba(154,240,164,0.85);
-      animation: blink 2.4s ease-in-out infinite;
-    }
-    @media (max-width: 700px) { .lab-fab { display: none; } }
-
     .page {
       position: relative;
       z-index: 1;
@@ -315,16 +272,6 @@
     .profile-card:hover .profile-image img {
       transform: scale(1.025);
       filter: grayscale(70%) saturate(1.05);
-    }
-    .profile-fallback {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--soft);
-      font-size: 0.92rem;
-      background: rgba(23,24,27,0.03);
     }
 
     .name {
@@ -520,80 +467,15 @@
       width: 100%;
       padding-top: 8px;
     }
-
-    .eyebrow-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      flex-wrap: wrap;
-      margin-bottom: 24px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: linear-gradient(120deg,
-        rgba(96,165,250,0.07), rgba(244,114,182,0.04), rgba(52,211,153,0.07));
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      color: var(--muted);
-      font-size: 0.78rem;
-      letter-spacing: 0.01em;
-    }
-    .eyebrow .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: #9af0a4;
-      box-shadow: 0 0 10px rgba(154,240,164,0.8);
-      animation: blink 2.4s ease-in-out infinite;
-    }
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.35; }
-    }
-
-    .meta-clock {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--soft);
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-variant-numeric: tabular-nums;
-      font-size: 0.74rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-    body.ko .meta-clock {
-      text-transform: none;
-      font-family: 'Pretendard', ui-monospace, monospace;
-      letter-spacing: 0.02em;
-    }
-    .meta-clock::before {
-      content: "";
-      width: 4px;
-      height: 4px;
-      border-radius: 999px;
-      background: var(--soft);
-      opacity: 0.6;
     }
 
     @keyframes shimmer {
       0%   { background-position: 0% 50%; }
       100% { background-position: 100% 50%; }
     }
-
-    .lead, .intro {
-      max-width: 860px;
-      margin: 0 0 18px;
-      color: #d9d9dc;
-      font-size: 1.05rem;
-    }
-    .lead strong, .intro strong { color: #fff; font-weight: 600; }
 
     /* ── Featured award ── */
     .item.featured { border-color: rgba(43,75,124,0.45); }
@@ -712,11 +594,11 @@
       left: 0;
       bottom: -1px;
       width: 0;
-      height: 1px;
+      height: 2px;
       background: linear-gradient(90deg, rgba(var(--accent, 23 24 27), 0.85), transparent);
       transition: width 1.2s var(--ease-out);
     }
-    .section.in-view .section-title::after { width: 80px; }
+    .section.in-view .section-title::after { width: 120px; }
 
     #education    { --accent: var(--c-education); }
     #projects     { --accent: var(--c-projects); }
@@ -813,7 +695,7 @@
       bottom: 18px;
       width: 2px;
       border-radius: 999px;
-      background: rgba(23,24,27,0.18);
+      background: rgba(var(--accent, 23 24 27), 0.45);
       transition: background 0.3s ease, top 0.3s ease, bottom 0.3s ease, width 0.3s ease;
     }
     .item::after {
@@ -829,7 +711,7 @@
     }
     .item:hover {
       transform: translateY(-3px);
-      border-color: rgba(var(--accent, 255 255 255), 0.25);
+      border-color: rgba(var(--accent, 23 24 27), 0.42);
       background: var(--surface);
       box-shadow: 0 2px 4px rgba(23,24,27,0.05), 0 12px 30px rgba(23,24,27,0.09);
     }
@@ -847,17 +729,18 @@
 
     .item-title {
       display: block;
-      margin-bottom: 4px;
-      font-size: 1.02rem;
-      line-height: 1.45;
+      margin-bottom: 5px;
+      font-size: 1.18rem;
+      line-height: 1.35;
+      letter-spacing: -0.018em;
       font-weight: 700;
-      letter-spacing: -0.012em;
       color: var(--text);
     }
+    body.ko .item-title { font-size: 1.12rem; letter-spacing: -0.01em; }
     .item-meta {
       margin-bottom: 10px;
       color: var(--soft);
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       letter-spacing: 0.01em;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-variant-numeric: tabular-nums;
@@ -870,8 +753,8 @@
     .item-desc {
       margin: 0;
       color: var(--muted);
-      font-size: 0.95rem;
-      line-height: 1.65;
+      font-size: 0.9rem;
+      line-height: 1.7;
       max-width: 66ch;   /* keep the reading measure near 65 characters */
       text-wrap: pretty;
     }
@@ -880,6 +763,13 @@
 
     .paper-title,
     .pub-author-me { color: var(--text); font-weight: 600; }
+    .paper-title {
+      font-size: 1.04rem;
+      line-height: 1.4;
+      letter-spacing: -0.012em;
+    }
+    #pubItems .item-desc { font-size: 0.85rem; line-height: 1.65; }
+    #pubItems .venue { font-size: 0.85rem; }
     .paper-title { font-weight: 600; }
     .pub-author-me {
       font-weight: 800;
@@ -932,8 +822,24 @@
     /* ═══════════════════════════════════════════════════════════
        FOOTER
        ═══════════════════════════════════════════════════════════ */
+    /* A monospace signature: the loop every project on this page follows.
+       Decorative to a scanner, meaningful to anyone who stops. */
+    .ascii-mark {
+      margin: 64px 0 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.7rem;
+      line-height: 1.5;
+      letter-spacing: 0.02em;
+      color: rgba(43,75,124,0.55);
+      white-space: pre;
+      overflow-x: auto;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    @media (max-width: 560px) { .ascii-mark { font-size: 0.6rem; } }
+
     .site-footer {
-      margin-top: 84px;
+      margin-top: 34px;
       padding: 26px 0 34px;
       border-top: 1px solid var(--line);
       display: flex;
@@ -1091,7 +997,8 @@
         border-radius: 2px;
       }
 
-      .lead, .intro, .item-desc { font-size: 0.96rem; }
+      .item-desc { font-size: 0.88rem; }
+      .item-title { font-size: 1.16rem; }
       .two-col { grid-template-columns: 1fr; }
       .item { padding: 16px 16px 16px 18px; }
       .section { margin-top: 48px; }
@@ -1134,8 +1041,6 @@
     body.reader .section-nav,
     body.reader .profile-image,
     body.reader .divider,
-    body.reader .eyebrow .dot,
-    body.reader .lab-fab,
     body.reader .button {
       display: none !important;
     }
@@ -1198,27 +1103,6 @@
       text-underline-offset: 3px;
     }
     body.reader .contact-list a::after { display: none !important; }
-    body.reader .eyebrow {
-      background: transparent !important;
-      border: 0 !important;
-      padding: 0 !important;
-      color: #555 !important;
-      font-style: italic;
-      font-size: 0.95rem !important;
-      margin-bottom: 14px !important;
-    }
-    body.reader.ko .eyebrow { font-style: normal; }
-    body.reader .lead,
-    body.reader .intro {
-      color: #2a2a2a !important;
-      max-width: 100%;
-      font-size: 1.05rem !important;
-    }
-    body.reader .lead strong,
-    body.reader .intro strong {
-      color: #111 !important;
-      font-weight: 600;
-    }
     body.reader .section-title {
       color: #111 !important;
       border-bottom: 1px solid rgba(0,0,0,0.18) !important;
@@ -1313,12 +1197,12 @@
       html { font-size: 15px; }
       .page { width: calc(100% - 22px); padding-top: 16px; }
       .name { font-size: 1.7rem; }
-      .lead, .intro { font-size: 0.92rem; }
       .profile-image { max-width: 200px; margin-left: auto; margin-right: auto; }
       .section { margin-top: 40px; }
       .caps { margin-bottom: 28px; }
       .item { padding: 13px 14px 13px 16px; }
-      .item-title { font-size: 0.98rem; }
+      .item-title { font-size: 1.14rem; }
+      .item-desc { font-size: 0.9rem; }
       .section-title { font-size: 1.3rem; }
     }
     @media (max-width: 440px) {
@@ -1490,7 +1374,7 @@
 
             <div class="item reveal">
               <span class="item-title"><span lang="en">Preserving the Haenyeo Legacy: Serious Games for Social Impact</span><span lang="ko">해녀 유산의 보존: 사회적 임팩트를 위한 시리어스 게임</span></span>
-              <div class="item-meta"><span lang="en">2025.06 – 2025.09 | KAIST | Leverhulme Trust International Fellow | Student Researcher</span><span lang="ko">2025.06 ~ 2025.09 | KAIST | Leverhulme Trust International Fellow | 학생연구원</span></div>
+              <div class="item-meta"><span lang="en">2025.06 – 2025.09 | KAIST | Leverhulme Trust International Fellowship | Student Researcher</span><span lang="ko">2025.06 ~ 2025.09 | KAIST | Leverhulme Trust International Fellowship | 학생연구원</span></div>
               <ul class="item-desc" lang="en">
                 <li>Solved a knowledge-transfer problem by design: a serious game that carries Jeju Haenyeo practice and environmental knowledge between generations.</li>
                 <li>Ran field-based design work with the diving communities themselves.</li>
@@ -1725,6 +1609,12 @@
             </div>
           </div>
         </section>
+
+        <pre class="ascii-mark" aria-hidden="true">
+   observe ---> decide ---> act
+      ^                      |
+      +----- measure <-------+
+</pre>
 
         <footer class="site-footer">
           <span>
