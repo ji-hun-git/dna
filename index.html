@@ -253,7 +253,46 @@
       box-shadow: 0 2px 4px rgba(23,24,27,0.05), 0 14px 40px rgba(23,24,27,0.08);
     }
 
+    /* ASCII portrait: revealed on hover over the photo, follows the cursor.
+       Rendered at a legible font size then scaled down, so the glyph grid stays
+       crisp instead of relying on sub-pixel font rendering. */
+    .ascii-portrait {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s var(--ease-out);
+      background: var(--bg);
+      border-radius: inherit;
+    }
+    .ascii-portrait pre {
+      margin: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 7px;
+      line-height: 1.02;
+      letter-spacing: 0;
+      white-space: pre;
+      transform-origin: center center;
+      background-image: linear-gradient(135deg, #2b4b7c 0%, #7b5ea7 38%, #b4553f 68%, #2b4b7c 100%);
+      background-size: 260% 260%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      transition: transform 0.18s var(--ease-out), background-position 0.5s var(--ease-out);
+      will-change: transform, background-position;
+    }
+    .profile-image:hover .ascii-portrait { opacity: 1; }
+    @media (hover: none) { .ascii-portrait { display: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .ascii-portrait pre { transition: none; }
+    }
+
     .profile-image {
+      position: relative;
       position: relative;
       overflow: hidden;
       border-radius: 20px;
@@ -1205,7 +1244,8 @@
     /* ── Print: the page doubles as a paper CV ── */
     @media print {
       .top-controls, .kbd-hint, .mobile-nav, .scroll-progress,
-      .button, .filter, .section-nav, .toast { display: none !important; }
+      .button, .filter, .section-nav, .toast,
+      .ascii-portrait { display: none !important; }
       body, body:not(.reader) { background: #fff !important; }
       .layout { display: block; }
       .sidebar { position: static; width: auto; margin-bottom: 24px; }
@@ -1256,9 +1296,69 @@
         <div class="profile-card" id="profileCard">
           <div class="profile-image">
             <img src="your-image.jpg" alt="Jihun Chae" onerror="this.onerror=null; this.parentElement.innerHTML='&lt;div class=&quot;profile-fallback&quot;&gt;Profile image&lt;/div&gt;';" />
+            <div class="ascii-portrait" aria-hidden="true"><pre id="asciiPre"> 
+                                                ``````````````````
+                                       ````````                   ````
+                                ``````          `,...,~~==*o*o=:,`    ````
+                        ```````       `,~=oo+*kbdphqQOM&amp;8WMMB0mZOZb*~`     ``
+                    ``         `.:~+abqmQQOO0BMMMW&amp;$B&amp;&amp;%W&amp;$w0$dmB%M%BOd*:`   ```
+                  `   `.,:*+=~opqO0B%%BMM$%MW&amp;WMMW#MB%%W%WW$BW88&amp;&amp;WMB%%B0wa+,  `````
+                    ,=*h**bkpqQ0B%MWWW&amp;W%B&amp;&amp;&amp;MM%MBBM%M%WW%&amp;W%WWMWW&amp;&amp;&amp;M%%BBQ0Od=.
+                  ,+*++*hZQ$BMMMWWWWW&amp;&amp;WWW%MMMMWW%$BMMMMW%WWMM&amp;&amp;WMMWWWWWMB$0BW$Oda~`` ```
+                `,+,,+pm$%%%MWWWWW&amp;&amp;W&amp;WWMMMMWWW%$BMMM&amp;8&amp;MBW#WMM8#&amp;WWWW%%&amp;M%0OBBBMB0q=`    `
+              ``~=`*m$B%WB%WWWWW&amp;&amp;&amp;WWWWWWM&amp;&amp;M%WMM%$MWMMM%M&amp;&amp;8&amp;M%&amp;88WM%%&amp;WMMBOq$%B00$Oq*:.  `
+            ``  :+mMM%MWM%&amp;WWW&amp;&amp;WM%MMMBBMW&amp;&amp;W0WB$BQ00$B&amp;8##WMM&amp;WB$B%M%MMW%%%$wm%MBMB$0Zdh+,
+              .aQ%W%BMWMMWWWW&amp;&amp;MMMMMMMWW&amp;&amp;&amp;W&amp;%0OO$QZ%MW8#8@#&amp;M%W&amp;MBBMM&amp;MM%%%B0qm$$B%B$BQOqb+,` `
+          ` .kQMMM%BMM%MMMWWW&amp;WWMWM%M8&amp;88WWWWM%MM8&amp;WWWW8&amp;&amp;&amp;&amp;#8W%M&amp;888@###WBBBBQQQO$$$$$$$Qmpa=.``
+          ``qWMMWBOB%B%MWW&amp;M%MWM%B$W&amp;&amp;W&amp;%MWM%MW%%MWWM%BW&amp;W8&amp;8&amp;WM%%M8&amp;8@##88&amp;MB$$%%B$B%B$$QOQmb*+,..``
+         ` =MWMM%ZOZ$$%MW8W%M%$Qww%WMM%%%W%%$$$$B%%MW%$$%WW%B&amp;WW%QOW&amp;M##&amp;8##8MWQmMW$B%B$0$$Q0mqdh*:.`
+         ` p&amp;MWMZQm0$%%B8W%MBwdmOO%%B%BOBMQwq0Q$$B$M&amp;&amp;%BwmBBB0M%%%0$&amp;WM#8&amp;&amp;8#&amp;&amp;%QQW%BB%BOQ0OOZQqaoo~.``
+        ` *WWWMZmBOpO%%%WMM$mQQ%MWBBQ$QpZ%mkhQZkwB$%MWWM$*hOBB$$M%MBM&amp;WM&amp;88W&amp;&amp;MWW0QMM%$00wZ0mmZwwbok+` `
+        ` d&amp;WWMOBBpbB$%B$QO0QZW%Q%$QZ0Qkm$QwhpwodOwQ%$%B%ZkpZm0B%B%MMMB%%M8&amp;MWM%W&amp;%$%%0Qkpp0BZbhdqddpk. `
+        ` O#MW%%MBmO0MW&amp;%$Z%mZ8pd$$wZmqhmOOwbkQwwmaZdhdpmwddpphw0Q$W&amp;MBM%$B8WMW%%88&amp;WW&amp;&amp;QpwdmmwhawmmZOp,``
+       ` ,&amp;8MM%WM%BZBB&amp;&amp;M%00$QBdbpZmpqbqwqbmpohZZ$wOb==*+*o***~ooaBB%%0BQmm$W%BQ0QW&amp;&amp;&amp;&amp;&amp;8%$QOQZdawQwwO$d `
+       ` +8MWWWMW%MB$BW&amp;MM%$$$$wp*dbppppppdpdppdpOmmZkokao+h+*bk~bhdpZBO0OkwmhZpdhdQBW&amp;W%BmOOm%0QOW0b$%M+ `
+       ` o@M8WWW&amp;MWB$MWWWW%%%$$Qwhhkbbkhhbkbpwmmwqpppwpppdpdkdqkoh*qbZmQObOOp`Qd*Z+qO0%MBQwapbO%&amp;%MBm$B%w``
+       ``,mMWWWW&amp;&amp;WWM%MWMW%B%$QOpdkdbkho++++*ooahhhahhhakdppbqddmdpw+Owwm,kwZw$mZ$Oqmpw0$QQmmBQBWWB0BB$$$= `
+           B&amp;M&amp;WWW&amp;MM%MWWMMMWMB0Opkkhbbh*+=~::,.,,...,,:=+*aaobq0B00qq0w%Z+oZW%%%$%$0OZZOBmO%BBBB%WMB0Q0%o `
+         ``0@&amp;WWWMMWWMMWW&amp;&amp;%B%B$Omko*+o*~:~~,,....`````````,~=*kmB%B%wOBB$0ww$%B0QOmOQ0OQQdwB%$$%MW&amp;%ZZQB+ `
+         ` o@@8&amp;&amp;&amp;WWM%MMWBmh**o*++=~+=+a*~,.````` `` `..,::::==*od0%B%ZmQBMW%B00BOQB%0qZ00B0BW%MW%%MZQBOQ~ `
+          ` h#8&amp;WW8MB$00qhoo*+==++**+**++=:,....```.,~=ook*oho+++::+kwOOQB%MW8&amp;MM%W&amp;MB%$QB%M8&amp;WM%W$0QQM$Z.``
+          ``~##8&amp;%WBQmqpdkko+=~===+*o++===~~:,,,...,:=~~===+**++*+++::=obm$&amp;88W&amp;&amp;&amp;WWWWM%%MM&amp;WMWM8BmB%M&amp;$: `
+          ``+8@#@&amp;$0wqwbkao*++=~~~~~~~****++~::,,,,,,,:=++==+=~~~~~:~~===*oqQMMW&amp;8WW&amp;WWW&amp;WBBMWWW&amp;%%WMW&amp;B``
+           ` o#@#Qpdbkahbbdppo*ha+++=~~+o***~::,::~:=*o*+=~~~:::,~~,:.`,,,::~odwZ$M8&amp;W%$BBB%&amp;&amp;WWMM&amp;&amp;&amp;@Mm: `
+            ` ~w8mhqhaahbqwwwaowQZZmhk+~*kao*~:,:~~oo=~=~~~=~,,,.....:~.,,,,,,,:~*bwM#&amp;&amp;&amp;MMMMWM%%&amp;@@#$q` `
+             ` ,8Zhphhhaahhaoo*+*****k*==qa**=:,,~b*,:~==ohobqkak+==~,~+.,,,,,::~~+hZ@@##MB0B%%%&amp;@@0+  ``
+              ` wQhphao*+===+======~~:=+opoo+:,.:+h~:..:=hk*b0QZQkappbohaoho~:~==~~+a$@@#WB%B%MM8#8, ``
+              ``awhhk++=~~::,,,,,,,,,:~:hpo*~,.`:aa~~...,~+o*+*=~===*o*ab=~~,,,::::~*k$8MmqOww&amp;&amp;@@m``
+               `hbaooo=:::,,,,,,,,,,,,:+koa=:,.`.=h,~,.``..,:~~~~:::,:`a+.....,,:::~op$0h=~+~p#@&amp;p.``
+             ` .kho*+=++:,...`.....,:+hh=+=~,..``.*o``.````````...... :a```....,,:~=*w%m+:,:,Q#$~
+             ` .ha*+=~:=+*=~,...,:=*aa*~==~:...``..*o, `...``````.` `~*`````...,:~~+awp~==:.o%~  ``
+             ` ~ho*=::,,,:~===++**++*+*+~~:,........~o+,..```    `.:+~  ````..,:~==*hb=,~~,,k+ ``
+             ` ~ko+=~::,,,,...,,::~**==+~~:,.````..,,,+o*+=~::,:~==:`   ````.,::~==oa+~::,,~~ `
+              ` ~a*==~:::::::::~~=*h+~:~=~:,.````.`...~~=+==~~,,.`   `  ```.,,:~~=+*=:.`,,.oh``
+                 oo*+=~~~:::~======oaahbko=:,,,~~:..,:=~:~=~,..```````````.,,:~~~===:,..,,,a, `
+                `*ao**=~~~~===~~~~~~=+ohbdkhaoaahaa*=~:,..:=+~:,..`````...,,:~~~~==~,``.,:.
+               ` =ao**+=~~==~~~~=~~~~~:~~~~=+=~::,...```...,=o+:,,.....,,,:::~~~=+=:.,+:,`  `
+               ` ,ho**+~~::=+===~~~~::~::,,,,,,,............,~*o=:,:::::::~:~~~=++*$W8w`
+                 `oo**+~:,,:=+*ha+==+===~:~::,,,.```````...,,,:=*=~:~~~~::::~~=+**QMdo. `
+                ` ~a***=::,,:~=dOOphoaaaaoo**++++==~~~~::,:~~~:,:~:::::::,::~=+*o*~
+                 ``*a**+~::,,::~*bwd~~,.:~~==~~~=~~*=~***O$p=:,,:,,,::,,,,:~=+*o*` ````
+                   .aao*+=~:,,:~~=*a*o+=,`            .~odh~...,,,,,,,,,,::~+*oa~ `
+                  ` ,hao*+=~::::~~+oooahha+==,::,~~:=++*=.`......,,,,,,,:~~+oaoo`
+                   ` ,aaoo+==~:::~=+*oo**++++++++*o**=~,.........,,,,,::~=*aaaao
+                    ` .ahoo*+=~::::=+*ooo*++++=====~:,...```.....,,,::~=+oaaaaa*
+                     ` `*hao*+=~::::~~=+*ooooo*+=~~,,...`````..,,,::~~=*oaaaoooo.``
+                      `  =hao*+=~:,,,,,,:::~~~~::,,..```````..,:::~~=+oaaoo****o~  ``
+                       `` ,aho*+=~,.,,,........````````````..,:~~~=+oaao**+=+++++,`   ```
+                         ` `oka*+~:,,....`..```````   ````.,:~~=+*oaao**+==~==++++dd~    ``
+                          `  =hho+=~:,,..````````` ````.,,:~=+*oaaao*++=~~~:~~=++=+$&amp;Qp+`   ```
+                            ` .=aao+=:,,...```````...,:~~=+*ahkkao*+==~::::::~~===~p8&amp;8&amp;0k~    ``
+                             `  .~ooo+~:::,,,,,,,:~~=+*oahkbbkao+==~~:,,,,,,::~~=~aW&amp;&amp;WW&amp;#W0qo,
+                              ``   owdbha*++===+*ahkdddddbkao*+=~~:::,,,,.,,::~~~+Q88&amp;&amp;&amp;&amp;W&amp;888MZo.`</pre></div>
           </div>
 
-          <h2 class="name"><span lang="en">Jihun Chae</span><span lang="ko">채지훈</span></h2>
+          <h1 class="name"><span lang="en">Jihun Chae</span><span lang="ko">채지훈</span></h1>
           <p class="role"><span lang="en">Human-Centered AI Engineer · Ph.D. Student</span><span lang="ko">인간 중심 AI 엔지니어 · 박사과정</span></p>
           <p class="org"><span lang="en">KAIST Graduate School of Culture Technology</span><span lang="ko">KAIST 문화기술대학원</span></p>
 
@@ -1715,6 +1815,46 @@
         }, { rootMargin: '-30% 0px -55% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
         sections.forEach((s) => spyIO.observe(s));
       }
+
+      // ── ASCII portrait: fit to the frame, then follow the cursor ──
+      (function () {
+        const wrap = document.querySelector('.ascii-portrait');
+        const pre = document.getElementById('asciiPre');
+        if (!wrap || !pre) return;
+        let baseScale = 1;
+        const fit = () => {
+          pre.style.transform = 'scale(1)';
+          const r = wrap.getBoundingClientRect();
+          const p = pre.getBoundingClientRect();
+          if (!p.width || !p.height) return;
+          baseScale = Math.min(r.width / p.width, r.height / p.height) * 0.98;
+          pre.style.transform = 'scale(' + baseScale + ')';
+        };
+        fit();
+        window.addEventListener('resize', fit, { passive: true });
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+
+        const frame = document.querySelector('.profile-image');
+        if (!frame || prefersReduced) return;
+        let pending = false;
+        frame.addEventListener('pointermove', (e) => {
+          if (pending) return;
+          pending = true;
+          requestAnimationFrame(() => {
+            const r = frame.getBoundingClientRect();
+            const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
+            const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+            pre.style.transform =
+              'scale(' + (baseScale * 1.04) + ') translate(' + (dx * 14).toFixed(1) + 'px, ' + (dy * 14).toFixed(1) + 'px)';
+            pre.style.backgroundPosition = (50 + dx * 45).toFixed(0) + '% ' + (50 + dy * 45).toFixed(0) + '%';
+            pending = false;
+          });
+        });
+        frame.addEventListener('pointerleave', () => {
+          pre.style.transform = 'scale(' + baseScale + ')';
+          pre.style.backgroundPosition = '50% 50%';
+        });
+      })();
 
       // ── Copy email + toast ─────────────────────────────────
       const toast = document.getElementById('toast');
