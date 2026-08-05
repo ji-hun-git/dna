@@ -256,6 +256,12 @@
     /* ASCII portrait: revealed on hover over the photo, follows the cursor.
        Rendered at a legible font size then scaled down, so the glyph grid stays
        crisp instead of relying on sub-pixel font rendering. */
+    .profile-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(100%);
+    }
     .ascii-portrait {
       position: absolute;
       inset: 0;
@@ -263,9 +269,14 @@
       display: grid;
       place-items: center;
       overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s var(--ease-out);
       background: var(--bg);
       border-radius: inherit;
     }
+    .profile-image:hover .ascii-portrait { opacity: 1; }
+    @media (hover: none) { .ascii-portrait { display: none; } }
     .ascii-portrait pre {
       margin: 0;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -551,10 +562,9 @@
     body:not(.ko) [lang="en"].v,
     body.ko [lang="ko"].v { display: block; }
     .caps-row .v {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.74rem;
-      line-height: 1.85;
-      letter-spacing: 0.01em;
+      font-size: 0.82rem;
+      line-height: 1.8;
+      letter-spacing: 0.005em;
       color: var(--muted);
     }
     body.ko .caps-row .v {
@@ -562,7 +572,7 @@
       font-size: 0.8rem;
       letter-spacing: 0;
     }
-    .caps-row .v .sep { color: var(--line-strong); margin: 0 7px; }
+    .caps-row .v .sep { color: var(--line-strong); margin: 0 8px; }
     @media (max-width: 700px) {
       .caps-row { grid-template-columns: 1fr; gap: 7px; }
       .caps-row .k { padding-top: 0; }
@@ -589,6 +599,15 @@
       font-weight: 700;
       letter-spacing: -0.025em;
     }
+    .title-aside {
+      margin-left: auto;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0;
+      color: var(--ink-accent);
+      white-space: nowrap;
+    }
+    .title-aside:hover { text-decoration: underline; text-underline-offset: 3px; }
     .section-title .num {
       display: inline-block;
       color: var(--soft);
@@ -1232,7 +1251,7 @@
     @media print {
       .top-controls, .kbd-hint, .mobile-nav, .scroll-progress,
       .button, .filter, .section-nav, .toast { display: none !important; }
-      .ascii-portrait pre { background: none !important; -webkit-text-fill-color: #333 !important; color: #333 !important; }
+      .ascii-portrait { display: none !important; }
       body, body:not(.reader) { background: #fff !important; }
       .layout { display: block; }
       .sidebar { position: static; width: auto; margin-bottom: 24px; }
@@ -1282,7 +1301,8 @@
       <aside class="sidebar">
         <div class="profile-card" id="profileCard">
           <div class="profile-image">
-            <div class="ascii-portrait" role="img" aria-label="ASCII art portrait of Jihun Chae"><pre id="asciiPre">                                                                                                   `
+            <img src="your-image.jpg" alt="Jihun Chae" />
+            <div class="ascii-portrait" aria-hidden="true"><pre id="asciiPre">                                                                                                   `
                                                                                                   .,
                                    ``````` `````````````                                          ` 
                               `````                     ````                                        
@@ -1359,17 +1379,17 @@ Z&amp;@#8888#888###888888888888888888&amp;M%B0$B%M&amp;###88&amp;888&amp;&amp;&a
 
           <p class="side-label"><span lang="en">Focus</span><span lang="ko">전문 분야</span></p>
           <div class="side-list" lang="en">
-            <div>Human-centered AI</div>
-            <div>Designing agentic adaptation</div>
-            <div>Embedded with the people doing the work</div>
-            <div>Vague ask to shipped solution, fast</div>
-            <div>AI transformation &amp; internal adoption (AX)</div>
+            <div>Human-centered AI systems</div>
+            <div>Agentic adaptation design</div>
+            <div>On-site requirements discovery</div>
+            <div>Rapid prototype-to-production delivery</div>
+            <div>AI transformation &amp; enterprise adoption (AX)</div>
           </div>
           <div class="side-list" lang="ko">
-            <div>인간 중심 AI</div>
+            <div>인간 중심 AI 시스템</div>
             <div>에이전트 적응 설계</div>
-            <div>현업부서에 들어가 함께 일하는 방식</div>
-            <div>모호한 요구를 빠르게 작동하는 결과물로</div>
+            <div>현장 요구사항 발굴</div>
+            <div>프로토타입의 신속한 실전 전환</div>
             <div>AI 트랜스포메이션 · 사내 내재화 (AX)</div>
           </div>
 
@@ -1403,18 +1423,18 @@ Z&amp;@#8888#888###888888888888888888&amp;M%B0$B%M&amp;###88&amp;888&amp;&amp;&a
         <div class="caps" aria-label="Capabilities">
           <div class="caps-row">
             <span class="k"><span lang="en">Build</span><span lang="ko">구축</span></span>
-            <span class="v" lang="en">problem discovery<span class="sep">/</span>agent architecture<span class="sep">/</span>orchestration<span class="sep">/</span>retrieval &amp; context<span class="sep">/</span>tools &amp; APIs<span class="sep">/</span>memory<span class="sep">/</span>multimodal I/O</span>
-            <span class="v" lang="ko">문제 발굴<span class="sep">/</span>에이전트 설계<span class="sep">/</span>오케스트레이션<span class="sep">/</span>검색·컨텍스트<span class="sep">/</span>툴·API 연동<span class="sep">/</span>메모리<span class="sep">/</span>멀티모달 입출력</span>
+            <span class="v" lang="en">Problem Discovery<span class="sep">·</span>Agent Architecture<span class="sep">·</span>Multi-Agent Orchestration<span class="sep">·</span>RAG &amp; Context Engineering<span class="sep">·</span>Tool &amp; API Integration<span class="sep">·</span>Multimodal Interfaces</span>
+            <span class="v" lang="ko">문제 정의<span class="sep">·</span>에이전트 아키텍처<span class="sep">·</span>멀티 에이전트 오케스트레이션<span class="sep">·</span>RAG · 컨텍스트 엔지니어링<span class="sep">·</span>툴 · API 연동<span class="sep">·</span>멀티모달 인터페이스</span>
           </div>
           <div class="caps-row">
             <span class="k"><span lang="en">Ship</span><span lang="ko">배포</span></span>
-            <span class="v" lang="en">Python<span class="sep">/</span>TypeScript<span class="sep">/</span>LLM APIs<span class="sep">/</span>prompt pipelines<span class="sep">/</span>containers<span class="sep">/</span>workflow automation<span class="sep">/</span>human-in-the-loop</span>
-            <span class="v" lang="ko">Python<span class="sep">/</span>TypeScript<span class="sep">/</span>LLM API<span class="sep">/</span>프롬프트 파이프라인<span class="sep">/</span>컨테이너<span class="sep">/</span>업무 자동화<span class="sep">/</span>사람 개입 설계</span>
+            <span class="v" lang="en">Python<span class="sep">·</span>TypeScript<span class="sep">·</span>LLM APIs<span class="sep">·</span>Prompt Pipelines<span class="sep">·</span>Containerized Services<span class="sep">·</span>Workflow Automation<span class="sep">·</span>Human-in-the-Loop Design</span>
+            <span class="v" lang="ko">Python<span class="sep">·</span>TypeScript<span class="sep">·</span>LLM API<span class="sep">·</span>프롬프트 파이프라인<span class="sep">·</span>컨테이너 기반 서비스<span class="sep">·</span>업무 자동화<span class="sep">·</span>사람 개입 설계</span>
           </div>
           <div class="caps-row">
             <span class="k"><span lang="en">Prove</span><span lang="ko">검증</span></span>
-            <span class="v" lang="en">evaluation design<span class="sep">/</span>baselines<span class="sep">/</span>observability<span class="sep">/</span>field studies<span class="sep">/</span>adoption &amp; retention</span>
-            <span class="v" lang="ko">평가 설계<span class="sep">/</span>기준선 비교<span class="sep">/</span>관측성<span class="sep">/</span>현장 검증<span class="sep">/</span>내재화·지속 사용률</span>
+            <span class="v" lang="en">Evaluation Design<span class="sep">·</span>Baseline Comparison<span class="sep">·</span>Observability<span class="sep">·</span>Field Studies<span class="sep">·</span>Adoption Measurement</span>
+            <span class="v" lang="ko">평가 설계<span class="sep">·</span>기준선 비교<span class="sep">·</span>관측성<span class="sep">·</span>현장 검증<span class="sep">·</span>내재화 측정</span>
           </div>
         </div>
 
@@ -1588,7 +1608,7 @@ Z&amp;@#8888#888###888888888888888888&amp;M%B0$B%M&amp;###88&amp;888&amp;&amp;&a
         </section>
 
         <section class="section" id="publications">
-          <h3 class="section-title"><span class="num">04</span><span lang="en">Publications</span><span lang="ko">논문</span></h3>
+          <h3 class="section-title"><span class="num">04</span><span lang="en">Publications</span><span lang="ko">논문</span><a class="title-aside" href="https://scholar.google.com/citations?user=OjxItRUAAAAJ" target="_blank" rel="noopener noreferrer"><span lang="en">Full list on Google Scholar ↗</span><span lang="ko">전체 목록: Google Scholar ↗</span></a></h3>
           <div class="filter" role="tablist" aria-label="Filter publications by year" id="pubFilter">
             <button class="active" data-year="all" role="tab"><span lang="en">All</span><span lang="ko">전체</span></button>
             <button data-year="2026" role="tab">2026</button>
