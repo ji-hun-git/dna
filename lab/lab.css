@@ -42,7 +42,10 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--ink);
-  background: var(--paper);
+  background:
+    linear-gradient(180deg, rgba(244, 242, 236, 0.84), var(--paper) 410px),
+    url("assets/lab-hero-field.png") right -120px top -120px / min(88vw, 1180px) auto no-repeat,
+    var(--paper);
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.6;
@@ -50,6 +53,20 @@ body {
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
   font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "cv05" 1;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(28, 27, 25, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 27, 25, 0.025) 1px, transparent 1px);
+  background-size: 52px 52px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 62%);
+          mask-image: linear-gradient(180deg, #000 0%, transparent 62%);
 }
 
 ::selection { background: rgba(193, 95, 60, 0.18); color: var(--ink); }
@@ -265,6 +282,40 @@ p { margin: 0; text-wrap: pretty; }
 }
 .rail-stats strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 
+.rail-visual {
+  position: relative;
+  height: 112px;
+  margin-top: 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(28, 27, 25, 0.68), rgba(28, 27, 25, 0.08)),
+    url("assets/lab-hero-field.png") right center / cover no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1), var(--shadow-sm);
+}
+.rail-visual::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.36;
+}
+.rail-visual::after {
+  content: "live systems";
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  color: rgba(251,250,246,0.82);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
 /* filter row */
 .rail-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
 .chip {
@@ -324,9 +375,9 @@ p { margin: 0; text-wrap: pretty; }
   border-left: 2px solid transparent;
   background: none;
   text-align: left;
-  transition: background 0.16s var(--ease), border-color 0.16s var(--ease);
+  transition: background 0.16s var(--ease), border-color 0.16s var(--ease), transform 0.16s var(--ease);
 }
-.project-card:hover { background: var(--paper-raised); }
+.project-card:hover { background: var(--paper-raised); transform: translateX(2px); }
 .project-card.active { background: var(--paper-raised); border-left-color: rgb(var(--brand)); }
 
 .card-index {
@@ -440,6 +491,17 @@ p { margin: 0; text-wrap: pretty; }
   overflow: hidden;
   background: var(--screen);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.viewport-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.035), transparent 12%, transparent 86%, rgba(0,0,0,0.22)),
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.024) 0 1px, transparent 1px 5px);
+  mix-blend-mode: screen;
+  opacity: 0.32;
 }
 .viewport-stage canvas { display: block; width: 100%; height: 100%; }
 
@@ -730,6 +792,12 @@ input[type="number"]:focus { outline: none; border-color: var(--ink-3); }
   .detail-grid, .analysis-grid { grid-template-columns: 1fr; }
   .controls { grid-template-columns: 1fr; }
   .lab-nav { flex-wrap: wrap; gap: 12px; }
+  body {
+    background:
+      linear-gradient(180deg, rgba(244, 242, 236, 0.9), var(--paper) 340px),
+      url("assets/lab-hero-field.png") center -90px / auto 420px no-repeat,
+      var(--paper);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -180,6 +180,7 @@ function viewportHTML(project) {
         <div class="viewport-tools">
           <button class="text-button" type="button" data-control="pause">Pause</button>
           <button class="text-button" type="button" data-control="reset">Reset</button>
+          <button class="text-button" type="button" data-control="copyLink">Copy link</button>
         </div>
       </figcaption>
       ${canRender
@@ -316,6 +317,21 @@ function mountSelectedSimulation(project) {
   mountedSimulation?.dispose?.();
   mountedSimulation = null;
 
+  const copyLink = $('[data-control="copyLink"]');
+  if (copyLink) {
+    copyLink.addEventListener("click", async () => {
+      const url = `${location.origin}${location.pathname}${project.route}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        copyLink.textContent = "Copied";
+        setTimeout(() => { copyLink.textContent = "Copy link"; }, 1300);
+      } catch {
+        copyLink.textContent = "Link ready";
+        setTimeout(() => { copyLink.textContent = "Copy link"; }, 1300);
+      }
+    }, { once: false });
+  }
+
   const renderer = rendererRegistry[project.id];
   if (!renderer) return;
 
@@ -325,6 +341,7 @@ function mountSelectedSimulation(project) {
     controls: {
       pause: $('[data-control="pause"]'),
       reset: $('[data-control="reset"]'),
+      copyLink: $('[data-control="copyLink"]'),
       randomize: $('[data-control="randomize"]'),
       variationButtons: [...document.querySelectorAll("[data-variation]")],
       count: $("#countControl"),
@@ -400,6 +417,22 @@ function selectProject(id, updateHash = false) {
   hlAccum = 0;
   currentEqEls.forEach((el, i) => el.classList.toggle("eq-active", i === 0));
   revealActiveCard();
+}
+
+function navigateProject(delta) {
+  const projects = sortedProjects();
+  const idx = Math.max(0, projects.findIndex((p) => p.id === currentProjectId));
+  const next = projects[(idx + delta + projects.length) % projects.length];
+  currentFilter = "All";
+  renderFilter();
+  selectProject(next.id, true);
+}
+
+function navigateVariation(delta) {
+  const buttons = [...document.querySelectorAll("[data-variation]")];
+  if (!buttons.length) return;
+  const idx = Math.max(0, buttons.findIndex((button) => button.classList.contains("active")));
+  buttons[(idx + delta + buttons.length) % buttons.length].click();
 }
 
 // Keep the active index entry in view by scrolling ONLY the rail list, never the
@@ -527,6 +560,15 @@ function boot() {
 
   window.addEventListener("hashchange", () => {
     selectProject(location.hash.replace("#", "") || labProjects[0].id);
+  });
+
+  window.addEventListener("keydown", (event) => {
+    const tag = (event.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.key === "j") navigateProject(1);
+    if (event.key === "k") navigateProject(-1);
+    if (event.key === "]") navigateVariation(1);
+    if (event.key === "[") navigateVariation(-1);
   });
 }
 
