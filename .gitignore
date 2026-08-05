@@ -1,5 +1,4 @@
-# This repo publishes ONLY the site. Everything else in this working folder
-# is unrelated local work and must never be committed.
+# Only the published site files are tracked.
 *
 !.gitignore
 !.nojekyll
