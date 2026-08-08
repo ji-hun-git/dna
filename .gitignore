@@ -1,0 +1,42 @@
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Build and tool output
+node_modules/
+.next/
+build/
+dist/
+coverage/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Sensitive working data must never be committed
+private-data/
+user-data/
+uploads/
+exports/
+*.vcf
+*.vcf.gz
+*.bam
+*.bai
+*.fastq
+*.fastq.gz
+*.dcm
+
+# Temporary document rendering
+rendered/
+tmp/
+temp/

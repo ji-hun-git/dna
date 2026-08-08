@@ -1,0 +1,203 @@
+Create a new project folder and treat it as the central workspace for this project.
+
+The project is a consumer-facing DNA and medical-data analysis platform. Users would be able to upload information such as DNA/genomic data, lab results, health reports, medical records, wearable data, and other relevant health information. The service would analyze the uploaded data, identify potentially useful patterns, correlations, trends, and risk-related signals, and translate them into understandable lifestyle-oriented insights.
+
+This is **not** intended to operate as a doctor, medical provider, pharmacy, diagnostic service, or prescription service. The product should be designed around the safest and most legally defensible model possible. It should avoid claiming to diagnose, cure, treat, or prevent disease unless a specific feature is legally permitted and properly regulated. Recommendations should primarily focus on areas such as lifestyle, nutrition, sleep, exercise, habits, wellness, questions users may want to discuss with licensed professionals, and educational interpretation of their own data.
+
+Start by thoroughly researching the product and business model.
+
+Study existing companies and services in areas including:
+
+* consumer DNA analysis
+* genomic interpretation
+* medical-record analysis
+* blood-test and biomarker interpretation
+* personalized wellness
+* longevity platforms
+* preventive-health dashboards
+* AI health assistants
+* wearable-data analysis
+* ancestry/genetics platforms moving into health
+* clinician-facing genomic software
+* direct-to-consumer health-data platforms
+
+For each relevant competitor or adjacent company, analyze:
+
+* what users upload or connect
+* what the platform analyzes
+* what outputs or recommendations it provides
+* whether clinicians are involved
+* regulatory positioning
+* disclaimers and boundaries
+* pricing and subscription structure
+* acquisition channels
+* retention mechanisms
+* target customer
+* major differentiators
+* weaknesses and user complaints
+* privacy and data-security model
+* DNA/genomic data handling
+* medical-record handling
+* whether data is sold, shared, licensed, or used for research
+* integrations and APIs
+* potential regulatory or liability risks
+
+Research the legal and compliance landscape for launching this type of service, especially for the United States, South Korea, and other attractive initial markets. Investigate relevant areas such as health-data privacy, genetic-data privacy, informed consent, medical-device regulation, clinical decision support, direct-to-consumer genetic testing, advertising claims, HIPAA applicability, FTC rules, FDA considerations, GDPR where relevant, Korean healthcare and genetic-testing regulations, data retention, deletion rights, cybersecurity, and cross-border storage.
+
+Do not assume that adding a disclaimer automatically makes a feature legal. Distinguish between:
+
+1. low-risk wellness features,
+2. educational health-data interpretation,
+3. features that may cross into medical advice,
+4. diagnostic or clinical functionality that may require professional involvement or regulatory approval.
+
+Then design several possible versions of the business, starting with the legally safest and easiest-to-launch version.
+
+Look specifically for a strong **niche wedge** rather than trying to build a generic health platform immediately. Identify underserved customer segments where users have valuable health data but lack an easy way to understand it.
+
+Potential niches to investigate include areas such as:
+
+* people with years of scattered lab results
+* quantified-self users
+* longevity enthusiasts
+* users of consumer DNA tests
+* people with wearable histories
+* athletes
+* executives
+* families organizing longitudinal health records
+* people preparing questions for doctor visits
+* nutrition and fitness optimization
+* medication-history organization without giving prescribing advice
+* aging and preventive wellness
+* specialized demographic or geographic markets
+
+Do not limit the research to these examples. Search broadly for overlooked, high-intent niches.
+
+The goal is to discover a business that can become **high-margin, recurring-revenue, defensible, and scalable**, rather than merely an interesting health application.
+
+For each promising niche, estimate:
+
+* severity of the customer problem
+* willingness to pay
+* market size
+* competition
+* regulatory burden
+* customer acquisition difficulty
+* retention potential
+* gross-margin potential
+* frequency of use
+* available data sources
+* technical difficulty
+* trust requirements
+* possible network effects or data advantages
+* opportunities for subscriptions, premium reports, family plans, professional plans, or B2B partnerships
+
+Explore monetization models including:
+
+* monthly subscription
+* annual membership
+* one-time comprehensive analysis
+* recurring health-data monitoring
+* premium genomic reports
+* family plans
+* employer wellness
+* partnerships with clinics
+* partnerships with laboratories
+* fitness and longevity professionals
+* API access
+* white-label services
+* research participation, only with explicit and legally appropriate consent
+* other ethical high-margin models
+
+Avoid monetization strategies that would undermine trust, exploit sensitive medical information, or create unacceptable privacy or regulatory risk.
+
+Develop a product architecture for the strongest opportunity. Consider a workflow such as:
+
+User uploads/connects data → normalization → structured personal health timeline → analysis engine → pattern detection → evidence retrieval → confidence/risk classification → user-friendly explanation → lifestyle-oriented suggestions → questions to discuss with a healthcare professional → ongoing tracking.
+
+For DNA analysis, investigate appropriate handling of:
+
+* raw genotype files
+* VCF files
+* SNP interpretation
+* polygenic scores
+* pharmacogenomic information
+* ancestry-related confounding
+* population-specific limitations
+* penetrance and uncertainty
+* false positives
+* clinical versus consumer-grade sequencing
+* evidence-quality grading
+
+The interface should clearly communicate uncertainty and should never present weak correlations as medical facts.
+
+Also research how modern AI systems can safely process medical records. Investigate:
+
+* document parsing
+* OCR
+* lab normalization
+* terminology mapping
+* longitudinal timeline creation
+* abnormal-value detection
+* medical knowledge retrieval
+* citation of original records
+* hallucination reduction
+* human review
+* explainability
+* provenance
+* confidence scoring
+
+Every important health-related conclusion should ideally be traceable back to the user's source data and reliable medical or scientific evidence.
+
+Use all relevant available tools, skills, connected services, code capabilities, and research resources that can improve the work. Do not use tools merely for the sake of using them; use them where they materially improve the analysis.
+
+Organize the project folder with sections such as:
+
+/research
+/competitors
+/regulatory
+/customer-niches
+/business-model
+/product
+/technical-architecture
+/dna-analysis
+/medical-record-analysis
+/privacy-security
+/market-sizing
+/pricing
+/go-to-market
+/experiments
+/mvp
+/risks
+/decisions
+
+Create a living research document that records sources, findings, assumptions, unresolved questions, and important decisions.
+
+At the end of the initial research phase, produce:
+
+1. Market landscape
+2. Competitor map
+3. Regulatory and legal risk map
+4. Privacy and trust requirements
+5. 10–20 potential niche markets
+6. Scoring matrix ranking those niches
+7. Top 3 business opportunities
+8. Recommended initial wedge
+9. Proposed product and user journey
+10. MVP feature set
+11. Features we should deliberately NOT build at launch
+12. Monetization strategy
+13. Suggested pricing
+14. Go-to-market strategy
+15. Technical architecture
+16. Data-security architecture
+17. DNA-analysis methodology
+18. Medical-record-analysis methodology
+19. Evidence and citation strategy
+20. Risk and failure-mode analysis
+21. 30/60/90-day validation roadmap
+22. Experiments that can test willingness to pay before building the full platform
+
+Prioritize building something users will genuinely pay for, with repeat usage and strong margins, while maintaining a very high standard for medical safety, scientific credibility, privacy, informed consent, and legal compliance.
+
+Challenge the concept aggressively. If the original idea is too broad, legally difficult, poorly differentiated, or economically unattractive, identify a better adjacent business model rather than forcing the initial concept to work.
