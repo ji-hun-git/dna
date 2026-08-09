@@ -904,6 +904,51 @@
 
     /* Publications read as an academic list, not a stack of cards */
     #pubItems { gap: 0; }
+    .pub-summary {
+      margin: 0 0 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      color: var(--soft);
+    }
+    body.ko .pub-summary { font-family: 'Pretendard', sans-serif; font-size: 0.78rem; }
+    .pub-group + .pub-group { margin-top: 22px; }
+    .pub-group-title {
+      display: flex;
+      align-items: baseline;
+      gap: 9px;
+      margin: 0 0 2px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--soft);
+    }
+    body.ko .pub-group-title { text-transform: none; letter-spacing: 0.03em; font-size: 0.84rem; }
+    .pub-group-n {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: rgb(var(--accent, 23 24 27));
+    }
+    .pub-n {
+      display: inline-block;
+      min-width: 1.6em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.78rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--soft);
+    }
+    .pub-tag {
+      display: inline-block;
+      margin-left: 4px;
+      padding: 1px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 0.72rem;
+      color: var(--soft);
+      white-space: nowrap;
+    }
     #pubItems .item {
       background: transparent;
       border: 0;
@@ -1442,7 +1487,7 @@
       <aside class="sidebar">
         <div class="profile-card" id="profileCard">
           <div class="profile-image">
-            <img src="your-image.jpg" alt="Jihun Chae" />
+            <img src="your-image.jpg" alt="Jihun Chae" />
           </div>
 
           <h1 class="name"><span lang="en">Jihun Chae</span><span lang="ko">채지훈</span></h1>
@@ -1519,14 +1564,29 @@
               <span class="item-title"><span lang="en">Development and Evaluation of the Inclusive Conversational AI Service for Game Accessibility Enhancement</span><span lang="ko">게임 접근성 향상을 위한 포용적 대화형 AI 서비스의 개발 및 평가</span></span>
               <div class="item-meta"><span lang="en">2024.05 – 2027.04 | KAIST | National Research Foundation of Korea (NRF) | Lead Student Researcher</span><span lang="ko">2024.05 ~ 2027.04 | KAIST | 한국연구재단 (NRF) | 학생연구원 (총괄)</span></div>
               <ul class="item-desc" lang="en">
-                <li>Build GAIA, an LLM agent that solves problems users cannot solve alone: RAG over game knowledge, an agent loop reading live screen and audio, voice in and out.</li>
+                <li>Build GAIA, a domain-specialized LLM agent that solves problems users cannot solve alone: RAG over large game-knowledge contexts, an agent loop reading live screen and audio, voice in and out, and an operator dashboard.</li>
                 <li>Own the full loop from problem to proof: field interviews to locate the real barrier, then requirements, shipped prototypes, and evaluation with the same users.</li>
+                <li>Design principles distilled from this work — including when an AI assistant should intervene and how refusals stay trustworthy — published at ACM IUI '26.</li>
               </ul>
               <ul class="item-desc" lang="ko">
-                <li>사용자가 혼자 해결할 수 없는 문제를 푸는 LLM 에이전트 GAIA 개발. 게임 지식 RAG, 실시간 화면·음성 맥락 에이전트 루프, 음성 입출력.</li>
+                <li>사용자가 혼자 해결할 수 없는 문제를 푸는 도메인 특화 LLM 에이전트 GAIA 개발. 대규모 게임 지식 RAG, 실시간 화면·음성 맥락 에이전트 루프, 음성 입출력, 운영 대시보드.</li>
                 <li>문제 발굴부터 검증까지 전 과정 수행: 현장 인터뷰로 실제 장벽을 찾고, 요구사항 정의, 프로토타입 구현, 동일 사용자 평가.</li>
+                <li>이 과정에서 도출한 설계 원칙 — AI가 언제 개입해야 하는가, 거부는 어떻게 신뢰를 유지하는가 — 을 ACM IUI '26에 게재.</li>
               </ul>
               <div class="partners"><span class="p-label"><span lang="en">Partners</span><span lang="ko">협력</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/samsung.png" alt="" onerror="this.remove()" />Samsung Electronics</span><span class="p-chip"><img class="p-logo" src="assets/logos/nexon.png" alt="" onerror="this.remove()" />Nexon Intelligence Labs</span><span class="p-chip"><img class="p-logo" src="assets/logos/smilegate.png" alt="" onerror="this.remove()" />Smilegate D&amp;I</span><span class="p-chip"><img class="p-logo" src="assets/logos/nrc.png" alt="" onerror="this.remove()" />National Rehabilitation Center</span><span class="p-chip"><img class="p-logo" src="assets/logos/specialeffect.png" alt="" onerror="this.remove()" />SpecialEffect (UK)</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/samsung.png" alt="" onerror="this.remove()" />삼성전자</span><span class="p-chip"><img class="p-logo" src="assets/logos/nexon.png" alt="" onerror="this.remove()" />넥슨 인텔리전스 랩</span><span class="p-chip"><img class="p-logo" src="assets/logos/smilegate.png" alt="" onerror="this.remove()" />스마일게이트 D&amp;I</span><span class="p-chip"><img class="p-logo" src="assets/logos/nrc.png" alt="" onerror="this.remove()" />국립재활원</span><span class="p-chip"><img class="p-logo" src="assets/logos/specialeffect.png" alt="" onerror="this.remove()" />SpecialEffect (영국)</span></span></div>
+            </div>
+
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Automated Data-Quality Measurement &amp; Verification Engine (Industry Contract)</span><span lang="ko">데이터 품질 측정·검증 자동화 엔진 (산업체 용역)</span></span>
+              <div class="item-meta"><span lang="en">2026 | Industry-commissioned project | Sole technical developer</span><span lang="ko">2026 | 산업체 용역 과제 | 단독 기술 개발</span></div>
+              <ul class="item-desc" lang="en">
+                <li>Designed, built, and delivered a production data-quality engine: rule-based and statistical validation over real enterprise data, shipped as a versioned release with a formal delivery report.</li>
+                <li>Deliberately chose not to use an LLM where determinism and auditability mattered more — drawing the boundary of where AI belongs is part of the engineering.</li>
+              </ul>
+              <ul class="item-desc" lang="ko">
+                <li>실제 기업 데이터에 대한 규칙·통계 기반 품질 측정/검증 엔진을 설계·구현해 정식 릴리스와 결과보고서로 납품.</li>
+                <li>결정론과 감사 가능성이 중요한 구간에는 LLM을 쓰지 않기로 판단 — AI를 어디에 배치하지 않을지 정하는 것까지가 설계임을 실무로 증명.</li>
+              </ul>
             </div>
 
             <div class="item reveal">
@@ -1608,6 +1668,13 @@
               <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/krafton.png" alt="" onerror="this.remove()" />KRAFTON</span><span class="p-chip"><img class="p-logo" src="assets/logos/oliveyoung.png" alt="" onerror="this.remove()" />CJ Olive Young</span><span class="p-chip"><img class="p-logo" src="assets/logos/openai.png" alt="" onerror="this.remove()" />OpenAI</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/krafton.png" alt="" onerror="this.remove()" />크래프톤</span><span class="p-chip"><img class="p-logo" src="assets/logos/oliveyoung.png" alt="" onerror="this.remove()" />CJ올리브영</span><span class="p-chip"><img class="p-logo" src="assets/logos/openai.png" alt="" onerror="this.remove()" />OpenAI</span></span></div>
             </div>
             <div class="item reveal">
+              <span class="item-title"><span lang="en">Best Presentation Award</span><span lang="ko">우수발표논문상</span></span>
+              <div class="item-meta"><span lang="en">2026.05 | Korea Game Society Spring Conference 2026</span><span lang="ko">2026.05 | 한국게임학회 2026 춘계학술발표대회</span></div>
+              <p class="item-desc" lang="en">Awarded for "Design principles for game AI assistant: Analyzing functional barriers and accessibility requirements of players with disabilities" (Proceedings 83–88), presented 30 May 2026 at Tech University of Korea.</p>
+              <p class="item-desc" lang="ko">“게임 AI 어시스턴트 설계 원칙: 장애 플레이어의 기능적 장벽과 접근성 요구사항 분석” (논문집 83–88)으로 수상, 2026년 5월 30일 한국공학대학교에서 발표.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip" data-m="K">Korea Game Society</span></span><span class="p-set" lang="ko"><span class="p-chip" data-m="게">한국게임학회</span></span></div>
+            </div>
+            <div class="item reveal">
               <span class="item-title"><span lang="en">Grand Prize – Edu4.0 Q TA Activities</span><span lang="ko">최우수상 – Edu4.0 Q TA 활동</span></span>
               <div class="item-meta"><span lang="en">2026.02 | Edu4.0 Q TA Case Presentation</span><span lang="ko">2026.02 | Edu4.0 Q TA 사례 발표</span></div>
               <p class="item-desc" lang="en">KAIST's top TA award: selected as the best case presentation on running a course with the Edu4.0 Q teaching model.</p>
@@ -1629,18 +1696,18 @@
               <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/kt.png" alt="" onerror="this.remove()" />KT</span><span class="p-chip" data-m="P">Pohang City</span><span class="p-chip" data-m="P">Pohang Cultural Foundation</span><span class="p-chip"><img class="p-logo" src="assets/logos/handong.png" alt="" onerror="this.remove()" />Handong Global University</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/kt.png" alt="" onerror="this.remove()" />KT</span><span class="p-chip" data-m="포">포항시</span><span class="p-chip" data-m="포">포항문화재단</span><span class="p-chip"><img class="p-logo" src="assets/logos/handong.png" alt="" onerror="this.remove()" />한동대학교</span></span></div>
             </div>
             <div class="item reveal">
-              <span class="item-title"><span lang="en">Excellence Award</span><span lang="ko">우수상</span></span>
-              <div class="item-meta"><span lang="en">2023.06 | National Metaverse Developer Contest</span><span lang="ko">2023.06 | 메타버스 개발자 경진대회</span></div>
-              <p class="item-desc" lang="en">Built a digital therapeutic on Meta Quest Pro eye tracking that turns eye-muscle rehabilitation into play; awarded the Skonec Entertainment CEO's Award.</p>
-              <p class="item-desc" lang="ko">메타 퀘스트 프로 시선추적으로 눈 근육 재활을 놀이처럼 만든 디지털 치료기기를 개발, 스코넥엔터테인먼트 대표이사상 수상.</p>
-              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/msit.png" alt="" onerror="this.remove()" />MSIT</span><span class="p-chip" data-m="K">Korea Metaverse Industry Association</span><span class="p-chip"><img class="p-logo" src="assets/logos/nipa.png" alt="" onerror="this.remove()" />NIPA</span><span class="p-chip"><img class="p-logo" src="assets/logos/skonec.png" alt="" onerror="this.remove()" />Skonec Entertainment</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/msit.png" alt="" onerror="this.remove()" />과학기술정보통신부</span><span class="p-chip" data-m="메">한국메타버스산업협회</span><span class="p-chip"><img class="p-logo" src="assets/logos/nipa.png" alt="" onerror="this.remove()" />정보통신산업진흥원</span><span class="p-chip"><img class="p-logo" src="assets/logos/skonec.png" alt="" onerror="this.remove()" />스코넥엔터테인먼트</span></span></div>
-            </div>
-            <div class="item reveal">
               <span class="item-title"><span lang="en">Outstanding Student Research Award</span><span lang="ko">우수 학생 연구상</span></span>
               <div class="item-meta"><span lang="en">2023.11 | Autumn Conference Student Research Award</span><span lang="ko">2023.11 | 추계학술대회 학생 연구상</span></div>
               <p class="item-desc" lang="en">Society-level student research award for eye-tracking VR game studies: analyzing oculomotor response to make virtual environments more immersive and more accessible.</p>
               <p class="item-desc" lang="ko">시선추적 VR 게임 연구로 학회 우수 학생 연구상: 안구 운동 반응 분석으로 가상 환경의 몰입감과 접근성을 높임.</p>
               <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/kmms.png" alt="" onerror="this.remove()" />Korea Multimedia Society (KMMS)</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/kmms.png" alt="" onerror="this.remove()" />한국멀티미디어학회</span></span></div>
+            </div>
+            <div class="item reveal">
+              <span class="item-title"><span lang="en">Excellence Award</span><span lang="ko">우수상</span></span>
+              <div class="item-meta"><span lang="en">2023.10 | 2023 Metaverse Developer Contest</span><span lang="ko">2023.10 | 2023 메타버스 개발자 경진대회</span></div>
+              <p class="item-desc" lang="en">Built <em>Watchers</em> (team EyeCU), a digital therapeutic on Meta Quest Pro eye tracking that turns eye-muscle rehabilitation into play. Adult division; awarded the Skonec Entertainment CEO's Award.</p>
+              <p class="item-desc" lang="ko">메타 퀘스트 프로 시선추적으로 눈 근육 재활을 놀이처럼 만든 디지털 치료기기 <em>Watchers</em> 개발 (팀명 EyeCU). 성인 부문, 스코넥엔터테인먼트 대표이사상 수상.</p>
+              <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/msit.png" alt="" onerror="this.remove()" />MSIT</span><span class="p-chip" data-m="K">Korea Metaverse Industry Association</span><span class="p-chip"><img class="p-logo" src="assets/logos/nipa.png" alt="" onerror="this.remove()" />NIPA</span><span class="p-chip"><img class="p-logo" src="assets/logos/skonec.png" alt="" onerror="this.remove()" />Skonec Entertainment</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/msit.png" alt="" onerror="this.remove()" />과학기술정보통신부</span><span class="p-chip" data-m="메">한국메타버스산업협회</span><span class="p-chip"><img class="p-logo" src="assets/logos/nipa.png" alt="" onerror="this.remove()" />정보통신산업진흥원</span><span class="p-chip"><img class="p-logo" src="assets/logos/skonec.png" alt="" onerror="this.remove()" />스코넥엔터테인먼트</span></span></div>
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">University President's Award</span><span lang="ko">한동대학교 총장상</span></span>
@@ -1651,7 +1718,7 @@
             </div>
             <div class="item reveal">
               <span class="item-title"><span lang="en">Outstanding Student Research Award</span><span lang="ko">우수 학생 연구상</span></span>
-              <div class="item-meta"><span lang="en">2022.05 | Spring Conference Student Research Award</span><span lang="ko">2022.05 | 춘계학술대회 학생 연구상</span></div>
+              <div class="item-meta"><span lang="en">2022.05 | Spring Undergraduate Paper Competition</span><span lang="ko">2022.05 | 춘계 학부생논문경진대회</span></div>
               <p class="item-desc" lang="en">Student research award for experimental work on VR exposure therapy for cynophobia, proposing spatiotemporal design factors that raise treatment efficacy.</p>
               <p class="item-desc" lang="ko">개 공포증 VR 노출 치료 실험 연구로 우수 학생 연구상: 치료 효과를 높이는 시공간 설계 요소 제안.</p>
               <div class="partners"><span class="p-label"><span lang="en">Hosts · Sponsors</span><span lang="ko">주최 · 후원</span></span><span class="p-set" lang="en"><span class="p-chip"><img class="p-logo" src="assets/logos/kmms.png" alt="" onerror="this.remove()" />Korea Multimedia Society (KMMS)</span></span><span class="p-set" lang="ko"><span class="p-chip"><img class="p-logo" src="assets/logos/kmms.png" alt="" onerror="this.remove()" />한국멀티미디어학회</span></span></div>
@@ -1698,63 +1765,85 @@
             <button data-year="2023" role="tab" aria-selected="false">2023</button>
             <button data-year="2022" role="tab" aria-selected="false">2022</button>
           </div>
+          <p class="pub-summary">
+            <span lang="en">21 total · First author 7 · Co-first author 4 · Co-second author 1</span>
+            <span lang="ko">총 21편 · 제1저자 7 · 공동 제1저자 4 · 공동 제2저자 1</span>
+          </p>
           <div class="items" id="pubItems">
+            <div class="pub-group">
+              <h4 class="pub-group-title"><span lang="en">Thesis</span><span lang="ko">학위논문</span><span class="pub-group-n">1</span></h4>
             <div class="item reveal" data-year="2026">
-              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2026). <a href="https://doi.org/10.64145/kjdgs.2026.2.1.29" target="_blank" rel="noopener noreferrer"><span class="paper-title">Toward Ludic AI: Proposing an Evaluation Framework for the Ludic Competence of Game-Playing AI.</span></a> <span class="venue">Digital Game Research, 2(1), 29–59.</span> <a class="pub-link" href="https://doi.org/10.64145/kjdgs.2026.2.1.29" target="_blank" rel="noopener noreferrer">DOI ↗</a> <a class="pub-link" href="https://www.researchgate.net/publication/408515882_Toward_Ludic_AI_Proposing_an_Evaluation_Framework_for_the_Ludic_Competence_of_Game-Playing_AI" target="_blank" rel="noopener noreferrer">Article ↗</a></p>
+              <p class="item-desc"><span class="pub-n"></span><span class="pub-author-me">Chae, J.</span> (2026). <span class="paper-title">Designing and evaluating an AI assistant for players with disabilities: Empirical findings and future design implications.</span> <span class="venue">Master's thesis, Korea Advanced Institute of Science and Technology. Advisor: Young Yim Doh.</span> <span class="pub-tag">MGCT 26010</span></p>
+            </div>
+            </div>
+            <div class="pub-group">
+              <h4 class="pub-group-title"><span lang="en">Journal Articles</span><span lang="ko">학술지 논문</span><span class="pub-group-n">4</span></h4>
+            <div class="item reveal" data-year="2026">
+              <p class="item-desc"><span class="pub-n">1</span><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2026). <a href="https://doi.org/10.64145/kjdgs.2026.2.1.29" target="_blank" rel="noopener noreferrer"><span class="paper-title">Toward Ludic AI: Proposing an evaluation framework for the ludic competence of game-playing AI.</span></a> <span class="venue">Digital Game Research, 2(1), 29–59.</span> <a class="pub-link" href="https://doi.org/10.64145/kjdgs.2026.2.1.29" target="_blank" rel="noopener noreferrer">DOI ↗</a> <a class="pub-link" href="https://www.researchgate.net/publication/408515882_Toward_Ludic_AI_Proposing_an_Evaluation_Framework_for_the_Ludic_Competence_of_Game-Playing_AI" target="_blank" rel="noopener noreferrer">Article ↗</a></p>
             </div>
             <div class="item reveal" data-year="2026">
-              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Lee, S., Jeong, S., &amp; Doh, Y. Y. (2026). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12890914" target="_blank" rel="noopener noreferrer"><span class="paper-title">Patterns of Preference for AI Assistants in Game Accessibility Among Players with Disabilities: An Exploratory Analysis of Functional Barriers and Intervention Timing.</span></a> <span class="venue">Journal of Korea Multimedia Society, 29(6), 885–904.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12890914" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
+              <p class="item-desc"><span class="pub-n">2</span><span class="pub-author-me">Chae, J.</span>, Lee, S., Jeong, S., &amp; Doh, Y. Y. (2026). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12890914" target="_blank" rel="noopener noreferrer"><span class="paper-title">Patterns of preference for AI assistants in game accessibility among players with disabilities: An exploratory analysis of functional barriers and intervention timing.</span></a> <span class="venue">Journal of Korea Multimedia Society, 29(6), 885–904.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12890914" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
             </div>
+            <div class="item reveal" data-year="2023">
+              <p class="item-desc"><span class="pub-n">3</span><span class="pub-author-me">Chae, J.</span>, Yoo, S., Lee, Y., Kim, Y., Kim, H., &amp; Han, D. (2023). <a href="http://journal.cg-korea.org/archive/view_article?pid=jkcgs-29-3-137" target="_blank" rel="noopener noreferrer"><span class="paper-title">Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles.</span></a> <span class="venue">Journal of the Korea Computer Graphics Society, 29(3), 137–147.</span> <a class="pub-link" href="http://journal.cg-korea.org/archive/view_article?pid=jkcgs-29-3-137" target="_blank" rel="noopener noreferrer">Article ↗</a></p>
+            </div>
+            <div class="item reveal" data-year="2023">
+              <p class="item-desc"><span class="pub-n">4</span>Yoon, D., Park, S., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2023). <a href="https://doi.org/10.21203/rs.3.rs-2637740/v1" target="_blank" rel="noopener noreferrer"><span class="paper-title">Methodology for improving the performance of demand forecasting through machine learning.</span></a> <span class="venue">Research Square [Preprint].</span> <a class="pub-link" href="https://doi.org/10.21203/rs.3.rs-2637740/v1" target="_blank" rel="noopener noreferrer">Preprint ↗</a></p>
+            </div>
+            </div>
+            <div class="pub-group">
+              <h4 class="pub-group-title"><span lang="en">International Conference Proceedings</span><span lang="ko">국제 학술대회</span><span class="pub-group-n">2</span></h4>
             <div class="item reveal" data-year="2026">
-              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). <a href="https://doi.org/10.1145/3742413.3789155" target="_blank" rel="noopener noreferrer"><span class="paper-title">Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns.</span></a> <span class="venue">Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI '26). ACM.</span> <a class="pub-link" href="https://doi.org/10.1145/3742413.3789155" target="_blank" rel="noopener noreferrer">DOI ↗</a></p>
+              <p class="item-desc"><span class="pub-n">5</span><span class="pub-author-me">Chae, J.</span>, Seo, G., Jeong, S., &amp; Doh, Y. Y. (2026). <a href="https://doi.org/10.1145/3742413.3789155" target="_blank" rel="noopener noreferrer"><span class="paper-title">Design principles of Game AI Assistant (GAIA) for players with disabilities: Accessibility needs and ethical concerns.</span></a> <span class="venue">Proceedings of the 31st International Conference on Intelligent User Interfaces (IUI '26), 144–155. ACM.</span> <a class="pub-link" href="https://doi.org/10.1145/3742413.3789155" target="_blank" rel="noopener noreferrer">DOI ↗</a></p>
             </div>
             <div class="item reveal" data-year="2025">
-              <p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). <a href="https://doi.org/10.1145/3706599.3719723" target="_blank" rel="noopener noreferrer"><span class="paper-title">Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties.</span></a> <span class="venue">Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA '25). ACM.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span> <a class="pub-link" href="https://doi.org/10.1145/3706599.3719723" target="_blank" rel="noopener noreferrer">DOI ↗</a></p>
+              <p class="item-desc"><span class="pub-n">6</span>Park, E., <span class="pub-author-me">Chae, J.</span>, Eum, K., Choi, E., Oh, H., &amp; Doh, Y. Y. (2025). <a href="https://doi.org/10.1145/3706599.3719723" target="_blank" rel="noopener noreferrer"><span class="paper-title">Press start to continue: A thematic analysis of the iterative process of hardcore players with disabilities adapting to gameplay difficulties.</span></a> <span class="venue">Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA '25). ACM.</span> <span lang="en">Co-first author.</span><span lang="ko">공동 제1저자.</span> <a class="pub-link" href="https://doi.org/10.1145/3706599.3719723" target="_blank" rel="noopener noreferrer">DOI ↗</a></p>
+            </div>
+            </div>
+            <div class="pub-group">
+              <h4 class="pub-group-title"><span lang="en">Domestic Conference Proceedings</span><span lang="ko">국내 학술대회</span><span class="pub-group-n">14</span></h4>
+            <div class="item reveal" data-year="2026">
+              <p class="item-desc"><span class="pub-n">7</span>Lee, S., <span class="pub-author-me">Chae, J.</span>, Jeong, S., &amp; Doh, Y. Y. (2026). <span class="paper-title">Design principles for game AI assistant: Analyzing functional barriers and accessibility requirements of players with disabilities.</span> <span class="venue">Korea Game Society Spring Conference 2026, 83–88.</span> <span class="pub-tag">Best Presentation Award</span></p>
             </div>
             <div class="item reveal" data-year="2025">
-              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2025). <span class="paper-title">The identity and role of game NPCs: Past, present, and future.</span> <span class="venue">Proceedings of the 1st DiGRA Korea Conference 2025.</span></p>
+              <p class="item-desc"><span class="pub-n">8</span><span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2025). <span class="paper-title">The identity and role of game NPCs: Past, present, and future.</span> <span class="venue">Proceedings of the 1st DiGRA Korea Conference 2025.</span></p>
             </div>
             <div class="item reveal" data-year="2025">
-              <p class="item-desc">Oh, H., Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12131622" target="_blank" rel="noopener noreferrer"><span class="paper-title">RAG-Enhanced LLM Chatbot for Game Accessibility: Development and Evaluation of GAIA.</span></a> <span class="venue">Korea HCI Conference 2025.</span> <span lang="en">Co-second Author.</span><span lang="ko">공동 제2저자.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12131622" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
+              <p class="item-desc"><span class="pub-n">9</span>Oh, H., Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, Seo, J., Choi, E., &amp; Doh, Y. Y. (2025). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12131622" target="_blank" rel="noopener noreferrer"><span class="paper-title">RAG-enhanced LLM chatbot for game accessibility: Development and evaluation of GAIA.</span></a> <span class="venue">Korea HCI Conference 2025.</span> <span lang="en">Co-second author.</span><span lang="ko">공동 제2저자.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12131622" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
             </div>
             <div class="item reveal" data-year="2024">
-              <p class="item-desc">Choi, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <span class="paper-title">Prompting-Based LLM Framework for Ethical Decision-Making in the Trolley Dilemma: Embedding Hofstede's Cultural Dimensions Theory (PLETH).</span> <span class="venue">Korean Artificial Intelligence Association Conference 2024.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span></p>
+              <p class="item-desc"><span class="pub-n">10</span>Choi, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <span class="paper-title">Prompting-based LLM framework for ethical decision-making in the trolley dilemma: Embedding Hofstede's cultural dimensions theory (PLETH).</span> <span class="venue">Korean Artificial Intelligence Association Conference 2024.</span> <span lang="en">Co-first author.</span><span lang="ko">공동 제1저자.</span></p>
             </div>
             <div class="item reveal" data-year="2024">
-              <p class="item-desc">Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11866034" target="_blank" rel="noopener noreferrer"><span class="paper-title">GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies.</span></a> <span class="venue">Korea Computer Graphics Society Conference 2024.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11866034" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
+              <p class="item-desc"><span class="pub-n">11</span>Eum, K., Park, E., <span class="pub-author-me">Chae, J.</span>, &amp; Doh, Y. Y. (2024). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11866034" target="_blank" rel="noopener noreferrer"><span class="paper-title">GAIA: A game AI assistant service framework integrating problem-solving and emotion regulation strategies.</span></a> <span class="venue">Korea Computer Graphics Society Conference 2024.</span> <span lang="en">Co-first author.</span><span lang="ko">공동 제1저자.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11866034" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
             </div>
             <div class="item reveal" data-year="2024">
-              <p class="item-desc">Park, E., <span class="pub-author-me">Chae, J.</span>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). <span class="paper-title">Challenges and opportunities of game NPC research using LLM: A scoping review.</span> <span class="venue">Korean Game Society Conference 2024.</span> <span lang="en">Co-first Author.</span><span lang="ko">공동 제1저자.</span></p>
+              <p class="item-desc"><span class="pub-n">12</span>Park, E., <span class="pub-author-me">Chae, J.</span>, Kim, K., Yi, H. W., Lootah, M. K., &amp; Doh, Y. Y. (2024). <span class="paper-title">Challenges and opportunities of game NPC research using LLM: A scoping review.</span> <span class="venue">Korean Game Society Conference 2024.</span> <span lang="en">Co-first author.</span><span lang="ko">공동 제1저자.</span></p>
             </div>
             <div class="item reveal" data-year="2024">
-              <p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd.</span> <span class="venue">Korea Technology Innovation Society Conference 2024.</span></p>
+              <p class="item-desc"><span class="pub-n">13</span>Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">A technical literature review of distributed management structure: Focusing on the multi-label system of HYBE Co., Ltd.</span> <span class="venue">Korea Technology Innovation Society Conference 2024.</span></p>
             </div>
             <div class="item reveal" data-year="2024">
-              <p class="item-desc">Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">From BigHit to HYBE: Sentiment analysis and strategic transition through news data.</span> <span class="venue">Korea Society for Innovation Management &amp; Economics Conference 2024.</span></p>
+              <p class="item-desc"><span class="pub-n">14</span>Kim, Y. B., &amp; <span class="pub-author-me">Chae, J.</span> (2024). <span class="paper-title">From BigHit to HYBE: Sentiment analysis and strategic transition through news data.</span> <span class="venue">Korea Society for Innovation Management &amp; Economics Conference 2024.</span></p>
             </div>
             <div class="item reveal" data-year="2023">
-              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Yoo, S., Lee, Y., Kim, Y., Kim, H., &amp; Han, D. (2023). <a href="http://journal.cg-korea.org/archive/view_article?pid=jkcgs-29-3-137" target="_blank" rel="noopener noreferrer"><span class="paper-title">Analysis of the effects of positive and negative VR game contents on enhancing environmental awareness based on self-reliant and team-based play styles.</span></a> <span class="venue">Journal of the Korea Computer Graphics Society, 29(3), 137–147.</span> <a class="pub-link" href="http://journal.cg-korea.org/archive/view_article?pid=jkcgs-29-3-137" target="_blank" rel="noopener noreferrer">Article ↗</a></p>
+              <p class="item-desc"><span class="pub-n">15</span><span class="pub-author-me">Chae, J.</span>, Kim, H., Kim, Y., Kim, M., Kim, S., &amp; Han, D. (2023). <a href="https://scholar.google.com/citations?view_op=view_citation&hl=en&user=OjxItRUAAAAJ&citation_for_view=OjxItRUAAAAJ:UeHWp8X0CEIC" target="_blank" rel="noopener noreferrer"><span class="paper-title">A study on the effect of group commitment on improving awareness of recycling through gamification.</span></a> <span class="venue">Korea HCI Conference 2023.</span> <a class="pub-link" href="https://scholar.google.com/citations?view_op=view_citation&hl=en&user=OjxItRUAAAAJ&citation_for_view=OjxItRUAAAAJ:UeHWp8X0CEIC" target="_blank" rel="noopener noreferrer">Scholar ↗</a></p>
             </div>
             <div class="item reveal" data-year="2023">
-              <p class="item-desc"><span class="pub-author-me">Chae, J.</span>, Kim, H., Kim, Y., Kim, M., Kim, S., &amp; Han, D. (2023). <a href="https://scholar.google.com/citations?view_op=view_citation&hl=en&user=OjxItRUAAAAJ&citation_for_view=OjxItRUAAAAJ:UeHWp8X0CEIC" target="_blank" rel="noopener noreferrer"><span class="paper-title">A study on the effect of group commitment on improving awareness of recycling through gamification.</span></a> <span class="venue">Korea HCI Conference 2023.</span> <a class="pub-link" href="https://scholar.google.com/citations?view_op=view_citation&hl=en&user=OjxItRUAAAAJ&citation_for_view=OjxItRUAAAAJ:UeHWp8X0CEIC" target="_blank" rel="noopener noreferrer">Scholar ↗</a></p>
+              <p class="item-desc"><span class="pub-n">16</span>Kim, Y., <span class="pub-author-me">Chae, J.</span>, Lee, Y., Kim, H., Lee, Y., &amp; Han, D. (2023). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11492794" target="_blank" rel="noopener noreferrer"><span class="paper-title">Enhancing participation in rehabilitation for diplopia through gamification.</span></a> <span class="venue">Korea Computer Graphics Society Conference 2023.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11492794" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
             </div>
             <div class="item reveal" data-year="2023">
-              <p class="item-desc">Kim, Y., <span class="pub-author-me">Chae, J.</span>, Lee, Y., Kim, H., Lee, Y., &amp; Han, D. (2023). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11492794" target="_blank" rel="noopener noreferrer"><span class="paper-title">Enhancing participation in rehabilitation for diplopia through gamification.</span></a> <span class="venue">Korea Computer Graphics Society Conference 2023.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11492794" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
-            </div>
-            <div class="item reveal" data-year="2023">
-              <p class="item-desc">Lee, Y. S., Kim, Y., Kim, H., <span class="pub-author-me">Chae, J.</span>, Lee, Y., &amp; Han, D. (2023). <span class="paper-title">Eye-tracking-based VR interactive games for eye movements.</span> <span class="venue">Korea Multimedia Society Conference 2023.</span></p>
-            </div>
-            <div class="item reveal" data-year="2023">
-              <p class="item-desc">Yoon, D., Park, S., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2023). <a href="https://doi.org/10.21203/rs.3.rs-2637740/v1" target="_blank" rel="noopener noreferrer"><span class="paper-title">Methodology for improving the performance of demand forecasting through machine learning.</span></a> <span class="venue">Preprint available at Research Square.</span> <a class="pub-link" href="https://doi.org/10.21203/rs.3.rs-2637740/v1" target="_blank" rel="noopener noreferrer">Preprint ↗</a></p>
+              <p class="item-desc"><span class="pub-n">17</span>Lee, Y. S., Kim, Y., Kim, H., <span class="pub-author-me">Chae, J.</span>, Lee, Y., &amp; Han, D. (2023). <span class="paper-title">Eye-tracking-based VR interactive games for eye movements.</span> <span class="venue">Korea Multimedia Society Conference 2023.</span></p>
             </div>
             <div class="item reveal" data-year="2022">
-              <p class="item-desc">Yoo, S., <span class="pub-author-me">Chae, J.</span>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). <span class="paper-title">Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for cynophobia.</span> <span class="venue">Korea Multimedia Society Conference 2022.</span></p>
+              <p class="item-desc"><span class="pub-n">18</span>Yoo, S., <span class="pub-author-me">Chae, J.</span>, Kim, H., Lee, Y., Kim, S., Kim, Y., &amp; Han, S. (2022). <span class="paper-title">Explored systematic exposure methods influenced by spatiotemporal factors in VR treatment for cynophobia.</span> <span class="venue">Korea Multimedia Society Conference 2022.</span></p>
             </div>
             <div class="item reveal" data-year="2022">
-              <p class="item-desc">Park, S., Yoon, D., <span class="pub-author-me">Chae, J.</span>, Song, Y., &amp; Chung, D. (2022). <span class="paper-title">Enhanced predictive model performance through clustering.</span> <span class="venue">Korea Society of Management Information Systems Conference 2022.</span></p>
+              <p class="item-desc"><span class="pub-n">19</span>Park, S., Yoon, D., <span class="pub-author-me">Chae, J.</span>, Song, Y., &amp; Chung, D. (2022). <span class="paper-title">Enhanced predictive model performance through clustering.</span> <span class="venue">Korea Society of Management Information Systems Conference 2022.</span></p>
             </div>
             <div class="item reveal" data-year="2022">
-              <p class="item-desc">Park, S., Yoon, D., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2022). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11207562" target="_blank" rel="noopener noreferrer"><span class="paper-title">Combined regression coefficient reduction method with clustering for performance enhancement.</span></a> <span class="venue">Korea Intelligent Information Systems Society Conference 2022.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11207562" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
+              <p class="item-desc"><span class="pub-n">20</span>Park, S., Yoon, D., Song, Y., <span class="pub-author-me">Chae, J.</span>, &amp; Chung, D. (2022). <a href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11207562" target="_blank" rel="noopener noreferrer"><span class="paper-title">Combined regression coefficient reduction method with clustering for performance enhancement.</span></a> <span class="venue">Korea Intelligent Information Systems Society Conference 2022.</span> <a class="pub-link" href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11207562" target="_blank" rel="noopener noreferrer">DBpia ↗</a></p>
+            </div>
             </div>
           </div>
         </section>
@@ -1963,6 +2052,11 @@
           const year = btn.dataset.year;
           pubItems.forEach((it) => {
             it.classList.toggle('hidden', !(year === 'all' || it.dataset.year === year));
+          });
+          // A typed group with nothing left in it should not leave a stray header.
+          document.querySelectorAll('.pub-group').forEach((g) => {
+            const any = g.querySelector('.item:not(.hidden)');
+            g.classList.toggle('hidden', !any);
           });
         });
       }
