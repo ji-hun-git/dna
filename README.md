@@ -4,9 +4,9 @@ Planning workspace for a Korea-first consumer health-data company. The project c
 
 ## Current status
 
-**Planning only. No product implementation has started.**
+**Founder-approved planning. No product implementation has started.**
 
-The approved design has been converted into a founder-review specification. Implementation remains gated on founder review, Korean healthcare/privacy counsel, an MFDS intended-use classification review, and a separate implementation plan.
+The founder approved all eight design decisions on 2026-08-09. The specification has been converted into a sequenced set of separate, test-first implementation plans and cross-workstream contracts. Product implementation remains gated on founder review and an explicit execution choice; production/beta additionally remains gated on Korean healthcare/privacy counsel and an MFDS intended-use classification review of the actual build.
 
 ## Strategic direction
 
@@ -14,7 +14,7 @@ The recommended launch wedge is:
 
 > **A private annual-checkup and medical-record companion with transparent provider, non-covered-price, and evidence information.**
 
-DNA/genomic interpretation remains a differentiated future module and can launch earlier only through a certified Korean DTC laboratory, deterministic signed-result import, and local-only processing. Raw VCF/BAM/FASTQ interpretation, diagnosis, prescribing, and autonomous clinical agents are outside the MVP.
+The genetic wallet remains a differentiated post-MVP module and may proceed only after its independent G0 gate. It is a device-only verifier and viewer for exact certified Korean laboratory-signed result-code tuples. Raw VCF/BAM/FASTQ, variants or alleles, scores, free-text genetic interpretation, server genetics APIs, network correction feeds, diagnosis, prescribing, and autonomous clinical agents are outside this product plan.
 
 ## Planning artifacts
 
@@ -23,16 +23,18 @@ DNA/genomic interpretation remains a differentiated future module and can launch
 - [`research/sources/primary-source-register.md`](research/sources/primary-source-register.md) — authoritative source register for Korean data, standards, regulation, and security.
 - [`governance/decision-log.md`](governance/decision-log.md) — decisions, assumptions, owners, and review triggers.
 - [`risks/risk-register.md`](risks/risk-register.md) — initial product, technical, security, scientific, and regulatory risks.
+- [`governance/founder-approval-2026-08-09.md`](governance/founder-approval-2026-08-09.md) — recorded resolution of all eight founder decision gates.
+- [`docs/superpowers/plans/README.md`](docs/superpowers/plans/README.md) — sequenced implementation roadmap and executable workstream plans.
 
 ## Workspace rules
 
 1. User health and genetic data is never treated as ordinary analytics data.
 2. Important claims require a primary source, access date, owner, and review date.
 3. AI may explain verified facts; it may not create the clinical truth layer.
-4. Every personalized conclusion must retain source-data provenance, evidence provenance, uncertainty, and model/rule version.
+4. Every personalized explanation must retain source-data provenance, evidence provenance, uncertainty, and policy/template version.
 5. Public aggregate/reference data and personal health data use separate ingestion paths, storage controls, and permissions.
 6. No paid medical referral or success-fee workflow is built without a written Korean legal opinion.
-7. No implementation phase begins until the written design is reviewed and converted into a separate execution plan.
+7. No implementation phase begins until the founder reviews the indexed execution plans and explicitly selects an execution mode.
 
 ## Source materials
 

@@ -1,6 +1,6 @@
 # Genome Companion Korea — Program and Technical Design
 
-**Status:** Founder-review draft
+**Status:** Founder-approved design baseline
 
 **Date:** 2026-08-08 (Asia/Seoul)
 
@@ -113,11 +113,11 @@ The current wedge loses its priority if another niche demonstrates stronger paid
 ### 2.3 Optional genetic-wallet journey
 
 1. Certified Korean DTC laboratory performs the test and remains the authoritative testing institution.
-2. User imports a lab-signed structured result bundle on the device; a stable partner PDF is a secondary, deterministic adapter.
-3. Signature, checksum, lab/test ID, schema version, and supported result codes are verified.
-4. A local rules engine maps authoritative result codes to a signed, versioned, medically reviewed knowledge pack.
-5. The encrypted profile stays on the device; the startup backend handles commerce/entitlement and public content only.
-6. The app explains result, evidence strength, limitations, reasonable general-wellness action, and what the result does not mean.
+2. User explicitly selects a bounded lab-signed structured JWS on the device; PDFs and raw genomic files are not accepted by this module.
+3. The app verifies the signature, exact G0-authorized laboratory/certification/assay/trait/result/schema tuple, subject binding, issuance window, and monotonic safety bundle.
+4. A device-only deterministic join selects only G0-digested Korean copy and citations for that exact tuple; no free-text genetics, variant inference, score, or remote model is present.
+5. The encrypted certified-result wallet stays on the device. It has no account session, HTTP client, `INTERNET` permission, server genetics API, or network correction feed.
+6. A correction arrives only as a user-selected signed replacement JWS; safety/recall material arrives only through a signed app release or user-selected `.gcsafety` file.
 
 ### 2.4 Explicit MVP exclusions
 
@@ -133,10 +133,10 @@ The current wedge loses its priority if another niche demonstrates stronger paid
 
 ## 3. Architectural principles
 
-1. **Clinical truth is deterministic.** AI can explain validated facts; it cannot invent, silently alter, or become the source of a lab value, genotype, diagnosis, medication, provider fact, or consent state.
+1. **Clinical truth is deterministic.** AI can explain validated facts; it cannot invent, silently alter, or become the source of a lab value, certified result, diagnosis, medication, provider fact, or consent state.
 2. **Bounded agents, not an autonomous swarm.** Every step has typed input/output, scoped identity, allowlisted tools, timeout, budget, idempotency key, and human/automated gate.
-3. **Local-first for the highest-risk data.** Raw genomes and derived genetic profiles stay on-device in the baseline. Medical documents are processed locally where feasible; cloud processing is explicit and minimized.
-4. **Four data planes.** Public reference, controlled research, consented personal, and local genomic data never collapse into one lake or permission model.
+3. **Non-collection for the highest-risk data.** Raw genomes, variants, alleles, and derived genetic scores are not admitted. The conditional certified-result wallet stays on-device. Medical documents are processed locally where feasible; cloud processing is explicit and minimized.
+4. **Four data planes.** Public reference, controlled research, consented personal, and the device-only certified-result wallet never collapse into one lake or permission model.
 5. **Source before synthesis.** Every displayed personal or public fact exposes origin, source time, retrieval time, transform, confidence, and caveat.
 6. **Korea first, region isolated.** Korean personal data remains in a Korean data plane by default. A US launch receives a separate account/database/consent/incident plane.
 7. **Privacy by non-collection.** If a feature works without centralizing data, the server never receives it.
@@ -193,7 +193,7 @@ The web/CDN path carries public content only. Authenticated health APIs, objects
 | C1 Internal | code, non-sensitive configuration, synthetic test fixtures | Standard private systems | Least privilege, change control, backup |
 | C2 Personal identifiers | account, contact, consent receipts, order status | Identity/account store | Field separation, encryption, limited staff access |
 | C3 Sensitive health | lab values, records, medications, wearable history, free-text health questions | Consented-personal plane | Separate basis/consent, per-purpose access, envelope encryption, deletion workflow, no ordinary telemetry |
-| C4 Genetic/highly identifying | raw genotype/VCF/BAM/FASTQ, variants, derived profile | On-device baseline; isolated regulated pipeline only in future | No central MVP endpoint, OS-backed keys, backup exclusion, biometric re-auth, reset-to-zero |
+| C4 Genetic/highly identifying | exact certified laboratory result-code tuples and their approved device-only projections | Conditional device-only wallet; raw VCF/BAM/FASTQ, variants, alleles, and scores are rejected | No server endpoint or `INTERNET` permission, signed G0 allowlist, OS-backed keys, backup exclusion, local re-auth, reset-to-zero |
 
 ### 5.2 Plane boundaries
 
@@ -215,11 +215,11 @@ The web/CDN path carries public content only. Authenticated health APIs, objects
 - Consent, purpose, scope, source, expiry/revocation, recipient, and data-class constraints attached to every access.
 - No joining on HIRA/NHIS encrypted catalog identifiers; person linkage follows consented or statutory routes.
 
-**Local-genomic plane**
+**Device-only certified-result wallet**
 
-- Encrypted profile database, signed result bundle, approved knowledge pack, and optional local assistant.
-- Account/entitlement services cannot import the genome/profile module.
-- Deletion removes the database, source cache, personalized assistant history, temporary parser artifacts, and data key.
+- Encrypted result database, exact lab-signed JWS, G0-authorized tuple/content digests, and signed safety bundle.
+- No raw genomics, variants, scores, free-text assistant, account session, HTTP client, server genetics API, or network correction feed enters this module.
+- Deletion removes the wallet database, encrypted signed-result provenance, temporary bounded-parser artifacts, and data key.
 
 ## 6. Korean government-data architecture
 
@@ -310,9 +310,9 @@ No “best hospital” ranking is created from incomparable or reimbursement-ori
 
 ### 7.1 Why these are bounded workflow agents
 
-An “agent” is a versioned task processor inside a deterministic state machine, not an independent actor with blanket access. The orchestrator—not the model—controls identity, data scope, tools, transitions, retries, timeout, and approval. A model cannot promote its own output to a verified fact or call an arbitrary database/network endpoint.
+An “agent” is a versioned task processor inside a deterministic state machine, not an independent actor with blanket access. The orchestrator controls identity, data scope, tools, transitions, retries, timeout, and approval. No task processor can promote its own output to a verified fact or call an arbitrary database/network endpoint.
 
-| Stage | Component | Generative? | Input | Output and hard rule |
+| Stage | Component | MVP method | Input | Output and hard rule |
 |---|---|---:|---|---|
 | A0 | Intake and malware gate | No | File/object metadata | Approved/rejected MIME, hash, scanner result; never trust extension |
 | A1 | Document classifier | Bounded ML | Sanitized pages | Supported template/version or abstain |
@@ -320,19 +320,12 @@ An “agent” is a versioned task processor inside a deterministic state machin
 | A3 | Deterministic parser | No | OCR plus template/schema | Candidate fields with source bounding boxes; unknown unit/value abstains |
 | A4 | Terminology normalizer | No + reviewed mappings | Verified candidate fields | FHIR/KR Core-compatible fact, original value/code retained, mapping confidence |
 | A5 | Timeline composer | No | Versioned facts | Chronological facts; no causal inference |
-| A6 | Evidence retriever | No semantic retrieval over approved corpus | Question + minimal fact types | Versioned source passages/IDs; no open-web medical retrieval in response path |
-| A7 | Explanation composer | Yes, constrained | Verified fact packet + approved evidence + policy | Structured draft only; no tool execution or truth mutation |
-| A8 | Safety/policy gate | Primarily deterministic; optional independent classifier | Draft + facts + risk policy | Allow, rewrite, require review, or block; model cannot override |
+| A6 | Evidence selector | Exact deterministic lookup | Minimal verified fact types | Active signed claim for exact `(factCode, unit)` or abstain; no semantic/open-web retrieval |
+| A7 | Explanation compiler | Deterministic signed templates | Verified fact packet + exact evidence claim + policy | Reviewed structured copy only; no prompt, tool execution, or truth mutation |
+| A8 | Safety/policy gate | Deterministic | Compiled response + facts + signed risk policy | Allow, require review, emergency-route, or block; generator cannot override |
 | A9 | Provenance/audit assembler | No | Full workflow metadata | Claim-level source/evidence/version/audit envelope |
 
-Model deployment follows an escalation ladder:
-
-1. **M0 deterministic:** templates, rules, approved copy, and search. This is the launch baseline and can deliver most core value without an LLM.
-2. **M1 on-device:** a compact Korean-capable model grounded only in the local profile and signed content pack, after device/performance/safety evaluation.
-3. **M2 private Korean compute:** a dedicated model endpoint in the personal-data plane, no public internet, no provider training, minimized task context, strict retention, and processor review.
-4. **M3 external API:** prohibited for identifiable health/genetic data in MVP. A future exception needs a PIPA transfer basis, contract, data-flow/retention proof, red-team, and founder/privacy/security approval.
-
-Model quality is selected through the release evaluation, not brand reputation or a generic benchmark. A smaller model that reliably abstains and follows the schema is preferable to a larger model that creates unsupported medical claims.
+The approved launch baseline is **M0 deterministic**: exact evidence lookup, reviewed templates, signed policy, citations, abstention, and recall in a Korea-hosted private worker. It has no model weights, arbitrary prompts, embeddings, remote provider, browser, or general network path. On-device, private-compute, or external-model experiments are not rungs that implementation may activate; each requires a new specification, intended-use/privacy/data-flow review, dependency and egress design, evaluation corpus, rollback plan, and founder approval.
 
 ### 7.2 Workflow state machine
 
@@ -419,18 +412,17 @@ The response schema requires:
 
 An assistant may say “your source report lists this value outside the report's stated reference range.” It may not independently diagnose a condition from that fact. It never reassures a user that an emergency is safe.
 
-### 7.5 Hallucination and prompt-injection controls
+### 7.5 Unsupported-claim and untrusted-input controls
 
 - Treat every uploaded document, OCR string, provider field, and user message as hostile data, never instructions.
 - Separate system policy, tool schemas, evidence, and untrusted content with explicit typed channels.
-- No shell, browser, email, messaging, payment, booking, prescription, or write-to-record tool is exposed to the explanation model.
-- Retrieval corpus includes only approved, versioned sources and reviewed company content; public evidence embeddings contain no personal data.
+- No shell, browser, email, messaging, payment, booking, prescription, write-to-record tool, arbitrary URL, prompt, or model adapter exists in the explanation worker.
+- Evidence selection reads only approved signed exact-key claims and reviewed company copy; embeddings are absent from MVP.
 - Structured output is schema-validated; unknown citations or fact references fail closed.
 - Run a deterministic claim checker against permitted/prohibited predicates and source coverage.
-- Use a second independent safety classifier only as defense in depth; deterministic rules remain authoritative.
-- Red-team Korean prompt injection, indirect injection in documents, citation fabrication, false reassurance, dosage requests, and encoding/spacing attacks.
-- No online learning from production personal data. Model or prompt changes require offline evaluation and a controlled release.
-- Global kill switches can disable a model, evidence pack, connector, or output class without an app release.
+- Red-team Korean untrusted input, indirect instructions in documents, citation fabrication, false reassurance, dosage requests, and Unicode/spacing attacks.
+- No online learning or prompt update exists. Policy, evidence, or template changes require signed review artifacts, complete offline evaluation, and controlled release.
+- Global signed controls can disable an evidence pack, policy/template release, connector, or output class without an app release.
 
 ### 7.6 Evaluation
 
@@ -579,17 +571,17 @@ Revocation stops future processing immediately, revokes tokens, queues deletion 
 | Public/user/admin web | Next.js + TypeScript; Radix/shadcn/Tailwind for consumer/editorial; MUI for dense reviewer/admin surfaces; Storybook | Custom brand without sacrificing accessible primitives and state documentation |
 | Core API | Kotlin + Spring Boot modular monolith | Strong typing, mature security/transaction tooling, natural HAPI FHIR integration |
 | FHIR | HAPI FHIR + HL7 validator, PostgreSQL, KR Core package | Interoperability-first; one source of truth; package-based validation |
-| AI/document workers | Python + FastAPI + Pydantic; PaddleOCR benchmark; Presidio with Korean customizations | Constrained typed workers and mature OCR/NLP ecosystem |
+| Explanation/document workers | Python 3.12.13 + FastAPI 0.141.1 + Pydantic 2.13.4; deterministic signed template/evidence explanation; PaddleOCR 3.7.0/PaddlePaddle 3.3.1/PyMuPDF 1.28.2/ClamAV for the separately consented cloud-document path | Constrained typed workers with exact dependency, provenance, benchmark, abstention, and zero-general-egress gates; Presidio is not admitted |
 | Workflow | AWS Step Functions + SQS/EventBridge initially | Managed state, retries, audit, least-privilege task identities; no agent framework lock-in |
 | Primary database | Managed PostgreSQL/Aurora PostgreSQL, multi-AZ | Transactions, FHIR ecosystem, mature operations |
 | Objects | S3-compatible managed object storage with separate quarantine/source/public/audit buckets, KMS encryption | Lifecycle separation, versioning, malware workflow, immutable log option |
-| Evidence search | PostgreSQL full text + pgvector for approved public evidence only | Avoid a second search system and prohibit raw personal-health embeddings by default |
+| Evidence selection | Exact `(factCode, unit)` lookup over signed approved evidence | No embeddings or semantic search in MVP; unsupported tuples abstain |
 | Cache | None until measured; managed Redis only for non-authoritative, non-sensitive short-lived data | Reduces copies and deletion complexity |
 | Infrastructure | AWS Seoul, ECS Fargate, API Gateway/ALB, WAF, KMS, Secrets Manager, Organizations, CloudTrail/Config/GuardDuty/Security Hub; OpenTofu | Managed Korea-region baseline and multi-account security without Kubernetes |
 | CI/CD | GitHub Actions with OIDC, Trivy, Gitleaks, test suites, SBOM, Cosign signatures/attestations, manual protected production promotion | No static cloud keys; evidence-bearing release process |
 | Observability | OpenTelemetry Collector to a region-approved metrics/log backend; no payload capture | Vendor-neutral signals with strict PHI allowlist |
 
-HAPI and Medplum are mutually exclusive choices, not two backends. If the team needs a faster application-first route and proves KR Core/security requirements, Medplum can replace HAPI—not mirror it.
+The MVP selection is HAPI FHIR 8.10.1 plus the HL7 validator, FHIR R4 4.0.1, and `hl7.fhir.kr.core#2.0.0`. Medplum is not admitted to the MVP; reconsideration requires a new decision after a documented HAPI conformance, security, licensing, or operations failure.
 
 AWS Seoul is the concrete baseline, not a claim of automatic compliance. Before procurement, compare AWS with Korean-region alternatives such as NAVER Cloud/KT Cloud on the exact required managed services, PIPA/ISMS evidence, contract/subprocessor terms, support access, audit export, key control, multi-AZ recovery, price, and exit portability. Change provider only if the alternative passes the same controls without creating an unowned operations burden.
 
@@ -833,7 +825,7 @@ Exact contrast is verified against WCAG 2.2 AA before adoption. Korean body text
 
 - Public: Evidence-led home → checkup/non-covered search → comparison → source detail → methodology/privacy.
 - Private: Scope/privacy → import/connect → verify fields → timeline home → fact detail/provenance → Ask/Explain → visit questions → export → privacy/delete.
-- Genetic module: certified test handoff → signed import → verification → private profile → evidence-bounded trait detail → local Ask → reset/export.
+- Conditional genetic wallet: user-selected signed import → verification → device-only certified-result list/detail → provenance/safety state → reset/export. No free-text Ask surface exists.
 
 The mobile home shows three high-confidence, user-relevant jobs—not an anxiety feed or universal “health score.” No longevity score, genetic age, disease countdown, leaderboards, streak pressure, or fear-based notifications.
 
@@ -841,18 +833,18 @@ The mobile home shows three high-confidence, user-relevant jobs—not an anxiety
 
 The detailed, current register is in [`technical-architecture/open-source-register.md`](../../../technical-architecture/open-source-register.md). The production shortlist is:
 
-- HAPI FHIR + HL7 validator **or** Medplum, never competing truth stores;
+- HAPI FHIR 8.10.1 + HL7 validator + FHIR R4 4.0.1 + `hl7.fhir.kr.core#2.0.0` as the selected canonical stack;
 - Flutter and SQLCipher for mobile/local vault;
 - Next.js, Radix/shadcn/Tailwind, Storybook, and optional MUI admin surface;
 - Spring Boot core API and FastAPI isolated workers;
 - PostgreSQL, OpenTelemetry, OpenTofu;
 - Trivy, Cosign, Gitleaks, OPA, ZAP, and Prowler as security/supply-chain layers.
 
-PaddleOCR and Presidio are conditional baselines that require Korean/hospital-specific evaluation. OMOP/OHDSI, ONNX Runtime, Kubernetes, DICOM viewers, GA4GH VRS, and nf-core/Sarek are future or research-only. No model weight, terminology pack, or dataset inherits the code repository's license automatically; all artifacts receive separate provenance/license review.
+PaddleOCR is conditional on a hospital-template-specific benchmark and model/license provenance. Presidio is not admitted and would require a separate Korean false-negative benchmark and implementation plan. OMOP/OHDSI, ONNX Runtime, Kubernetes, DICOM viewers, GA4GH VRS, and nf-core/Sarek are future or research-only. No model weight, terminology pack, or dataset inherits the code repository's license automatically; all artifacts receive separate provenance/license review.
 
 ## 16. Phased delivery and gates
 
-This is a program roadmap, not the file-by-file implementation plan. A separate implementation plan will be written only after founder review of this specification.
+This roadmap is supplemented by the six implementation plans indexed in [`docs/superpowers/plans/README.md`](../plans/README.md). Execution remains unauthorized until the founder selects an execution mode.
 
 ### Phase 0 — 0–30 days: prove the lane before building
 
@@ -878,7 +870,7 @@ Proceed only if one wedge shows real paid intent, at least one lawful data/partn
 - Build a clickable Korean-first Midnight Evidence Ledger prototype with comparison, source detail, import verification, timeline, provenance, boundary, privacy, export, and delete flows.
 - Implement a local/synthetic vertical slice for one or two stable checkup document templates; no open-ended OCR claim.
 - Build one HIRA reference connector end to end through bronze/silver/gold and display exact source metadata.
-- Create the FHIR/KR Core validation harness and synthetic fixtures; select HAPI or Medplum through a time-boxed proof.
+- Create the HAPI FHIR R4/KR Core 2.0.0 validation harness and synthetic fixtures; Medplum is not an MVP selection task unless the approved HAPI path fails a documented conformance/security/operations gate.
 - Define terminology mapping/review workflow and initial evidence content policy.
 - Run usability, accessibility, security architecture, and clinician/scientist reviews.
 
@@ -983,13 +975,13 @@ The product cannot enter public beta unless all are true:
 
 1. The founder approves the exact wedge, business model, intended use, and exclusions.
 2. Korean counsel approves the privacy, comparison/ranking, advertising/referral, lab, and compensation model.
-3. MFDS classification/required route is documented against actual copy/screenshots/data/model behavior.
+3. MFDS classification/required route is documented against actual copy, screenshots, data flow, and deterministic explanation behavior.
 4. Every production government source has an approved connector record, license, attribution, schema/freshness checks, and kill switch.
 5. FHIR/KR Core conformance and terminology version tests pass for the supported resource set.
 6. Every personalized claim in the release evaluation has personal-source provenance, evidence provenance, uncertainty, safety class, and version metadata.
 7. Hard diagnosis/medication/emergency/genetic boundary sets pass completely.
 8. Automated network capture finds no prohibited health/genetic fields in logs, analytics, crash, notifications, URLs, or third-party calls.
-9. Deletion, consent revocation, backup restore/tombstone replay, model/evidence recall, and incident runbooks are tested.
+9. Deletion, consent revocation, backup restore/tombstone replay, evidence/policy/template recall, and incident runbooks are tested.
 10. No unresolved critical security/privacy/clinical/regulatory risk remains; each accepted high risk has a named owner and rollback.
 
 ## 19. Failure modes and deliberate responses
@@ -999,30 +991,30 @@ The product cannot enter public beta unless all are true:
 | Government source changes schema or silently stops updating | Contract/freshness/distribution monitor | Quarantine new version; serve last signed version with stale label or disable; notify data owner |
 | Wrong document value/unit | Golden tests, plausibility, source overlay, user/reviewer report | Stop publication; recall affected facts/explanations; reparse from retained source only under policy; notify affected users |
 | Knowledge/evidence correction | Source change monitor and content board | Revoke signed pack/version, display recall banner, regenerate eligible local explanations, preserve history |
-| Model produces prohibited advice | Policy gate, safety eval, user report | Block response, disable output class/model, review task/audit, expand regression set |
+| Explanation pipeline produces prohibited advice | Policy gate, release-boundary evaluation, user report | Block response, disable the signed output class/template/evidence release, review task/audit, expand the regression set |
 | Consent revoked mid-workflow | Consent event and purpose token check at every stage | Cancel queued/running tasks, revoke object URLs/tokens, delete/segregate, issue receipt |
 | Admin account compromise | Identity/session/config anomaly | Revoke sessions/keys, isolate account, engage incident plan, validate audit chain, restore known-good control |
 | Public ranking accused of bias/pay-to-play | Transparent methodology and change/audit log | Freeze ranking, show raw filters, independent review, separate sponsorship, correct and disclose |
 | MyHealthWay category/schema mismatch | Conformity test failure/version mismatch | Pin approved guide, disable affected resource, never transform against marketing-page assumptions |
-| Lab partner reissues/corrects result | Signed correction/revocation feed or support event | Verify partner signature, supersede locally, preserve provenance, recall derived explanation |
+| Lab partner reissues/corrects result | User selects a signed replacement JWS or signed app/`.gcsafety` safety update | Verify the new signature and G0 tuple, supersede only on-device, preserve encrypted provenance, and apply the signed safety action; no network correction feed exists |
 | User presents emergency symptoms | Deterministic safety classifier/rules | Do not assess severity; show immediate Korean emergency/professional route; no delay through generative flow |
 
-## 20. Founder decisions required after review
+## 20. Founder decisions resolved
 
-This specification proposes, but does not silently decide, the following business choices:
+The founder approved all eight decision gates on 2026-08-09. The approved interpretations are binding inputs to implementation planning:
 
-1. Approve the checkup/record companion as the lead wedge, or retain certified-DNA wallet as lead and explain why its retention/economics are stronger.
-2. Approve consumer-paid/fixed-fee software revenue as the baseline and prohibit patient/success-based fees pending counsel.
-3. Choose whether the MVP supports cloud document processing with explicit consent or only local/on-device supported imports.
-4. Choose HAPI FHIR (recommended) or authorize a time-boxed HAPI-versus-Medplum proof before commitment.
-5. Decide whether MyHealthWay onboarding is launch-critical or a post-MVP workstream.
-6. Set the source-document retention default: immediate post-verification deletion versus user-controlled encrypted retention.
-7. Approve the Korea-only personal data plane and separate future US plane.
-8. Approve the Midnight Evidence Ledger design direction and its accessibility/usability validation requirement.
+1. **Lead wedge:** annual checkup/lab-history and longitudinal-record companion with transparent provider and non-covered-price information. The certified-DNA wallet is optional and independently gated.
+2. **Revenue:** consumer-paid and fixed-fee software/information revenue is the baseline. Patient-, booking-, conversion-, or success-based medical fees remain prohibited pending written Korean counsel approval.
+3. **Document processing:** use a consented hybrid. Perform classification, redaction, and supported extraction on-device where feasible; allow Korea-region cloud quarantine and processing only after explicit purpose-bound consent. A local-only mode remains available for supported imports.
+4. **FHIR implementation:** select HAPI FHIR for the canonical server and validation path; do not run a Medplum selection proof in the MVP plan.
+5. **MyHealthWay:** treat formal Health Information Highway/MyHealthWay connectivity as a post-MVP workstream. Preserve an adapter seam but do not make launch depend on onboarding timing.
+6. **Source retention:** delete a source document immediately after the user verifies extraction by default. Encrypted source retention is an explicit, reversible opt-in with a visible retention policy.
+7. **Residency:** keep the personal-data plane in Korea. Any future US operation receives a separate data plane and regulatory review; code and public content may be shared, user records may not.
+8. **Experience:** use the Midnight Evidence Ledger direction, subject to Korean-first readability, WCAG accessibility, usability, reduced-motion, and non-color-only meaning tests.
 
 ## 21. Next planning gate
 
-After the founder reviews this design, resolve the eight decisions above and any comments. Only then invoke the separate implementation-planning workflow to produce work packages, sequencing, test-first tasks, ownership, estimates, and checkpoints. Until that review, this repository remains planning-only.
+The founder decision gate is complete. Separate implementation plans now cover platform/security, public data, personal records/FHIR, AI safety, product experience, and the independently gated genetic wallet; the roadmap index freezes their sequencing and interfaces. No product code, deployment, external account mutation, or data acquisition is authorized until the founder reviews this package and chooses an execution mode.
 
 Supporting evidence and detailed registers:
 
