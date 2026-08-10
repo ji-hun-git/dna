@@ -39,6 +39,12 @@ Those are long (1.4k–6.2k lines); read the one you are working on, not all six
   [`governance/founder-brand-positioning-decision-proposal-2026-08-10.md`](governance/founder-brand-positioning-decision-proposal-2026-08-10.md)
   now isolate the decisions and retained boundaries. **The proposal is not approval:** the
   spec, D-016, product plans, workstream status, and implementation gate remain unchanged.
+- **Direction recommendation prepared but not approved:**
+  [`governance/founder-final-direction-recommendation-2026-08-10.md`](governance/founder-final-direction-recommendation-2026-08-10.md)
+  recommends `앎` as the Korean-first consumer brand and a source-verifiable Health History
+  as the defining product object after checking the founder conversation against current
+  competitor/category evidence. It does not select a founder-resolution checkbox or cross
+  an implementation, brand-adoption, external-account, or personal-data gate.
 
 ## Gates — do not cross these without a written approval in `governance/`
 

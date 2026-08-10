@@ -29,6 +29,7 @@ It gives the reading order, the current state, and the gates that must not be cr
 - [`risks/risk-register.md`](risks/risk-register.md) — initial product, technical, security, scientific, and regulatory risks.
 - [`governance/founder-approval-2026-08-09.md`](governance/founder-approval-2026-08-09.md) — recorded resolution of all eight founder decision gates.
 - [`governance/founder-brand-positioning-decision-proposal-2026-08-10.md`](governance/founder-brand-positioning-decision-proposal-2026-08-10.md) — unapproved category, longitudinal-model, experience-loop, and `앎 (ALM)` decision proposal derived from the later founder brief.
+- [`governance/founder-final-direction-recommendation-2026-08-10.md`](governance/founder-final-direction-recommendation-2026-08-10.md) — unapproved synthesis of the founder conversation, current competitor/category evidence, and the recommended `앎`/Health History direction.
 - [`docs/superpowers/plans/README.md`](docs/superpowers/plans/README.md) — sequenced implementation roadmap and executable workstream plans.
 
 ## Workspace rules
