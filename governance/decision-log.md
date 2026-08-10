@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: 2026-08-09 (Asia/Seoul)
+Last updated: 2026-08-10 (Asia/Seoul)
 
 | ID | Status | Decision | Why | Revisit trigger |
 |---|---|---|---|---|
@@ -33,8 +33,12 @@ Last updated: 2026-08-09 (Asia/Seoul)
 | D-027 | Planned architecture 2026-08-09 | Deliver AI evidence recalls to REC through exact mTLS-isolated registry/notice/ack routes, with a shared root-pinned monotonic key registry and REC-ready-before-AI-activation ordering. | User-facing recall state is a safety control; an in-process handler or unauthenticated key allowlist cannot prove delivery, rotation, idempotency, or rollback resistance. | A reviewed service-identity/control-plane design provides stronger authenticated delivery and preserves the same PHI-free acknowledgement contract. |
 | D-028 | Planned architecture 2026-08-09 | Verify the complete REC export in a bounded, Fargate-CMK-encrypted BFF spool before committing any browser response header; do not claim a pass-through stream can fail closed after it has started. | Length and digest are knowable only at EOF. Full verification before release prevents an early EOF, extra byte, or same-length mutation from becoming a partially trusted browser download. | A separately reviewed ticket-bound direct-download design gives the browser a trustworthy independent digest/attestation verifier without exposing object identity or weakening one-use authorization. |
 | D-029 | Planned architecture 2026-08-09 | Foundation owns reproducible, locked recall/telemetry certificate-rotation handlers and exact version-staged Secrets Manager schemas; Terraform alone is not treated as the runtime implementation. | Key generation, PCA issuance, canary, stage moves, deployment replacement, and rollback are executable security behavior with private-key and partial-failure risk. | A managed service demonstrably provides the same constrained identities, atomic promotion, bounded overlap, evidence, and rollback contract. |
+| D-030 | Proposed 2026-08-10 | Position the company as `AI-native preventive health`, the product as `Personal Health Intelligence`, the core asset as a `Longitudinal Personal Health Model`, and the experience loop as `Collect → Connect → Know`, without changing the approved intended-use or launch wedge. | The founder brief supplies a coherent longitudinal self-knowledge narrative that can strengthen the product promise if it remains subordinate to verified facts, provenance, uncertainty, and existing safety boundaries. | Founder selects an option in the linked proposal; counsel/MFDS review shows the language changes intended-use interpretation; user research finds the language confusing, coercive, or untrustworthy. |
+| D-031 | Proposed 2026-08-10 | Use `앎 (ALM)` as the candidate service name and `Health is knowledge of oneself` as philosophy-only language, with no public or durable technical adoption before clearance. | The name expresses the founder's desired self-knowledge philosophy but has not passed trademark, collision, language, accessibility, consumer-interpretation, or intended-use review. | Founder selects an option in the linked proposal and every named clearance gate is evidenced; any clearance conflict keeps `Genome Companion` as the working identifier. |
 
 Approval owner and evidence for D-004 and D-017 through D-021: **Founder**, 2026-08-09, [`founder-approval-2026-08-09.md`](founder-approval-2026-08-09.md). That record also reaffirms D-005, D-014, and D-016 as the resolutions of founder gates 2, 7, and 8.
+
+D-030 and D-031 are proposals only. Decision source and options: [`founder-brand-positioning-decision-proposal-2026-08-10.md`](founder-brand-positioning-decision-proposal-2026-08-10.md).
 
 ## Decision process
 

@@ -31,13 +31,14 @@ Those are long (1.4k–6.2k lines); read the one you are working on, not all six
 - **Plans: written and reviewable, none executed.** Every workstream row in the roadmap
   says "Plan-ready; not executed".
 - **Implementation: not started, and not authorized to start.**
-- **Open input, not yet integrated:** [`research/source-materials/2026-08-10-founder-brief-ko.txt`](research/source-materials/2026-08-10-founder-brief-ko.txt)
+- **Open input, decision proposal prepared but not approved:** [`research/source-materials/2026-08-10-founder-brief-ko.txt`](research/source-materials/2026-08-10-founder-brief-ko.txt)
   (2026-08-10, Korean). It reframes category/brand — *AI-native Preventive Health*,
   product = *Personal Health Intelligence*, core asset = *Longitudinal Personal Health Model*,
   Collect → Connect → Know, and proposes the service name **앎 (ALM)** with
-  "Health is knowledge of oneself" as the brand line. **None of this is reflected in the
-  spec, the decision log, or D-016's visual direction yet.** Treat it as a founder input
-  awaiting a decision-log row, not as an approved change.
+  "Health is knowledge of oneself" as the brand line. D-030/D-031 and
+  [`governance/founder-brand-positioning-decision-proposal-2026-08-10.md`](governance/founder-brand-positioning-decision-proposal-2026-08-10.md)
+  now isolate the decisions and retained boundaries. **The proposal is not approval:** the
+  spec, D-016, product plans, workstream status, and implementation gate remain unchanged.
 
 ## Gates — do not cross these without a written approval in `governance/`
 
