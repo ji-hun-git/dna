@@ -1,0 +1,11 @@
+{
+  "processorSetVersion": "kr-processors-2026-08",
+  "noticeVersion": "privacy-notice-ko-v1",
+  "recipients": ["genome-companion-korea"],
+  "region": "KR",
+  "cloudProcessingMaxHours": 24,
+  "retentionMaxDays": 365,
+  "noticeUrl": "https://genome-companion.kr/privacy/consent/v1",
+  "effectiveAt": "2026-08-09T00:00:00Z",
+  "configurationDigest": "sha256:8d7da353f86727af45eaefdaf12337b5be18a850cb7891cc7215f3b3aa0a082e"
+}

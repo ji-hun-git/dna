@@ -29,6 +29,8 @@ test-results/
 *.tfstate.*
 *.tfvars
 out/
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/consentpurpose/adapter/out/
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/consentpurpose/adapter/out/**
 evidence/
 !apps/web/components/evidence/
 !apps/web/components/evidence/**
