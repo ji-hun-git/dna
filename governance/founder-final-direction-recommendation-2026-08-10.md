@@ -1,6 +1,6 @@
 # Founder Final-Direction Recommendation — 2026-08-10
 
-**Status:** Recommended for founder approval; not approved
+**Status:** Founder-approved direction on 2026-08-10; public brand remains provisional
 
 **Research owner:** Founder, with Codex-assisted synthesis
 
@@ -193,7 +193,7 @@ Approve or revise the following single direction:
 
 > **`앎` is a Korea-first longitudinal personal health intelligence product. Its first and defining object is the user's source-verifiable Health History, beginning with multi-year checkup and laboratory records. Provider/price information supports the journey; DNA, wet lab, continuous monitoring, and general medical chat do not define the MVP.**
 
-Approval would authorize planning-document alignment only. It would not authorize implementation, deployment, external-account changes, procurement, personal-health-data processing, public brand adoption, or a regulated launch.
+The founder subsequently approved this direction and separately authorized checkpointed local implementation in [`founder-execution-authorization-2026-08-10.md`](founder-execution-authorization-2026-08-10.md). Deployment, external-account changes, procurement, personal-health-data processing, public brand adoption, and a regulated launch remain unauthorized.
 
 ## Evidence and limitations
 

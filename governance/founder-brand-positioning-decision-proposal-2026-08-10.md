@@ -1,6 +1,6 @@
 # Founder Brand and Positioning Decision Proposal — 2026-08-10
 
-**Status:** Proposed for founder decision; not approved
+**Status:** Approved by founder on 2026-08-10, subject to the recorded clearance and execution boundaries
 
 **Source input:** [`../research/source-materials/2026-08-10-founder-brief-ko.txt`](../research/source-materials/2026-08-10-founder-brief-ko.txt)
 
@@ -87,9 +87,11 @@ If the founder approves the positioning stack, make a separate planning-only com
 
 ## Founder resolution
 
-No option is selected in this proposal.
+The founder approved the first option in the 2026-08-10 execution authorization.
 
-- [ ] Approve the full positioning stack and authorize the follow-on planning edits, while keeping `앎 (ALM)` provisional until clearance.
+- [x] Approve the full positioning stack and authorize the follow-on planning edits, while keeping `앎 (ALM)` provisional until clearance.
 - [ ] Approve category/product/core-asset/experience language only; hold the name and philosophy.
 - [ ] Request revisions before any part is added to the approved design.
 - [ ] Reject this proposal and retain the current Genome Companion positioning.
+
+Approval evidence: [`founder-execution-authorization-2026-08-10.md`](founder-execution-authorization-2026-08-10.md).
