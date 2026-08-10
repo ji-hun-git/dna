@@ -1,0 +1,8 @@
+subject,source,measured_at,test,value,unit,reference_low,reference_high
+demo,lab,2026-08-01T08:00:00+09:00,fasting_glucose,102,mg/dL,70,99
+demo,lab,2026-08-01T08:00:00+09:00,hba1c,5.8,%,4.0,5.6
+demo,lab,2026-08-01T08:00:00+09:00,tg,178,mg/dL,40,150
+demo,lab,2026-08-01T08:00:00+09:00,hdl,35,mg/dL,40,100
+demo,lab,2026-08-01T08:00:00+09:00,ldl,160,mg/dL,0,129
+demo,lab,2026-08-01T08:00:00+09:00,waist,93,cm,0,90
+demo,lab,2026-08-01T08:00:00+09:00,bmi,24.8,kg/m2,18.5,23

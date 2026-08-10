@@ -1,0 +1,77 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dna.healthingest.v1.ingestEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "kind", "subject", "timestamp", "payload", "producer", "integrity"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "description": "Stable unique event identifier",
+      "pattern": "^[a-zA-Z0-9._-]+$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["pdf_upload", "image_upload", "dicom_upload", "csv_upload", "dna_upload", "insight_snapshot", "intervention_request"]
+    },
+    "subject": {
+      "type": "string",
+      "enum": ["user", "provider", "system", "operator"],
+      "description": "Who initiated the event"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Payload is source-kind specific; must be JSON-stringifiable and non-empty"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app", "version", "actorId", "environment"],
+      "properties": {
+        "app": {"type": "string"},
+        "version": {"type": "string"},
+        "actorId": {"type": "string"},
+        "environment": {"type": "string", "enum": ["prod", "staging", "dev"]}
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "sizeBytes", "mimeType"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"},
+        "sizeBytes": {"type": "integer", "minimum": 1},
+        "mimeType": {"type": "string", "minLength": 3}
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataCategory", "retentionChoice", "expiresAt"],
+      "properties": {
+        "dataCategory": {
+          "type": "string",
+          "enum": ["LAB_REPORT", "QUESTIONNAIRE", "IMAGE", "WORN_SENSOR", "DICOM", "DNA", "GENERIC"]
+        },
+        "retentionChoice": {
+          "type": "string",
+          "enum": ["DELETE_AFTER_VERIFICATION", "RETAIN_ENCRYPTED_365_DAYS"]
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

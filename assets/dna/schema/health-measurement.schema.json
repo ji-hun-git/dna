@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dna.health.v1.measurement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "subjectId", "metricId", "value", "unit", "measuredAt"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+    "subjectId": { "type": "string", "minLength": 1 },
+    "metricId": {
+      "type": "string",
+      "enum": [
+        "fasting_glucose", "hba1c", "tg", "hdl", "ldl", "alt", "ggt", "creatinine", "egfr",
+        "ast", "bmi", "waist", "sbp", "dbp", "vitamin_d", "crp", "apo_b", "lp_a", "ferritin"
+      ]
+    },
+    "value": { "type": "number" },
+    "unit": { "type": "string", "minLength": 1 },
+    "measuredAt": { "type": "string", "format": "date-time" },
+    "source": { "type": "string", "minLength": 1 },
+    "referenceRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "low": { "type": "number" },
+        "high": { "type": "number" },
+        "unit": { "type": "string", "minLength": 1 }
+      }
+    },
+    "memo": { "type": "string" }
+  }
+}
