@@ -1,0 +1,15 @@
+{
+  "document": {
+    "schemaVersion": "workload-jwks.v1",
+    "sequence": 1,
+    "generatedAt": "2026-08-09T00:00:00Z",
+    "keys": [{
+      "kty": "OKP", "crv": "Ed25519", "alg": "EdDSA", "use": "sig",
+      "kid": "workload-2026-08", "x": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w", "role": "current",
+      "notBefore": "2026-08-09T00:00:00Z", "notAfter": "2026-11-07T00:00:00Z"
+    }],
+    "documentDigest": "sha256:dd730592527d5d43397f7fc293e7005e3e16910d12e6a29837d6e36c00ec1ae1"
+  },
+  "signatureBase64Url": "3KHk4PFgOLGPxZNm1WXHrH2UjV769NgsFm0e6_YsUGO_d7zmZ1bqe4GG3fTzvUe1A7j-IZwOV5dVJ0N9IUxfDg",
+  "releaseKeyId": "release-2026-08"
+}

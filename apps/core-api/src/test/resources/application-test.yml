@@ -1,0 +1,6 @@
+security:
+  oidc:
+    issuer: https://issuer.test.invalid
+    jwk-set-uri: https://issuer.test.invalid/.well-known/jwks.json
+    audience: https://api.genome-companion.kr
+    client-id: synthetic-web-client

@@ -1,0 +1,25 @@
+security:
+  oidc:
+    issuer: ${OIDC_ISSUER}
+    jwk-set-uri: ${OIDC_JWK_SET_URI}
+    audience: ${OIDC_AUDIENCE}
+    client-id: ${OIDC_CLIENT_ID}
+server:
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-binding-errors: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+spring:
+  mvc:
+    log-request-details: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s

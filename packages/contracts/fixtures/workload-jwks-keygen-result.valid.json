@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "workload-jwks-keygen-result.v1",
+  "requestSha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "kid": "workload-2026-08",
+  "publicKeyRawBase64Url": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+  "publicKeySha256": "sha256:34750f98bd59fcfc946da45aaabe933be154a4b5094e1c4abf42866505f3c97e",
+  "privateKeyVersionIdSha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "notBefore": "2026-08-09T00:00:00Z",
+  "notAfter": "2026-11-07T00:00:00Z",
+  "executedAt": "2026-08-09T00:00:00Z",
+  "resultSha256": "sha256:176321a8d9e2693f519f37afe4abc4aa2d152f01c1dc401d1943aed03c768fa7"
+}

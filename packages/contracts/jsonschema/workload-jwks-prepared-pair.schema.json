@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genome-companion.kr/schemas/workload-jwks-prepared-pair.schema.json",
+  "$defs": {
+    "objectCoordinate": {"type": "object", "additionalProperties": false, "required": ["key", "versionId", "sha256"], "properties": {"key": {"type": "string", "minLength": 1}, "versionId": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}},
+    "secretCoordinate": {"type": "object", "additionalProperties": false, "required": ["secretArn", "versionId", "sha256"], "properties": {"secretArn": {"type": "string", "pattern": "^arn:aws:secretsmanager:"}, "versionId": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}},
+    "signedSecret": {"type": "object", "additionalProperties": false, "required": ["secretArn", "versionId", "sha256", "signingResult"], "properties": {"secretArn": {"type": "string", "pattern": "^arn:aws:secretsmanager:"}, "versionId": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "signingResult": {"$ref": "#/$defs/objectCoordinate"}}}
+  },
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "sequence", "registry", "release", "candidateSignerKeyVersionIdSha256", "keygenResult", "rootBundle", "preparedAt", "preparedPairSha256"],
+  "properties": {
+    "schemaVersion": {"const": "workload-jwks-prepared-pair.v1"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "registry": {"$ref": "#/$defs/signedSecret"},
+    "release": {"$ref": "#/$defs/signedSecret"},
+    "candidateSignerKeyVersionIdSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "keygenResult": {"$ref": "#/$defs/objectCoordinate"},
+    "rootBundle": {"$ref": "#/$defs/secretCoordinate"},
+    "preparedAt": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "preparedPairSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}
