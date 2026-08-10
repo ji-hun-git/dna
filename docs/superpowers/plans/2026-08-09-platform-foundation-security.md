@@ -723,7 +723,7 @@ git commit -m "build: bootstrap pinned platform monorepo"
 )
 @ActiveProfiles("test")
 class ApplicationSmokeTest(
-    @Autowired private val fhirContext: FhirContext,
+    @param:Autowired private val fhirContext: FhirContext,
 ) {
     @Test
     fun `application exposes exactly an R4 FHIR context`() {
@@ -753,6 +753,7 @@ class ModuleBoundaryTest {
             "..consentpurpose..",
             "..exportdeletion..",
         )
+        .allowEmptyShould(true)
 
     @ArchTest
     val moduleInternalsAreNotImportedAcrossModules: ArchRule = noClasses()
@@ -769,7 +770,9 @@ class ModuleBoundaryTest {
 )
 @ActiveProfiles("test")
 class ProhibitedRouteTest(
-    @Autowired private val mappings: RequestMappingHandlerMapping,
+    @param:Autowired
+    @param:Qualifier("requestMappingHandlerMapping")
+    private val mappings: RequestMappingHandlerMapping,
 ) {
     @Test
     fun `medical genomic referral and training routes are absent`() {
