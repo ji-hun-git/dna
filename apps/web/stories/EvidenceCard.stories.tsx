@@ -45,7 +45,7 @@ export const TwoHundredPercentText: Story = {
   name: "200% 텍스트",
   decorators: [
     (Story) => (
-      <div style={{ width: "min(92vw, 42rem)", fontSize: "200%" }}>
+      <div style={{ width: "min(calc(100dvw - 3rem), 42rem)", fontSize: "200%" }}>
         <Story />
       </div>
     ),
