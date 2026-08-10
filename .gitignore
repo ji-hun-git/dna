@@ -19,6 +19,8 @@ node_modules/
 build/
 dist/
 coverage/
+storybook-static/
+*.tsbuildinfo
 .gradle/
 .terraform/
 *.tfstate
@@ -26,6 +28,8 @@ coverage/
 *.tfvars
 out/
 evidence/
+!apps/web/components/evidence/
+!apps/web/components/evidence/**
 .pytest_cache/
 __pycache__/
 *.pyc
