@@ -35,6 +35,7 @@ dependencies {
     runtimeOnly(libs.postgresql)
     testImplementation(libs.spring.test)
     testImplementation(libs.spring.security.test)
+    testImplementation(libs.jackson.yaml)
     testImplementation(libs.archunit)
     testImplementation(libs.testcontainers.junit)
     testImplementation(libs.testcontainers.postgresql)

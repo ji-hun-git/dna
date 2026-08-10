@@ -3,19 +3,14 @@ package kr.co.genomecompanion.documentintake.api
 import java.net.URI
 import java.time.Instant
 import java.util.UUID
+import kr.co.genomecompanion.consentpurpose.api.DocumentUploadConsentAuthorization
 
 
 data class AuthorizedDocumentRequest(
-    val subjectId: String,
-    val timelineConsentId: UUID,
-    val cloudConsentId: UUID,
+    val authorization: DocumentUploadConsentAuthorization,
     val mediaType: String,
     val contentLength: Long,
-) {
-    init {
-        require(timelineConsentId != cloudConsentId)
-    }
-}
+)
 
 
 data class UploadTicket(

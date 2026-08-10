@@ -19,6 +19,9 @@ management:
       probes:
         enabled: true
 spring:
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
   mvc:
     log-request-details: false
   lifecycle:

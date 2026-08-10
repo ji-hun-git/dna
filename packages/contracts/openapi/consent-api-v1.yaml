@@ -1,0 +1,162 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: Genome Companion Korea Consent API
+  version: 1.0.0
+paths:
+  /v1/consent-options:
+    get:
+      operationId: getConsentOptions
+      tags: [Consent]
+      security: [{oauth2: [consent:read]}]
+      responses:
+        '200':
+          description: Release-pinned consent notice and processor options
+          content: {application/json: {schema: {$ref: '#/components/schemas/ConsentOptionsView'}}}
+        '401': {$ref: '#/components/responses/ProblemResponse'}
+        '403': {$ref: '#/components/responses/ProblemResponse'}
+  /v1/consents:
+    post:
+      operationId: grantConsent
+      tags: [Consent]
+      security: [{oauth2: [consent:write]}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/GrantConsentRequest'}}}
+      responses:
+        '200':
+          description: Consent receipt created
+          content: {application/json: {schema: {$ref: '#/components/schemas/ConsentView'}}}
+        '400': {$ref: '#/components/responses/ProblemResponse'}
+        '401': {$ref: '#/components/responses/ProblemResponse'}
+        '403': {$ref: '#/components/responses/ProblemResponse'}
+    get:
+      operationId: listConsents
+      tags: [Consent]
+      security: [{oauth2: [consent:read]}]
+      responses:
+        '200':
+          description: Subject-bound consent receipts
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/ConsentView'}}
+        '401': {$ref: '#/components/responses/ProblemResponse'}
+        '403': {$ref: '#/components/responses/ProblemResponse'}
+  /v1/consents/{consentId}:
+    delete:
+      operationId: revokeConsent
+      tags: [Consent]
+      security: [{oauth2: [consent:write]}]
+      parameters:
+        - {name: consentId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Idempotently revoked consent receipt
+          content: {application/json: {schema: {$ref: '#/components/schemas/ConsentView'}}}
+        '401': {$ref: '#/components/responses/ProblemResponse'}
+        '403': {$ref: '#/components/responses/ProblemResponse'}
+        '404': {$ref: '#/components/responses/ProblemResponse'}
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.genome-companion.kr/oauth2/authorize
+          tokenUrl: https://auth.genome-companion.kr/oauth2/token
+          scopes:
+            consent:read: Read the authenticated subject's consent receipts
+            consent:write: Grant or revoke the authenticated subject's consent
+  responses:
+    ProblemResponse:
+      description: Request rejected without sensitive-data echo
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    RecentSensitiveActionRequired:
+      x-http-status: 403
+      description: Sensitive action assurance or action scope is not satisfied
+      headers:
+        Cache-Control: {required: true, schema: {type: string, const: no-store}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/SensitiveActionProblem'}}}
+  schemas:
+    ConsentPurpose:
+      type: string
+      enum: [BUILD_PERSONAL_LAB_TIMELINE, PROCESS_UPLOADED_DOCUMENT_IN_KR_CLOUD, RETAIN_VERIFIED_SOURCE]
+    DataSource: {type: string, enum: [USER_UPLOAD]}
+    DataCategory: {type: string, enum: [LAB_REPORT, MEDICAL_RECORD]}
+    ConsentOperation: {type: string, enum: [COLLECT, EXTRACT, NORMALIZE, EXPLAIN, RETAIN]}
+    GrantConsentRequest:
+      type: object
+      additionalProperties: false
+      required: [purpose, sources, dataCategories, operations, recipients, processorSetVersion, noticeVersion, expiresAt]
+      properties:
+        purpose: {$ref: '#/components/schemas/ConsentPurpose'}
+        sources: {type: array, minItems: 1, uniqueItems: true, items: {$ref: '#/components/schemas/DataSource'}}
+        dataCategories: {type: array, minItems: 1, uniqueItems: true, items: {$ref: '#/components/schemas/DataCategory'}}
+        operations: {type: array, minItems: 1, uniqueItems: true, items: {$ref: '#/components/schemas/ConsentOperation'}}
+        recipients: {type: array, minItems: 1, uniqueItems: true, items: {type: string, minLength: 3, maxLength: 64}}
+        processorSetVersion: {type: string, minLength: 8, maxLength: 32}
+        noticeVersion: {type: string, minLength: 8, maxLength: 64}
+        expiresAt: {type: [string, 'null'], format: date-time}
+    ConsentOptionsView:
+      type: object
+      additionalProperties: false
+      required: [processorSetVersion, noticeVersion, recipients, region, cloudProcessingMaxHours, retentionMaxDays, noticeUrl, effectiveAt, configurationDigest]
+      properties:
+        processorSetVersion: {type: string, minLength: 8, maxLength: 32}
+        noticeVersion: {type: string, minLength: 8, maxLength: 64}
+        recipients: {type: array, minItems: 1, uniqueItems: true, items: {type: string}}
+        region: {type: string, const: KR}
+        cloudProcessingMaxHours: {type: integer, const: 24}
+        retentionMaxDays: {type: integer, const: 365}
+        noticeUrl: {type: string, format: uri, pattern: '^https://'}
+        effectiveAt: {type: string, format: date-time}
+        configurationDigest: {type: string, pattern: '^sha256:[0-9a-f]{64}$'}
+    ConsentView:
+      type: object
+      additionalProperties: false
+      required: [consentId, purpose, sources, dataCategories, operations, recipients, processorSetVersion, noticeVersion, region, grantedAt, expiresAt, revokedAt, signatureReceipt]
+      properties:
+        consentId: {type: string, format: uuid}
+        purpose: {$ref: '#/components/schemas/ConsentPurpose'}
+        sources: {type: array, minItems: 1, uniqueItems: true, items: {$ref: '#/components/schemas/DataSource'}}
+        dataCategories: {type: array, minItems: 1, uniqueItems: true, items: {$ref: '#/components/schemas/DataCategory'}}
+        operations: {type: array, minItems: 1, uniqueItems: true, items: {$ref: '#/components/schemas/ConsentOperation'}}
+        recipients: {type: array, minItems: 1, uniqueItems: true, items: {type: string}}
+        processorSetVersion: {type: string}
+        noticeVersion: {type: string}
+        region: {type: string, const: KR}
+        grantedAt: {type: string, format: date-time}
+        expiresAt: {type: [string, 'null'], format: date-time}
+        revokedAt: {type: [string, 'null'], format: date-time}
+        signatureReceipt: {type: string, pattern: '^sha256:[0-9a-f]{64}$'}
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, detail]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer, minimum: 400, maximum: 599}
+        detail: {type: string}
+    SensitiveAction: {type: string, enum: [EXPORT_RECORDS, RESET_PROFILE]}
+    SensitiveActionAssuranceRequirement:
+      type: object
+      additionalProperties: false
+      required: [action, requiredScope, maxAuthAgeSeconds, assurancePolicy, region]
+      properties:
+        action: {$ref: '#/components/schemas/SensitiveAction'}
+        requiredScope: {type: string, enum: ['records:export', 'profile:reset']}
+        maxAuthAgeSeconds: {type: integer, const: 300}
+        assurancePolicy: {type: string, const: cognito_mfa_required_pool}
+        region: {type: string, const: KR}
+    SensitiveActionProblem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, detail, code, assurance]
+      properties:
+        type: {type: string, const: https://api.genome-companion.kr/problems/sensitive-action}
+        title: {type: string, const: Sensitive action not authorized}
+        status: {type: integer, const: 403}
+        detail: {type: string, const: Sensitive action requirements are not satisfied.}
+        code: {type: string, enum: [recent_authentication_required, insufficient_action_scope, sensitive_action_denied]}
+        assurance: {$ref: '#/components/schemas/SensitiveActionAssuranceRequirement'}
