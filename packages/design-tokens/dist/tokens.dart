@@ -1,0 +1,31 @@
+abstract final class GcTokens {
+  static const String colorSurfaceCanvas = '#08090A';
+  static const String colorSurfaceRaised = '#111315';
+  static const String colorSurfaceInverse = '#F2F0EA';
+  static const String colorTextPrimary = '#F2F0EA';
+  static const String colorTextSecondary = '#A8AAAD';
+  static const String colorTextInverse = '#111315';
+  static const String colorLineSubtle = '#2B2E31';
+  static const String colorLineStrong = '#6F7479';
+  static const String colorStatusVerified = '#69E7F2';
+  static const String colorStatusDanger = '#FF6B6B';
+  static const String colorStatusWarning = '#F0C36A';
+  static const String colorStatusUnknown = '#A8AAAD';
+  static const String colorFocusRing = '#8CF3FA';
+  static const String typeSans = 'Pretendard Variable, Pretendard, Noto Sans KR, system-ui, sans-serif';
+  static const String typeMono = 'IBM Plex Mono, ui-monospace, SFMono-Regular, monospace';
+  static const String typeBodySize = '16px';
+  static const String typeBodyLine = '1.65';
+  static const String space1 = '4px';
+  static const String space2 = '8px';
+  static const String space3 = '12px';
+  static const String space4 = '16px';
+  static const String space6 = '24px';
+  static const String space8 = '32px';
+  static const String space12 = '48px';
+  static const String radiusSm = '2px';
+  static const String radiusMd = '6px';
+  static const String motionFast = '100ms';
+  static const String motionStandard = '180ms';
+  static const String targetMinimum = '44px';
+}
