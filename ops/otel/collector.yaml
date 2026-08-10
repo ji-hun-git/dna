@@ -1,0 +1,34 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+  transform/phi_allowlist:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - keep_keys(attributes, ["http.route", "http.request.method", "http.response.status_code", "server.duration_ms", "aws.region", "aws.availability_zone", "correlation.id", "error.type"])
+      - context: resource
+        statements:
+          - keep_keys(attributes, ["service.name", "service.version", "deployment.environment", "aws.region", "aws.availability_zone"])
+  batch:
+    timeout: 5s
+
+exporters:
+  # The protected deployment maps this only to the ap-northeast-2 private collector endpoint.
+  otlphttp/seoul:
+    endpoint: ${env:OTEL_EXPORTER_OTLP_ENDPOINT_AP_NORTHEAST_2}
+    compression: gzip
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/phi_allowlist, batch]
+      exporters: [otlphttp/seoul]

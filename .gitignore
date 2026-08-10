@@ -27,6 +27,8 @@ coverage/
 out/
 !apps/core-api/src/main/kotlin/kr/co/genomecompanion/consentpurpose/adapter/out/
 !apps/core-api/src/main/kotlin/kr/co/genomecompanion/consentpurpose/adapter/out/**
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/audit/adapter/out/
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/audit/adapter/out/**
 evidence/
 .pytest_cache/
 __pycache__/
