@@ -9,6 +9,16 @@ import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 @AnalyzeClasses(packages = ["kr.co.genomecompanion"])
 class ModuleBoundaryTest {
     @ArchTest
+    val sensitiveActionAuthorizationCannotLogTokens: ArchRule = noClasses()
+        .that().haveSimpleName("JwtSensitiveActionAuthorizer")
+        .should().dependOnClassesThat().resideInAnyPackage(
+            "org.slf4j..",
+            "org.apache.logging..",
+            "java.util.logging..",
+        )
+        .allowEmptyShould(true)
+
+    @ArchTest
     val publicDataCannotReadPersonalModules: ArchRule = noClasses()
         .that().resideInAPackage("..publicdata..")
         .should().dependOnClassesThat().resideInAnyPackage(

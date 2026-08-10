@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genome-companion.kr/schemas/workload-jwks-keygen-result.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "requestSha256", "kid", "publicKeyRawBase64Url", "publicKeySha256", "privateKeyVersionIdSha256", "notBefore", "notAfter", "executedAt", "resultSha256"],
+  "properties": {
+    "schemaVersion": {"const": "workload-jwks-keygen-result.v1"},
+    "requestSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "kid": {"type": "string", "pattern": "^workload-[A-Za-z0-9_-]{1,64}$"},
+    "publicKeyRawBase64Url": {"type": "string", "pattern": "^[A-Za-z0-9_-]{43}$"},
+    "publicKeySha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "privateKeyVersionIdSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "notBefore": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "notAfter": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "executedAt": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "resultSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

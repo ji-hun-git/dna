@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "workload-jwks-prepared-pair.v1",
+  "sequence": 1,
+  "registry": {
+    "secretArn": "arn:aws:secretsmanager:ap-northeast-2:111122223333:secret:workload-registry",
+    "versionId": "workload-registry-version-1",
+    "sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "signingResult": {"key": "evidence/registry-signing.json", "versionId": "registry-signing-version-1", "sha256": "sha256:3333333333333333333333333333333333333333333333333333333333333333"}
+  },
+  "release": {
+    "secretArn": "arn:aws:secretsmanager:ap-northeast-2:111122223333:secret:workload-release",
+    "versionId": "workload-release-version-1",
+    "sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "signingResult": {"key": "evidence/release-signing.json", "versionId": "release-signing-version-1", "sha256": "sha256:3333333333333333333333333333333333333333333333333333333333333333"}
+  },
+  "candidateSignerKeyVersionIdSha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "keygenResult": {"key": "evidence/keygen-result.json", "versionId": "keygen-result-version-1", "sha256": "sha256:3333333333333333333333333333333333333333333333333333333333333333"},
+  "rootBundle": {"secretArn": "arn:aws:secretsmanager:ap-northeast-2:111122223333:secret:broker-root-bundle", "versionId": "broker-root-bundle-version-1", "sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444"},
+  "preparedAt": "2026-08-09T00:10:00Z",
+  "preparedPairSha256": "sha256:4865975bf7aa42f4849ee5ed8215b69a449cd55449a00612fdff303ae4c34f24"
+}

@@ -1,3 +1,28 @@
+security:
+  oidc:
+    enabled: false
+    issuer: ${OIDC_ISSUER:}
+    jwk-set-uri: ${OIDC_JWK_SET_URI:}
+    audience: ${OIDC_AUDIENCE:}
+    client-id: ${OIDC_CLIENT_ID:}
+
+server:
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 spring:
   application:
     name: genome-companion-core-api
@@ -10,11 +35,12 @@ spring:
     locations: classpath:db/migration
   jackson:
     default-property-inclusion: non_null
-
-server:
-  error:
-    include-message: never
-    include-stacktrace: never
+    deserialization:
+      fail-on-unknown-properties: true
+  mvc:
+    log-request-details: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
 gc:
   foundation:

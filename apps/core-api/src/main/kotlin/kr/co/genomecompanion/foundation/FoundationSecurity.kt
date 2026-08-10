@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
+import org.springframework.core.annotation.Order
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
@@ -71,11 +72,13 @@ class FoundationSecurityConfiguration(
     fun foundationClock(): Clock = Clock.systemUTC()
 
     @Bean
+    @Order(1)
     fun foundationSecurityFilterChain(
         http: HttpSecurity,
         foundationSessionFilter: FoundationSessionFilter,
     ): SecurityFilterChain =
         http
+            .securityMatcher("/api/foundation/**", "/actuator/health/**")
             .csrf { csrf -> csrf.disable() }
             .cors { cors -> cors.disable() }
             .httpBasic { basic -> basic.disable() }
