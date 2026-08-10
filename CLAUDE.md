@@ -1,13 +1,12 @@
 # CLAUDE.md — how to pick this project up
 
-이 저장소는 **코드가 아직 한 줄도 없는 기획 저장소**입니다. 승인된 설계와 실행 계획만
-들어 있고, 구현은 창업자의 실행 모드 선택 이후에 시작합니다. 새 세션은 아래 순서대로
-읽으면 맥락이 복원됩니다.
+이 저장소는 승인된 설계와 실행 계획을 바탕으로 **구현을 시작한 저장소**입니다. 창업자는
+2026-08-10에 체크포인트 기반 인라인 실행을 승인했습니다. 새 세션은 아래 순서대로 읽으면
+맥락이 복원됩니다.
 
-This repository is a **planning workspace with no implementation yet**. There is no build,
-no test suite, no dependency manifest, and no application code. Everything here is a
-reviewed document. Do not "fix" that by scaffolding an app — implementation is gated
-(see [Gates](#gates)).
+This repository is now an **implementation workspace governed by the reviewed plans**.
+The founder authorized checkpointed inline execution on 2026-08-10. Execute one plan task
+at a time, preserve its red/green cycle, and stop at named checkpoints.
 
 ## Read in this order
 
@@ -28,9 +27,8 @@ Those are long (1.4k–6.2k lines); read the one you are working on, not all six
 ## Current state
 
 - **Design: approved** (2026-08-09, all eight gates).
-- **Plans: written and reviewable, none executed.** Every workstream row in the roadmap
-  says "Plan-ready; not executed".
-- **Implementation: not started, and not authorized to start.**
+- **Plans: written and reviewable.** FND Task 1 is the first authorized implementation slice.
+- **Implementation: authorized 2026-08-10** in checkpointed inline batches; production and beta are not authorized.
 - **Open input, not yet integrated:** [`research/source-materials/2026-08-10-founder-brief-ko.txt`](research/source-materials/2026-08-10-founder-brief-ko.txt)
   (2026-08-10, Korean). It reframes category/brand — *AI-native Preventive Health*,
   product = *Personal Health Intelligence*, core asset = *Longitudinal Personal Health Model*,
@@ -41,8 +39,8 @@ Those are long (1.4k–6.2k lines); read the one you are working on, not all six
 
 ## Gates — do not cross these without a written approval in `governance/`
 
-- No implementation phase begins until the founder reviews the indexed plans and explicitly
-  selects an execution mode (D-021).
+- Implementation follows D-030 and the founder's 2026-08-10 execution authorization. Do not
+  skip plan tasks or named checkpoints.
 - No real personal health data, ever, in this repository or in any lower environment.
   Synthetic fixtures only, marked `SYNTHETIC`.
 - No paid medical referral or success-fee workflow without a written Korean legal opinion (D-005).

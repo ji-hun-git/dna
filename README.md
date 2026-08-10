@@ -4,9 +4,9 @@ Planning workspace for a Korea-first consumer health-data company. The project c
 
 ## Current status
 
-**Founder-approved planning. No product implementation has started.**
+**Founder-approved implementation has started with FND Task 1.**
 
-The founder approved all eight design decisions on 2026-08-09. The specification has been converted into a sequenced set of separate, test-first implementation plans and cross-workstream contracts. Product implementation remains gated on founder review and an explicit execution choice; production/beta additionally remains gated on Korean healthcare/privacy counsel and an MFDS intended-use classification review of the actual build.
+The founder approved all eight design decisions on 2026-08-09 and explicitly authorized checkpointed implementation on 2026-08-10. Work proceeds one reviewed plan task at a time, beginning with the pinned foundation build. Production/beta remains gated on Korean healthcare/privacy counsel and an MFDS intended-use classification review of the actual build.
 
 ## Strategic direction
 
@@ -28,6 +28,7 @@ It gives the reading order, the current state, and the gates that must not be cr
 - [`governance/decision-log.md`](governance/decision-log.md) — decisions, assumptions, owners, and review triggers.
 - [`risks/risk-register.md`](risks/risk-register.md) — initial product, technical, security, scientific, and regulatory risks.
 - [`governance/founder-approval-2026-08-09.md`](governance/founder-approval-2026-08-09.md) — recorded resolution of all eight founder decision gates.
+- [`governance/founder-execution-authorization-2026-08-10.md`](governance/founder-execution-authorization-2026-08-10.md) — founder authorization and retained execution boundaries.
 - [`docs/superpowers/plans/README.md`](docs/superpowers/plans/README.md) — sequenced implementation roadmap and executable workstream plans.
 
 ## Workspace rules

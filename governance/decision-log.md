@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: 2026-08-09 (Asia/Seoul)
+Last updated: 2026-08-10 (Asia/Seoul)
 
 | ID | Status | Decision | Why | Revisit trigger |
 |---|---|---|---|---|
@@ -33,8 +33,11 @@ Last updated: 2026-08-09 (Asia/Seoul)
 | D-027 | Planned architecture 2026-08-09 | Deliver AI evidence recalls to REC through exact mTLS-isolated registry/notice/ack routes, with a shared root-pinned monotonic key registry and REC-ready-before-AI-activation ordering. | User-facing recall state is a safety control; an in-process handler or unauthenticated key allowlist cannot prove delivery, rotation, idempotency, or rollback resistance. | A reviewed service-identity/control-plane design provides stronger authenticated delivery and preserves the same PHI-free acknowledgement contract. |
 | D-028 | Planned architecture 2026-08-09 | Verify the complete REC export in a bounded, Fargate-CMK-encrypted BFF spool before committing any browser response header; do not claim a pass-through stream can fail closed after it has started. | Length and digest are knowable only at EOF. Full verification before release prevents an early EOF, extra byte, or same-length mutation from becoming a partially trusted browser download. | A separately reviewed ticket-bound direct-download design gives the browser a trustworthy independent digest/attestation verifier without exposing object identity or weakening one-use authorization. |
 | D-029 | Planned architecture 2026-08-09 | Foundation owns reproducible, locked recall/telemetry certificate-rotation handlers and exact version-staged Secrets Manager schemas; Terraform alone is not treated as the runtime implementation. | Key generation, PCA issuance, canary, stage moves, deployment replacement, and rollback are executable security behavior with private-key and partial-failure risk. | A managed service demonstrably provides the same constrained identities, atomic promotion, bounded overlap, evidence, and rollback contract. |
+| D-030 | Accepted 2026-08-10 | Begin implementation using checkpointed inline batches, one reviewed plan task at a time, starting with FND Task 1 in an isolated worktree. | The founder explicitly instructed the project to resume development after the indexed plans were reviewed. This satisfies D-021's execution-choice trigger while preserving test-first checkpoints and synthetic-only lower environments. | The founder pauses implementation, selects a different roadmap execution mode, or a checkpoint reviewer identifies a blocking safety or scope mismatch. |
 
 Approval owner and evidence for D-004 and D-017 through D-021: **Founder**, 2026-08-09, [`founder-approval-2026-08-09.md`](founder-approval-2026-08-09.md). That record also reaffirms D-005, D-014, and D-016 as the resolutions of founder gates 2, 7, and 8.
+
+Approval owner and evidence for D-030: **Founder**, 2026-08-10, [`founder-execution-authorization-2026-08-10.md`](founder-execution-authorization-2026-08-10.md).
 
 ## Decision process
 
