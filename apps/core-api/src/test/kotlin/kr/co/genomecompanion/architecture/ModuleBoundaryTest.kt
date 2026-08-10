@@ -10,6 +10,12 @@ import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 @AnalyzeClasses(packages = ["kr.co.genomecompanion"], importOptions = [ImportOption.DoNotIncludeTests::class])
 class ModuleBoundaryTest {
     @ArchTest
+    val loggingIsAvailableOnlyBehindPhiSafeTelemetry: ArchRule = noClasses()
+        .that().resideOutsideOfPackage("..platform.telemetry..")
+        .should().dependOnClassesThat().resideInAnyPackage("org.slf4j..")
+        .allowEmptyShould(true)
+
+    @ArchTest
     val sensitiveActionAuthorizationCannotLogTokens: ArchRule = noClasses()
         .that().haveSimpleName("JwtSensitiveActionAuthorizer")
         .should().dependOnClassesThat().resideInAnyPackage(

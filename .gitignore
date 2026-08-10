@@ -31,6 +31,8 @@ test-results/
 out/
 !apps/core-api/src/main/kotlin/kr/co/genomecompanion/consentpurpose/adapter/out/
 !apps/core-api/src/main/kotlin/kr/co/genomecompanion/consentpurpose/adapter/out/**
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/audit/adapter/out/
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/audit/adapter/out/**
 evidence/
 !apps/web/components/evidence/
 !apps/web/components/evidence/**
