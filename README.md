@@ -16,8 +16,12 @@ The recommended launch wedge is:
 
 The genetic wallet remains a differentiated post-MVP module and may proceed only after its independent G0 gate. It is a device-only verifier and viewer for exact certified Korean laboratory-signed result-code tuples. Raw VCF/BAM/FASTQ, variants or alleles, scores, free-text genetic interpretation, server genetics APIs, network correction feeds, diagnosis, prescribing, and autonomous clinical agents are outside this product plan.
 
+**Picking this up in a new session (human or Claude Code): start at [`CLAUDE.md`](CLAUDE.md).**
+It gives the reading order, the current state, and the gates that must not be crossed.
+
 ## Planning artifacts
 
+- [`CLAUDE.md`](CLAUDE.md) — resumption guide: reading order, current state, gates, working rules.
 - [`docs/superpowers/specs/2026-08-08-genome-companion-program-design.md`](docs/superpowers/specs/2026-08-08-genome-companion-program-design.md) — approved design translated into the comprehensive technical/product specification.
 - [`technical-architecture/open-source-register.md`](technical-architecture/open-source-register.md) — curated dependency shortlist, license posture, and adoption gates.
 - [`research/sources/primary-source-register.md`](research/sources/primary-source-register.md) — authoritative source register for Korean data, standards, regulation, and security.
@@ -39,5 +43,7 @@ The genetic wallet remains a differentiated post-MVP module and may proceed only
 ## Source materials
 
 Original source material is preserved under `research/source-materials/`. Visual references are preserved under `product/visual-references/`.
+
+`research/source-materials/2026-08-10-founder-brief-ko.txt` is a later founder brief (2026-08-10) covering category, brand philosophy, and naming. It is an input awaiting a decision, not an approved change to the specification.
 
 This repository is a planning artifact, not medical advice or a formal legal opinion.

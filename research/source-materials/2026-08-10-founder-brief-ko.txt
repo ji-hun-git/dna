@@ -1,0 +1,2656 @@
+서비스의 본질
+사용자가 병원·건강검진센터·보건소·DNA 검사기관 등에서 실제로 받은 PDF, 종이 결과지 사진, 이미지, DICOM, CSV/텍스트 등의 건강 데이터를 우리 서비스에 넣으면, AI가 여러 데이터를 통합해서 사용자의 현재 상태를 설명하고 식습관·운동·수면·생활습관 등 개인화된 액션으로 바꿔주는 서비스입니다. 특히 “실제 병원/DNA/보건소에서 발급 가능한 데이터여야 한다”는 조건이 중요합니다.
+우리가 검사를 직접 하는 것은 우선순위가 낮음
+DNA 검사처럼 Wet Lab, 장비, 전문인력, 인증이 필요한 영역은 초기에 직접 들어가기보다 기존 검사기관과 제휴하고 우리는 데이터 해석·통합·UX에 집중하는 Dry Lab/플랫폼 모델을 우선 검토합니다. 기존 대화에서도 이 구조를 핵심 현실적 접근으로 잡았습니다.
+DNA만 볼 필요가 없음
+오히려 초기에는 건강검진 혈액수치, 혈압·BMI·허리둘레, 체성분/InBody, 병원 정밀검사 결과, 알레르기 검사, 호르몬·영양·염증 지표 등 이미 사람들이 가지고 있거나 비교적 쉽게 얻을 수 있는 데이터가 중요한 후보입니다. 대화에서도 국민건강보험/보건소/병원 데이터를 DNA의 대안 또는 보완재로 보고 있습니다.
+더 깊은 데이터도 후보
+장기적으로는 안저사진, X-ray/DICOM, 정밀 혈액검사, CGM 시계열, 보행·족압/체형 데이터처럼 AI가 단순 OCR 이상의 분석을 할 수 있는 데이터까지 확장하는 그림입니다.
+지금 가장 먼저 밝혀야 할 것은 AI 모델이 아님
+이 프로젝트에서 가장 중요한 리서치는 “대한민국에서 개인이 어떤 검사를 어디에서 받을 수 있고, 결과를 어떤 형태로 가져갈 수 있느냐”입니다.
+
+앞으로는 각 검사를 아래 구조로 보는 게 좋습니다.
+
+검사명 → 어디서 받는가 → 누가 받을 수 있는가 → 가격 → 소요시간 → 어떤 데이터가 나오는가 → PDF/사진/CSV/DICOM 등 반출 가능한가 → 우리 서비스에 어떻게 업로드하는가 → AI가 무엇을 분석할 수 있는가 → 사용자에게 어떤 lifestyle action을 줄 수 있는가 → 의료기기/의료행위/개인정보 측면의 규제 리스크
+
+그리고 서비스의 핵심 UX는 결국 이런 형태라고 이해하고 있습니다.
+
+“내 건강 데이터를 가져오세요 → AI가 모두 한곳에서 읽습니다 → 각각의 숫자를 설명하는 데 그치지 않고 서로 연결합니다 → 지금 가장 개선할 부분을 우선순위화합니다 → 오늘부터 할 행동을 제안합니다 → 몇 달 뒤 새 검사 결과를 넣으면 변화까지 추적합니다.”
+
+또 하나 중요한 점이 있습니다. 첨부된 대화에는 검사 가격, 보건소 제공 항목, 병원 데이터 발급, MyHealthWay 연동 가능 범위, AI가 특정 의료영상에서 예측할 수 있는 항목, 법적으로 가능한 서비스 범위 등에 일부 단정적인 내용이 포함되어 있습니다. 앞으로 실제 사업 설계에 사용할 때는 이 부분을 그대로 사실로 전제하지 않고, 2026년 대한민국 기준 공식 자료를 하나씩 확인하는 것을 기준으로 삼겠습니다.
+
+즉, 우리가 다음에 해야 할 가장 중요한 작업은 “한국 Health Test/Data Map”을 만드는 것입니다. DNA부터 시작하지 않고 병원·건강검진·보건소·민간검사까지 전부 펼쳐놓고, 실제 발급 가능성과 AI 활용 가치가 높은 순서대로 정리하는 방향으로 이어가면 됩니다.
+
+이제 여기에 전문화된 분석 엔진 + 여러 검사 간 교차분석 + 시간축 분석 + 사용자 과금을 핵심 조건으로 추가해서 보면 됩니다.
+
+먼저, 어떤 Test들이 있나
+
+서비스 관점에서는 아래처럼 보는 게 좋습니다. “실제로 한국에서 받을 수 있는가 + 결과 데이터를 사용자가 가져올 수 있는가 + AI가 lifestyle action으로 변환하기 좋은가” 기준입니다.
+
+영역	Test / 데이터	주로 어디서	AI 활용 가치
+기본 건강검진	혈압	건강검진·보건소·병원	★★★★★
+	키 / 체중 / BMI	건강검진·보건소	★★★★☆
+	허리둘레	건강검진·보건소	★★★★★
+	공복혈당	건강검진·보건소·병원	★★★★★
+	혈색소(Hb)	건강검진·병원	★★★★☆
+	AST / ALT	건강검진·병원	★★★★★
+	γ-GTP	건강검진·병원	★★★★★
+	Creatinine / eGFR	건강검진·병원	★★★★★
+	총콜레스테롤	검진·병원	★★★★★
+	HDL	검진·병원·보건소	★★★★★
+	LDL	검진·병원	★★★★★
+	중성지방 TG	검진·병원·보건소	★★★★★
+혈당·대사	HbA1c	병원·검진센터	★★★★★
+	공복 인슐린	병원·검진센터	★★★★★
+	C-peptide	병원	★★★★☆
+	요산	병원·검진센터	★★★★☆
+혈액 일반	CBC	병원·검진센터	★★★★★
+	WBC 및 differential	병원	★★★★☆
+	RBC	병원	★★★★☆
+	Hemoglobin	병원	★★★★☆
+	Hematocrit	병원	★★★★☆
+	Platelet	병원	★★★★☆
+철·빈혈	Ferritin	병원·검진센터	★★★★★
+	Serum iron	병원	★★★★☆
+	TIBC / transferrin	병원	★★★★☆
+	Vitamin B12	병원	★★★★☆
+	Folate	병원·검진센터	★★★★☆
+간 기능	AST	병원·검진	★★★★★
+	ALT	병원·검진	★★★★★
+	ALP	병원	★★★★☆
+	GGT	병원·검진	★★★★★
+	Bilirubin	병원	★★★★☆
+	Albumin	병원	★★★★☆
+신장·전해질	Creatinine	병원·검진	★★★★★
+	eGFR	병원·검진	★★★★★
+	BUN	병원	★★★★☆
+	Sodium	병원	★★★★☆
+	Potassium	병원	★★★★☆
+	Calcium	병원	★★★★☆
+	Magnesium	병원	★★★★☆
+갑상선	TSH	병원·검진센터	★★★★★
+	Free T4	병원	★★★★★
+	T3	병원	★★★☆☆
+	Thyroid antibodies	병원	★★★☆☆
+염증/면역	CRP	병원·검진센터	★★★★★
+	hs-CRP	병원	★★★★★
+	ESR	병원	★★★☆☆
+	Rheumatoid factor	병원·검진센터	★★☆☆☆
+영양 상태	Vitamin D	병원·검진센터	★★★★★
+	Vitamin B12	병원	★★★★☆
+	Folate	병원	★★★★☆
+	Iron/Ferritin	병원	★★★★★
+	Zinc	일부 병원	★★★☆☆
+심혈관 고급	ApoB	병원·검진센터	★★★★★
+	ApoA1	병원	★★★★☆
+	Lp(a)	병원	★★★★★
+	Homocysteine	병원·검진센터	★★★★☆
+호르몬	Testosterone	병원·검진센터	★★★★☆
+	Estradiol	병원	★★★★☆
+	FSH / LH	병원	★★★★☆
+	Prolactin	병원	★★★☆☆
+	Cortisol	병원	★★★☆☆
+체성분	체지방률	보건소·검진·헬스센터	★★★★★
+	골격근량	보건소·검진	★★★★★
+	내장지방 지표	체성분 검사	★★★★★
+	기초대사량	체성분 검사	★★★★☆
+	부위별 근육/지방	체성분 검사	★★★★★
+대사증후군	혈압+혈당+TG+HDL+허리둘레	보건소	★★★★★
+골 건강	DEXA 골밀도	병원·검진센터	★★★★☆
+	T-score / Z-score	병원	★★★★☆
+심장	안정 심전도 ECG	병원·검진센터	★★★★☆
+	Holter ECG	병원	★★★★★
+	Patch ECG	병원	★★★★★
+	운동부하검사	병원	★★★★☆
+	심장초음파	병원	★★★★☆
+	24시간 혈압 ABPM	병원	★★★★★
+혈당 시계열	CGM	병원·기기	★★★★★+
+폐	Spirometry 폐기능	병원·검진센터	★★★★☆
+	FEV1 / FVC	병원	★★★★☆
+수면	수면다원검사 PSG	수면센터·병원	★★★★★
+	산소포화도 시계열	병원·웨어러블	★★★★☆
+	AHI	수면검사	★★★★★
+알레르기	Total IgE	병원	★★★☆☆
+	Specific IgE	병원	★★★★☆
+	알레르기 정밀혈액검사	병원	★★★★☆
+	Skin prick test	병원	★★★☆☆
+위장	H. pylori 검사	병원·검진센터	★★★☆☆
+	위내시경	병원·검진센터	★★★☆☆
+	대장내시경	병원·검진센터	★★★☆☆
+간/복부	복부초음파	병원·검진센터	★★★★☆
+	지방간 판독	병원	★★★★★
+영상	흉부 X-ray	병원·검진	★★★★☆
+	CT	병원	★★★★☆
+	MRI/MRA	병원	★★★★☆
+	DICOM 원본	병원	★★★★★ 잠재력
+눈	안저촬영	안과·검진센터	★★★★★
+	OCT	안과	★★★★★
+치과	파노라마 X-ray	치과	★★★★☆
+	치주검사	치과	★★★★☆
+여성건강	Pap smear	산부인과·검진	★★☆☆☆
+	HPV 검사	병원	★★★☆☆
+	여성호르몬	병원	★★★★☆
+	골반초음파	병원	★★★☆☆
+남성건강	Testosterone	병원	★★★★☆
+	PSA	병원·검진센터	★★☆☆☆
+감염/면역 상태	B형간염 항원/항체	병원·검진센터	★★★☆☆
+	C형간염 항체	병원·검진센터	★★★☆☆
+DNA	DTC SNP 검사	인증 유전자검사기관	★★★★★
+	영양 관련 genetic traits	DTC	★★★★★
+	운동 관련 traits	DTC	★★★★☆
+	피부/탈모 관련 traits	DTC	★★★★☆
+	카페인/알코올 대사	DTC	★★★★★
+Microbiome	장내 미생물 검사	민간검사·일부 의료기관	★★★★☆
+보행/자세	족압 검사	재활·정형외과 등	★★★★☆
+	보행분석	병원·재활센터	★★★★☆
+체력	악력	건강/체력센터	★★★★☆
+	심폐체력	체력센터·병원	★★★★★
+	유연성/근지구력	체력센터	★★★★☆
+
+이게 상상 속 검사들이 아니라, 현재 국내 검진기관에서 실제로 상당수가 제공되고 있습니다. 예를 들어 서울아산병원 건강검진에는 일반혈액·간·신장·갑상선·지질·당뇨·철결핍·염증·알레르기·비타민D 등이 포함되고, 심전도·골밀도·연속심전도 등의 특화 검사도 운영되고 있습니다. 삼성서울병원도 일반혈액, 신장, 간, 갑상선, 요산, 전해질, 지질, 당뇨, CRP, 비타민D, 호르몬 등을 검진 항목으로 제공하고 있습니다.
+
+보건소도 무시하면 안 됩니다. 서울시의 현재 대사증후군 사업에서는 혈압·혈당·허리둘레·중성지방·HDL을 실제 측정하고 있으며, 일부 센터에서는 체성분 측정도 함께 제공됩니다. 다만 보건소 서비스는 지역별로 차이가 있으므로 전국에서 동일하다고 가정하면 안 됩니다.
+
+그리고 매우 중요한 변화가 건강정보 고속도로입니다. 현재 공식 포털은 FHIR 기반으로 검사 결과, 영상·판독, 투약·처방, 건강검진 등을 포함한 12개 범주의 개인 건강데이터 전송을 설명하고 있습니다. 따라서 장기적으로는 “PDF 사진 올리기”뿐 아니라 사용자 동의를 기반으로 한 구조화 데이터 수집도 제품의 중요한 진입점이 될 수 있습니다.
+
+진짜 중요한 건 “Test 개수”보다 분석 깊이
+
+예를 들어 사용자가 이런 결과를 올렸다고 해보죠.
+
+GPT/Claude에 그냥 올렸을 때
+
+LDL이 조금 높습니다.
+운동하고 포화지방 섭취를 줄이는 것이 좋습니다.
+의사와 상담하세요.
+
+이 정도면 돈 받을 이유가 없습니다.
+
+우리 제품은 이렇게 가야 합니다.
+
+Metabolic Profile
+
+최근 3년 동안 체중 +4.7kg, 허리둘레 +6cm.
+공복혈당은 정상범위지만 87 → 94 → 99로 지속 상승.
+
+TG 168, HDL 43, ALT 36, GGT 48이고 체성분에서 내장지방이 증가.
+
+개별적으로는 심각한 이상이 없지만, 서로 같이 보면 현재 가장 먼저 관리할 축은 LDL 자체보다는 insulin sensitivity / visceral adiposity 쪽이다.
+
+지난 검사 대비 악화 속도가 가장 빠른 항목:
+
+허리둘레
+TG
+공복혈당
+ALT
+
+향후 8주 intervention
+
+야식 빈도 감소 → 식후 15~20분 보행 → 주 3회 resistance training → 8주 후 HbA1c/TG/ALT/허리둘레 재측정.
+
+그리고 이번 검사에서는 ApoB, HbA1c가 없기 때문에 다음 검사 때 이 두 데이터를 추가하면 분석 confidence가 높아짐.
+
+이게 제품이어야 합니다.
+
+그러려면 우리 AI는 GPT 자체가 아니라 “Health Intelligence Engine”이어야 함
+
+사용자가 PDF 하나 올리고 LLM에 prompt 하나 던지는 구조가 아닙니다.
+
+Upload
+
+PDF / 검사결과 사진 / DICOM / CSV / 병원 데이터 / DNA / CGM
+
+↓
+
+① Medical Parser
+
+병원마다 다른 양식에서
+
+ALT: 41 U/L
+
+같은 값을 구조화합니다.
+
+↓
+
+② Normalization Engine
+
+단위, 검사법, 성별, 나이, 검사기관 reference range 등을 정규화.
+
+↓
+
+③ Personal Health Graph
+
+사용자 한 명에 대해서
+
+혈당 ↔ TG ↔ HDL ↔ 체지방 ↔ 간수치 ↔ 운동 ↔ 수면 ↔ DNA
+
+를 하나의 그래프로 만듭니다.
+
+↓
+
+④ Longitudinal Engine
+
+한 번 검사한 결과가 아니라
+
+2023 → 2024 → 2025 → 2026
+
+변화를 봅니다.
+
+↓
+
+⑤ Cross-Test Reasoning
+
+이게 가장 중요한 moat입니다.
+
+예:
+
+DNA + 혈액 + InBody + CGM + 운동 + 수면
+
+을 서로 연결합니다.
+
+↓
+
+⑥ Evidence Engine
+
+각 insight마다 근거와 confidence를 붙입니다.
+
+↓
+
+⑦ Intervention Engine
+
+“운동하세요”가 아니라
+
+이 사용자가 지금 바꿀 수 있는 가장 impact가 큰 행동 3개
+
+를 찾아냅니다.
+
+↓
+
+⑧ Re-test Engine
+
+그리고 다음에는 무엇을 검사해야 하는지 알려줍니다.
+
+이 부분이 굉장히 중요합니다.
+
+우리 서비스가 단순 분석이 아니라:
+
+What should I measure next?
+
+까지 알려주는 겁니다.
+
+1. Health Checkup
+
+혈당 / HbA1c / LDL / HDL / TG / AST / ALT / GGT / Creatinine / eGFR / CBC / 혈압 / BMI / 허리둘레
+
+2. Body Composition
+
+체지방 / 근육량 / visceral fat / BMR / 부위별 데이터
+
+3. Advanced Blood
+
+Vitamin D / Ferritin / B12 / TSH / Free T4 / hs-CRP / ApoB / Lp(a)
+
+4. DNA
+
+DTC 검사 결과
+
+5. Continuous Data
+
+CGM + Apple Health / Galaxy Health / Garmin 등의 활동·수면·심박 데이터
+
+
+
+국내 DTC 유전자검사도 현재 인증제 하에서 실제 운영되고 있으며, 보건복지부는 2026년 7월 기준 전체 13개 DTC 인증기관이 있다고 밝히고 있습니다. DTC 검사는 영양·생활습관·신체적 특징 등을 대상으로 활용되고 있습니다.
+
+사업상 경계는 미리 잡아야 합니다. lifestyle/health-management 영역을 넘어 소프트웨어가 특정 질병의 진단·예측·치료 의사결정을 수행하는 방향으로 가면 국내 디지털의료기기 규제 검토가 중요해집니다. 식약처는 현재 AI/ML을 포함한 독립형 소프트웨어를 디지털의료제품 체계에서 다루고 있고, 의료기기 소프트웨어 허가·심사 가이드라인도 운영하고 있습니다.
+
+내가 이걸 더 발전시킨다면 다음 단계는 Test 100개를 그냥 나열하는 게 아니라 Test Marketplace / Test Catalog 형태로 만드는 겁니다.
+
+예를 들어 앱에서:
+
+“피로가 궁금해요”
+→ CBC / Ferritin / B12 / Folate / Vitamin D / TSH 후보
+
+“살이 왜 안 빠지는지 궁금해요”
+→ HbA1c / fasting glucose / TG / HDL / InBody / CGM 후보
+
+“심혈관 건강을 자세히 알고 싶어요”
+→ BP / LDL / ApoB / Lp(a) / HbA1c / hs-CRP 후보
+
+처럼 사용자가 원하는 insight → 필요한 test → 어디서 받을지 → 결과를 우리 AI에 넣기 → 분석이라는 flow가 훨씬 강합니다.
+
+사용자가 병원, 건강검진센터, 보건소, DNA 검사, 웨어러블 등에서 얻을 수 있는 자기 건강 데이터를 하나씩 Collect합니다.
+
+처음에는 건강검진 하나뿐일 수 있습니다.
+
+하지만 시간이 지나면서
+
+건강검진 → InBody → 혈액검사 → DNA → 수면 → CGM → 새로운 건강검진 → …
+
+계속 데이터가 쌓입니다.
+
+그리고 데이터를 추가할 때마다 AI가 사용자를 더 깊게 이해하게 됩니다.
+
+즉,
+
+The more you collect, the better we understand you.
+
+이게 제품의 핵심 loop입니다.
+
+우리가 만들려는 것은 사용자의 Personal Health Dataset입니다.
+
+크게 보면 다음처럼 계속 확장할 수 있습니다.
+
+Collection	대표 데이터
+🩸 Blood	혈당, HbA1c, LDL, HDL, TG, 간수치, 신장, CBC, 철분, 비타민
+🧬 DNA	영양, 대사, 운동, 카페인, 알코올 등 유전적 특성
+⚖️ Body	체중, 체지방, 근육량, 내장지방, 허리둘레
+❤️ Cardio	혈압, ECG, 안정심박, HRV
+🍚 Metabolism	공복혈당, 인슐린, CGM
+🧠 Hormone	갑상선, testosterone, estrogen, cortisol 등
+🥗 Nutrition	Vitamin D, B12, Folate, Ferritin 등
+🔥 Inflammation	CRP, hs-CRP 등
+🦠 Microbiome	장내 미생물
+🦴 Bone	골밀도, DEXA
+😴 Sleep	수면시간, 단계, PSG, 산소포화도
+🏃 Fitness	VO2, 악력, 활동량, 운동
+👁️ Vision	안저, OCT 등
+🫁 Lung	폐기능 검사
+🦷 Dental	치과 영상, 치주 데이터
+🩻 Imaging	X-ray, CT, MRI, 초음파, DICOM
+🚶 Movement	보행, 자세, 족압
+⌚ Wearable	Apple Health, Galaxy, Garmin 등
+📋 Medical History	건강검진, 병력, 투약 기록
+📝 Lifestyle	음식, 운동, 음주, 흡연, 스트레스, 생활패턴
+
+그리고 중요한 건 이 데이터를 모두 한 종류의 데이터로 보지 않는 것입니다.
+
+DNA는 “나는 원래 어떤 사람인가”를 보여주고,
+
+혈액검사는 “지금 내 몸 안에서 무슨 일이 벌어지고 있는가”를 보여주고,
+
+InBody는 “현재 몸의 구조가 어떤가”를 보여주고,
+
+CGM은 “내 몸이 실제 생활에 어떻게 반응하는가”를 보여주고,
+
+웨어러블은 “평소 나는 어떻게 생활하고 있는가”를 보여줍니다.
+
+이게 합쳐져야 진짜 나를 이해하는 데이터가 됩니다.
+
+그래서 UX의 중심도 “Upload”가 아니라 “Collect”
+
+이 차이가 꽤 중요합니다.
+
+일반적인 건강 AI
+
+검사지를 업로드하세요.
+→ AI 분석
+→ 결과
+→ 끝
+
+우리 서비스는:
+
+Start your collection
+
+건강검진 추가
+
+→ You unlocked 12 health markers
+
+InBody 추가
+
+→ We now understand your body composition
+
+DNA 추가
+
+→ We now understand some of your inherited traits
+
+CGM 추가
+
+→ We can now see how your metabolism responds in real life
+
+6개월 뒤 건강검진 추가
+
+→ We can now see how your body is changing over time
+
+이런 식이어야 합니다.
+
+사용자가 뭔가를 하나 추가할 때마다
+
+AI가 나를 조금 더 알게 됐다.
+
+라는 느낌을 받아야 합니다.
+
+4. Collection이 쌓이면 “나의 Health Profile”이 만들어짐
+
+예를 들어 처음 가입한 사용자.
+
+Collection Level 1
+
+건강검진만 있음.
+
+AI가 알고 있는 것:
+
+32%
+
+혈압 ✅
+혈당 ✅
+콜레스테롤 ✅
+간 ✅
+신장 ✅
+체성분 ❌
+유전 ❌
+영양상태 △
+수면 ❌
+실제 혈당반응 ❌
+
+그러면 이렇게 보여줄 수도 있습니다.
+
+We currently understand 32% of your health profile.
+
+그리고:
+
+Want to understand your metabolism better?
+
+Collect:
+HbA1c
+InBody
+CGM
+
+이런 식으로 자연스럽게 다음 데이터를 모으도록 만듭니다.
+
+물론 실제로 “32%”라는 수치를 쓰려면 과학적으로 scoring methodology를 만들어야 하지만 제품 concept 자체는 강합니다.
+
+5. Test 자체가 Collection Item이 된다
+
+따라서 Test Catalog가 굉장히 중요합니다.
+
+앱에:
+
+Blood
+Basic Health Checkup
+CBC
+HbA1c
+Insulin
+ApoB
+Lp(a)
+hs-CRP
+Vitamin D
+Ferritin
+Vitamin B12
+Thyroid
+Hormone panel
+Body
+InBody
+DEXA
+Bone Density
+Waist Circumference
+Genetics
+DNA Wellness
+Nutrition Genetics
+Exercise Genetics
+Alcohol/Caffeine Metabolism
+Metabolism
+Fasting Glucose
+HbA1c
+Insulin
+CGM
+Heart
+Blood Pressure
+ECG
+Holter
+HRV
+Cardiovascular Blood Markers
+Sleep
+Sleep Study
+Wearable Sleep
+Oxygen Saturation
+
+...
+
+이런 Collection Library가 존재하게 됩니다.
+
+그리고 각각 눌러보면:
+
+What you can learn
+
+Where to get it
+
+Approximate cost
+
+What file/data you'll receive
+
+How to import it
+
+What collecting this unlocks
+
+를 보여주는 겁니다.
+
+6. “어떤 검사를 해야 할지”도 AI가 알려줌
+
+이게 중요한 비즈니스 기능입니다.
+
+사용자가:
+
+“나는 피곤한 이유가 궁금해.”
+
+라고 하면 바로 답을 내는 게 아니라,
+
+현재 사용자가 Collect한 데이터를 봅니다.
+
+예를 들어:
+
+CBC ✅
+Vitamin D ✅
+Ferritin ❌
+B12 ❌
+TSH ❌
+Sleep ✅
+
+그러면:
+
+We don't know enough yet.
+
+당신의 현재 Collection에서 피로와 관련해 아직 확인되지 않은 영역이 있습니다.
+
+다음 Collection이 분석 품질을 가장 많이 높일 수 있습니다:
+
+1. Ferritin
+2. TSH / Free T4
+3. Vitamin B12
+
+이런 식입니다.
+
+즉 AI가 단순히
+
+Answer
+
+만 주는 것이 아니라
+
+What should I collect next?
+
+를 알려줍니다.
+
+7. 이것이 GPT/Claude와 가장 크게 다른 부분
+
+사용자가 건강검진 PDF를 ChatGPT에 올리면 ChatGPT도 꽤 잘 설명할 겁니다.
+
+그래서 우리의 경쟁력이
+
+“우리도 GPT를 사용합니다.”
+
+이면 가치가 없습니다.
+
+우리의 차이는 Context의 깊이여야 합니다.
+
+Claude/GPT
+
+사용자가 지금 올린 PDF를 봅니다.
+
+우리 AI
+
+사용자의:
+
+2022 건강검진
+2023 건강검진
+2024 InBody
+2024 DNA
+2025 CGM
+2025 Apple Health
+2026 혈액검사
+음식/운동 기록
+
+을 하나의 개인 모델로 봅니다.
+
+그리고 질문은:
+
+“ALT가 정상인가?”
+
+수준이 아니라,
+
+지난 4년 동안 내 몸에서 어떤 방향의 변화가 발생하고 있는가?
+
+가 됩니다.
+
+8. 진짜 AI 가치는 Cross-Analysis
+
+예를 들어 개별적으로 보면:
+
+LDL 124
+→ 조금 높음.
+
+TG 160
+→ 조금 높음.
+
+공복혈당 98
+→ 정상범위.
+
+ALT 37
+→ 크게 이상 없음.
+
+체중 +5kg
+
+일반 LLM은 각 항목을 하나씩 설명할 가능성이 높습니다.
+
+하지만 우리 시스템은 이것을 연결해서:
+
+각각은 큰 이상으로 보이지 않지만 지난 3년 추세와 체성분 변화를 함께 보면 대사 건강이 한 방향으로 악화되는 패턴이 나타나고 있습니다.
+
+그리고:
+
+이 패턴에서 현재 가장 actionable한 요소는 LDL 하나를 낮추는 것보다는 내장지방 감소와 식후 활동 증가입니다.
+
+이런 식으로 여러 데이터 사이의 관계를 찾는 것이 핵심입니다.
+
+9. 거기에 Time이 추가됨
+
+이 서비스의 시간이 길어질수록 moat가 커집니다.
+
+첫날에는:
+
+Who am I?
+
+1년 뒤에는:
+
+How am I changing?
+
+3년 뒤에는:
+
+What works for me?
+
+까지 갈 수 있습니다.
+
+예를 들어:
+
+2026년:
+
+체중 78kg
+TG 180
+ALT 43
+
+사용자가 운동을 시작.
+
+2027년:
+
+체중 74kg
+TG 125
+ALT 27
+
+그러면 AI가 단순히:
+
+좋아졌습니다.
+
+가 아니라
+
+지난 10개월간 당신에게 가장 큰 positive change와 함께 움직인 행동은 주 3회 resistance training과 야식 감소였습니다.
+
+라는 나에게서 실제로 학습한 insight를 줄 수 있습니다.
+
+이게 굉장히 중요합니다.
+
+10. 결국 우리가 만드는 건 Personal Health Model
+
+개념적으로는 이렇게 생각할 수 있습니다.
+
+COLLECT
+
+↓
+
+DNA
+Blood
+Body
+Sleep
+Metabolism
+Wearable
+Medical
+
+↓
+
+PERSONAL HEALTH MODEL
+
+↓
+
+Understand
+
+Who you are
+
+↓
+
+Understand
+
+How you're changing
+
+↓
+
+Understand
+
+What works for you
+
+↓
+
+Recommend
+
+What to do next
+
+↓
+
+Recommend
+
+What to collect next
+
+↓
+
+다시 COLLECT
+
+이게 계속 반복됩니다.
+
+11. Product loop
+
+나는 이 구조를 가장 핵심적인 loop로 봅니다.
+
+① Collect
+
+내 건강 데이터를 하나씩 추가한다.
+
+↓
+
+② Understand
+
+AI가 나에 대해 이해하는 영역이 늘어난다.
+
+↓
+
+③ Discover
+
+내가 몰랐던 패턴과 insight를 발견한다.
+
+↓
+
+④ Act
+
+음식 / 운동 / 수면 / 생활을 바꾼다.
+
+↓
+
+⑤ Measure
+
+다시 검사한다.
+
+↓
+
+⑥ Compare
+
+정말 효과가 있었는지 본다.
+
+↓
+
+⑦ Collect More
+
+새로운 데이터를 추가한다.
+
+그리고 다시 반복합니다.
+
+Collect → Understand → Act → Measure → Collect
+
+사용자가 우리한테:
+
+건강검진 5년
+DNA
+InBody 20회
+CGM 3회
+Sleep 2년
+운동 데이터
+식습관
+Blood biomarkers
+
+를 Collect했다고 생각해보면,
+
+우리 AI는 단순한 chatbot이 아니라
+
+“내 몸을 제일 많이 알고 있는 시스템”
+
+이 됩니다.
+
+이것 자체가 retention입니다.
+
+새로운 검사 결과가 생기면 사용자는 자연스럽게:
+
+이것도 내 Collection에 넣어야겠다.
+
+라고 생각하게 됩니다.
+
+14. 그래서 제품의 중심 단어
+
+지금 단계에서는 Analysis보다 Collect를 앞에 두는 게 좋습니다.
+
+브랜드 언어도:
+
+Collect
+
+“내 건강 데이터를 모은다.”
+
+↓
+
+Know
+
+“나를 알아간다.”
+
+↓
+
+Understand
+
+“왜 이런지 이해한다.”
+
+↓
+
+Improve
+
+“내 생활을 개선한다.”
+
+정도로 잡을 수 있습니다.
+
+개인적으로 가장 중요한 감정은 이겁니다.
+
+Every test tells us something about you.
+
+Every new result makes your health profile more complete.
+
+The more you collect, the better you understand yourself.
+
+결국 이 서비스가 파는 것
+
+DNA 검사 회사도 아니고,
+
+건강검진 회사도 아니고,
+
+병원도 아니고,
+
+GPT wrapper도 아닙니다.
+
+내 몸에 존재하는 흩어진 데이터를 평생 Collect하고, 그것을 하나의 개인 모델로 만들어 내가 나 자신을 점점 더 깊게 이해하도록 해주는 Personal Health Intelligence 플랫폼.
+
+그리고 핵심 경험은 딱 이것입니다.
+
+검사를 하나 더 할 때마다,
+내 몸에 대해 모르는 것이 하나 줄어든다.
+
+이 방향으로 잡으면 Test Catalog, Collection UX, Health Profile, AI Analysis, 과금, 장기 retention이 전부 하나의 제품 철학 아래 연결됩니다.
+
+Collect → Know Yourself Better
+
+사용자는 건강검진, 혈액검사, DNA, InBody, 수면, CGM, 웨어러블 등 자기 몸에 관한 데이터를 하나씩 Collect한다.
+
+데이터가 하나 추가될 때마다 AI가 사용자를 더 많이 이해한다.
+
+그리고 핵심 차별화는 “검사 결과 하나를 설명하는 AI”가 아니라, 지금까지 Collect한 모든 데이터를 연결해서 나라는 사람을 점점 더 깊게 이해하는 AI라는 것.
+
+즉 제품의 큰 구조는:
+
+Collect
+→ 내 몸에 관한 데이터를 모은다.
+
+Understand
+→ 각 데이터가 무엇을 의미하는지 이해한다.
+
+Connect
+→ DNA × 혈액 × 체성분 × 수면 × 생활습관처럼 서로 다른 데이터를 연결한다.
+
+Discover
+→ 각각 따로 봤을 때는 보이지 않던 패턴을 발견한다.
+
+Track
+→ 시간이 지나면서 내가 어떻게 변하고 있는지 본다.
+
+Improve
+→ 지금 나에게 도움이 될 lifestyle action을 찾는다.
+
+Collect More
+→ 아직 모르는 영역을 발견하고 새로운 검사를 추가한다.
+
+결국 사용자가 느껴야 하는 감정은:
+
+“검사를 하나 더 할수록 나라는 사람에 대한 그림이 완성된다.”
+
+그리고 GPT/Claude와의 차이도 여기서 자연스럽게 생겨.
+
+일반 AI:
+“이 검사 결과를 설명해줘.”
+
+우리 AI:
+“지금까지 내가 Collect한 모든 건강 데이터를 바탕으로, 나는 어떤 사람이고, 어떻게 변하고 있고, 아직 무엇을 모르고 있는지 알려줘.”
+
+우리 방향과 가까운 서비스가 이미 여러 개 있습니다. 다만 조사해보니 시장이 꽤 조각나 있고, 우리가 말한 “검사를 하나씩 Collect하면서 나라는 사람의 모델이 점점 완성된다”를 제품 전체의 중심 철학으로 잡은 서비스는 아직 뚜렷하지 않았습니다.
+
+특히 2026년에는 ChatGPT Health, Copilot Health 같은 범용 AI까지 개인 의료기록과 웨어러블을 연결하기 시작해서, 단순히 “건강데이터를 한곳에 모아서 AI가 설명한다”만으로는 차별화가 부족해졌습니다.
+
+가장 가까운 서비스들
+서비스	무엇을 Collect?	무엇을 해주나	우리와 유사도
+InsideTracker	Blood + DNA + Wearable + Lifestyle	통합 분석, 시간에 따른 추적, 개인화 행동 추천	🔥🔥🔥🔥🔥
+Guava Health	의료기록 + Labs + DICOM + PDF/사진 + Wearable + 증상	한곳에 정리, 시계열, correlation, AI insight	🔥🔥🔥🔥🔥
+SelfDecode	DNA + Labs + Lifestyle + 증상	AI 분석, 개인화 recommendation, 다음 검사 제안	🔥🔥🔥🔥🔥
+SiPhox Health	혈액검사 + 외부 검사결과 + Wearable	biomarker tracking + lifestyle 연결	🔥🔥🔥🔥
+WHOOP Advanced Labs	Blood + WHOOP continuous data + 기존 혈액검사	검사결과와 수면/회복/운동 데이터를 연결	🔥🔥🔥🔥
+Function Health	160+ Labs + Imaging	장기 추적 및 health intelligence	🔥🔥🔥🔥
+Superpower	Labs + 과거 Lab + Wearables	health dashboard + longitudinal analysis	🔥🔥🔥🔥
+Heads Up Health	Labs + Wearables + Devices + EHR	여러 데이터를 통합해 AI 분석	🔥🔥🔥🔥
+Human Longevity	Genome + MRI + Blood + Proteomics 등	깊은 precision-health 분석 및 longitudinal follow-up	🔥🔥🔥
+Fountain Life	MRI + Genome + Metabolic/Lab	AI가 여러 진단 데이터를 종합	🔥🔥🔥
+Prenuvo	MRI + Blood	year-over-year 건강 변화	🔥🔥🔥
+Neko Health	자체 Scan + Heart + Blood + Body + Skin	반복 검사를 통한 예방의학적 health profile	🔥🔥🔥
+ZOE	Microbiome + nutrition 중심	음식 반응 개인화	🔥🔥
+Viome	Gut/Oral microbiome + RNA/gene expression	생물학적 분석 → 음식/lifestyle recommendation	🔥🔥
+
+여기서 특히 봐야 하는 건 InsideTracker, Guava, SelfDecode, WHOOP 네 개입니다.
+
+1. InsideTracker — 지금 아이디어와 가장 직접적으로 겹침
+
+InsideTracker는 공식적으로 blood + DNA + fitness tracker 데이터를 하나의 플랫폼에서 결합한다고 설명합니다. 수백 개의 marker를 시간에 따라 추적하고, 이를 바탕으로 개인화된 nutrition, fitness, lifestyle recommendation을 제공합니다. 기존 혈액검사 결과도 추가할 수 있습니다.
+
+구조가 거의:
+
+Blood
+
+DNA
+Wearables
+Lifestyle
+→ Personal analysis
+→ Action
+
+입니다.
+
+우리와 겹치는 부분
+
+Collect multiple data → connect → understand yourself → lifestyle action
+
+거의 같습니다.
+
+그런데 InsideTracker는 여전히 상당히 biomarker optimization 중심입니다.
+
+우리 쪽에서 더 강하게 잡을 수 있는 것은:
+
+“Health markers를 optimize한다”
+
+보다
+
+“내 몸에 대해 알고 있는 것 자체가 계속 축적된다.”
+
+라는 Personal Health Model 개념입니다.
+
+2. Guava Health — 사실 이게 굉장히 중요함
+
+내가 찾은 서비스 중 Collect UX 측면에서 우리 생각과 제일 비슷합니다.
+
+Guava는 의료기록, lab results, doctor notes뿐 아니라 CCDA, X-ray/MRI DICOM, PDF, 사진까지 업로드할 수 있고 AI가 내용을 추출해서 구조화합니다. Wearable도 Oura, WHOOP, Apple Health, Dexcom 등과 연결해 한곳에 모읍니다.
+
+그리고:
+
+historical labs
+
+visit notes
+imaging
+wearable
+
+을 longitudinal view로 보여주고 AI insight도 제공합니다.
+
+이건 우리가 말한:
+
+병원에서 종이 받음
+→ 사진 찍음
+
+DICOM 받음
+→ 넣음
+
+검사 결과 PDF
+→ 넣음
+
+Wearable
+→ 연결
+
+내 데이터 Collection
+
+과 상당히 가깝습니다.
+
+다만 차이점
+
+내가 현재 공개된 제품 설명을 보고 판단하면 Guava의 핵심은 상대적으로
+
+Personal Health Record + Tracking + Correlation
+
+쪽에 더 가깝습니다.
+
+우리가 원하는 것은 그 위에:
+
+Personal Health Intelligence
+
+를 훨씬 세게 얹는 것입니다.
+
+즉 Guava가
+
+“내 건강정보가 모두 여기 있다.”
+
+라면,
+
+우리는
+
+“이 시스템이 나를 이해하고 있다.”
+
+까지 가고 싶은 거죠.
+
+3. SelfDecode — AI intelligence 측면에서는 가장 주목해야 함
+
+SelfDecode는 원래 DNA 분석 서비스인데 지금은 많이 확장됐습니다.
+
+현재는 DNA + lab results + lifestyle + symptoms + health goals를 함께 이용하고 AI 기반 health coach인 DecodyGPT를 제공합니다. 또한 사용자의 DNA와 health goal을 기반으로 추가로 어떤 lab test를 해보면 좋을지 제안하는 기능도 운영하고 있습니다.
+
+이게 우리가 조금 전에 이야기한:
+
+What should I collect next?
+
+와 굉장히 가깝습니다.
+
+예를 들어 우리 사용자가
+
+DNA ✅
+CBC ✅
+Vitamin D ✅
+Ferritin ❌
+TSH ❌
+
+상태라면
+
+“지금 네 Health Profile을 더 이해하기 위해서는 다음에 이것을 Collect해라.”
+
+라고 하는 구조입니다.
+
+그래서 SelfDecode는 반드시 깊게 뜯어봐야 할 competitor입니다.
+
+4. WHOOP — 엄청 중요한 방향 변화
+
+WHOOP도 이제 wearable 회사만이 아닙니다.
+
+2026년 현재 WHOOP Advanced Labs는 임상 혈액검사 데이터를 WHOOP의 24시간 wearable 데이터와 연결합니다. 기존 다른 provider에서 받은 혈액검사 결과도 업로드할 수 있고, biomarkers를 WHOOP의 continuous physiology와 같이 분석합니다.
+
+즉:
+
+Blood
++
+Sleep
++
+Recovery
++
+HR/HRV
++
+Exercise
+
+를 하나로 봅니다.
+
+이 방향이 중요한 이유는:
+
+Static Test + Continuous Data
+
+가 합쳐지기 때문입니다.
+
+우리도 결국 여기를 가야 합니다.
+
+건강검진은 1년에 한두 번 찍는 사진이고,
+
+웨어러블은 매일 돌아가는 영상 같은 데이터입니다.
+
+둘이 같이 있어야 훨씬 재미있는 insight가 나옵니다.
+
+5. SiPhox Health
+
+SiPhox도 상당히 비슷합니다.
+
+자체 검사뿐 아니라 third-party lab 결과를 업로드해서 하나의 health dashboard에서 추적할 수 있고, wearable을 연결해서 수면·glucose·HRV 등의 데이터와 blood biomarkers 간 관계를 분석합니다.
+
+이것도:
+
+Collect → Track → Connect → Action
+
+구조입니다.
+
+다만 Blood biomarker가 제품의 중심에 있다는 차이가 있습니다.
+
+6. Function Health
+
+Function은 160개 이상의 lab test를 하나의 시스템에서 추적하고 doctor-reviewed insight와 personalized health plan을 제공합니다. 최근에는 advanced MRI/CT와 longitudinal health data까지 결합하며 이를 “Medical Intelligence”라는 방향으로 확장하고 있습니다.
+
+흥미로운 문구가:
+
+continuous learning system
+
+이라는 방향입니다.
+
+즉 Function 역시 한 번의 검사 결과보다 시간이 지나면서 쌓이는 개인 건강 데이터를 중요하게 보고 있습니다.
+
+하지만 구조상 사용자가 세상의 온갖 데이터를 자유롭게 Collect한다기보다는 Function이 제공하는 검사 ecosystem의 성격이 더 강합니다.
+
+7. Superpower
+
+Superpower도 비슷합니다.
+
+혈액 biomarker를 중심으로 시작하지만 과거 lab 결과를 업로드하고 wearable을 연결해 여러 검사 결과의 변화를 시간에 따라 볼 수 있습니다.
+
+그래서 미국에서 지금 벌어지고 있는 큰 방향은 아주 분명합니다.
+
+One-time health check
+
+에서
+
+Longitudinal health profile
+
+로 넘어가고 있습니다.
+
+8. Heads Up Health
+
+Heads Up Health는 소비자보다는 longevity clinic이나 의료 제공자 쪽이 중심이지만 기술적으로 상당히 흥미롭습니다.
+
+Labs + wearables + medical devices + EHR을 한 workspace에 모으고 AI-powered insight를 제공합니다.
+
+심지어 symptoms, mood, events, notes 같은 subjective data도 objective health data 옆에 놓고 correlation을 찾도록 합니다.
+
+즉 우리가 생각하는 Health Data Graph에 상당히 가까운 접근입니다.
+
+9. 더 깊은 쪽: Human Longevity / Fountain Life
+
+이쪽은 방향 자체는 우리가 원하는 것의 극단적인 버전입니다.
+
+Human Longevity는 현재:
+
+Whole Genome Sequencing
++
+Whole-body MRI
++
+120+ Blood biomarkers
++
+Proteomics
++
+AI analysis
++
+Longitudinal follow-up
+
+을 하나의 precision-health system으로 결합합니다.
+
+Fountain Life도 full-body MRI, genomic data, metabolic panels 같은 여러 proprietary diagnostic data를 AI가 종합해서 personalized insight를 생성하는 방향입니다.
+
+즉 “다양한 modalities를 합쳐야 개인을 제대로 이해할 수 있다”라는 thesis 자체는 이미 글로벌하게 검증되고 있다고 볼 수 있습니다.
+
+10. Neko Health
+
+Spotify 창업자 Daniel Ek가 공동 창업한 Neko는 방향이 조금 다릅니다.
+
+자체 장비로 한 번 방문할 때 skin + heart + blood + body composition + circulation 등 수백만 개의 data point를 수집하고, 이후 검사를 반복하면서 시간에 따른 변화를 봅니다.
+
+즉 Neko는:
+
+우리가 데이터를 Collect한다
+
+이고,
+
+우리 아이디어는:
+
+세상 곳곳에서 이미 생성되는 내 데이터를 내가 Collect한다
+
+입니다.
+
+이 차이는 꽤 큽니다.
+
+11. ZOE / Viome
+
+둘 다 우리 전체 서비스라기보다는 특정 Collection category의 좋은 사례입니다.
+
+ZOE는 microbiome과 personalized nutrition을 중심으로 개인의 food response를 모델링합니다. 현재는 축적된 대규모 microbiome 데이터를 이용한 predictive personalization도 강화하고 있습니다.
+
+Viome은 gut/oral microbiome과 인간 세포의 gene expression(RNA)를 분석하여 health score와 personalized food recommendation 등을 만듭니다.
+
+여기서 배울 점은:
+
+“데이터를 보여준다”
+
+보다
+
+“그 데이터에서 나를 설명하는 새로운 abstraction을 만든다.”
+
+입니다.
+
+예를 들어 그냥 bacteria 목록을 주는 게 아니라 Gut Health Score, Inflammatory Activity 같은 상위 개념을 만드는 식입니다.
+
+우리도 raw marker 100개를 보여주는 것이 아니라 그 위에 Personal Health Model이 있어야 합니다.
+
+그런데 2026년에 더 중요한 경쟁자가 생김
+
+이 부분이 이번 조사에서 제일 중요한 발견입니다.
+
+ChatGPT Health
+
+2026년 1월 OpenAI가 ChatGPT Health를 출시했습니다.
+
+공식 설명 자체가:
+
+흩어져 있는 의료 기록, 웰니스 앱, 파일 등의 건강정보를 연결해서 사용자가 자신의 건강을 더 잘 이해하도록 한다
+
+는 방향입니다. 의료 기록과 wellness app을 연결하고 별도의 Health 공간에서 개인 건강 맥락을 사용할 수 있습니다.
+
+즉 우리가
+
+“PDF 올리면 AI가 읽어준다.”
+
+로 시작하면 바로 commodity입니다.
+
+Microsoft Copilot Health
+
+Microsoft도 2026년에 Copilot Health를 공개했고, EHR + wearable/Apple Health를 연결해서 개인의 전체 건강정보를 기반으로 대화하도록 하고 있습니다. 미국에서는 광범위한 의료기관 기록 연결을 전면에 내세우고 있습니다.
+
+Fitbit / Gemini Health Coach
+
+Google도 Fitbit에서 Gemini 기반 personal health coach를 운영하고 있고, 2026년에는 의료기록 연동까지 확대했습니다.
+
+그래서 지금은 정말로:
+
+“AI가 내 건강데이터를 안다.”
+
+조차 독점적인 아이디어가 아닙니다.
+
+그러면 시장에서 빈 공간은 어디인가?
+
+내가 이번에 조사한 서비스들을 놓고 보면 이런 그림입니다.
+
+InsideTracker
+
+Collect biomarkers
+
+Guava
+
+Collect medical records
+
+SelfDecode
+
+Collect genetics
+
+WHOOP
+
+Collect physiology
+
+ZOE
+
+Collect nutrition/microbiome
+
+Neko
+
+Collect scans
+
+Function
+
+Collect comprehensive labs
+
+ChatGPT Health / Copilot Health
+
+Connect health context to a general AI
+
+그런데 우리가 이야기한 것은 조금 다릅니다.
+
+Collect Yourself
+
+입니다.
+
+Blood
++
+DNA
++
+Body
++
+Medical
++
+Images
++
+Sleep
++
+Wearables
++
+Metabolism
++
+Fitness
++
+Lifestyle
++
+Time
+
+↓
+
+Your Personal Health Model
+
+↓
+
+What do we know about you?
+
+↓
+
+What don't we know yet?
+
+↓
+
+What changed?
+
+↓
+
+What connects?
+
+↓
+
+What seems to work specifically for you?
+
+↓
+
+What should you collect next?
+
+내가 보기엔 가장 중요한 차별점은 4개
+
+첫째, 검사기관 자체가 되지 않는 것.
+Function이나 Neko처럼 “우리 검사를 받아라”가 아니라 병원, 보건소, 건강검진센터, DNA 회사 등 어디서 얻은 데이터든 내 Collection으로 가져오는 것.
+
+둘째, Collection 자체가 제품인 것.
+Guava는 이 부분에 가장 가깝지만 우리는 의료기록 보관보다는 “나를 알아가는 과정”을 훨씬 앞에 놓습니다.
+
+셋째, Personal Health Model.
+파일을 그때그때 RAG로 찾아주는 게 아니라, 사용자의 biomarkers, traits, trends, interventions, behaviors, missing information 등을 구조화된 장기 모델로 유지하는 것.
+
+넷째, Next Collection.
+이게 꽤 강합니다.
+
+“당신의 LDL은 130입니다.”
+
+보다
+
+“심혈관 부분은 꽤 많이 알고 있지만 insulin sensitivity 부분은 아직 잘 모릅니다. HbA1c와 공복 인슐린을 Collect하면 이 부분을 더 잘 이해할 수 있습니다.”
+
+라고 하는 겁니다.
+
+경쟁 지도를 한 줄로 그리면
+
+Records
+
+Guava
+
+↕
+
+Deep Analysis
+
+InsideTracker / SelfDecode / SiPhox
+
+↕
+
+Continuous Data
+
+WHOOP / Fitbit
+
+↕
+
+Deep Diagnostics
+
+Function / Human Longevity / Neko / Prenuvo / Fountain Life
+
+↕
+
+General Intelligence
+
+ChatGPT Health / Copilot Health
+
+그리고 우리가 노리는 위치는 이 모든 것 사이의:
+
+Open Personal Health Collection + Deep Health Intelligence
+
+라고 보는 게 가장 맞아 보여.
+
+특히 이번 조사 결과를 보면 InsideTracker + Guava + SelfDecode + WHOOP + ChatGPT Health 이 다섯 개는 제품 설계 전에 실제 onboarding부터 결과 화면까지 하나씩 teardown해볼 가치가 큽니다. 이 다섯 서비스를 뜯어보면 우리가 무엇을 그대로 따라가면 안 되고, 어디를 훨씬 더 깊게 만들어야 하는지 상당히 선명해질 것 같습니다.
+
+공개된 창업자 인터뷰, 제품 업데이트, 실제 사용자 반응, 의료 데이터 표준, 연구자료까지 같이 보면 가장 중요한 결론은 이거야.
+
+우리의 moat는 Health AI가 아니다.
+
+“한 사람을 시간이 지나면서 점점 더 정확하게 이해하는 데이터 구조와 reasoning system”이 moat가 되어야 한다.
+
+1. 먼저 알아야 할 불편한 사실: Upload + AI는 이미 commodity다
+
+2026년 기준 ChatGPT Health는 의료기록과 Apple Health 같은 데이터를 연결해서 개인 데이터를 맥락으로 대화할 수 있고, Microsoft Copilot Health도 EHR과 wearable을 연결해 개인 health profile 기반 insight를 제공하기 시작했습니다.
+
+Guava는 이미 사진/PDF를 업로드하면 여러 형식의 lab result를 구조화하고, EHR·wearable까지 통합합니다.
+
+따라서 아래는 장기적으로 moat가 되기 어렵습니다.
+
+기능	왜 부족한가
+PDF 검사 결과 읽기	범용 multimodal AI도 가능
+검사 수치 설명	ChatGPT/Claude도 상당히 잘함
+의료기록 한곳에 모으기	Guava 등 이미 존재
+Wearable 연결	대형 플랫폼들이 이미 함
+“AI에게 건강 질문하기”	ChatGPT Health/Copilot Health가 직접 경쟁
+단순 personalized recommendation	거의 모든 health startup이 주장
+
+우리 서비스에 파일을 넣는 이유가 “GPT보다 UI가 편해서”라면 약해.
+
+사용자가 반드시 느껴야 하는 건:
+
+“ChatGPT는 내 파일을 읽는다.
+얘는 나를 알고 있다.”
+
+이 차이야.
+
+2. 업계가 어디로 움직이는지를 보면 미래가 보임
+
+최근 선두 서비스들의 움직임이 굉장히 비슷합니다.
+
+WHOOP은 원래 continuous wearable 회사였는데 이제 혈액검사를 붙이고 있습니다. 현재 Advanced Labs는 임상 lab 결과를 24/7 WHOOP 데이터와 함께 분석한다고 명시합니다.
+
+Function Health는 혈액검사에서 시작했지만 Ezra를 인수해 MRI/CT까지 붙였습니다. 즉 blood → imaging으로 확장하고 있습니다.
+
+InsideTracker는 blood, DNA, wearable을 합치고 있고, 새로운 AI agent Terra에서는 단순 LLM이 아니라 LLM + Knowledge Representation & Reasoning + 자체 scientific database를 결합한다고 공개했습니다.
+
+이걸 한 문장으로 정리하면:
+
+Single modality → Multimodal → Longitudinal → Personal Model
+
+로 시장이 이동하고 있어.
+
+그래서 우리가 지금 잡은 Collect 방향은 맞는데, 한 단계 더 구체적이어야 합니다.
+
+Collect everything이 아니라
+Build an increasingly accurate model of you.
+
+3. 진짜 어려운 건 AI가 아니라 “Health Data Normalization”
+
+이게 outsider가 잘 못 보는 부분 중 하나라고 생각해.
+
+예를 들어 사용자가 이렇게 올렸다고 해보자.
+
+2024:
+
+LDL Cholesterol 128 mg/dL
+
+2025:
+
+LDL-C 3.5 mmol/L
+
+2026:
+
+LDL 139
+
+사람 눈에는 같은 계열 데이터처럼 보입니다.
+
+그런데 실제 시스템에서는 단순 문자열 비교로 끝나지 않습니다. 검사명, 단위, specimen, 검사 방식, reference range, 검사기관 등의 context를 보존해야 합니다. 국제 의료 데이터에서도 LOINC는 임상·검사 observation 식별에 사용되고, FHIR의 Observation과 DiagnosticReport는 값뿐 아니라 검사 맥락을 구조화하기 위해 존재합니다. UCUM은 단위 표준화에 사용됩니다.
+
+더 중요한 것은 reference range조차 단순 universal constant가 아니라는 점입니다. CLSI는 reference interval을 다룰 때 analytical/preanalytical considerations와 해당 검사실에서의 적용 가능성을 검증하도록 별도 표준을 두고 있습니다.
+
+실제 Function Health 사용자 커뮤니티에서도 이전 검사와 값이 크게 달라져 문의했는데 검사실·장비·methodology 차이가 가능한 원인으로 거론되는 사례가 보입니다. 이건 anecdote이지만 실제 product problem을 아주 잘 보여줍니다.
+
+그래서 우리가 저장해야 하는 건:
+
+LDL = 139
+
+가 아니야.
+
+개념적으로는:
+
+What was measured
++
+raw test name
++
+normalized concept
++
+value
++
+unit
++
+sample/specimen
++
+date/time
++
+lab/provider
++
+reference interval
++
+method/context
++
+original document
++
+extraction confidence
+
+가 하나의 Measurement Event가 되어야 해.
+
+이 database를 제대로 만들면 나중에 모델을 GPT-8이든 Claude 10이든 교체해도 데이터 asset은 그대로 남습니다.
+
+나는 이걸 가장 중요한 초기 기술 moat 중 하나로 봐.
+
+4. 더 많이 Collect하는 게 무조건 좋은 건 아니다
+
+이건 우리의 현재 아이디어에서 특히 조심해야 해.
+
+우리가 UX를:
+
+34% complete
+검사 하나 더 하세요.
+42% complete
+또 검사하세요.
+
+처럼 만들면 굉장히 addictive할 수는 있지만, 의료적으로 위험한 방향으로 갈 수 있습니다.
+
+의료계에서는 unnecessary testing과 overdiagnosis가 오래된 문제입니다. Choosing Wisely 자체가 불필요한 검사와 처치를 줄이기 위한 캠페인이었고, 디지털 screening도 accuracy뿐 아니라 실제 benefit/harm을 검증해야 한다는 지적이 있습니다.
+
+그래서 우리의 철학은:
+
+More tests = better
+
+가 아니라
+
+More useful evidence = better understanding
+
+이어야 합니다.
+
+이 차이가 중요해.
+
+5. 그래서 “Next Test Recommendation”보다 더 좋은 개념이 있음
+
+나는 이름을 일단:
+
+Next Best Collection
+
+이라고 잡고 싶어.
+
+현재 우리가 사용자의 metabolism에 대해 이미:
+
+HbA1c ✅
+공복혈당 ✅
+TG ✅
+HDL ✅
+체성분 ✅
+
+을 알고 있다면 무조건 다른 검사 10개를 추천하지 않아.
+
+AI가 판단하는 것은:
+
+새 데이터 하나를 추가했을 때 내가 이 사람을 이해하는 데 얼마나 새로운 정보가 생기는가?
+
+입니다.
+
+내부적으로는 일종의 Information Gain 개념으로 만들 수 있어.
+
+Candidate collection	현재 unknown 감소	다른 데이터와 연결 가치	행동 변화 가능성	우선순위
+또 다른 기본 cholesterol	낮음	낮음	낮음	낮음
+ApoB	높음	높음	중간	높음
+CGM	매우 높음	매우 높음	높음	매우 높음
+무관한 imaging	낮음	낮음	낮음	낮음
+
+그러면 제품이 때로는 이렇게 말할 수도 있어야 해.
+
+You don't need another test right now.
+
+현재 가지고 있는 데이터만으로도 이 영역은 충분히 이해하고 있습니다.
+
+이 말을 할 수 있는 health company는 오히려 신뢰를 얻을 수 있어.
+
+6. 경쟁사들이 아직 완전히 해결하지 못한 것: Correlation ≠ Causation
+
+Guava를 조사하면서 흥미로운 product update가 하나 있었어.
+
+2026년 Guava는 자동 correlation을 Top / All로 filtering하기 시작했고, 본인들도 Top correlation이라도 causation을 뜻하는 것은 아니라고 명시합니다.
+
+이게 굉장히 중요한 문제야.
+
+사용자 데이터에서:
+
+수면 8시간 이상인 날
+HRV가 15% 높았다.
+
+라고 발견했다고 해서,
+
+8시간 자면 당신의 HRV가 15% 올라갑니다.
+
+라고 말하면 안 됩니다.
+
+우리 제품은 그래서 세 단계를 구분해야 해.
+
+Observed
+
+이런 패턴이 관찰됨.
+
+Hypothesis
+
+이 두 요소가 관련되어 있을 가능성이 있음.
+
+Learned About You
+
+여러 차례 변화와 반복 측정을 통해 이 사람에게 일관된 response가 관찰됨.
+
+이 세 번째가 정말 중요해.
+
+7. 장기적으로 우리가 가장 강한 데이터를 만들 수 있는 부분
+
+바로:
+
+What works for YOU
+
+야.
+
+예를 들어 일반 AI는 연구논문을 보고:
+
+식후 걷기는 일반적으로 혈당 관리에 도움이 될 수 있습니다.
+
+라고 할 수 있어.
+
+우리 AI는 몇 년 후:
+
+지난 14개월 동안 당신에게서 식후 20분 이내의 걷기가 있었던 날은 비슷한 식사에서도 glucose excursion이 반복적으로 낮았습니다.
+
+라고 할 수 있어야 합니다.
+
+그리고 더 나아가 controlled하게 생활 intervention → measurement → repeat를 하면 일종의 N-of-1 personalization이 가능해집니다. 실제 연구에서도 wearable과 개인 longitudinal data를 이용해 개인별 lifestyle intervention을 학습하려는 접근이 진행 중입니다.
+
+그러면 제품의 진화가:
+
+What science knows about people like you
+
+↓
+
+What your current data suggests about you
+
+↓
+
+What we have learned actually works for you
+
+가 되는 거야.
+
+마지막 단계는 일반 GPT가 복제하기 훨씬 어렵습니다.
+
+8. 이때부터 “Personal Health Model”이 진짜 의미를 가짐
+
+내가 생각하는 Personal Health Model은 단순 profile이 아닙니다.
+
+Model layer	시스템이 알고 있어야 하는 것
+Identity	나이, 성별 등 기본 context
+Baseline	이 사람에게 일반적인 상태
+Traits	DNA 등 비교적 stable한 특성
+State	현재 혈액·체성분·생체 상태
+Behavior	수면, 운동, 식사, 활동
+Timeline	시간에 따른 변화
+Relationships	어떤 요소들이 같이 변하는가
+Responses	어떤 행동에 이 사람이 어떻게 반응하는가
+Interventions	무엇을 바꿨는가
+Outcomes	그 결과 무엇이 바뀌었는가
+Evidence	각 결론을 뒷받침하는 근거
+Uncertainty	우리가 얼마나 확신하는가
+Missingness	아직 무엇을 모르는가
+Freshness	해당 정보가 얼마나 오래되었는가
+Provenance	정보가 어디서 왔는가
+
+여기서 나는 특히 Uncertainty + Missingness + Freshness가 중요하다고 봐.
+
+대부분 앱은:
+
+What we know
+
+만 보여줘.
+
+우리는:
+
+What we know
+
+What we think
+
+What we don't know yet
+
+What may have changed since we last measured it
+
+까지 보여줄 수 있어야 해.
+
+이게 훨씬 intelligent하게 느껴집니다.
+
+9. “Health Score 82점” 같은 방식도 조심해야 함
+
+소비자 health 제품은 모든 것을 score로 만들고 싶어 해.
+
+그런데:
+
+Health = 82/100
+
+은 설명력은 좋지만 결국 매우 arbitrary한 abstraction이 될 위험이 있습니다.
+
+차라리 우리 제품에서는:
+
+Metabolic health
+
+Well understood
+
+Cardiovascular
+
+Moderately understood
+
+Nutrition
+
+Some important gaps
+
+Sleep
+
+Rich continuous data
+
+Genetics
+
+Not collected
+
+Musculoskeletal
+
+Little data
+
+같은 식이 더 좋을 수 있어.
+
+그리고 각 영역을 클릭하면:
+
+What we know about you
+
+와
+
+What would help us understand you better
+
+를 보여주는 거지.
+
+그러면 “Collect”의 재미를 살리면서도 무작정 medical test completion game으로 변질되는 걸 막을 수 있어.
+
+10. 사용자들이 실제로 좋아하는 것도 AI만은 아님
+
+Guava 사용자 반응에서 재미있는 패턴이 있습니다.
+
+한 장기 사용자는 AI 자체보다 Guava가 자신의 복잡한 의료사를 기억하는 “external brain”이 된 게 가장 큰 가치라고 설명합니다. 여러 specialist, medication change, illness와 symptom 등이 언제 있었는지 연결해서 기억할 수 있다는 거죠. 다른 사용자들도 중앙 repository에서 의사에게 데이터를 보여주는 점을 장점으로 꼽습니다.
+
+이건 우리한테 굉장히 중요한 insight야.
+
+사람들은 항상:
+
+“AI가 놀라운 질병을 찾아줬어요.”
+
+때문에 남는 게 아닐 수도 있어.
+
+오히려:
+
+“여기에 내 몸의 역사가 있다.”
+
+때문에 남을 수 있어.
+
+그러니까 Collection 자체가 value여야 해.
+
+AI는 그 Collection의 intelligence layer이고.
+
+11. Privacy도 moat의 일부로 봐야 함
+
+건강 데이터에서는 이것이 약관 문제가 아니라 product behavior 자체가 되어야 합니다.
+
+Guava는 사용자가 데이터를 다운로드·삭제할 수 있도록 하고, health data를 판매하지 않는다고 명시합니다. ChatGPT Health 역시 별도의 health privacy controls를 강조하고 있습니다.
+
+따라서 우리 철학도:
+
+This is your health collection.
+
+이어야 한다고 생각해.
+
+즉,
+
+사용자가 언제든 데이터 원본을 볼 수 있고,
+
+AI가 어떤 데이터로 conclusion을 냈는지 확인할 수 있고,
+
+잘못된 extraction을 수정할 수 있고,
+
+삭제할 수 있고,
+
+export할 수 있어야 해.
+
+이게 trust를 만듭니다.
+
+12. 그리고 한국에는 생각보다 큰 구조적 advantage가 있음
+
+여기가 특히 재미있습니다.
+
+한국의 건강정보 고속도로는 현재 국가 표준 FHIR을 사용해 12개 범주의 개인 건강데이터를 전송할 수 있다고 공식적으로 설명하고 있습니다. 여기에는 진단검사, 영상검사/DICOM, 병리, 처방, 진료기록 등을 포함하고 사용자의 동의를 기반으로 전송하는 구조입니다.
+
+게다가 활용서비스 개발용 테스트베드와 표준 API도 제공하고 있습니다.
+
+그리고 국민건강보험 일반건강검진 자체가 신체계측, 혈압, 공복혈당, AST/ALT/GGT, creatinine/eGFR 등 반복 가능한 기본 데이터 세트를 이미 만들어냅니다.
+
+그래서 한국에서는 처음부터:
+
+자체 Lab을 만들어서 데이터를 생산한다
+
+보다
+
+이미 전국에 존재하는 health data를 사용자의 개인 Collection으로 가져오는 최고의 layer가 된다
+
+가 상당히 흥미로운 전략입니다.
+
+이건 미국의 Function과 다른 game을 할 수 있게 해.
+
+13. 그래서 내가 지금 이 회사를 만든다면 가장 먼저 만드는 moat
+
+우선순위를 굳이 잡으면 이렇게 됩니다.
+
+Universal Health Parser — 한국 병원/검진센터/DNA/InBody 등 수많은 결과 포맷을 구조화하고, 원본과 normalized value를 모두 보존한다.
+Personal Health Graph — 각 파일을 독립적으로 저장하지 않고 모든 measurement, trait, behavior, event를 한 사람의 time graph에 연결한다.
+Evidence & Confidence Engine — 모든 insight에 “왜 이렇게 생각했는가 / 어느 데이터가 근거인가 / confidence는 어느 정도인가”가 붙는다. InsideTracker가 LLM만이 아니라 KRR와 scientific database를 결합하는 방향은 이 필요성을 잘 보여줍니다.
+Longitudinal Intelligence — “정상/비정상”보다 “당신의 baseline에서 어떤 방향으로 얼마나 변하고 있는가”를 본다.
+Next Best Collection — 검사 많이 하기를 유도하는 것이 아니라 현재 uncertainty를 가장 크게 줄여줄 데이터가 무엇인지 찾는다.
+Personal Experiment Engine — 사용자가 무엇을 바꿨고 그 뒤 어떤 biomarker/behavior가 바뀌었는지 추적해서 점차 what works for you를 학습한다.
+User-owned Health Memory — 몇 년이 지나도 내 데이터, 변화, 중요한 사건, 과거 reasoning을 기억하는 “external brain for my body”가 된다.
+우리가 정말 알아야 하는 것
+
+결국 경쟁사가 많이 생기는 건 별로 무섭지 않아.
+
+ChatGPT가 medical records를 연결하는 것도 예상해야 하고, Apple/Google/Samsung이 더 많은 health data를 가져가는 것도 예상해야 하고, WHOOP/Oura가 혈액검사를 붙이는 것도 예상해야 합니다. 이미 그런 방향으로 움직이고 있습니다.
+
+오히려 우리가 물어야 하는 건:
+
+“10년 뒤에도 범용 AI가 쉽게 복제하지 못하는 것은 무엇인가?”
+
+내 답은 지금으로서는:
+
+10년 동안 구조화해서 쌓은 한 사람의 longitudinal health model,
+
+그 데이터의 provenance와 quality,
+
+시간에 따른 변화,
+
+그리고 실제로 그 사람에게 무엇이 효과가 있었는지에 대한 accumulated evidence
+
+야.
+
+즉 우리가 Collect해야 하는 건 검사 결과의 숫자가 아니라,
+
+Evidence about a person.
+
+이라고 보는 게 가장 강합니다.
+
+그리고 이것 때문에 제품 카피도 나는 조금 바꾸고 싶어.
+
+“Collect more health data.”
+
+보다
+
+Every collection teaches us something new about you.
+
+가 훨씬 좋은 방향이야.
+
+다음에 더 깊게 들어간다면, 나는 InsideTracker / Guava / Function / WHOOP / SelfDecode / ChatGPT Health를 각각 Data model · AI · UX · What they know · What they cannot know · Weakness의 6축으로 teardown해보는 게 가장 유용하다고 봐. 그러면 우리가 실제로 어디를 파야 하는지 꽤 구체적인 제품 요구사항까지 내려갈 수 있어.
+
+정리하면, 우리 서비스는 “내 건강 데이터를 평생 Collect해서, 시간이 갈수록 나를 더 잘 이해하는 Personal Health Intelligence”야.
+
+핵심은 검사 결과를 한 번 해석해주는 게 아니고, 검사를 할 때마다 ‘나에 대한 증거’가 하나씩 쌓이고, 그 증거들이 연결되면서 내 몸에 대한 모델이 점점 정교해지는 것이야.
+
+한 문장으로
+
+Collect your health. Know yourself better.
+
+사용자는 병원, 건강검진센터, 보건소, DNA 검사, InBody, 웨어러블 등에서 얻은 데이터를 가져온다.
+
+Blood · DNA · Body · Sleep · Metabolism · Imaging · Wearable · Medical History · Lifestyle
+
+이 데이터들이 각각 따로 존재하는 게 아니라 하나의 Personal Health Model 안에 연결된다.
+
+사용자가 경험하는 흐름
+
+1. Collect
+검사 결과나 건강 데이터를 하나씩 추가한다.
+
+2. Understand
+AI가 각각의 데이터가 현재 나에게 어떤 의미인지 해석한다.
+
+3. Connect
+혈액검사 하나만 보는 게 아니라 서로 다른 데이터를 연결한다.
+
+예를 들면:
+
+DNA에서 탄수화물 대사 관련 특성
+
+최근 HbA1c 변화
+CGM에서의 식후 혈당
+체지방 증가
+최근 운동량 감소
+
+를 같이 본다.
+
+4. Discover
+개별 검사에서는 잘 보이지 않는 패턴을 찾는다.
+
+5. Track
+2026년의 나와 2027년의 나를 비교한다.
+
+6. Learn
+어떤 행동을 했을 때 실제 내 몸이 어떻게 변했는지 계속 학습한다.
+
+7. Collect Next
+현재 나를 이해하는 데 부족한 데이터가 무엇인지 알려준다.
+
+그리고 다시 Collect한다.
+
+그래서 전체 loop는:
+
+Collect → Understand → Connect → Discover → Act → Measure → Learn → Collect
+
+이야.
+
+중요한 건 “건강기록 앱”이 아니라는 것
+
+단순한 저장소라면:
+
+“2026년 LDL 132”
+
+를 기억하는 데서 끝난다.
+
+우리 서비스라면:
+
+LDL은 최근 3년 동안 지속적으로 상승하고 있고, 같은 기간 TG·허리둘레·ALT도 같은 방향으로 움직였다.
+반면 혈압과 신장기능은 안정적이다.
+따라서 현재 나타나는 변화는 전체적인 건강 악화라기보다는 대사 영역에 집중되어 있다.
+
+처럼 시간 + 다른 데이터 + 개인 baseline을 같이 본다.
+
+즉 데이터를 저장하는 것은 기반이고, 핵심 제품은 그 위에서 만들어지는 understanding이야.
+
+GPT / Claude와도 여기서 갈림
+
+일반 AI:
+
+“이 PDF를 읽어줘.”
+
+우리 서비스:
+
+“지금까지 Collect한 내 모든 데이터를 바탕으로 나를 이해해줘.”
+
+차이는 파일 하나의 분석 성능만이 아니야.
+
+우리 시스템은 사용자의:
+
+지금까지의 검사 결과
+과거 변화
+개인 baseline
+DNA 같은 stable traits
+현재 body state
+행동과 생활패턴
+어떤 intervention을 했는지
+그 뒤 무엇이 변했는지
+아직 무엇을 모르는지
+
+를 계속 유지한다.
+
+그러니까 ChatGPT가 document context를 가지는 것과 달리 우리는 person context를 구축하는 것이 핵심이야.
+
+Personal Health Model이 기억해야 할 것
+
+나는 내부적으로 최소한 이렇게 보는 게 좋다고 생각해.
+
+Layer	의미
+Traits	비교적 변하지 않는 나 — DNA 등
+State	지금의 나 — 혈액, 체성분 등
+Behavior	어떻게 살고 있는가 — 수면, 운동, 식사
+Timeline	시간이 지나며 어떻게 변했는가
+Baseline	나에게 평소 어떤 상태가 정상인가
+Relationships	어떤 데이터들이 함께 움직이는가
+Interventions	내가 무엇을 바꿨는가
+Responses	그 변화에 내 몸이 어떻게 반응했는가
+Evidence	AI가 왜 그렇게 판단했는가
+Uncertainty	아직 확실하지 않은 것은 무엇인가
+Missingness	현재 무엇을 모르고 있는가
+
+이게 쌓일수록 AI는 “사람 일반”보다 “나”를 더 많이 이야기할 수 있게 되는 거지.
+
+그리고 Collect의 철학도 중요함
+
+우리가:
+
+“검사를 많이 하세요.”
+
+라고 하면 안 돼.
+
+더 좋은 철학은:
+
+Every collection should teach us something new about you.
+
+야.
+
+그래서 사용자가 검사를 추가하려고 하면 시스템도 생각해야 해.
+
+이 데이터를 추가하면 무엇을 새롭게 알 수 있는가?
+
+이미 충분히 알고 있는 영역이라면:
+
+지금은 추가 검사가 필요하지 않습니다.
+
+라고 할 수도 있어야 하고,
+
+반대로 현재 metabolic health는 많이 알고 있지만 sleep이나 cardiovascular 영역에 중요한 gap이 있다면:
+
+이 데이터를 Collect하면 아직 잘 모르는 부분을 이해하는 데 도움이 됩니다.
+
+라고 안내하는 거야.
+
+제품 화면도 이렇게 잡을 수 있어
+
+홈 화면에는 단순히 검사 목록이 아니라:
+
+What we know about you
+
+Metabolic Health
+Rich data · 변화 추적 가능
+
+Cardiovascular
+Moderate understanding
+
+Nutrition
+Several important gaps
+
+Sleep
+Continuous data available
+
+Genetics
+Not collected
+
+Musculoskeletal
+Little data
+
+이런 식으로 “내 몸의 어떤 부분을 얼마나 알고 있는가”를 보여준다.
+
+그리고 영역을 누르면:
+
+What we know
+
+What changed
+
+What connects
+
+What we learned about you
+
+What we don't know yet
+
+What you could collect next
+
+가 나온다.
+
+나는 이 UX가 단순 Health Score보다 우리 제품 철학에 훨씬 잘 맞는다고 봐.
+
+결국 서비스의 정체성
+
+우리는 검사 회사도 아니고,
+병원도 아니고,
+건강검진 예약 플랫폼도 아니고,
+의료 PDF 챗봇도 아니야.
+
+우리는:
+
+A personal health intelligence system that learns you over time.
+
+한국어로 풀면,
+
+내 몸에 관한 흩어진 데이터를 계속 모으고 연결해서, 시간이 지날수록 나를 더 깊게 이해하게 해주는 개인 건강 인텔리전스.
+
+그리고 사용자가 느껴야 하는 핵심 감정은 이것 하나면 돼.
+
+“새로운 건강 데이터를 하나 Collect할 때마다,
+이 시스템은 나를 조금 더 알게 된다.”
+
+그리고 몇 년 뒤에는 더 강해져야 해.
+
+처음에는 내가 어떤 사람인지 알려준다.
+시간이 지나면 내가 어떻게 변하고 있는지 알려준다.
+더 오래 쓰면 나에게 실제로 무엇이 효과가 있었는지까지 알려준다.
+
+나는 이 세 단계가 우리 서비스의 가장 좋은 장기 비전이라고 봐.
+
+여기까지 오면 나는 “앱이 있어야 하나?”가 아니라 “앱이 핵심 인터페이스여야 한다”고 봐.
+
+왜냐하면 이 제품은 한 번 분석하고 끝나는 서비스가 아니라, 시간이 지나면서 사용자의 몸을 계속 알아가는 서비스이기 때문이야. 웨어러블·건강기록 연결, 검사 결과 촬영/업로드, 변화 알림, 다음 체크 시점 안내 같은 기능은 모바일 앱과 잘 맞는다. 한국에서도 건강정보 고속도로가 개인 동의 기반으로 여러 기관의 건강데이터를 연결하고, 현재 FHIR 기반 12개 범주의 개인 건강데이터 전송을 지원하고 있어서 “데이터를 내 앱으로 모은다”는 구조도 현실적인 방향이다.
+
+다만 App-only로 생각하지는 않았으면 해. 내 생각에는 앱이 본체 + 웹이 보조가 좋아.
+
+내가 보는 전체 서비스 구조
+
+한 문장으로 하면:
+
+An AI health app that builds a living model of you over time.
+
+또는 우리가 지금까지 쓰던 언어로는:
+
+Collect your health. Know yourself better.
+
+핵심은 한 번의 건강검진이 아니라 반복 측정이야.
+
+처음 시작할 때
+
+여기서 한 가지 수정하고 싶은 게 있어.
+
+“처음부터 최대한 많은 새 검사를 받는다”보다는,
+
+처음부터 최대한 많은 ‘이미 존재하는 내 데이터’를 Collect한다.
+
+가 먼저야.
+
+예를 들면 신규 사용자가 들어오면:
+
+병원 기록
++
+과거 건강검진
++
+국민건강보험 건강검진
++
+기존 혈액검사 PDF
++
+InBody
++
+DNA 검사 결과
++
+Apple Health / Samsung Health / Garmin / Oura 등
++
+현재 복용약
++
+과거 검사 이미지
++
+간단한 lifestyle questionnaire
+
+를 먼저 가져온다.
+
+한국에서는 건강정보 고속도로가 이미 의료기관·공공기관에 흩어진 개인 의료데이터를 본인 동의 아래 연결·전송하도록 설계되어 있고, 건강검진·검사결과·영상/판독·투약/처방 등까지 데이터 범위에 포함한다.
+
+즉 처음부터 사용자가 바늘을 열 번 맞게 하는 게 아니라,
+
+“당신에 대해 이미 존재하는 정보를 먼저 찾아서 하나로 합쳐봅시다.”
+
+가 onboarding이 되는 거야.
+
+Day 0 — Build My Baseline
+
+앱 가입 후 첫 경험을 이렇게 만들 수 있어.
+
+Build your baseline
+
+앱이 하나씩 묻는다.
+
+Health Checkup
+→ 가져오기
+
+Blood tests
+→ PDF / 사진 / 연결
+
+Body Composition
+→ InBody 사진 추가
+
+DNA
+→ 기존 검사 있음? 추가
+
+Wearables
+→ 연결
+
+Medical History
+→ 가져오기
+
+Lifestyle
+→ 짧은 questionnaire
+
+그리고 끝나면:
+
+Your first Health Model is ready.
+
+그런데 단순히 “건강점수 82점”을 보여주는 게 아니라,
+
+We know a lot about
+
+Metabolic health
+Liver
+Kidney
+Body composition
+
+We know a little about
+
+Cardiovascular
+Nutrition
+
+We don't know much about
+
+Sleep
+Genetics
+Glucose response
+
+이렇게 보여주는 거야.
+
+그리고 여기서 필요한 검사만 추가
+
+예를 들어 사용자가 기존 건강검진을 넣었는데:
+
+공복혈당 ✅
+LDL ✅
+TG ✅
+HDL ✅
+ALT ✅
+혈압 ✅
+
+하지만:
+
+HbA1c ❌
+Vitamin D ❌
+Ferritin ❌
+InBody ❌
+
+라면 AI가:
+
+Here's what would help us understand you better.
+
+라고 알려준다.
+
+중요한 건 “검사 많이 하세요”가 아니라 information gap을 채우는 것이야.
+
+그다음은 시간축
+
+여기서부터 우리가 일반 GPT와 완전히 다른 제품이 돼.
+
+예를 들어:
+
+Start
+
+Baseline Collection
+
+↓
+
++1 month
+
+Continuous data 축적
+
+Sleep
+Steps
+Resting HR
+HRV
+Exercise
+Weight
+
+↓
+
++3 months
+
+Health Check-in
+
+일부 중요 marker 업데이트
+
+↓
+
++6 months
+
+Progress Review
+
+이전 데이터와 비교
+
+↓
+
++12 months
+
+Annual Health Snapshot
+
+큰 baseline 업데이트
+
+↓
+
+다시 반복
+
+하지만 무조건 모든 사람에게 3개월마다 모든 검사를 하라는 구조는 피하는 게 좋아.
+
+검사마다 의미 있는 시간 간격이 다르기 때문이야. 예를 들어 HbA1c는 대략 지난 3개월의 평균 혈당을 반영하기 때문에 3개월이라는 interval이 의미가 있는 상황이 있지만, 모든 건강검사가 3개월마다 의미 있는 것은 아니다. 국민건강보험 일반건강검진도 기본적으로 대부분 대상자에게 2년에 한 번, 일부 직장가입자에게 1년에 한 번 시행되는 구조다.
+
+그래서 앱이 가져야 할 진짜 intelligence가:
+
+When should I measure this again?
+
+이거야.
+
+결국 개인별 Health Schedule이 생김
+
+예를 들어 J라는 사용자에게 앱이 이렇게 보여주는 거야.
+
+Your Health Timeline
+
+Today
+
+Baseline complete
+
+Blood · Body · Medical · Wearable
+
+In 6 weeks
+
+Review exercise & sleep changes
+
+자동 wearable 분석
+
+In 3 months
+
+Recheck selected metabolic markers
+
+지난 변화가 실제 biological change로 이어졌는지 확인
+
+In 6 months
+
+Body composition update
+
+In 12 months
+
+Annual health collection
+
+새로운 건강검진 데이터 추가
+
+그리고 시간이 지나면서 일정도 개인화됨.
+
+어떤 사용자는:
+
+Vitamin D 다시 볼 시점
+
+어떤 사용자는:
+
+Blood pressure home measurements 업데이트
+
+어떤 사용자는:
+
+InBody 다시 측정
+
+어떤 사용자는:
+
+지금은 추가 검사가 필요 없음
+
+이렇게 달라지는 거야.
+
+그래서 알림이 아주 중요한 기능
+
+그냥:
+
+🔔 건강검진 받으실 시간입니다.
+
+가 아니야.
+
+훨씬 개인적이어야 해.
+
+예를 들어:
+
+It's been 3 months since your last metabolic check.
+지난 3개월 동안 체중과 활동량에 변화가 있었습니다. 새로운 데이터를 추가하면 그 변화가 metabolic markers에도 나타났는지 비교할 수 있습니다.
+
+또는:
+
+Your body composition data is getting old.
+마지막 InBody 측정 이후 187일이 지났습니다.
+
+또는 더 재미있게:
+
+We've learned a lot about your sleep.
+We still know little about your glucose response.
+
+→ Explore what to collect
+
+이런 식이면 notification 자체가 “나를 더 알아가는 journey”를 계속 이어준다.
+
+그러면 앱의 핵심 탭도 거의 보임
+
+나는 4개 정도면 된다고 봐.
+
+1. Me
+
+현재 Personal Health Model.
+
+What we know about you
+
+Metabolism
+Heart
+Body
+Nutrition
+Sleep
+Genetics
+Fitness
+etc.
+
+2. Collect
+
+새로운 데이터를 추가하는 곳.
+
+What can I collect?
+
+Blood Test
+Health Checkup
+DNA
+InBody
+CGM
+Sleep
+Imaging
+etc.
+
+각각 들어가면:
+
+What you'll learn
+
+How to collect it
+
+Where you can get it
+
+How to import it
+
+3. Insights
+
+AI가 발견한 것.
+
+What's changing?
+
+What connects?
+
+What did we learn?
+
+What seems to work for you?
+
+4. Timeline
+
+2026
+
+검사
+운동 시작
+InBody
+혈액검사
+
+2027
+
+건강검진
+체중 변화
+혈액검사
+
+2028...
+
+내 몸의 history가 되는 거지.
+
+이 스타트업을 뭐라고 부르느냐
+
+여기가 꽤 중요해.
+
+업계의 큰 분류로 보면 Digital Health가 가장 넓고 안전한 표현이야. FDA도 앱·소프트웨어·센서·연결 기술을 포괄하는 넓은 범주로 digital health를 사용한다.
+
+그런데 Digital Health Startup이라고만 하면 너무 넓어.
+
+우리에게 더 가까운 시장 언어는:
+
+Consumer Health
+Preventive Health
+Precision Health
+
+쪽이야. 현재 health-tech 투자자들도 질병이 생긴 후 치료하는 reactive healthcare에서 continuous monitoring과 prevention 중심의 consumer health로 이동하는 흐름을 이야기하고 있다. Precision health 역시 유전체뿐 아니라 lifestyle, medical records 등 여러 데이터원을 결합해 개인화된 예방·건강관리를 하려는 개념과 맞닿아 있다.
+
+그런데 나는 우리 자신을 설명할 때는 이 표현이 제일 좋다고 봐.
+
+Personal Health Intelligence
+
+다만 이 표현은 이미 여러 신생 서비스들이 사용하기 시작해서, 우리가 독점적으로 새로 만든 category처럼 보기는 어렵다. 실제로 2026년 현재 Anomaly 같은 서비스가 “Personal Health Intelligence”와 longitudinal health memory를 전면에 내세우고 있고, Available Health 등도 같은 표현을 사용한다.
+
+그래서 조금 더 날카롭게 하려면:
+
+Longitudinal Personal Health Intelligence
+
+가 우리 구조를 더 잘 설명한다고 생각해.
+
+회사 소개할 때는 이렇게
+
+누가:
+
+“뭐 하는 스타트업이에요?”
+
+라고 물으면 나는:
+
+AI-native preventive health startup입니다. 개인의 건강검진, 혈액검사, DNA, 체성분, 웨어러블 같은 건강 데이터를 계속 모아 longitudinal health model을 만들고, 시간이 지날수록 사용자를 더 깊게 이해하는 personal health intelligence를 만들고 있습니다.
+
+라고 설명할 것 같아.
+
+더 짧게 하면:
+
+We're building a personal health intelligence app that learns you over time.
+
+이게 제일 좋아.
+
+그리고 장기적인 그림
+
+결국 사용자가 앱을 열었을 때:
+
+2026 — We met you
+
+↓
+
+2027 — We're learning your baseline
+
+↓
+
+2028 — We understand how you're changing
+
+↓
+
+2029 — We're learning what works for you
+
+가 되어야 해.
+
+그러면 이 앱은 단순 건강 앱이 아니라,
+
+내 몸의 평생 데이터베이스 + AI memory + health timeline
+
+이 돼.
+
+그리고 병원에 갈 때만 건강을 생각하는 게 아니라 앱이 “지금 무엇을 다시 확인할 때인지”, “무엇이 변했는지”, “다음에 무엇을 Collect하면 좋은지” 계속 알려주는 proactive health companion으로 가는 거야. 이 방향은 현재 투자 업계에서도 reactive healthcare에서 continuous, data-informed preventive health로 이동하는 흐름과 맞는다.
+
+나는 그래서 현재 우리 category를 AI-native Preventive Health, 제품을 Personal Health Intelligence, 핵심 기술/자산을 **Longitudinal Personal Health Model**이라고 나눠 부르는 게 가장 깔끔하다고 봐.
+
+철학적으로 잡으면, 이 서비스의 핵심은 건강을 관리하는 것보다 “시간을 통해 나를 알아가는 것”에 더 가까워.
+
+그래서 브랜드도 병원, 질병, 바이오해킹, 수명연장 같은 언어에서 출발하면 오히려 좁아져. 중심 철학은 이 문장이 가장 잘 맞아.
+
+You are not a snapshot. You are a pattern unfolding over time.
+
+건강검진 한 장은 “지금의 나”를 찍은 사진일 뿐이고, 혈액·DNA·수면·체성분·웨어러블·생활습관이 몇 년간 쌓이면 그때부터 나라는 패턴이 보인다는 거야.
+
+브랜드의 핵심 철학
+
+나는 세 단어로 잡고 싶어.
+
+Collect → Connect → Know
+
+Collect는 단순히 데이터를 저장한다는 뜻이 아니야. 나에 관한 evidence를 하나씩 모으는 것.
+
+Connect는 혈액검사 하나, DNA 하나를 따로 보는 게 아니라 서로 연결하고 시간축 위에 올리는 것.
+
+Know는 최종적으로 “건강해진다”보다 더 근본적인 가치야.
+
+I know myself better than before.
+
+이게 사용자가 앱을 쓸수록 쌓여야 하는 감정이라고 봐.
+
+그래서 비전도 “모두를 더 건강하게” 같은 일반적인 헬스케어 문구보다,
+
+To build the most complete understanding of a human being — starting with yourself.
+
+혹은 더 짧게,
+
+A lifetime of data. A deeper understanding of you.
+
+가 이 서비스에 더 맞아.
+
+로고의 철학
+
+나는 십자가, 하트, 심전도, DNA 이중나선은 피하고 싶어.
+
+너무 의료 서비스처럼 보이고, 우리가 원하는 “나를 알아가는 장기적 과정”을 표현하지 못해.
+
+가장 좋은 상징은 점들이 시간이 지나면서 하나의 형태를 이루는 것이라고 생각해.
+
+처음에는 점 몇 개뿐이야.
+
+· ·
+
+건강검진이 추가되고,
+
+· · · ·
+
+DNA, InBody, 수면이 추가되고,
+
+· · · · · ·
+
+몇 년이 지나면서 점들이 연결돼 하나의 패턴을 만든다.
+
+이걸 로고에서는 아주 추상적으로 표현할 수 있어.
+
+예를 들어 여러 개의 점이 하나의 원 또는 궤도를 만들어가는 심볼. 혹은 완전한 원이 아니라 아직 일부가 비어 있는 형태.
+
+그 비어 있는 부분이 중요해.
+
+There is always more to learn about you.
+
+라는 철학을 담을 수 있기 때문이야.
+
+완성된 체크마크가 아니라 계속 완성되어가는 존재인 거지.
+
+이름은 어떤 철학이어야 하나
+
+이 서비스 이름에 Health, Medical, AI, Bio를 반드시 넣을 필요는 없다고 생각해.
+
+왜냐하면 우리가 장기적으로 소유하고 싶은 개념은 건강검진보다 더 큰:
+
+Me / Self / Time / Knowing / Pattern / Becoming
+
+이기 때문이야.
+
+Curiositas sui
+Curiosity about oneself.
+
+Exploratio
+Discovery through exploration.
+
+Continuitas
+Understanding across time.
+
+Sapientia quieta
+Quiet intelligence.
+
+가장 짧고 강한 버전
+
+Morbus curatur. Salus cognoscitur.
+
+Disease is treated.<<< 이게 최종 
+Health is understood. <<< 이게 최종 
+Health is knowledge of oneself. <<< 이게 최종 
+
+상당히 강한 브랜드 문장이야.
+
+직역하면:
+
+건강이란 자기 자신을 아는 것이다.
+
+물론 의학적 정의로 쓰는 문장이 아니라 브랜드 philosophy로 쓰는 거지. 
+
+
+앎 — ALM
+
+건강을 치료가 아니라 앎으로 정의하는 거지.
+
+건강은 병이 없는 상태만이 아니다.
+내 몸을 알아가는 것이다.
+
+브랜드 이름 자체가 철학이 돼.
+
+앎
+
+나를 알아가는 건강.
+
+서비스 이름을 앎으로 하자
