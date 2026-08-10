@@ -27,7 +27,7 @@ Those are long (1.4k–6.2k lines); read the one you are working on, not all six
 ## Current state
 
 - **Design: approved** (2026-08-09, all eight gates).
-- **Plans: written and reviewable.** FND Task 1 is the first authorized implementation slice.
+- **Plans: written and reviewable.** FND Task 1 is implemented locally; its Linux-only installer evidence remains pending pinned CI before Task 2 begins.
 - **Implementation: authorized 2026-08-10** in checkpointed inline batches; production and beta are not authorized.
 - **Open input, not yet integrated:** [`research/source-materials/2026-08-10-founder-brief-ko.txt`](research/source-materials/2026-08-10-founder-brief-ko.txt)
   (2026-08-10, Korean). It reframes category/brand — *AI-native Preventive Health*,

@@ -19,6 +19,13 @@ node_modules/
 build/
 dist/
 coverage/
+.gradle/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+out/
+evidence/
 .pytest_cache/
 __pycache__/
 *.pyc

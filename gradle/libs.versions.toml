@@ -1,0 +1,35 @@
+[versions]
+kotlin = "2.2.20"
+spring-boot = "3.5.7"
+spring-dependency-management = "1.1.7"
+hapi-fhir = "8.10.1"
+archunit = "1.4.1"
+testcontainers = "1.21.3"
+cyclonedx = "2.3.1"
+
+[libraries]
+spring-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-security = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
+spring-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
+spring-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+jackson-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+flyway-core = { module = "org.flywaydb:flyway-core" }
+flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
+postgresql = { module = "org.postgresql:postgresql" }
+hapi-base = { module = "ca.uhn.hapi.fhir:hapi-fhir-base", version.ref = "hapi-fhir" }
+hapi-r4 = { module = "ca.uhn.hapi.fhir:hapi-fhir-structures-r4", version.ref = "hapi-fhir" }
+spring-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-security-test = { module = "org.springframework.security:spring-security-test" }
+archunit = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+testcontainers-junit = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
+cyclonedx = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
+
