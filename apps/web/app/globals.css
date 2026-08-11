@@ -449,6 +449,46 @@ svg {
   margin: 0;
 }
 
+.gc-evidence-lens__automation {
+  margin-top: 0.9rem;
+  border-top: 1px solid #cbd1d9;
+}
+
+.gc-evidence-lens__automation summary {
+  padding-block: 0.75rem;
+  color: #243957;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gc-evidence-lens__automation dl {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.25rem 0 0.9rem;
+}
+
+.gc-evidence-lens__automation dl > div {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.75rem;
+}
+
+.gc-evidence-lens__automation dt {
+  color: #78818e;
+  font-size: 0.7rem;
+}
+
+.gc-evidence-lens__automation dd {
+  margin: 0;
+  color: #273140;
+  font-family: var(--gc-type-mono);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .gc-evidence-lens__history li p {
   margin-top: 0.4rem;
   color: #647082;

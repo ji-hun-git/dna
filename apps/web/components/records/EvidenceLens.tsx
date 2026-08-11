@@ -13,6 +13,12 @@ export type EvidenceLensRecord = {
   sourceDigest: string;
   extractedAt: string;
   confirmedAt: string;
+  automation?: {
+    layoutModel: string;
+    semanticModel: string;
+    evaluationGate: string;
+    disposition: string;
+  };
 };
 
 export type EvidenceLensProps = {
@@ -145,7 +151,21 @@ export function EvidenceLens({ record, onBack }: EvidenceLensProps) {
             </li>
             <li>
               <span>02</span>
-              <div><strong>자동 추출 후보</strong><p>{record.originalValue} {record.unit}을 후보로 제시했어요. 아직 기록에는 넣지 않았어요.</p></div>
+              <div>
+                <strong>자동 추출 후보</strong>
+                <p>{record.originalValue} {record.unit}을 후보로 제시했어요. 아직 기록에는 넣지 않았어요.</p>
+                {record.automation && (
+                  <details className="gc-evidence-lens__automation">
+                    <summary>자동 추출 방법 보기</summary>
+                    <dl>
+                      <div><dt>문서 구조 읽기</dt><dd>{record.automation.layoutModel}</dd></div>
+                      <div><dt>의료 항목 후보</dt><dd>{record.automation.semanticModel}</dd></div>
+                      <div><dt>배포 전 평가</dt><dd>{record.automation.evaluationGate}</dd></div>
+                      <div><dt>저장 원칙</dt><dd>{record.automation.disposition}</dd></div>
+                    </dl>
+                  </details>
+                )}
+              </div>
               <time dateTime={record.extractedAt}>{record.extractedAt}</time>
             </li>
             <li data-emphasis="true">

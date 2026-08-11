@@ -2,10 +2,12 @@
   "name": "@gc/web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "test": "vitest run",
+    "medical-ai:gate": "node scripts/evaluate-medical-documents.mts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "e2e": "playwright test"

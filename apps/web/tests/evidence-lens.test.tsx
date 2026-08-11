@@ -20,6 +20,12 @@ const correctedRecord = {
   sourceDigest: "sha256:7c91…42a8 · 합성 시연 문서",
   extractedAt: "2026-08-10 09:41",
   confirmedAt: "2026-08-10 09:44",
+  automation: {
+    layoutModel: "PaddleOCR-VL 1.6",
+    semanticModel: "MedGemma 1.5 4B",
+    evaluationGate: "medical-document-eval.v1",
+    disposition: "자동 결과는 후보로만 제시하고 사람의 확인 전에는 저장하지 않음",
+  },
 };
 
 it("shows exact source location, correction history, and a non-diagnostic boundary", async () => {
@@ -31,6 +37,10 @@ it("shows exact source location, correction history, and a non-diagnostic bounda
   expect(screen.getByText("188 → 190 mg/dL로 수정했어요.")).toBeVisible();
   expect(screen.getByRole("heading", { name: "이 화면은 진단 결과가 아니에요" })).toBeVisible();
   expect(screen.getByText(/sha256:7c91/)).toBeVisible();
+  await userEvent.click(screen.getByText("자동 추출 방법 보기"));
+  expect(screen.getByText("PaddleOCR-VL 1.6")).toBeVisible();
+  expect(screen.getByText("MedGemma 1.5 4B")).toBeVisible();
+  expect(screen.getByText("medical-document-eval.v1")).toBeVisible();
   expect(await axe(container)).toHaveNoViolations();
 
   await userEvent.click(screen.getByRole("button", { name: "건강 기록으로 돌아가기" }));

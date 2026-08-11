@@ -7,6 +7,7 @@
   },
   "scripts": {
     "tokens": "pnpm --filter @gc/design-tokens generate",
-    "web:test": "pnpm --filter @gc/web test"
+    "web:test": "pnpm --filter @gc/web test",
+    "medical-ai:gate": "pnpm --filter @gc/web medical-ai:gate"
   }
 }

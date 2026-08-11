@@ -14,6 +14,7 @@ import {
   type LocalDocumentReceipt,
 } from "@/lib/imports/local-document";
 import { EvidenceLens } from "@/components/records/EvidenceLens";
+import { candidateOnlyPipelineDisclosure } from "@/lib/medical-ai/policy";
 
 type ReviewCandidate = RecordImportCandidate & {
   id: string;
@@ -238,6 +239,7 @@ export function HealthExperience() {
           sourceDigest: "sha256:7c91…42a8 · 합성 시연 문서",
           extractedAt: "2026-08-10 09:41",
           confirmedAt: "2026-08-10 09:44",
+          automation: candidateOnlyPipelineDisclosure,
         }}
         onBack={() => setView("home")}
       />

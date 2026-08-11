@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "medical-document-corpus.v1",
+  "corpusId": "synthetic-ko-lab-v1",
+  "description": "비식별 합성 한국어 건강검진·보건소 검사표의 값·단위·검사일·근거 위치 평가셋",
+  "syntheticOnly": true,
+  "documents": [
+    {
+      "documentId": "synthetic-checkup-001",
+      "documentSha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "documentType": "health-screening-lab-report",
+      "language": "ko-KR",
+      "synthetic": true,
+      "expectedMeasurements": [
+        {
+          "semanticRole": "measurement",
+          "fieldId": "hba1c",
+          "label": "당화혈색소",
+          "value": "6.1",
+          "unit": "%",
+          "observedAt": "2026-07-28",
+          "referenceRange": "4.0–5.6 %",
+          "evidence": {
+            "page": 2,
+            "blockId": "block-lab-row-03",
+            "box": { "x": 0.09, "y": 0.27, "width": 0.82, "height": 0.06 },
+            "sourceTextSha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "semanticRole": "measurement",
+          "fieldId": "total-cholesterol",
+          "label": "총콜레스테롤",
+          "value": "188",
+          "unit": "mg/dL",
+          "observedAt": "2026-07-28",
+          "referenceRange": "120–199 mg/dL",
+          "evidence": {
+            "page": 2,
+            "blockId": "block-lab-row-04",
+            "box": { "x": 0.09, "y": 0.34, "width": 0.82, "height": 0.06 },
+            "sourceTextSha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        {
+          "semanticRole": "measurement",
+          "fieldId": "vitamin-d",
+          "label": "비타민 D",
+          "value": "31",
+          "unit": "ng/mL",
+          "observedAt": "2026-07-28",
+          "referenceRange": "30–100 ng/mL",
+          "evidence": {
+            "page": 2,
+            "blockId": "block-lab-row-05",
+            "box": { "x": 0.09, "y": 0.41, "width": 0.82, "height": 0.06 },
+            "sourceTextSha256": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        }
+      ],
+      "requiredAbstentions": [
+        {
+          "fieldId": "ldl-cholesterol",
+          "label": "LDL 콜레스테롤",
+          "acceptedReasons": ["unreadable", "ambiguous_value"]
+        }
+      ]
+    },
+    {
+      "documentId": "synthetic-public-health-001",
+      "documentSha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "documentType": "public-health-lab-report",
+      "language": "ko-KR",
+      "synthetic": true,
+      "expectedMeasurements": [
+        {
+          "semanticRole": "measurement",
+          "fieldId": "fasting-glucose",
+          "label": "공복혈당",
+          "value": "96",
+          "unit": "mg/dL",
+          "observedAt": "2026-06-18",
+          "referenceRange": "70–99 mg/dL",
+          "evidence": {
+            "page": 1,
+            "blockId": "block-result-row-01",
+            "box": { "x": 0.08, "y": 0.22, "width": 0.84, "height": 0.07 },
+            "sourceTextSha256": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        },
+        {
+          "semanticRole": "measurement",
+          "fieldId": "ast",
+          "label": "AST",
+          "value": "24",
+          "unit": "U/L",
+          "observedAt": "2026-06-18",
+          "referenceRange": "0–40 U/L",
+          "evidence": {
+            "page": 1,
+            "blockId": "block-result-row-02",
+            "box": { "x": 0.08, "y": 0.30, "width": 0.84, "height": 0.07 },
+            "sourceTextSha256": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        },
+        {
+          "semanticRole": "measurement",
+          "fieldId": "alt",
+          "label": "ALT",
+          "value": "19",
+          "unit": "U/L",
+          "observedAt": "2026-06-18",
+          "referenceRange": "0–40 U/L",
+          "evidence": {
+            "page": 1,
+            "blockId": "block-result-row-03",
+            "box": { "x": 0.08, "y": 0.38, "width": 0.84, "height": 0.07 },
+            "sourceTextSha256": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          }
+        }
+      ],
+      "requiredAbstentions": []
+    }
+  ]
+}
