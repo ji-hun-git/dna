@@ -8,6 +8,11 @@ import {
   RecordImportConcept,
   RecordImportStage,
 } from "@/components/concept/RecordImportConcept";
+import {
+  inspectLocalDocument,
+  LocalDocumentError,
+  type LocalDocumentReceipt,
+} from "@/lib/imports/local-document";
 
 type ReviewCandidate = RecordImportCandidate & {
   id: string;
@@ -61,6 +66,10 @@ export function HealthExperience() {
   const [editing, setEditing] = useState(false);
   const [draftValue, setDraftValue] = useState("");
   const [editError, setEditError] = useState("");
+  const [documentReceipt, setDocumentReceipt] = useState<LocalDocumentReceipt>();
+  const [sourceMessage, setSourceMessage] = useState("");
+  const [sourceError, setSourceError] = useState("");
+  const [isInspecting, setIsInspecting] = useState(false);
 
   const candidate = useMemo(() => {
     const current = candidates[Math.min(candidateIndex, candidates.length - 1)];
@@ -94,12 +103,50 @@ export function HealthExperience() {
 
   const beginImport = () => {
     resetReview();
+    setDocumentReceipt(undefined);
+    setSourceMessage("");
+    setSourceError("");
     setView("source");
   };
 
   const closeImport = () => {
     setView("home");
     setEditing(false);
+    setSourceMessage("");
+    setSourceError("");
+  };
+
+  const chooseSource = (source: "device" | "camera" | "provider") => {
+    setSourceError("");
+    if (source === "device") {
+      setSourceMessage("");
+      return;
+    }
+    setSourceMessage(
+      source === "camera"
+        ? "카메라 촬영은 다음 슬라이스에서 연결할게요. 지금은 PDF, PNG, JPEG 파일을 선택해 주세요."
+        : "병원 연결은 기관 연동 계약 뒤에 제공할게요. 지금은 기기 파일로 안전하게 체험할 수 있어요.",
+    );
+  };
+
+  const selectLocalDocument = async (file: File) => {
+    setSourceError("");
+    setSourceMessage("");
+    setIsInspecting(true);
+    try {
+      const receipt = await inspectLocalDocument(file);
+      setDocumentReceipt(receipt);
+      setView("processing");
+    } catch (error) {
+      setDocumentReceipt(undefined);
+      setSourceError(
+        error instanceof LocalDocumentError
+          ? error.message
+          : "이 기기에서 파일을 확인하지 못했어요. 다시 선택해 주세요.",
+      );
+    } finally {
+      setIsInspecting(false);
+    }
   };
 
   const advance = (decision: "confirmed" | "excluded") => {
@@ -135,7 +182,8 @@ export function HealthExperience() {
 
   const goBack = () => {
     if (view === "source") setView("home");
-    else if (view === "review") setView("source");
+    else if (view === "processing") setView("source");
+    else if (view === "review") setView(documentReceipt ? "processing" : "source");
     else {
       restartReview();
       setView("review");
@@ -177,9 +225,15 @@ export function HealthExperience() {
         candidate={candidate}
         confirmedCount={confirmedCount}
         excludedCount={excludedCount}
+        documentReceipt={documentReceipt}
+        sourceMessage={sourceMessage}
+        sourceError={sourceError}
+        isInspecting={isInspecting}
         onBack={goBack}
         onClose={closeImport}
-        onChooseSource={() => setView("review")}
+        onChooseSource={chooseSource}
+        onFileSelect={selectLocalDocument}
+        onBeginReview={() => setView("review")}
         onConfirm={() => advance("confirmed")}
         onEdit={openEditor}
         onExclude={() => advance("excluded")}

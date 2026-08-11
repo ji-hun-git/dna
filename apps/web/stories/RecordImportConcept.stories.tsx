@@ -14,6 +14,14 @@ const syntheticImport = {
   },
 };
 
+const documentReceipt = {
+  format: "PDF" as const,
+  byteLength: 248_320,
+  sizeLabel: "243 KB",
+  sha256: `sha256:${"5d9fbc80d047f8a25538970b".padEnd(64, "7")}` as const,
+  processingBoundary: "local-synthetic-fixture" as const,
+};
+
 const meta = {
   title: "Concept/Record Import",
   component: RecordImportConcept,
@@ -25,6 +33,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ChooseSource: Story = { name: "결과지 선택" };
+
+export const LocalProcessingReceipt: Story = {
+  name: "로컬 처리 영수증",
+  args: { stage: "processing", documentReceipt },
+};
 
 export const ReviewOneItem: Story = {
   name: "항목 하나씩 확인",

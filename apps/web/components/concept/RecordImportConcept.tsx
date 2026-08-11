@@ -1,4 +1,7 @@
-export type RecordImportStage = "source" | "review" | "complete";
+import { ChangeEvent, useRef } from "react";
+import type { LocalDocumentReceipt } from "@/lib/imports/local-document";
+
+export type RecordImportStage = "source" | "processing" | "review" | "complete";
 
 export type RecordImportCandidate = {
   label: string;
@@ -16,9 +19,15 @@ export type RecordImportConceptProps = {
   candidate: RecordImportCandidate;
   confirmedCount?: number;
   excludedCount?: number;
+  documentReceipt?: LocalDocumentReceipt;
+  sourceMessage?: string;
+  sourceError?: string;
+  isInspecting?: boolean;
   onBack?: () => void;
   onClose?: () => void;
   onChooseSource?: (source: "device" | "camera" | "provider") => void;
+  onFileSelect?: (file: File) => void;
+  onBeginReview?: () => void;
   onConfirm?: () => void;
   onEdit?: () => void;
   onExclude?: () => void;
@@ -90,7 +99,21 @@ function StepProgress({ current, total }: { current: number; total: number }) {
   );
 }
 
-function SourceStage({ onChooseSource }: Pick<RecordImportConceptProps, "onChooseSource">) {
+function SourceStage({
+  onChooseSource,
+  onFileSelect,
+  sourceMessage,
+  sourceError,
+  isInspecting,
+}: Pick<RecordImportConceptProps, "onChooseSource" | "onFileSelect" | "sourceMessage" | "sourceError" | "isInspecting">) {
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const selectFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    if (file) onFileSelect?.(file);
+    event.currentTarget.value = "";
+  };
+
   return (
     <section className="gc-import__question" aria-labelledby="import-source-title">
       <p className="gc-import__eyebrow">첫 번째로 알려주세요</p>
@@ -100,11 +123,24 @@ function SourceStage({ onChooseSource }: Pick<RecordImportConceptProps, "onChoos
       </p>
 
       <div className="gc-import__choices" aria-label="결과지 가져오기 방법">
-        <button type="button" onClick={() => onChooseSource?.("device")}>
+        <button
+          type="button"
+          disabled={isInspecting}
+          aria-busy={isInspecting}
+          onClick={() => { onChooseSource?.("device"); fileInput.current?.click(); }}
+        >
           <span className="gc-import__choice-icon"><FileIcon /></span>
-          <span><strong>이 기기에 있어요</strong><small>PDF, DICOM, CSV, 이미지</small></span>
+          <span><strong>{isInspecting ? "파일을 확인하고 있어요" : "이 기기에 있어요"}</strong><small>PDF, PNG, JPEG · 최대 20MB</small></span>
           <span aria-hidden="true">›</span>
         </button>
+        <input
+          ref={fileInput}
+          className="gc-import__file-input"
+          type="file"
+          accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg"
+          aria-label="기기에서 결과지 선택"
+          onChange={selectFile}
+        />
         <button type="button" onClick={() => onChooseSource?.("camera")}>
           <span className="gc-import__choice-icon gc-import__choice-icon--camera"><CameraIcon /></span>
           <span><strong>종이로 가지고 있어요</strong><small>카메라로 한 장씩 촬영</small></span>
@@ -117,9 +153,56 @@ function SourceStage({ onChooseSource }: Pick<RecordImportConceptProps, "onChoos
         </button>
       </div>
 
+      {sourceError && <p className="gc-import__source-feedback gc-import__source-feedback--error" role="alert">{sourceError}</p>}
+      {!sourceError && sourceMessage && <p className="gc-import__source-feedback" role="status">{sourceMessage}</p>}
+
       <p className="gc-import__privacy-note">
-        원본은 암호화해 처리하고, 저장 방식은 확인 단계에서 직접 선택할 수 있어요.
+        이 프로토타입에서는 파일이 기기 밖으로 전송되지 않아요. 실제 클라우드 처리는 별도의 명시적 동의 뒤에만 연결합니다.
       </p>
+    </section>
+  );
+}
+
+function ProcessingStage({
+  documentReceipt,
+  totalItems,
+  onBeginReview,
+}: Pick<RecordImportConceptProps, "documentReceipt" | "totalItems" | "onBeginReview">) {
+  if (!documentReceipt) return null;
+  const digest = `${documentReceipt.sha256.slice(7, 19)}…${documentReceipt.sha256.slice(-8)}`;
+
+  return (
+    <section className="gc-import__processing" aria-labelledby="import-processing-title">
+      <div className="gc-import__processing-mark" aria-hidden="true"><CheckIcon /></div>
+      <p className="gc-import__eyebrow">기기 안에서 준비됐어요</p>
+      <h1 id="import-processing-title">검토할 항목을<br />안전하게 나눴어요</h1>
+      <p className="gc-import__lead">파일 형식과 지문을 이 브라우저 안에서 확인했습니다. 아직 건강 기록에는 아무것도 추가되지 않았어요.</p>
+
+      <div className="gc-import__receipt" aria-label="로컬 파일 처리 영수증">
+        <div className="gc-import__receipt-head">
+          <span>LOCAL RECEIPT · SYNTHETIC</span>
+          <strong>{documentReceipt.format}</strong>
+        </div>
+        <dl>
+          <div><dt>파일 크기</dt><dd>{documentReceipt.sizeLabel}</dd></div>
+          <div><dt>로컬 SHA-256</dt><dd><code title={documentReceipt.sha256}>{digest}</code></dd></div>
+          <div><dt>검토할 항목</dt><dd>{totalItems}개</dd></div>
+        </dl>
+        <ol>
+          <li><span aria-hidden="true">✓</span> 허용된 파일 형식과 크기 확인</li>
+          <li><span aria-hidden="true">✓</span> 브라우저 내부 파일 지문 생성</li>
+          <li><span aria-hidden="true">✓</span> 합성 분석 fixture 연결</li>
+        </ol>
+      </div>
+
+      <div className="gc-import__demo-boundary">
+        <strong>합성 데모예요</strong>
+        <p>아래 수치는 업로드한 파일에서 읽은 실제 결과가 아닙니다. 실제 OCR·의료 데이터 처리는 아직 연결하지 않았어요.</p>
+      </div>
+
+      <button className="gc-import__action gc-import__action--primary gc-import__processing-cta" type="button" onClick={onBeginReview}>
+        {totalItems}개 항목 검토 시작
+      </button>
     </section>
   );
 }
@@ -215,7 +298,7 @@ function CompleteStage({
 }
 
 export function RecordImportConcept(props: RecordImportConceptProps) {
-  const step = props.stage === "source" ? 1 : props.stage === "review" ? 2 : 3;
+  const step = props.stage === "source" ? 1 : props.stage === "processing" ? 2 : props.stage === "review" ? 3 : 4;
   const confirmedCount = props.confirmedCount ?? props.totalItems;
   const excludedCount = props.excludedCount ?? 0;
   return (
@@ -226,8 +309,23 @@ export function RecordImportConcept(props: RecordImportConceptProps) {
         <button type="button" onClick={props.onClose}>닫기</button>
       </header>
       <div className="gc-import__shell" id="import">
-        <StepProgress current={step} total={3} />
-        {props.stage === "source" && <SourceStage onChooseSource={props.onChooseSource} />}
+        <StepProgress current={step} total={4} />
+        {props.stage === "source" && (
+          <SourceStage
+            onChooseSource={props.onChooseSource}
+            onFileSelect={props.onFileSelect}
+            sourceMessage={props.sourceMessage}
+            sourceError={props.sourceError}
+            isInspecting={props.isInspecting}
+          />
+        )}
+        {props.stage === "processing" && (
+          <ProcessingStage
+            documentReceipt={props.documentReceipt}
+            totalItems={props.totalItems}
+            onBeginReview={props.onBeginReview}
+          />
+        )}
         {props.stage === "review" && <ReviewStage {...props} />}
         {props.stage === "complete" && (
           <CompleteStage
