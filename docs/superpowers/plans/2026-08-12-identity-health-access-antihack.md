@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-12 (Asia/Seoul)
 
-**Status:** Task 1 implemented locally; Tasks 2–6 gated
+**Status:** Tasks 1 and 3 local safe-state UI implemented; Tasks 2 and 4–6 gated
 
 **Data rule:** synthetic identifiers only; no personal health information
 
@@ -82,9 +82,9 @@ Exit evidence:
 8. Exact Kakao/Naver egress additions to Network Firewall and DNS Firewall, preserving the existing no-general-egress rule.
 9. Redacted telemetry, alerting, containment, token revocation, session kill, and incident runbooks.
 
-## Task 3 — Connection experience
+## Task 3 — Connection experience (local safe-state UI implemented)
 
-- Korean-first Kakao and Naver sign-in buttons that follow each provider's brand rules without visual dominance.
+- Korean-first Kakao and Naver sign-in cards follow each provider's brand rules without visual dominance and remain honestly disabled until external registration is complete.
 - A separate “건강정보 연결” screen that explains purpose, data categories, duration, revocation, deletion, and source freshness before any health-data consent.
 - Recent-auth account linking and unlinking; no silent merge; recovery never trusts email alone.
 - Honest states: `준비 중`, `기관 승인 대기`, `연결 가능`, `연결됨`, `재동의 필요`, `중단됨`.

@@ -31,6 +31,7 @@ it("renders a calm, evidence-first health home", async () => {
 
   expect(screen.getByRole("heading", { name: "흩어진 건강 기록을 한눈에 모았어요" })).toBeVisible();
   expect(screen.getByRole("button", { name: /새 결과지 가져오기/ })).toBeVisible();
+  expect(screen.getByRole("link", { name: /연결 관리/ })).toHaveAttribute("href", "/connections");
   expect(screen.getByText("확인을 기다리는 항목이 3개 있어요")).toBeVisible();
   expect(screen.getByText("검증됨")).toBeVisible();
   expect(screen.getAllByText(/삼성 건강검진 결과지/).length).toBeGreaterThanOrEqual(2);

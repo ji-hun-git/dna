@@ -32,6 +32,8 @@ Authoritative record: [`../../../governance/founder-approval-2026-08-09.md`](../
 
 Supplemental identity/security slice: [`2026-08-12-identity-health-access-antihack.md`](2026-08-12-identity-health-access-antihack.md) freezes Kakao/Naver OIDC contracts, a fail-closed anti-hack workflow, and the still-disabled formal MyHealthWay connector. Its local Task 1 may execute with synthetic identifiers; its broker, external registration, deployment, and personal-data tasks remain gated by FND and the existing external-state/privacy approvals.
 
+Deferred founder setup: [`../../../governance/founder-external-setup-runbook-2026-08-12.md`](../../../governance/founder-external-setup-runbook-2026-08-12.md) consolidates domains, GitHub/AWS access, Kakao/Naver applications, Korean public-data keys, MyHealthWay onboarding, mobile stores, regulatory review, and the exact one-day execution order. It stores no secret value.
+
 ```mermaid
 flowchart LR
     A["Founder execution choice"] --> FND["FND: Korea platform and security foundation"]

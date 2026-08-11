@@ -111,6 +111,7 @@ export function HealthHomeConcept({
             </div>
             <p><strong>{sourceCount}곳</strong>의 기록이 연결되어 있어요</p>
             <span>검증한 기록 {recordCount}개 · 업데이트 <time dateTime={updatedAt}>{updatedAt}</time></span>
+            <a href="/connections">연결 관리 <ArrowIcon /></a>
           </aside>
         </section>
 
@@ -242,7 +243,7 @@ export function HealthHomeConcept({
               <li>처리 동의와 삭제 내역 확인</li>
             </ul>
           </div>
-          <button className="gc-button gc-button--weak" type="button">내 데이터 관리</button>
+          <a className="gc-button gc-button--weak" href="/connections">내 데이터 관리</a>
         </section>
 
         <p className="gc-health-home__boundary">
