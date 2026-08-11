@@ -6,8 +6,11 @@ import type { Preview } from "@storybook/nextjs-vite";
 const preview: Preview = {
   parameters: {
     backgrounds: {
-      default: "midnight",
-      values: [{ name: "midnight", value: "#08090A" }],
+      default: "daylight",
+      values: [
+        { name: "daylight", value: "#F5F7FA" },
+        { name: "evidence", value: "#0B0D10" },
+      ],
     },
     a11y: {
       test: "error",

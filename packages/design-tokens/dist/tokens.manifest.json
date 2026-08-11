@@ -1,8 +1,8 @@
 {
   "schemaVersion": "design-token-manifest.v1",
-  "sourceSha256": "7959e7a18176a20243f0cfa6bfdefe6cdfadd009defd600dd3cacf117002beae",
+  "sourceSha256": "c9dc8baf61ee32d3418eca54ed782ef4a69fb3c276064b095b3df4eee4574999",
   "outputs": {
-    "tokens.css": "4eab8c4a28c1adb38291bd0a772a89856dad51c2471215656194e273f1dfbdc0",
-    "tokens.dart": "1872475a5cfcdbbb063015b7d46d9d998f4ecd4991578716aeac5de22d4bfa6f"
+    "tokens.css": "35584fd8ccc6aa06aa4bb6df91724a6a02f8ea1ee99dd63a5f26873474f1bc7a",
+    "tokens.dart": "5cae5f6b3233ec1bf461017cd9a0238a1c25d8747499f673d459fbb9e0074964"
   }
 }

@@ -11,7 +11,7 @@ const contrast = (a: string, b: string) => {
   return (lighter + 0.05) / (darker + 0.05);
 };
 
-describe("Midnight Evidence Ledger tokens", () => {
+describe("Alm Health OS tokens", () => {
   it("meets body and focus contrast gates", () => {
     expect(contrast(tokens.color.text.primary, tokens.color.surface.canvas)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(tokens.color.focus.ring, tokens.color.surface.canvas)).toBeGreaterThanOrEqual(3);
@@ -19,6 +19,7 @@ describe("Midnight Evidence Ledger tokens", () => {
 
   it("keeps verification and danger semantically distinct", () => {
     expect(tokens.color.status.verified).not.toBe(tokens.color.status.danger);
+    expect(contrast(tokens.color.status.verified, tokens.color.surface.raised)).toBeGreaterThanOrEqual(4.5);
     expect(tokens.target.minimum).toBe("44px");
     expect(Number.parseInt(tokens.motion.standard)).toBeLessThanOrEqual(200);
   });
