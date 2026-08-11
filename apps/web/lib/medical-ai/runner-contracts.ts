@@ -16,7 +16,7 @@ export const offlineRunnerManifestSchema = z.strictObject({
   execution: z.strictObject({
     networkMode: z.literal("none"),
     inputMount: z.literal("read-only"),
-    outputMount: z.literal("write-only"),
+    outputMount: z.literal("isolated-read-write"),
     environmentAllowlist: z.tuple([
       z.literal("GC_JOB_ID"),
       z.literal("GC_INPUT_HANDLE"),

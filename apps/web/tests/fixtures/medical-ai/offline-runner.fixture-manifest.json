@@ -19,7 +19,7 @@
   "execution": {
     "networkMode": "none",
     "inputMount": "read-only",
-    "outputMount": "write-only",
+    "outputMount": "isolated-read-write",
     "environmentAllowlist": ["GC_JOB_ID", "GC_INPUT_HANDLE", "GC_OUTPUT_HANDLE"],
     "maxInputBytes": 20971520,
     "maxOutputBytes": 1048576,

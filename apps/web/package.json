@@ -8,6 +8,7 @@
     "build": "next build",
     "test": "vitest run",
     "medical-ai:gate": "node scripts/evaluate-medical-documents.mts",
+    "medical-ai:runner:preflight": "node scripts/preflight-medical-runner.mts",
     "medical-ai:runner:fixture": "node scripts/simulate-offline-medical-runner.mts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",

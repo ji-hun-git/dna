@@ -43,7 +43,7 @@ it("admits a digest-bound, network-free fixture result only as a human-confirmat
     executionBoundary: {
       networkMode: "none",
       inputMount: "read-only",
-      outputMount: "write-only",
+      outputMount: "isolated-read-write",
     },
   });
 });

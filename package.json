@@ -9,6 +9,7 @@
     "tokens": "pnpm --filter @gc/design-tokens generate",
     "web:test": "pnpm --filter @gc/web test",
     "medical-ai:gate": "pnpm --filter @gc/web medical-ai:gate",
+    "medical-ai:runner:preflight": "pnpm --filter @gc/web medical-ai:runner:preflight",
     "medical-ai:runner:fixture": "pnpm --filter @gc/web medical-ai:runner:fixture"
   }
 }
