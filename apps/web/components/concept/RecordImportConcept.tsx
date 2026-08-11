@@ -1,17 +1,29 @@
 export type RecordImportStage = "source" | "review" | "complete";
 
+export type RecordImportCandidate = {
+  label: string;
+  value: string;
+  unit: string;
+  reference: string;
+};
+
 export type RecordImportConceptProps = {
   stage: RecordImportStage;
   sourceName: string;
   observedAt: string;
   currentItem: number;
   totalItems: number;
-  candidate: {
-    label: string;
-    value: string;
-    unit: string;
-    reference: string;
-  };
+  candidate: RecordImportCandidate;
+  confirmedCount?: number;
+  excludedCount?: number;
+  onBack?: () => void;
+  onClose?: () => void;
+  onChooseSource?: (source: "device" | "camera" | "provider") => void;
+  onConfirm?: () => void;
+  onEdit?: () => void;
+  onExclude?: () => void;
+  onSave?: () => void;
+  onReviewAgain?: () => void;
 };
 
 function BackIcon() {
@@ -78,7 +90,7 @@ function StepProgress({ current, total }: { current: number; total: number }) {
   );
 }
 
-function SourceStage() {
+function SourceStage({ onChooseSource }: Pick<RecordImportConceptProps, "onChooseSource">) {
   return (
     <section className="gc-import__question" aria-labelledby="import-source-title">
       <p className="gc-import__eyebrow">첫 번째로 알려주세요</p>
@@ -88,17 +100,17 @@ function SourceStage() {
       </p>
 
       <div className="gc-import__choices" aria-label="결과지 가져오기 방법">
-        <button type="button">
+        <button type="button" onClick={() => onChooseSource?.("device")}>
           <span className="gc-import__choice-icon"><FileIcon /></span>
           <span><strong>이 기기에 있어요</strong><small>PDF, DICOM, CSV, 이미지</small></span>
           <span aria-hidden="true">›</span>
         </button>
-        <button type="button">
+        <button type="button" onClick={() => onChooseSource?.("camera")}>
           <span className="gc-import__choice-icon gc-import__choice-icon--camera"><CameraIcon /></span>
           <span><strong>종이로 가지고 있어요</strong><small>카메라로 한 장씩 촬영</small></span>
           <span aria-hidden="true">›</span>
         </button>
-        <button type="button">
+        <button type="button" onClick={() => onChooseSource?.("provider")}>
           <span className="gc-import__choice-icon gc-import__choice-icon--link"><LinkIcon /></span>
           <span><strong>병원에서 바로 연결할게요</strong><small>연결 가능한 기관 확인</small></span>
           <span aria-hidden="true">›</span>
@@ -118,6 +130,9 @@ function ReviewStage({
   currentItem,
   totalItems,
   candidate,
+  onConfirm,
+  onEdit,
+  onExclude,
 }: Omit<RecordImportConceptProps, "stage">) {
   return (
     <section className="gc-import__review" aria-labelledby="import-review-title">
@@ -162,31 +177,37 @@ function ReviewStage({
       </div>
 
       <div className="gc-import__review-actions">
-        <button className="gc-import__action gc-import__action--primary" type="button">맞아요</button>
-        <button className="gc-import__action gc-import__action--secondary" type="button">수정할게요</button>
-        <button className="gc-import__action gc-import__action--text" type="button">기록에서 제외</button>
+        <button className="gc-import__action gc-import__action--primary" type="button" onClick={onConfirm}>맞아요</button>
+        <button className="gc-import__action gc-import__action--secondary" type="button" onClick={onEdit}>수정할게요</button>
+        <button className="gc-import__action gc-import__action--text" type="button" onClick={onExclude}>기록에서 제외</button>
       </div>
     </section>
   );
 }
 
-function CompleteStage({ totalItems, sourceName }: Pick<RecordImportConceptProps, "totalItems" | "sourceName">) {
+function CompleteStage({
+  confirmedCount,
+  excludedCount,
+  sourceName,
+  onSave,
+  onReviewAgain,
+}: Pick<RecordImportConceptProps, "confirmedCount" | "excludedCount" | "sourceName" | "onSave" | "onReviewAgain">) {
   return (
     <section className="gc-import__complete" aria-labelledby="import-complete-title">
       <div className="gc-import__complete-mark"><CheckIcon /></div>
       <p className="gc-import__eyebrow">확인이 끝났어요</p>
-      <h1 id="import-complete-title">{totalItems}개 항목을<br />기록할 준비가 됐어요</h1>
+      <h1 id="import-complete-title">{confirmedCount}개 항목을<br />기록할 준비가 됐어요</h1>
       <p className="gc-import__lead">확인한 값과 원본 출처가 한 묶음으로 저장돼요.</p>
 
       <div className="gc-import__summary">
-        <div><span>확인한 항목</span><strong>{totalItems}개</strong></div>
-        <div><span>제외한 항목</span><strong>1개</strong></div>
+        <div><span>확인한 항목</span><strong>{confirmedCount}개</strong></div>
+        <div><span>제외한 항목</span><strong>{excludedCount}개</strong></div>
         <div><span>출처</span><strong>{sourceName}</strong></div>
       </div>
 
       <div className="gc-import__complete-actions">
-        <button className="gc-import__action gc-import__action--primary" type="button">건강 기록에 추가</button>
-        <button className="gc-import__action gc-import__action--secondary" type="button">다시 확인</button>
+        <button className="gc-import__action gc-import__action--primary" type="button" onClick={onSave}>건강 기록에 추가</button>
+        <button className="gc-import__action gc-import__action--secondary" type="button" onClick={onReviewAgain}>다시 확인</button>
       </div>
       <p className="gc-import__boundary">추가한 수치만으로 질환을 진단하지 않아요. 원본·검사 조건·의료진 설명을 함께 확인해 주세요.</p>
     </section>
@@ -195,18 +216,28 @@ function CompleteStage({ totalItems, sourceName }: Pick<RecordImportConceptProps
 
 export function RecordImportConcept(props: RecordImportConceptProps) {
   const step = props.stage === "source" ? 1 : props.stage === "review" ? 2 : 3;
+  const confirmedCount = props.confirmedCount ?? props.totalItems;
+  const excludedCount = props.excludedCount ?? 0;
   return (
     <main className="gc-import" data-stage={props.stage}>
       <header className="gc-import__appbar">
-        <button type="button" aria-label="이전 화면"><BackIcon /></button>
+        <button type="button" aria-label="이전 화면" onClick={props.onBack}><BackIcon /></button>
         <a href="#import" aria-label="앎 건강 홈"><span aria-hidden="true">앎</span></a>
-        <button type="button">닫기</button>
+        <button type="button" onClick={props.onClose}>닫기</button>
       </header>
       <div className="gc-import__shell" id="import">
         <StepProgress current={step} total={3} />
-        {props.stage === "source" && <SourceStage />}
+        {props.stage === "source" && <SourceStage onChooseSource={props.onChooseSource} />}
         {props.stage === "review" && <ReviewStage {...props} />}
-        {props.stage === "complete" && <CompleteStage totalItems={props.totalItems} sourceName={props.sourceName} />}
+        {props.stage === "complete" && (
+          <CompleteStage
+            confirmedCount={confirmedCount}
+            excludedCount={excludedCount}
+            sourceName={props.sourceName}
+            onSave={props.onSave}
+            onReviewAgain={props.onReviewAgain}
+          />
+        )}
       </div>
     </main>
   );

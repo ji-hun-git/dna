@@ -414,6 +414,45 @@ svg {
   background: #fff9e8;
 }
 
+.gc-health-home__saved {
+  display: flex;
+  align-items: center;
+  gap: var(--gc-space-4);
+  margin-bottom: clamp(4rem, 8vw, 6rem);
+  padding: var(--gc-space-5);
+  border: 1px solid rgb(0 127 123 / 14%);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--gc-color-status-verified) 7%, white);
+}
+
+.gc-health-home__saved > span {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 1rem;
+  color: var(--gc-color-text-inverse);
+  background: var(--gc-color-status-verified);
+  font-weight: 750;
+}
+
+.gc-health-home__saved h2,
+.gc-health-home__saved p {
+  margin: 0;
+}
+
+.gc-health-home__saved h2 {
+  font-size: 1em;
+  line-height: 1.45;
+}
+
+.gc-health-home__saved p {
+  margin-top: 0.25rem;
+  color: var(--gc-color-text-secondary);
+  font-size: 0.875em;
+}
+
 .gc-health-home__review-icon {
   display: grid;
   width: 3rem;
@@ -1097,6 +1136,116 @@ svg {
   .gc-import__complete-actions {
     grid-template-columns: 1fr;
   }
+}
+
+.gc-edit-dialog__overlay {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  background: rgb(23 26 31 / 48%);
+  backdrop-filter: blur(6px);
+}
+
+.gc-edit-dialog__content {
+  position: fixed;
+  z-index: 51;
+  top: 50%;
+  left: 50%;
+  width: min(calc(100% - 2rem), 26rem);
+  box-sizing: border-box;
+  padding: var(--gc-space-8);
+  transform: translate(-50%, -50%);
+  border-radius: 1.75rem;
+  background: var(--gc-color-surface-raised);
+  box-shadow: 0 28px 70px rgb(15 23 42 / 24%);
+}
+
+.gc-edit-dialog__content h2 {
+  margin: 0;
+  font-size: 1.5em;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+}
+
+.gc-edit-dialog__content > p {
+  margin: var(--gc-space-3) 0 0;
+  color: var(--gc-color-text-secondary);
+  font-size: 0.875em;
+  line-height: 1.6;
+}
+
+.gc-edit-dialog__content form {
+  margin-top: var(--gc-space-6);
+}
+
+.gc-edit-dialog__content label {
+  display: block;
+  margin-bottom: var(--gc-space-2);
+  font-size: 0.875em;
+  font-weight: 700;
+}
+
+.gc-edit-dialog__field {
+  display: grid;
+  min-height: 3.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--gc-space-3);
+  padding-inline: var(--gc-space-4);
+  border: 1px solid var(--gc-color-line-strong);
+  border-radius: 1rem;
+  background: var(--gc-color-surface-raised);
+}
+
+.gc-edit-dialog__field:focus-within {
+  border-color: var(--gc-color-focus-ring);
+  box-shadow: 0 0 0 3px rgb(47 95 227 / 12%);
+}
+
+.gc-edit-dialog__field input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 1.25em;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+}
+
+.gc-edit-dialog__field span {
+  color: var(--gc-color-text-secondary);
+  font-weight: 650;
+}
+
+.gc-edit-dialog__content [role="alert"] {
+  margin: var(--gc-space-2) 0 0;
+  color: var(--gc-color-status-danger);
+  font-size: 0.8125em;
+  font-weight: 650;
+}
+
+.gc-edit-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gc-space-3);
+  margin-top: var(--gc-space-6);
+}
+
+.gc-edit-dialog__actions button {
+  min-height: 3.25rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--gc-color-surface-soft);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gc-edit-dialog__actions button[type="submit"] {
+  color: var(--gc-color-text-inverse);
+  background: var(--gc-color-brand-primary);
 }
 
 .gc-health-home__metric-value span {

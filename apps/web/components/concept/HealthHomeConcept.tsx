@@ -24,6 +24,8 @@ export type HealthHomeConceptProps = {
     status: "verified";
   };
   recentRecords: readonly HealthHomeRecord[];
+  savedRecordCount?: number;
+  onStartImport?: () => void;
 };
 
 function ArrowIcon() {
@@ -59,6 +61,8 @@ export function HealthHomeConcept({
   pendingReviewCount,
   metric,
   recentRecords,
+  savedRecordCount = 0,
+  onStartImport,
 }: HealthHomeConceptProps) {
   const timeline = Array.from({ length: 12 }, (_, index) => index);
 
@@ -88,7 +92,7 @@ export function HealthHomeConcept({
               병원, 건강검진센터, 검사기관의 결과를 출처와 함께 안전하게 확인하세요.
             </p>
             <div className="gc-health-home__hero-actions">
-              <button className="gc-button gc-button--primary" type="button">
+              <button className="gc-button gc-button--primary" type="button" onClick={onStartImport}>
                 <UploadIcon /> 새 결과지 가져오기
               </button>
               <a className="gc-button gc-button--weak" href="#records">내 기록 보기</a>
@@ -107,6 +111,16 @@ export function HealthHomeConcept({
             <span>검증한 기록 {recordCount}개 · 업데이트 <time dateTime={updatedAt}>{updatedAt}</time></span>
           </aside>
         </section>
+
+        {savedRecordCount > 0 && (
+          <section className="gc-health-home__saved" aria-live="polite">
+            <span aria-hidden="true">✓</span>
+            <div>
+              <h2>{savedRecordCount}개 항목을 건강 기록에 추가했어요</h2>
+              <p>원본 출처와 확인 이력이 함께 저장됐어요.</p>
+            </div>
+          </section>
+        )}
 
         {pendingReviewCount > 0 && (
           <section className="gc-health-home__review" aria-labelledby="review-title">
@@ -172,7 +186,7 @@ export function HealthHomeConcept({
             <div><p>바로 할 수 있어요</p><h2 id="task-title">무엇을 할까요?</h2></div>
           </div>
           <div className="gc-health-home__task-grid">
-            <button type="button">
+            <button type="button" onClick={onStartImport}>
               <span className="gc-health-home__task-icon"><UploadIcon /></span>
               <strong>검사 결과 가져오기</strong>
               <span>PDF나 사진 한 장으로 시작해요</span>
@@ -237,7 +251,7 @@ export function HealthHomeConcept({
       <nav className="gc-health-home__bottom-nav" aria-label="모바일 주요 메뉴">
         <a href="#home" aria-current="page"><span aria-hidden="true">●</span>홈</a>
         <a href="#records"><span aria-hidden="true">▤</span>기록</a>
-        <button type="button"><span aria-hidden="true">＋</span>결과지 추가</button>
+        <button type="button" onClick={onStartImport}><span aria-hidden="true">＋</span>결과지 추가</button>
         <a href="#privacy"><span aria-hidden="true">◈</span>내 데이터</a>
       </nav>
     </main>
