@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "medical-document-runner-manifest.v1",
+  "manifestId": "runner-paddle-medgemma-fixture.v1",
+  "pipelineId": "paddleocr-vl-1.6.medgemma-1.5-4b",
+  "approvalStatus": "fixture-only",
+  "runnerImage": "local-fixture/medical-document-runner@sha256:7777777777777777777777777777777777777777777777777777777777777777",
+  "models": {
+    "layout": {
+      "modelId": "PaddleOCR-VL-1.6",
+      "artifactSha256": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "executionMode": "offline-pinned"
+    },
+    "semantic": {
+      "modelId": "google/medgemma-1.5-4b-it",
+      "artifactSha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "executionMode": "offline-pinned"
+    }
+  },
+  "execution": {
+    "networkMode": "none",
+    "inputMount": "read-only",
+    "outputMount": "write-only",
+    "environmentAllowlist": ["GC_JOB_ID", "GC_INPUT_HANDLE", "GC_OUTPUT_HANDLE"],
+    "maxInputBytes": 20971520,
+    "maxOutputBytes": 1048576,
+    "maxRuntimeSeconds": 600
+  },
+  "evaluationApproval": {
+    "schemaVersion": "medical-document-evaluation-approval.v1",
+    "corpusId": "synthetic-ko-lab-v1",
+    "reportSha256": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+    "approvedFor": "candidate-only",
+    "approvedAt": "2026-08-12T01:30:00+09:00"
+  },
+  "outputPolicy": {
+    "measurements": "candidate-only",
+    "diagnoses": "forbidden",
+    "normality": "forbidden",
+    "treatmentRecommendations": "forbidden",
+    "patientManagement": "forbidden"
+  }
+}

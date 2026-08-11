@@ -17,6 +17,8 @@ export type EvidenceLensRecord = {
     layoutModel: string;
     semanticModel: string;
     evaluationGate: string;
+    executionBoundary: string;
+    artifactPolicy: string;
     disposition: string;
   };
 };
@@ -161,6 +163,8 @@ export function EvidenceLens({ record, onBack }: EvidenceLensProps) {
                       <div><dt>문서 구조 읽기</dt><dd>{record.automation.layoutModel}</dd></div>
                       <div><dt>의료 항목 후보</dt><dd>{record.automation.semanticModel}</dd></div>
                       <div><dt>배포 전 평가</dt><dd>{record.automation.evaluationGate}</dd></div>
+                      <div><dt>실행 경계</dt><dd>{record.automation.executionBoundary}</dd></div>
+                      <div><dt>파일 고정</dt><dd>{record.automation.artifactPolicy}</dd></div>
                       <div><dt>저장 원칙</dt><dd>{record.automation.disposition}</dd></div>
                     </dl>
                   </details>

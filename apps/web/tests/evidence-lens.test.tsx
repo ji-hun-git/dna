@@ -24,6 +24,8 @@ const correctedRecord = {
     layoutModel: "PaddleOCR-VL 1.6",
     semanticModel: "MedGemma 1.5 4B",
     evaluationGate: "medical-document-eval.v1",
+    executionBoundary: "오프라인 실행 · 네트워크 없음",
+    artifactPolicy: "runner와 모델의 SHA-256이 모두 일치해야 실행",
     disposition: "자동 결과는 후보로만 제시하고 사람의 확인 전에는 저장하지 않음",
   },
 };
@@ -41,6 +43,8 @@ it("shows exact source location, correction history, and a non-diagnostic bounda
   expect(screen.getByText("PaddleOCR-VL 1.6")).toBeVisible();
   expect(screen.getByText("MedGemma 1.5 4B")).toBeVisible();
   expect(screen.getByText("medical-document-eval.v1")).toBeVisible();
+  expect(screen.getByText("오프라인 실행 · 네트워크 없음")).toBeVisible();
+  expect(screen.getByText("runner와 모델의 SHA-256이 모두 일치해야 실행")).toBeVisible();
   expect(await axe(container)).toHaveNoViolations();
 
   await userEvent.click(screen.getByRole("button", { name: "건강 기록으로 돌아가기" }));
