@@ -17,7 +17,7 @@
   --gc-color-status-warning: #9A6700;
   --gc-color-status-unknown: #6B7684;
   --gc-color-focus-ring: #2F5FE3;
-  --gc-type-sans: "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
+  --gc-type-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
   --gc-type-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
   --gc-type-bodySize: 16px;
   --gc-type-bodyLine: 1.65;

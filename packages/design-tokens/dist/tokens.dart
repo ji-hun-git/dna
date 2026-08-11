@@ -17,7 +17,7 @@ abstract final class GcTokens {
   static const String colorStatusWarning = '#9A6700';
   static const String colorStatusUnknown = '#6B7684';
   static const String colorFocusRing = '#2F5FE3';
-  static const String typeSans = '"IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif';
+  static const String typeSans = '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif';
   static const String typeMono = '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
   static const String typeBodySize = '16px';
   static const String typeBodyLine = '1.65';

@@ -24,8 +24,8 @@ describe("Alm Health OS tokens", () => {
     expect(Number.parseInt(tokens.motion.standard)).toBeLessThanOrEqual(200);
   });
 
-  it("pins the editorial Korean sans and numeric mono families", () => {
-    expect(tokens.type.sans).toMatch(/^"IBM Plex Sans KR"/);
+  it("pins the Korean product sans and numeric mono families", () => {
+    expect(tokens.type.sans).toMatch(/^"Pretendard Variable"/);
     expect(tokens.type.mono).toMatch(/^"IBM Plex Mono"/);
   });
 });
