@@ -22,4 +22,9 @@ describe("Midnight Evidence Ledger tokens", () => {
     expect(tokens.target.minimum).toBe("44px");
     expect(Number.parseInt(tokens.motion.standard)).toBeLessThanOrEqual(200);
   });
+
+  it("pins the editorial Korean sans and numeric mono families", () => {
+    expect(tokens.type.sans).toMatch(/^"IBM Plex Sans KR"/);
+    expect(tokens.type.mono).toMatch(/^"IBM Plex Mono"/);
+  });
 });

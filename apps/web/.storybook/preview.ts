@@ -1,3 +1,4 @@
+import "../font-bundle";
 import "@gc/design-tokens/tokens.css";
 import "../app/globals.css";
 import type { Preview } from "@storybook/nextjs-vite";

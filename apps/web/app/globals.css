@@ -11,6 +11,9 @@ body {
   margin: 0;
   color: var(--gc-color-text-primary);
   font-family: var(--gc-type-sans);
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
 }
 
 :focus-visible {
@@ -49,6 +52,7 @@ body {
   font-size: clamp(1.75em, 6vw, 2.5em);
   line-height: 1.1;
   letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums slashed-zero;
   overflow-wrap: anywhere;
 }
 
@@ -107,6 +111,7 @@ body {
   font-size: 0.75em;
   line-height: 1.6;
   overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 .gc-source-strip p {
@@ -151,7 +156,8 @@ body {
   padding-block: var(--gc-space-3);
   border-block: 1px solid var(--gc-color-line-strong);
   font-family: var(--gc-type-mono);
-  font-size: 0.75em;
+  font-size: 0.6875em;
+  font-weight: 500;
   line-height: 1.4;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -195,7 +201,8 @@ body {
   margin: 0 0 var(--gc-space-4);
   color: var(--gc-color-text-secondary);
   font-family: var(--gc-type-mono);
-  font-size: 0.75em;
+  font-size: 0.6875em;
+  font-weight: 500;
   line-height: 1.5;
   letter-spacing: 0.06em;
 }
@@ -206,7 +213,7 @@ body {
   font-size: clamp(4rem, 12vw, 11rem);
   font-weight: 700;
   line-height: 0.9;
-  letter-spacing: -0.075em;
+  letter-spacing: -0.06em;
   text-wrap: balance;
 }
 
@@ -254,6 +261,7 @@ body {
   margin: 0;
   font-family: var(--gc-type-mono);
   letter-spacing: -0.08em;
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 .gc-health-ledger__metric-number {
@@ -275,6 +283,7 @@ body {
   font-family: var(--gc-type-mono);
   font-size: clamp(0.75rem, 1.5vw, 1rem);
   line-height: 1.65;
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 .gc-health-ledger__metric-context p {
@@ -317,6 +326,7 @@ body {
   color: var(--gc-color-text-secondary);
   font-family: var(--gc-type-mono);
   font-size: 0.6875em;
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 .gc-health-ledger__years span:last-child {
@@ -332,6 +342,7 @@ body {
   color: var(--gc-color-text-secondary);
   font-family: var(--gc-type-mono);
   font-size: 0.6875em;
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 .gc-health-ledger__section-heading {
@@ -354,6 +365,7 @@ body {
   border-bottom: 1px solid var(--gc-color-line-subtle);
   font-family: var(--gc-type-mono);
   font-size: clamp(0.75rem, 1.4vw, 0.95rem);
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 .gc-health-ledger__record-index,
@@ -420,7 +432,11 @@ body {
   }
 
   .gc-health-ledger__metric-number {
-    font-size: clamp(7rem, 48vw, 12rem);
+    font-size: clamp(6.5rem, 44vw, 12rem);
+  }
+
+  .gc-health-ledger__metric-unit {
+    padding-left: var(--gc-space-2);
   }
 
   .gc-health-ledger__field {

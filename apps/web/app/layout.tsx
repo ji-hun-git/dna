@@ -1,3 +1,4 @@
+import "../font-bundle";
 import "@gc/design-tokens/tokens.css";
 import "./globals.css";
 import type { ReactNode } from "react";
