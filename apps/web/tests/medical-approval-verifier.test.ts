@@ -69,10 +69,11 @@ it("rejects exact-Version substitution, trust-anchor substitution, and expired a
 
 it("rejects signature tamper, a foreign signing key, and noncanonical envelope bytes", () => {
   const fixture = createSignedApprovalFixture(approval());
-  const replacement = fixture.envelope.signatureBase64Url.endsWith("A") ? "B" : "A";
+  const tamperedSignature = Buffer.from(fixture.envelope.signatureBase64Url, "base64url");
+  tamperedSignature[0] ^= 1;
   const tamperedEnvelope = {
     ...fixture.envelope,
-    signatureBase64Url: `${fixture.envelope.signatureBase64Url.slice(0, -1)}${replacement}`,
+    signatureBase64Url: tamperedSignature.toString("base64url"),
   };
   const tampered = rebindObject(fixture, tamperedEnvelope);
   expect(() => verifySignedOciApproval({

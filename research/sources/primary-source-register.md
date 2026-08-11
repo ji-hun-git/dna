@@ -1,6 +1,6 @@
 # Primary-Source Register
 
-Accessed: 2026-08-08; HIRA dataset 15001700 and the cited AWS implementation references reverified 2026-08-09; the strategy, category, and brand-collision sources identified below were accessed 2026-08-10 (Asia/Seoul). This is a living evidence register, not a formal legal opinion. Before a release or procurement decision, re-open the linked source and record the then-current version, effective date, license, and applicability.
+Accessed: 2026-08-08; HIRA dataset 15001700 and the cited AWS implementation references reverified 2026-08-09; the strategy, category, and brand-collision sources identified below were accessed 2026-08-10; Kakao, Naver, and MyHealthWay identity/connection contracts were reverified 2026-08-12 (Asia/Seoul). This is a living evidence register, not a formal legal opinion. Before a release or procurement decision, re-open the linked source and record the then-current version, effective date, license, and applicability.
 
 ## Evidence rules
 
@@ -41,6 +41,13 @@ Accessed: 2026-08-08; HIRA dataset 15001700 and the cited AWS implementation ref
 | KHIS | [FHIR/KR Core overview](https://www.k-his.or.kr/menu.es?mid=a20203020000) and [2026 standard revision](https://www.k-his.or.kr/board.es?act=view&bid=0001&list_no=2265&mid=a10301000000) | Korean profiles/resources and national standard revision. | Conformance suite must pin the approved package and migration path. |
 | NEMC | [Emergency institution API](https://www.data.go.kr/data/15000563/openapi.do) and [AED API](https://www.data.go.kr/data/15000652/openapi.do) | Emergency/AED reference datasets with operational caveats. | Reference/navigation only; never replace 119 or emergency dispatch. |
 | MFDS | [DUR contraindications](https://www.data.go.kr/data/15056780/openapi.do) and [consumer drug information](https://www.data.go.kr/data/15075057/openapi.do) | Medication reference APIs. | Searchable education/reference; no autonomous prescribing, dosing, or interaction clearance. |
+
+## Consumer identity providers
+
+| Provider | Primary link | What it establishes | Product treatment |
+|---|---|---|---|
+| Kakao | [Kakao Login REST API](https://developers.kakao.com/docs/ko/kakaologin/rest-api), [configuration](https://developers.kakao.com/docs/ko/kakaologin/prerequisite), and [webhook](https://developers.kakao.com/docs/ko/kakaologin/callback) | Exact registered redirect URI, Authorization Code, unique `state`, optional OIDC with nonce, RS256 discovery/JWKS, S256 PKCE, client-secret token exchange, and signed security-event webhook rules. | OIDC + S256 PKCE only; `openid` first; server-only secret/token; exact issuer/audience/nonce/state/callback; raw-body webhook verification; no profile field is an account key. |
+| Naver | [Login API specification](https://developers.naver.com/docs/login/api/api.md) and [development guide](https://developers.naver.com/docs/login/devguide/devguide.md) | OIDC discovery/JWKS, Authorization Code, mandatory `state`, `openid`, S256 PKCE, server-side client secret, token revocation, provider subject, optional consented profile fields, and pre-service review. | Use the OIDC endpoint family and issuer+subject account key; never merge by email; request no optional profile field without a reviewed need and consent; complete provider review before service. |
 
 ## Interoperability and terminology
 

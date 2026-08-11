@@ -30,6 +30,8 @@ Authoritative record: [`../../../governance/founder-approval-2026-08-09.md`](../
 
 ## Architecture and dependency flow
 
+Supplemental identity/security slice: [`2026-08-12-identity-health-access-antihack.md`](2026-08-12-identity-health-access-antihack.md) freezes Kakao/Naver OIDC contracts, a fail-closed anti-hack workflow, and the still-disabled formal MyHealthWay connector. Its local Task 1 may execute with synthetic identifiers; its broker, external registration, deployment, and personal-data tasks remain gated by FND and the existing external-state/privacy approvals.
+
 ```mermaid
 flowchart LR
     A["Founder execution choice"] --> FND["FND: Korea platform and security foundation"]
