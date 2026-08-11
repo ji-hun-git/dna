@@ -13,6 +13,7 @@ import {
   LocalDocumentError,
   type LocalDocumentReceipt,
 } from "@/lib/imports/local-document";
+import { EvidenceLens } from "@/components/records/EvidenceLens";
 
 type ReviewCandidate = RecordImportCandidate & {
   id: string;
@@ -57,7 +58,8 @@ const homeRecordMetadata = [
 ] as const;
 
 export function HealthExperience() {
-  const [view, setView] = useState<"home" | RecordImportStage>("home");
+  const [view, setView] = useState<"home" | "evidence" | RecordImportStage>("home");
+  const [selectedRecordIndex, setSelectedRecordIndex] = useState(0);
   const [candidateIndex, setCandidateIndex] = useState(0);
   const [candidateValues, setCandidateValues] = useState(() => candidates.map((candidate) => candidate.value));
   const [confirmedCount, setConfirmedCount] = useState(0);
@@ -210,6 +212,34 @@ export function HealthExperience() {
         }}
         recentRecords={recentRecords}
         onStartImport={beginImport}
+        onOpenRecord={(recordId) => {
+          const index = homeRecordMetadata.findIndex((record) => record.id === recordId);
+          setSelectedRecordIndex(index >= 0 ? index : 0);
+          setView("evidence");
+        }}
+      />
+    );
+  }
+
+  if (view === "evidence") {
+    const record = candidates[selectedRecordIndex] ?? candidates[0];
+    return (
+      <EvidenceLens
+        record={{
+          id: record.id,
+          label: record.label,
+          value: candidateValues[selectedRecordIndex] ?? record.value,
+          originalValue: record.value,
+          unit: record.unit,
+          reference: record.reference,
+          sourceName: record.sourceName,
+          observedAt: record.observedAt,
+          sourceLocation: "2쪽 · 검사결과 표 · 4행",
+          sourceDigest: "sha256:7c91…42a8 · 합성 시연 문서",
+          extractedAt: "2026-08-10 09:41",
+          confirmedAt: "2026-08-10 09:44",
+        }}
+        onBack={() => setView("home")}
       />
     );
   }

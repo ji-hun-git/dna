@@ -26,6 +26,7 @@ export type HealthHomeConceptProps = {
   recentRecords: readonly HealthHomeRecord[];
   savedRecordCount?: number;
   onStartImport?: () => void;
+  onOpenRecord?: (recordId: string) => void;
 };
 
 function ArrowIcon() {
@@ -63,6 +64,7 @@ export function HealthHomeConcept({
   recentRecords,
   savedRecordCount = 0,
   onStartImport,
+  onOpenRecord,
 }: HealthHomeConceptProps) {
   const timeline = Array.from({ length: 12 }, (_, index) => index);
 
@@ -174,7 +176,7 @@ export function HealthHomeConcept({
               <div className="gc-health-home__trend-labels" aria-hidden="true">
                 <span>2025.08</span><span>2026.07</span>
               </div>
-              <button className="gc-health-home__metric-link" type="button">
+              <button className="gc-health-home__metric-link" type="button" onClick={() => recentRecords[0] && onOpenRecord?.(recentRecords[0].id)}>
                 출처와 변화 자세히 보기 <ArrowIcon />
               </button>
             </div>
@@ -215,7 +217,7 @@ export function HealthHomeConcept({
           <ol>
             {recentRecords.map((record) => (
               <li key={record.id}>
-                <button type="button" aria-label={`${record.label} ${record.value} 자세히 보기`}>
+                <button type="button" aria-label={`${record.label} ${record.value} 자세히 보기`} onClick={() => onOpenRecord?.(record.id)}>
                   <span className="gc-health-home__record-symbol" aria-hidden="true">{record.label.slice(0, 1)}</span>
                   <span className="gc-health-home__record-copy">
                     <strong>{record.label}</strong>
