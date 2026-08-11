@@ -28,11 +28,13 @@ No OCI runtime is currently installed. The repository does not install Docker, a
 1. A human with authority reviews and accepts the current HAI-DEF terms and prohibited-use policy.
 2. A protected artifact job downloads exact revisions, creates canonical content manifests, scans the files, and publishes SHA-256 receipts. Current/list-style model resolution and `latest` tags are forbidden.
 3. A reviewed runner image is built and addressed only by its repository digest.
-4. The production-reviewed manifest and both artifact receipts are joined into `medical-document-oci-approval.v1` by the founder-approved workflow.
+4. The production-reviewed manifest and both artifact receipts are joined into `medical-document-oci-approval.v1` by the founder-approved workflow, serialized canonically, signed as ES256/P1363, and stored at its exact immutable VersionId and content-addressed key.
 5. Immediately before invocation, the launcher rehashes `job.json`, the document bytes, and every file in both model content manifests. It rejects symbolic links, unlisted files, path escape, mismatched totals, and a non-empty result directory.
 6. The runner is invoked as an argument array with `--pull=never`, `--network=none`, read-only root/input/model mounts, an isolated result directory, no added capabilities, no-new-privileges, bounded CPU/memory/PIDs, and exactly three non-secret environment keys.
 7. Only strict, digest-bound output from a still-valid job may enter the existing human-confirmation admission gate.
 
 Until all seven conditions are met, deterministic synthetic fixtures are the only executable path.
 
-The current repository validates the approval object's closed shape and every digest it binds. It does not yet authenticate a production approval signature or exact-version object-store coordinate. That authority verifier is a required later integration, and this local contract must not be treated as its substitute.
+The repository now verifies a canonical ES256 approval envelope, an active P-256 public JWK trust anchor, the trust-anchor digest, the exact immutable coordinate digest, opaque non-null VersionId, content-addressed object key, raw object digest, approval expiry, license-review chronology, and complete job window. Raw approval JSON cannot enter the OCI command builder.
+
+Production integration must still source the expected trust-anchor and coordinate digests from protected Foundation outputs and exact-version fetch the envelope under a narrowly scoped runtime role. This local verifier does not create those AWS resources, credentials, or approvals and must not be treated as their substitute.

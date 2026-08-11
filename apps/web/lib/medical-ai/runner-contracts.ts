@@ -80,6 +80,26 @@ export const offlineRunnerResultSchema = z.strictObject({
   run: medicalDocumentRunSchema,
 });
 
+export const medicalDocumentOciApprovalSchema = z.strictObject({
+  schemaVersion: z.literal("medical-document-oci-approval.v1"),
+  approvalId: z.string().regex(/^oci-approval-[a-z0-9-]+$/),
+  manifestSha256: sha256Schema,
+  runnerImage: z.string().regex(/^[a-z0-9./-]+@sha256:[0-9a-f]{64}$/),
+  layoutReceiptSha256: sha256Schema,
+  semanticReceiptSha256: sha256Schema,
+  approvedUse: z.literal("candidate-extraction-evaluation-only"),
+  approvalAuthority: z.literal("founder-approved-workflow"),
+  approvedAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }),
+}).superRefine((approval, context) => {
+  const approvedAt = Date.parse(approval.approvedAt);
+  const expiresAt = Date.parse(approval.expiresAt);
+  if (expiresAt <= approvedAt || expiresAt - approvedAt > 24 * 60 * 60 * 1000) {
+    context.addIssue({ code: "custom", message: "OCI approval expiry must be within 24 hours" });
+  }
+});
+
 export type OfflineRunnerManifest = z.infer<typeof offlineRunnerManifestSchema>;
 export type OfflineRunnerJob = z.infer<typeof offlineRunnerJobSchema>;
 export type OfflineRunnerResult = z.infer<typeof offlineRunnerResultSchema>;
+export type MedicalDocumentOciApproval = z.infer<typeof medicalDocumentOciApprovalSchema>;

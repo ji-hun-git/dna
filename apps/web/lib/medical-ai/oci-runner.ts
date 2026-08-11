@@ -6,6 +6,7 @@ import { join, relative, resolve, sep } from "node:path";
 import { offlineRunnerJobSchema, offlineRunnerManifestSchema } from "./runner-contracts.ts";
 import { pinnedModelSchema } from "./contracts.ts";
 import { sha256Of } from "./offline-runner.ts";
+import { unwrapVerifiedOciApproval } from "./approval-verifier.ts";
 
 const sha256Schema = z.string().regex(/^sha256:[0-9a-f]{64}$/);
 const apacheLicenseUrl = "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/LICENSE";
@@ -74,18 +75,6 @@ export const medicalModelArtifactReceiptSchema = z.discriminatedUnion("artifactR
     license: medGemmaLicenseReceiptSchema,
   }),
 ]);
-
-export const medicalDocumentOciApprovalSchema = z.strictObject({
-  schemaVersion: z.literal("medical-document-oci-approval.v1"),
-  approvalId: z.string().regex(/^oci-approval-[a-z0-9-]+$/),
-  manifestSha256: sha256Schema,
-  runnerImage: z.string().regex(/^[a-z0-9./-]+@sha256:[0-9a-f]{64}$/),
-  layoutReceiptSha256: sha256Schema,
-  semanticReceiptSha256: sha256Schema,
-  approvedUse: z.literal("candidate-extraction-evaluation-only"),
-  approvalAuthority: z.literal("founder-approved-workflow"),
-  approvedAt: z.string().datetime({ offset: true }),
-});
 
 const hostPathSchema = z.string().min(1).superRefine((value, context) => {
   if (/[\0\r\n,]/.test(value)) context.addIssue({ code: "custom", message: "host path contains a forbidden character" });
@@ -212,14 +201,15 @@ async function verifyJobDirectories(bindings: z.infer<typeof offlineDockerBindin
 export async function buildOfflineDockerInvocation(args: {
   manifest: unknown;
   job: unknown;
-  approval: unknown;
+  verifiedApproval: unknown;
   layoutReceipt: unknown;
   semanticReceipt: unknown;
   bindings: unknown;
 }) {
   const manifest = offlineRunnerManifestSchema.parse(args.manifest);
   const job = offlineRunnerJobSchema.parse(args.job);
-  const approval = medicalDocumentOciApprovalSchema.parse(args.approval);
+  const verifiedApproval = unwrapVerifiedOciApproval(args.verifiedApproval);
+  const approval = verifiedApproval.approval;
   const layoutReceipt = medicalModelArtifactReceiptSchema.parse(args.layoutReceipt);
   const semanticReceipt = medicalModelArtifactReceiptSchema.parse(args.semanticReceipt);
   const bindings = offlineDockerBindingSchema.parse(args.bindings);
@@ -232,9 +222,20 @@ export async function buildOfflineDockerInvocation(args: {
   }
   assertReceiptMatchesModel(layoutReceipt, "layout", manifest.models.layout);
   assertReceiptMatchesModel(semanticReceipt, "semantic", manifest.models.semantic);
+  if (layoutReceipt.artifactRole !== "layout" || semanticReceipt.artifactRole !== "semantic") {
+    throw new Error("artifact receipt roles are invalid");
+  }
   if (approval.layoutReceiptSha256 !== sha256Of(layoutReceipt)
     || approval.semanticReceiptSha256 !== sha256Of(semanticReceipt)) {
     throw new Error("OCI approval does not match the artifact receipts");
+  }
+  const approvalTime = Date.parse(approval.approvedAt);
+  if (approvalTime < Date.parse(layoutReceipt.license.reviewedAt)
+    || approvalTime < Date.parse(semanticReceipt.license.acceptedAt)) {
+    throw new Error("OCI approval predates a required license receipt");
+  }
+  if (Date.parse(job.requestedAt) < approvalTime || Date.parse(job.expiresAt) > Date.parse(approval.expiresAt)) {
+    throw new Error("OCI approval does not cover the complete job window");
   }
   await verifyJobDirectories(bindings, job);
   await verifyLocalModelArtifact(bindings.layoutModelRoot, layoutReceipt);
@@ -273,6 +274,8 @@ export async function buildOfflineDockerInvocation(args: {
       jobId: job.jobId,
       manifestSha256: job.manifestSha256,
       approvalId: approval.approvalId,
+      approvalCoordinateSha256: sha256Of(verifiedApproval.coordinate),
+      trustAnchorSha256: verifiedApproval.trustAnchorSha256,
       runnerImage: manifest.runnerImage,
       networkMode: "none" as const,
       inputAndModels: "read-only" as const,
@@ -310,6 +313,7 @@ export function assessOciHostReadiness(input: { dockerServerVersion?: string; nv
     blockers,
     modelArtifactsChecked: false as const,
     licenseApprovalChecked: false as const,
+    approvalAuthenticationChecked: false as const,
   };
 }
 

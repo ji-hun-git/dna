@@ -7,11 +7,12 @@ import fixtureManifest from "./fixtures/medical-ai/offline-runner.fixture-manife
 import {
   assessOciHostReadiness,
   buildOfflineDockerInvocation,
-  medicalDocumentOciApprovalSchema,
   medicalModelArtifactReceiptSchema,
   medicalModelContentManifestSchema,
 } from "@/lib/medical-ai/oci-runner";
 import { createOfflineRunnerJob, sha256Of } from "@/lib/medical-ai/offline-runner";
+import { medicalDocumentOciApprovalSchema } from "@/lib/medical-ai/runner-contracts";
+import { createSignedApprovalFixture } from "./helpers/signed-oci-approval";
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
 const digestBytes = (value: Uint8Array) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
@@ -113,7 +114,9 @@ async function productionContract() {
     approvedUse: "candidate-extraction-evaluation-only",
     approvalAuthority: "founder-approved-workflow",
     approvedAt: "2026-08-12T02:00:00+09:00",
+    expiresAt: "2026-08-12T03:00:00+09:00",
   };
+  const signedApproval = createSignedApprovalFixture(approval);
   const bindings = {
     inputRoot,
     outputRoot,
@@ -128,6 +131,7 @@ async function productionContract() {
     semanticModelFile: semantic.filePath,
     job,
     approval,
+    verifiedApproval: signedApproval.verifiedApproval,
     bindings,
   };
 }
@@ -154,11 +158,16 @@ it("rehashes all mounted bytes before building a shell-free, network-free Docker
   expect(invocation.args.at(-1)).toBe(contract.manifest.runnerImage);
   expect(invocation.redactedSummary).not.toHaveProperty("inputRoot");
   expect(invocation.redactedSummary.output).toBe("isolated-read-write");
+  expect(invocation.redactedSummary.approvalCoordinateSha256).toMatch(/^sha256:[0-9a-f]{64}$/);
 });
 
 it("rejects fixture approval, artifact substitution, approval drift, and unsafe paths", async () => {
   const contract = await productionContract();
   await expect(buildOfflineDockerInvocation({ ...contract, manifest: fixtureManifest })).rejects.toThrow("production-reviewed");
+  await expect(buildOfflineDockerInvocation({
+    ...contract,
+    verifiedApproval: contract.approval,
+  })).rejects.toThrow("authenticated approval envelope");
   await expect(buildOfflineDockerInvocation({
     ...contract,
     semanticReceipt: {
@@ -168,7 +177,7 @@ it("rejects fixture approval, artifact substitution, approval drift, and unsafe 
   })).rejects.toThrow("semantic artifact receipt");
   await expect(buildOfflineDockerInvocation({
     ...contract,
-    approval: { ...contract.approval, semanticReceiptSha256: digest("9") },
+    semanticReceipt: { ...contract.semanticReceipt, contentManifestSha256: digest("9") },
   })).rejects.toThrow("artifact receipts");
   await expect(buildOfflineDockerInvocation({
     ...contract,
@@ -182,6 +191,14 @@ it("rejects fixture approval, artifact substitution, approval drift, and unsafe 
     ...contract,
     bindings: { ...contract.bindings, outputRoot: join(contract.bindings.inputRoot, "nested-output") },
   })).rejects.toThrow("may not overlap");
+  const shortApproval = createSignedApprovalFixture({
+    ...contract.approval,
+    expiresAt: "2026-08-12T02:05:00+09:00",
+  });
+  await expect(buildOfflineDockerInvocation({
+    ...contract,
+    verifiedApproval: shortApproval.verifiedApproval,
+  })).rejects.toThrow("complete job window");
   expect(medicalDocumentOciApprovalSchema.safeParse({
     ...contract.approval,
     approvalAuthority: "caller",
@@ -221,6 +238,7 @@ it("reports Docker, VRAM, and compute-capability blockers without claiming model
     hostReadyForOciBoundary: false,
     modelArtifactsChecked: false,
     licenseApprovalChecked: false,
+    approvalAuthenticationChecked: false,
     blockers: ["docker-runtime-unavailable"],
   });
   expect(assessOciHostReadiness({
