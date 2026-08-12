@@ -201,12 +201,12 @@ export function HealthHomeConcept({
               <span>좋고 나쁨 없이 사실만 비교해요</span>
               <ArrowIcon />
             </button>
-            <button type="button">
+            <a href="/providers">
               <span className="gc-health-home__task-icon gc-health-home__task-icon--gray">₩</span>
               <strong>비급여 금액 비교하기</strong>
               <span>공개 자료만 사용해 확인해요</span>
               <ArrowIcon />
-            </button>
+            </a>
           </div>
         </section>
 
