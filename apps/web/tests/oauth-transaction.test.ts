@@ -46,7 +46,7 @@ it("builds a five-minute Kakao transaction with exact callback, state, nonce, an
   expect(JSON.stringify(transaction.record)).not.toContain(transaction.secrets.codeVerifier);
 });
 
-it("uses Naver's OIDC and PKCE endpoints without inventing a nonce the provider guide does not document", () => {
+it("uses Naver's live OIDC discovery endpoints and S256 PKCE without inventing an undocumented nonce", () => {
   const transaction = beginOAuthTransaction({
     provider: "naver",
     clientId: "synthetic-naver-client",
@@ -63,6 +63,29 @@ it("uses Naver's OIDC and PKCE endpoints without inventing a nonce the provider 
   expect(url.searchParams.get("code_challenge_method")).toBe("S256");
   expect(url.searchParams.has("nonce")).toBe(false);
   expect(transaction.secrets.nonce).toBeNull();
+});
+
+it("accepts only a cryptographically verified Naver OIDC identity and does not use profile email as an account key", async () => {
+  const { privateKey, publicKey } = await generateKeyPair("RS256", { extractable: true });
+  const publicJwk = await exportJWK(publicKey);
+  const jwks = { keys: [{ ...publicJwk, kid: "naver-synthetic-key", use: "sig", alg: "RS256" }] };
+  const token = await new SignJWT({ email: "must-not-be-an-account-key@example.com" })
+    .setProtectedHeader({ alg: "RS256", kid: "naver-synthetic-key" })
+    .setIssuer("https://nid.naver.com")
+    .setAudience("synthetic-naver-client")
+    .setSubject("pairwise-synthetic-subject")
+    .setIssuedAt(Math.floor(now.getTime() / 1000) - 10)
+    .setExpirationTime(Math.floor(now.getTime() / 1000) + 600)
+    .sign(privateKey);
+
+  await expect(verifyProviderIdToken({
+    provider: "naver",
+    clientId: "synthetic-naver-client",
+    expectedNonce: null,
+    idToken: token,
+    jwks,
+    now,
+  })).resolves.toEqual({ ok: true, accountKey: "https://nid.naver.com#pairwise-synthetic-subject" });
 });
 
 it("fails closed on state, PKCE secret, expiry, replay, provider error, and origin drift", () => {

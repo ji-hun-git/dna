@@ -6,6 +6,8 @@
 
 **Purpose:** one list of external decisions, accounts, evidence, and approvals that only the founder or an authorized human can complete. Product coding, synthetic tests, design, and documentation continue without these items unless the row says `NOW`.
 
+Exact provider callbacks, credential names, current protocol endpoints, and the recommended one-day setup order are consolidated in [`founder-provider-api-register-2026-08-12.md`](founder-provider-api-register-2026-08-12.md).
+
 ## Rules
 
 - Never paste secrets, API keys, passwords, private keys, recovery codes, real health records, or government IDs into GitHub, Codex, this file, screenshots, or committed `.env` files.

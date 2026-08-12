@@ -6,7 +6,7 @@ import {
   identityProviderContracts,
 } from "@/lib/auth/provider-contracts";
 
-it("pins Kakao and Naver to OIDC authorization code with S256 PKCE and exact HTTPS hosts", () => {
+it("pins Kakao and Naver to their live OIDC discovery contracts with server-only secrets", () => {
   for (const contract of Object.values(identityProviderContracts)) {
     expect(identityProviderContractSchema.parse(contract)).toEqual(contract);
     expect(contract.protocol).toBe("oidc-authorization-code");
@@ -14,9 +14,13 @@ it("pins Kakao and Naver to OIDC authorization code with S256 PKCE and exact HTT
     expect(contract.stateRequired).toBe(true);
     expect(contract.requiredScopes).toEqual(["openid"]);
     expect(contract.accountKey).toBe("issuer-and-subject");
+    expect(contract.tokenEndpointAuthMethod).toBe("client_secret_post");
+    expect(contract.clientSecretStorage).toBe("server-secret-manager-only");
+    expect(contract.browserTokenStorage).toBe("forbidden");
 
     const endpointHosts = [
       contract.issuer,
+      contract.discoveryUri,
       contract.authorizationEndpoint,
       contract.tokenEndpoint,
       contract.userInfoEndpoint,
@@ -27,6 +31,9 @@ it("pins Kakao and Naver to OIDC authorization code with S256 PKCE and exact HTT
   }
 
   expect(identityProviderContracts.kakao.nonceMode).toBe("required");
+  expect(identityProviderContracts.naver.discoveryUri).toBe("https://nid.naver.com/.well-known/openid-configuration");
+  expect(identityProviderContracts.naver.authorizationEndpoint).toBe("https://nid.naver.com/oauth2/authorize");
+  expect(identityProviderContracts.naver.tokenEndpoint).toBe("https://nid.naver.com/oauth2/token");
   expect(identityProviderContracts.naver.tokenRevocationEndpoint).toBe("https://nid.naver.com/oauth2.0/revoke");
 });
 
