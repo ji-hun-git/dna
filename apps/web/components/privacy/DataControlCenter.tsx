@@ -19,10 +19,15 @@ const statusLabel = {
 
 const operationLabel = {
   COLLECT: "기록 수집",
-  EXPLAIN: "사실 설명",
+  EXPLAIN: "기록 내용 보여주기",
   EXTRACT: "항목 추출",
   NORMALIZE: "형식 정리",
   RETAIN: "원본 보관",
+} as const;
+
+const categoryLabel = {
+  LAB_REPORT: "검사 결과지",
+  MEDICAL_RECORD: "진료 기록",
 } as const;
 
 function ArrowIcon() {
@@ -55,7 +60,7 @@ export function DataControlCenter() {
       consentAuditViewSchema.parse({
         schemaVersion: "consent-audit-view.v1",
         eventCode: "purpose-revoked",
-        label: "결과지 기록 목적 철회 · 합성 시연",
+        label: "결과지 기록 동의를 철회함 · 예시",
         occurredAt: "2026-08-12T03:00:00Z",
         disclosure: "synthetic-no-phi",
       }),
@@ -71,7 +76,7 @@ export function DataControlCenter() {
           <a className="gc-data-control__brand" href="/" aria-label="앎 건강 홈으로 돌아가기">
             <span aria-hidden="true">앎</span><strong>앎</strong>
           </a>
-          <span>CONSENT · RETENTION · AUDIT</span>
+          <span>동의 · 보관 · 변경 내역</span>
           <a href="/connections">연결 관리 <ArrowIcon /></a>
         </header>
 
@@ -81,20 +86,20 @@ export function DataControlCenter() {
             <h1 id="data-control-title">내 데이터는 내가 정해요</h1>
           </div>
           <div className="gc-data-control__hero-copy">
-            <p>목적마다 따로 허용하고, 원본을 얼마나 보관할지 선택하고, 언제든 기록을 확인할 수 있어요.</p>
-            <strong><ShieldIcon /> 합성 시연 · 서버 반영 없음</strong>
+            <p>정보를 쓰는 목적마다 따로 동의하고, 원본 보관 설정과 변경 내역을 확인할 수 있어요.</p>
+            <strong><ShieldIcon /> 예시 화면 · 서버에는 반영되지 않아요</strong>
           </div>
         </section>
 
         <section className="gc-data-control__summary" aria-label="현재 데이터 제어 상태">
-          <article><span>ACTIVE PURPOSES</span><strong>{String(activeCount).padStart(2, "0")}</strong><p>현재 허용 중인 목적</p></article>
-          <article><span>HEALTH PROVIDERS</span><strong>00</strong><p>연결된 외부 건강기관</p></article>
-          <article><span>SOURCE RETENTION</span><strong>OFF</strong><p>원본 장기 보관</p></article>
+          <article><span>허용 중인 목적</span><strong>{String(activeCount).padStart(2, "0")}</strong><p>현재 동의한 목적</p></article>
+          <article><span>연결된 기관</span><strong>00</strong><p>실제 외부 건강기관</p></article>
+          <article><span>원본 보관</span><strong>안 함</strong><p>현재 보관 설정</p></article>
         </section>
 
         <section className="gc-data-control__purposes" aria-labelledby="purpose-title">
           <header>
-            <div><p>PURPOSE BOUNDARIES</p><h2 id="purpose-title">목적별 동의</h2></div>
+            <div><p>정보를 쓰는 목적</p><h2 id="purpose-title">목적별 동의</h2></div>
             <p>한 번의 동의로 모든 처리를 묶지 않아요.</p>
           </header>
           <div className="gc-data-control__purpose-list">
@@ -106,7 +111,7 @@ export function DataControlCenter() {
                   <p>{purpose.description}</p>
                   <dl>
                     <div><dt>출처</dt><dd>내가 가져온 결과지</dd></div>
-                    <div><dt>항목</dt><dd>{purpose.categories.join(" · ")}</dd></div>
+                    <div><dt>항목</dt><dd>{purpose.categories.map((category) => categoryLabel[category]).join(" · ")}</dd></div>
                     <div><dt>허용 작업</dt><dd>{purpose.operations.map((operation) => operationLabel[operation]).join(" · ")}</dd></div>
                   </dl>
                 </div>
@@ -118,31 +123,31 @@ export function DataControlCenter() {
                   >
                     동의 철회
                   </button>
-                ) : <span className="gc-data-control__purpose-lock">별도 선택 필요</span>}
+                ) : <span className="gc-data-control__purpose-lock">아직 동의하지 않음</span>}
               </article>
             ))}
           </div>
         </section>
 
         <section className="gc-data-control__retention" aria-labelledby="retention-title">
-          <header><span>SOURCE DISPOSITION · DEFAULT</span><strong>확인 후 즉시 삭제</strong></header>
+          <header><span>원본 보관 기본 설정</span><strong>확인 후 바로 삭제</strong></header>
           <div>
             <section>
-              <p>RETENTION 00 / 365 DAYS</p>
-              <h2 id="retention-title">원본은 남기지 않는 것이 기본이에요</h2>
-              <p>사용자가 확인한 기록과 출처 지문만 남기고, 처리에 사용한 원본과 중간 파일은 삭제하는 설계예요.</p>
+              <p>원본 보관 0일</p>
+              <h2 id="retention-title">원본은 확인 후 바로 삭제하도록 설계하고 있어요</h2>
+              <p>사용자가 확인한 기록과 파일 확인값만 남기고, 처리에 사용한 원본과 중간 파일은 삭제할 계획이에요.</p>
             </section>
             <div className="gc-data-control__retention-grid" role="img" aria-label="365일 중 원본 보관을 허용한 날은 0일이에요">
               {Array.from({ length: 50 }, (_, index) => <span key={index} aria-hidden="true" />)}
             </div>
           </div>
-          <footer><span>장기 보관 동의 없음</span><span>Object Lock 사용 안 함</span><span>별도 허용 시 최대 365일</span></footer>
+          <footer><span>현재 원본을 보관하지 않아요</span><span>별도 동의가 있을 때만 암호화 보관</span><span>최대 365일</span></footer>
         </section>
 
         <section className="gc-data-control__audit" aria-labelledby="audit-title">
           <header>
-            <div><p>LOCAL AUDIT VIEW</p><h2 id="audit-title">동의 변경 이력</h2></div>
-            <p>개인 식별정보나 건강 수치는 기록하지 않아요.</p>
+            <div><p>이 기기에 표시된 내역</p><h2 id="audit-title">동의 변경 이력</h2></div>
+            <p>이 변경 내역에는 이름이나 건강 수치를 표시하지 않아요.</p>
           </header>
           <ol aria-live="polite">
             {auditEvents.map((event, index) => (
@@ -150,15 +155,15 @@ export function DataControlCenter() {
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <strong>{event.label}</strong>
                 <time dateTime={event.occurredAt}>2026.08.12</time>
-                <em>NO PHI</em>
+                <em>개인 건강정보 없음</em>
               </li>
             ))}
           </ol>
         </section>
 
         <section className="gc-data-control__danger" aria-labelledby="delete-title">
-          <div><p>ACCOUNT DATA</p><h2 id="delete-title">전체 계정 데이터 삭제</h2><span>실제 계정과 삭제 오케스트레이션이 연결된 뒤에만 제공해요.</span></div>
-          <button type="button" disabled aria-label="전체 계정 데이터 삭제 실제 계정 연결 후 제공">실제 계정 연결 후 제공</button>
+          <div><p>계정 데이터</p><h2 id="delete-title">계정과 데이터 모두 삭제</h2><span>실제 계정 삭제 기능을 연결한 뒤에 제공할 예정이에요.</span></div>
+          <button type="button" disabled aria-label="계정과 데이터 모두 삭제 아직 사용할 수 없음">아직 사용할 수 없어요</button>
         </section>
       </div>
 
@@ -168,11 +173,11 @@ export function DataControlCenter() {
           <Dialog.Content className="gc-consent-dialog__content" aria-describedby="revoke-consent-description">
             <Dialog.Title>이 동의를 철회할까요?</Dialog.Title>
             <Dialog.Description id="revoke-consent-description">
-              {target?.title} 상태가 철회됨으로 바뀝니다. 이 합성 화면에서만 상태가 바뀌어요. 실제 서버나 건강 기록은 변경하지 않아요.
+              {target?.title} 상태가 ‘철회됨’으로 바뀌어요. 이 예시 화면에서만 바뀌며 실제 서버나 건강 기록에는 영향을 주지 않아요.
             </Dialog.Description>
             <div>
               <Dialog.Close asChild><button type="button">취소</button></Dialog.Close>
-              <button type="button" onClick={revokeLocalPurpose}>시연 동의 철회</button>
+              <button type="button" onClick={revokeLocalPurpose}>동의 철회</button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

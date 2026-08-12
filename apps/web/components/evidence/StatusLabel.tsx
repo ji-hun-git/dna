@@ -1,7 +1,7 @@
 const labels = {
-  verified: "검증됨",
-  stale: "업데이트 필요",
-  unknown: "확인되지 않음",
+  verified: "직접 확인",
+  stale: "최신 정보 확인 필요",
+  unknown: "출처 확인 전",
 } as const;
 
 export type EvidenceStatus = keyof typeof labels;

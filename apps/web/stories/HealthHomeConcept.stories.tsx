@@ -13,13 +13,13 @@ const syntheticHome = {
     unit: "%",
     observedAt: "2026-07-28",
     delta: "이전 기록보다 0.2%p 낮아요",
-    source: "삼성 건강검진 결과지",
+    source: "예시 건강검진 결과지",
     status: "verified" as const,
   },
   recentRecords: [
-    { id: "record-1", label: "당화혈색소", value: "6.1%", source: "삼성 건강검진 결과지", observedAt: "2026-07-28" },
-    { id: "record-2", label: "총콜레스테롤", value: "188 mg/dL", source: "삼성 건강검진 결과지", observedAt: "2026-07-28" },
-    { id: "record-3", label: "비타민 D", value: "31 ng/mL", source: "강남세브란스병원 검사 결과", observedAt: "2026-04-12" },
+    { id: "record-1", label: "당화혈색소", value: "6.1%", source: "예시 건강검진 결과지", observedAt: "2026-07-28" },
+    { id: "record-2", label: "총콜레스테롤", value: "188 mg/dL", source: "예시 건강검진 결과지", observedAt: "2026-07-28" },
+    { id: "record-3", label: "비타민 D", value: "31 ng/mL", source: "예시 대학병원 검사 결과", observedAt: "2026-04-12" },
   ],
 };
 

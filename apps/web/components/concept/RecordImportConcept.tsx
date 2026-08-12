@@ -1,5 +1,6 @@
 import { ChangeEvent, useRef } from "react";
 import type { LocalDocumentReceipt } from "@/lib/imports/local-document";
+import { formatKoreanDate } from "@/lib/format/korean-date";
 
 export type RecordImportStage = "source" | "processing" | "review" | "complete";
 
@@ -116,10 +117,10 @@ function SourceStage({
 
   return (
     <section className="gc-import__question" aria-labelledby="import-source-title">
-      <p className="gc-import__eyebrow">첫 번째로 알려주세요</p>
-      <h1 id="import-source-title">어떤 결과지를<br />가져올까요?</h1>
+      <p className="gc-import__eyebrow">1. 결과지 선택</p>
+      <h1 id="import-source-title">결과지가<br />어디에 있나요?</h1>
       <p className="gc-import__lead">
-        파일을 올리거나 종이 결과지를 촬영해 주세요. 항목을 직접 확인하기 전에는 건강 기록에 반영되지 않아요.
+        지금은 기기에 있는 PDF나 사진을 선택할 수 있어요. 직접 확인한 항목만 화면에 반영합니다.
       </p>
 
       <div className="gc-import__choices" aria-label="결과지 가져오기 방법">
@@ -130,7 +131,7 @@ function SourceStage({
           onClick={() => { onChooseSource?.("device"); fileInput.current?.click(); }}
         >
           <span className="gc-import__choice-icon"><FileIcon /></span>
-          <span><strong>{isInspecting ? "파일을 확인하고 있어요" : "이 기기에 있어요"}</strong><small>PDF, PNG, JPEG · 최대 20MB</small></span>
+          <span><strong>{isInspecting ? "파일을 확인하고 있어요" : "기기에서 파일 선택"}</strong><small>PDF, PNG, JPEG · 최대 20MB</small></span>
           <span aria-hidden="true">›</span>
         </button>
         <input
@@ -143,12 +144,12 @@ function SourceStage({
         />
         <button type="button" onClick={() => onChooseSource?.("camera")}>
           <span className="gc-import__choice-icon gc-import__choice-icon--camera"><CameraIcon /></span>
-          <span><strong>종이로 가지고 있어요</strong><small>카메라로 한 장씩 촬영</small></span>
+          <span><strong>종이 결과지 촬영</strong><small>아직 준비 중이에요</small></span>
           <span aria-hidden="true">›</span>
         </button>
         <button type="button" onClick={() => onChooseSource?.("provider")}>
           <span className="gc-import__choice-icon gc-import__choice-icon--link"><LinkIcon /></span>
-          <span><strong>병원에서 바로 연결할게요</strong><small>연결 가능한 기관 확인</small></span>
+          <span><strong>기관에서 가져오기</strong><small>아직 준비 중이에요</small></span>
           <span aria-hidden="true">›</span>
         </button>
       </div>
@@ -157,7 +158,7 @@ function SourceStage({
       {!sourceError && sourceMessage && <p className="gc-import__source-feedback" role="status">{sourceMessage}</p>}
 
       <p className="gc-import__privacy-note">
-        이 프로토타입에서는 파일이 기기 밖으로 전송되지 않아요. 실제 클라우드 처리는 별도의 명시적 동의 뒤에만 연결합니다.
+        이 예시에서는 선택한 파일을 서버로 보내지 않아요. 브라우저 안에서 파일 종류와 크기, 확인값만 살펴봅니다.
       </p>
     </section>
   );
@@ -174,34 +175,34 @@ function ProcessingStage({
   return (
     <section className="gc-import__processing" aria-labelledby="import-processing-title">
       <div className="gc-import__processing-mark" aria-hidden="true"><CheckIcon /></div>
-      <p className="gc-import__eyebrow">기기 안에서 준비됐어요</p>
-      <h1 id="import-processing-title">검토할 항목을<br />안전하게 나눴어요</h1>
-      <p className="gc-import__lead">파일 형식과 지문을 이 브라우저 안에서 확인했습니다. 아직 건강 기록에는 아무것도 추가되지 않았어요.</p>
+      <p className="gc-import__eyebrow">2. 파일 확인</p>
+      <h1 id="import-processing-title">파일 확인을<br />마쳤어요</h1>
+      <p className="gc-import__lead">이 기기에서 파일 종류와 크기, 확인값만 살펴봤어요. 파일 내용은 읽지 않았습니다.</p>
 
-      <div className="gc-import__receipt" aria-label="로컬 파일 처리 영수증">
+      <div className="gc-import__receipt" aria-label="파일 확인 결과">
         <div className="gc-import__receipt-head">
-          <span>LOCAL RECEIPT · SYNTHETIC</span>
+          <span>파일 확인 결과 · 예시</span>
           <strong>{documentReceipt.format}</strong>
         </div>
         <dl>
           <div><dt>파일 크기</dt><dd>{documentReceipt.sizeLabel}</dd></div>
-          <div><dt>로컬 SHA-256</dt><dd><code title={documentReceipt.sha256}>{digest}</code></dd></div>
-          <div><dt>검토할 항목</dt><dd>{totalItems}개</dd></div>
+          <div><dt>파일 확인값</dt><dd><code title={documentReceipt.sha256}>{digest}</code></dd></div>
+          <div><dt>예시 항목</dt><dd>{totalItems}개</dd></div>
         </dl>
         <ol>
           <li><span aria-hidden="true">✓</span> 허용된 파일 형식과 크기 확인</li>
-          <li><span aria-hidden="true">✓</span> 브라우저 내부 파일 지문 생성</li>
-          <li><span aria-hidden="true">✓</span> 합성 분석 fixture 연결</li>
+          <li><span aria-hidden="true">✓</span> 이 기기에서 파일 확인값 생성</li>
+          <li><span aria-hidden="true">✓</span> 파일 내용과 무관한 예시 항목 준비</li>
         </ol>
       </div>
 
       <div className="gc-import__demo-boundary">
-        <strong>합성 데모예요</strong>
-        <p>아래 수치는 업로드한 파일에서 읽은 실제 결과가 아닙니다. 실제 OCR·의료 데이터 처리는 아직 연결하지 않았어요.</p>
+        <strong>예시 화면이에요</strong>
+        <p>아래 값은 선택한 파일에서 읽은 결과가 아니에요. 파일에서 검사 수치를 읽는 기능은 아직 연결하지 않았습니다.</p>
       </div>
 
       <button className="gc-import__action gc-import__action--primary gc-import__processing-cta" type="button" onClick={onBeginReview}>
-        {totalItems}개 항목 검토 시작
+        예시 항목 {totalItems}개 확인하기
       </button>
     </section>
   );
@@ -221,18 +222,18 @@ function ReviewStage({
     <section className="gc-import__review" aria-labelledby="import-review-title">
       <div className="gc-import__review-heading">
         <div>
-          <p className="gc-import__eyebrow">항목 {currentItem} / {totalItems}</p>
-          <h1 id="import-review-title">이 수치가 맞나요?</h1>
-          <p className="gc-import__lead">원본의 한 항목씩 확인해요. 한 번에 모두 승인하지 않아요.</p>
+          <p className="gc-import__eyebrow">3. 항목 확인 · {currentItem} / {totalItems}</p>
+          <h1 id="import-review-title">이 값이 맞나요?</h1>
+          <p className="gc-import__lead">예시 항목을 하나씩 보여드려요. 선택한 파일에서 읽은 값은 아니에요.</p>
         </div>
-        <span className="gc-import__review-state">확인 필요</span>
+        <span className="gc-import__review-state">확인 전</span>
       </div>
 
       <div className="gc-import__review-grid">
         <figure className="gc-import__source-preview">
-          <div className="gc-import__paper" role="img" aria-label={`${sourceName}에서 찾은 ${candidate.label} 원본 영역`}>
+          <div className="gc-import__paper" role="img" aria-label={`${sourceName} 형식으로 만든 ${candidate.label} 예시 영역`}>
             <div className="gc-import__paper-head">
-              <span>건강검진 결과</span><span>LAB · 04</span>
+              <span>건강검진 결과</span><span>예시 · 04</span>
             </div>
             <div className="gc-import__paper-row gc-import__paper-row--muted"><span>검사 항목</span><span>결과</span><span>단위</span></div>
             <div className="gc-import__paper-row gc-import__paper-row--focus">
@@ -241,28 +242,28 @@ function ReviewStage({
               <span>{candidate.unit}</span>
             </div>
             <div className="gc-import__paper-rule" />
-            <p>참고 범위 · {candidate.reference}</p>
+            <p>참고치 · {candidate.reference}</p>
           </div>
-          <figcaption>원본에서 찾은 위치</figcaption>
+          <figcaption>예시 원문 위치</figcaption>
         </figure>
 
         <article className="gc-import__candidate">
-          <p className="gc-import__candidate-label">확인할 항목</p>
+          <p className="gc-import__candidate-label">확인할 예시 항목</p>
           <h2>{candidate.label}</h2>
           <p className="gc-import__candidate-value"><strong>{candidate.value}</strong><span>{candidate.unit}</span></p>
           <dl>
-            <div><dt>검사일</dt><dd><time dateTime={observedAt}>{observedAt}</time></dd></div>
+            <div><dt>검사일</dt><dd><time dateTime={observedAt}>{formatKoreanDate(observedAt)}</time></dd></div>
             <div><dt>출처</dt><dd>{sourceName}</dd></div>
-            <div><dt>참고 범위</dt><dd>{candidate.reference}</dd></div>
+            <div><dt>참고치</dt><dd>{candidate.reference}</dd></div>
           </dl>
-          <p className="gc-import__meaning">수치의 의미는 확인 완료 뒤, 출처와 기준을 함께 보여드려요.</p>
+          <p className="gc-import__meaning">참고치는 검사실과 검사 조건에 따라 달라질 수 있어요.</p>
         </article>
       </div>
 
       <div className="gc-import__review-actions">
-        <button className="gc-import__action gc-import__action--primary" type="button" onClick={onConfirm}>맞아요</button>
-        <button className="gc-import__action gc-import__action--secondary" type="button" onClick={onEdit}>수정할게요</button>
-        <button className="gc-import__action gc-import__action--text" type="button" onClick={onExclude}>기록에서 제외</button>
+        <button className="gc-import__action gc-import__action--primary" type="button" onClick={onConfirm}>원문과 같아요</button>
+        <button className="gc-import__action gc-import__action--secondary" type="button" onClick={onEdit}>값 수정</button>
+        <button className="gc-import__action gc-import__action--text" type="button" onClick={onExclude}>이 항목 빼기</button>
       </div>
     </section>
   );
@@ -278,9 +279,9 @@ function CompleteStage({
   return (
     <section className="gc-import__complete" aria-labelledby="import-complete-title">
       <div className="gc-import__complete-mark"><CheckIcon /></div>
-      <p className="gc-import__eyebrow">확인이 끝났어요</p>
-      <h1 id="import-complete-title">{confirmedCount}개 항목을<br />기록할 준비가 됐어요</h1>
-      <p className="gc-import__lead">확인한 값과 원본 출처가 한 묶음으로 저장돼요.</p>
+      <p className="gc-import__eyebrow">4. 화면에 반영</p>
+      <h1 id="import-complete-title">예시 항목 {confirmedCount}개를<br />확인했어요</h1>
+      <p className="gc-import__lead">추가하면 이 시연 화면에 값과 출처, 확인 과정이 함께 표시돼요.</p>
 
       <div className="gc-import__summary">
         <div><span>확인한 항목</span><strong>{confirmedCount}개</strong></div>
@@ -289,10 +290,10 @@ function CompleteStage({
       </div>
 
       <div className="gc-import__complete-actions">
-        <button className="gc-import__action gc-import__action--primary" type="button" onClick={onSave}>건강 기록에 추가</button>
-        <button className="gc-import__action gc-import__action--secondary" type="button" onClick={onReviewAgain}>다시 확인</button>
+        <button className="gc-import__action gc-import__action--primary" type="button" onClick={onSave}>시연 화면에 추가</button>
+        <button className="gc-import__action gc-import__action--secondary" type="button" onClick={onReviewAgain}>처음부터 다시 확인</button>
       </div>
-      <p className="gc-import__boundary">추가한 수치만으로 질환을 진단하지 않아요. 원본·검사 조건·의료진 설명을 함께 확인해 주세요.</p>
+      <p className="gc-import__boundary">이 값만으로 건강 상태나 질환을 판단할 수 없어요. 결과지와 의료진 설명을 함께 확인하세요.</p>
     </section>
   );
 }
@@ -305,7 +306,7 @@ export function RecordImportConcept(props: RecordImportConceptProps) {
     <main className="gc-import" data-stage={props.stage}>
       <header className="gc-import__appbar">
         <button type="button" aria-label="이전 화면" onClick={props.onBack}><BackIcon /></button>
-        <a href="#import" aria-label="앎 건강 홈"><span aria-hidden="true">앎</span></a>
+        <a href="#import" aria-label="결과지 가져오기"><span aria-hidden="true">앎</span></a>
         <button type="button" onClick={props.onClose}>닫기</button>
       </header>
       <div className="gc-import__shell" id="import">

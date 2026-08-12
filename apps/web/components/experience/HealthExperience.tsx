@@ -29,7 +29,7 @@ const candidates: readonly ReviewCandidate[] = [
     value: "6.1",
     unit: "%",
     reference: "4.0–5.6 %",
-    sourceName: "삼성 건강검진 결과지",
+    sourceName: "예시 건강검진 결과지",
     observedAt: "2026-07-28",
   },
   {
@@ -38,7 +38,7 @@ const candidates: readonly ReviewCandidate[] = [
     value: "188",
     unit: "mg/dL",
     reference: "120–199 mg/dL",
-    sourceName: "삼성 건강검진 결과지",
+    sourceName: "예시 건강검진 결과지",
     observedAt: "2026-07-28",
   },
   {
@@ -47,15 +47,15 @@ const candidates: readonly ReviewCandidate[] = [
     value: "31",
     unit: "ng/mL",
     reference: "30–100 ng/mL",
-    sourceName: "삼성 건강검진 결과지",
+    sourceName: "예시 건강검진 결과지",
     observedAt: "2026-07-28",
   },
 ] as const;
 
 const homeRecordMetadata = [
-  { id: "record-1", label: "당화혈색소", value: "6.1%", source: "삼성 건강검진 결과지", observedAt: "2026-07-28" },
-  { id: "record-2", label: "총콜레스테롤", value: "188 mg/dL", source: "삼성 건강검진 결과지", observedAt: "2026-07-28" },
-  { id: "record-3", label: "비타민 D", value: "31 ng/mL", source: "강남세브란스병원 검사 결과", observedAt: "2026-04-12" },
+  { id: "record-1", label: "당화혈색소", value: "6.1%", source: "예시 건강검진 결과지", observedAt: "2026-07-28" },
+  { id: "record-2", label: "총콜레스테롤", value: "188 mg/dL", source: "예시 건강검진 결과지", observedAt: "2026-07-28" },
+  { id: "record-3", label: "비타민 D", value: "31 ng/mL", source: "예시 대학병원 검사 결과", observedAt: "2026-04-12" },
 ] as const;
 
 export function HealthExperience() {
@@ -127,8 +127,8 @@ export function HealthExperience() {
     }
     setSourceMessage(
       source === "camera"
-        ? "카메라 촬영은 다음 슬라이스에서 연결할게요. 지금은 PDF, PNG, JPEG 파일을 선택해 주세요."
-        : "병원 연결은 기관 연동 계약 뒤에 제공할게요. 지금은 기기 파일로 안전하게 체험할 수 있어요.",
+        ? "촬영 기능은 아직 준비 중이에요. 지금은 PDF, PNG, JPEG 파일을 선택해 주세요."
+        : "기관 연결은 아직 사용할 수 없어요. 지금은 기기에 있는 파일로 체험할 수 있어요.",
     );
   };
 
@@ -145,7 +145,7 @@ export function HealthExperience() {
       setSourceError(
         error instanceof LocalDocumentError
           ? error.message
-          : "이 기기에서 파일을 확인하지 못했어요. 다시 선택해 주세요.",
+          : "파일을 읽지 못했어요. 다른 파일을 선택해 주세요.",
       );
     } finally {
       setIsInspecting(false);
@@ -170,7 +170,7 @@ export function HealthExperience() {
     event.preventDefault();
     const normalized = draftValue.trim();
     if (!/^\d+(?:\.\d+)?$/.test(normalized)) {
-      setEditError("숫자만 입력해 주세요.");
+      setEditError("숫자로 입력해 주세요. 예: 6.1");
       return;
     }
     setCandidateValues((values) => values.map((value, index) => index === candidateIndex ? normalized : value));
@@ -196,7 +196,7 @@ export function HealthExperience() {
   if (view === "home") {
     return (
       <HealthHomeConcept
-        userName="지훈"
+        userName="사용자"
         updatedAt="2026-08-10"
         sourceCount={4}
         recordCount={17 + savedCount}
@@ -208,11 +208,15 @@ export function HealthExperience() {
           unit: "%",
           observedAt: "2026-07-28",
           delta: "이전 기록보다 0.2%p 낮아요",
-          source: "삼성 건강검진 결과지",
+          source: "예시 건강검진 결과지",
           status: "verified",
         }}
         recentRecords={recentRecords}
         onStartImport={beginImport}
+        onResumeReview={() => {
+          resetReview();
+          setView("review");
+        }}
         onOpenRecord={(recordId) => {
           const index = homeRecordMetadata.findIndex((record) => record.id === recordId);
           setSelectedRecordIndex(index >= 0 ? index : 0);
@@ -236,7 +240,7 @@ export function HealthExperience() {
           sourceName: record.sourceName,
           observedAt: record.observedAt,
           sourceLocation: "2쪽 · 검사결과 표 · 4행",
-          sourceDigest: "sha256:7c91…42a8 · 합성 시연 문서",
+          sourceDigest: "sha256:7c91…42a8 · 예시 문서",
           extractedAt: "2026-08-10 09:41",
           confirmedAt: "2026-08-10 09:44",
           automation: candidateOnlyPipelineDisclosure,
@@ -277,9 +281,9 @@ export function HealthExperience() {
         <Dialog.Portal>
           <Dialog.Overlay className="gc-edit-dialog__overlay" />
           <Dialog.Content className="gc-edit-dialog__content" aria-describedby="edit-value-description">
-            <Dialog.Title>수치를 수정할까요?</Dialog.Title>
+            <Dialog.Title>값 수정</Dialog.Title>
             <Dialog.Description id="edit-value-description">
-              원본 결과지와 같은 값을 입력해 주세요. 단위는 {candidate.unit}예요.
+              결과지와 같은 값을 입력해 주세요. 단위는 {candidate.unit}입니다.
             </Dialog.Description>
             <form onSubmit={saveCorrection}>
               <label htmlFor="candidate-value">{candidate.label} 값</label>
@@ -298,7 +302,7 @@ export function HealthExperience() {
               {editError && <p id="candidate-value-error" role="alert">{editError}</p>}
               <div className="gc-edit-dialog__actions">
                 <Dialog.Close asChild><button type="button">취소</button></Dialog.Close>
-                <button type="submit">수정값 저장</button>
+                <button type="submit">수정한 값 저장</button>
               </div>
             </form>
           </Dialog.Content>

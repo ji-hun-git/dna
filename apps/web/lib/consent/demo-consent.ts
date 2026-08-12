@@ -37,8 +37,8 @@ export const initialConsentPurposeViews: readonly ConsentPurposeView[] = [
   consentPurposeViewSchema.parse({
     schemaVersion: "consent-purpose-view.v1",
     id: "process-uploaded-document-in-kr-cloud",
-    title: "한국 클라우드에서 결과지 처리",
-    description: "별도 동의가 있을 때만 한국 리전에서 결과지 후보를 만들어요.",
+    title: "한국 내 서버에서 결과지 읽기",
+    description: "별도로 동의했을 때만 한국 내 서버에서 검사 항목 후보를 만들어요.",
     status: "not-granted",
     dataSource: "USER_UPLOAD",
     categories: ["LAB_REPORT", "MEDICAL_RECORD"],
@@ -72,14 +72,14 @@ export const initialConsentAuditViews: readonly ConsentAuditView[] = [
   consentAuditViewSchema.parse({
     schemaVersion: "consent-audit-view.v1",
     eventCode: "purpose-confirmed",
-    label: "결과지 기록 목적 확인 · 합성 시연",
+    label: "결과지 기록에 동의함 · 예시",
     occurredAt: "2026-08-12T02:00:00Z",
     disclosure: "synthetic-no-phi",
   }),
   consentAuditViewSchema.parse({
     schemaVersion: "consent-audit-view.v1",
     eventCode: "retention-defaulted",
-    label: "원본 즉시 삭제 기본값 확인 · 합성 시연",
+    label: "원본 바로 삭제를 선택함 · 예시",
     occurredAt: "2026-08-12T02:01:00Z",
     disclosure: "synthetic-no-phi",
   }),

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { RecordImportConcept } from "@/components/concept/RecordImportConcept";
 
 const syntheticImport = {
-  sourceName: "삼성 건강검진 결과지",
+  sourceName: "예시 건강검진 결과지",
   observedAt: "2026-07-28",
   currentItem: 4,
   totalItems: 12,

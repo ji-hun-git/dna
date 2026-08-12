@@ -14,13 +14,13 @@ const protectionRules = [
   },
   {
     index: "02",
-    title: "이메일만으로 계정을 합치지 않아요",
-    body: "최근 로그인과 직접 확인 없이는 다른 계정이나 건강 기록을 연결하지 않아요.",
+    title: "이메일이 같다는 이유만으로 계정을 합치지 않아요",
+    body: "최근 로그인과 사용자의 직접 확인이 있어야 다른 계정이나 기록을 연결해요.",
   },
   {
     index: "03",
-    title: "이상한 연결은 즉시 멈춰요",
-    body: "재사용·위조·시간 초과·연결 충돌을 감지하면 세션을 끊고 다시 확인해요.",
+    title: "의심스러운 연결은 바로 멈춰요",
+    body: "로그인 정보가 만료됐거나 계정이 맞지 않으면 연결을 멈추고 다시 확인해요.",
   },
 ] as const;
 
@@ -50,24 +50,24 @@ export function ConnectionExperience() {
             <span aria-hidden="true">앎</span>
             <strong>앎</strong>
           </a>
-          <span>IDENTITY · CONSENT · CONTROL</span>
+          <span>로그인 · 동의 · 관리</span>
           <a className="gc-connections__back" href="/">홈으로 <ArrowIcon /></a>
         </header>
 
         <section className="gc-connections__hero" aria-labelledby="connections-title">
-          <p>내 데이터 연결</p>
-          <h1 id="connections-title">연결은 내가 허용한 만큼만</h1>
+          <p>데이터 연결</p>
+          <h1 id="connections-title">필요한 정보만 연결해요</h1>
           <div className="gc-connections__hero-copy">
-            <p>로그인과 건강정보 연결을 분리하고, 무엇을 언제까지 허용했는지 다시 확인할 수 있게 만들었어요.</p>
-            <span><LockIcon /> 현재는 안전한 제품 시연 환경이에요</span>
+            <p>로그인과 건강정보 연결 동의는 서로 달라요. 연결할 기관과 항목, 기간을 따로 선택할 수 있게 준비하고 있어요.</p>
+            <span><LockIcon /> 실제 계정이나 건강정보와 연결되지 않은 예시 화면이에요</span>
           </div>
         </section>
 
         <section className="gc-connections__identity" aria-labelledby="identity-title">
           <div className="gc-connections__section-heading">
-            <p>STEP 01 · IDENTITY</p>
+            <p>1. 로그인</p>
             <div>
-              <h2 id="identity-title">먼저, 나를 확인해요</h2>
+              <h2 id="identity-title">로그인 방법을 선택해요</h2>
               <p>로그인은 건강정보 제공 동의가 아니에요</p>
             </div>
           </div>
@@ -78,7 +78,7 @@ export function ConnectionExperience() {
               <div>
                 <p>간편 로그인</p>
                 <h3>카카오</h3>
-                <span>공식 앱 등록과 보안 심사 후 열려요</span>
+                <span>아직 사용할 수 없어요 · 공식 심사 필요</span>
               </div>
               <button type="button" disabled aria-label="카카오 로그인 준비 중">준비 중</button>
             </article>
@@ -88,45 +88,45 @@ export function ConnectionExperience() {
               <div>
                 <p>간편 로그인</p>
                 <h3>네이버</h3>
-                <span>공식 앱 등록과 서비스 검수 후 열려요</span>
+                <span>아직 사용할 수 없어요 · 공식 심사 필요</span>
               </div>
               <button type="button" disabled aria-label="네이버 로그인 준비 중">준비 중</button>
             </article>
           </div>
 
           <p className="gc-connections__identity-note">
-            처음에는 이름·이메일·전화번호를 요구하지 않고, 제공자가 발급한 고유 식별자만 계정 확인에 사용해요.
+            로그인할 때 이름·이메일·전화번호를 별도로 입력받지 않을 계획이에요. 로그인 제공자가 만든 식별자로 계정을 구분합니다.
           </p>
         </section>
 
         <section className="gc-connections__health" aria-labelledby="health-connection-title">
           <header>
-            <span>HEALTH DATA CONNECTION · KOREA</span>
-            <strong>기관 승인 대기</strong>
+            <span>건강정보 연결</span>
+            <strong>연결 준비 전</strong>
           </header>
 
           <div className="gc-connections__health-grid">
             <div className="gc-connections__health-copy">
-              <p>STEP 02 · EXPLICIT CONSENT</p>
-              <h2 id="health-connection-title">건강정보고속도로 · MyHealthWay</h2>
+              <p>2. 건강정보 연결 동의</p>
+              <h2 id="health-connection-title">건강정보고속도로</h2>
               <p>
                 로그인한 뒤에도 별도의 동의가 있어야 건강정보를 가져올 수 있어요. 기관, 항목, 목적, 기간을 확인한 뒤 직접 선택해요.
               </p>
               <dl>
                 <div><dt>직접 건강보험 비밀번호 입력</dt><dd>사용하지 않음</dd></div>
                 <div><dt>포털 화면 수집·스크래핑</dt><dd>사용하지 않음</dd></div>
-                <div><dt>교환 형식</dt><dd>FHIR 기반</dd></div>
+                <div><dt>의료정보 표준 형식</dt><dd>FHIR</dd></div>
               </dl>
             </div>
 
             <div className="gc-connections__readiness" aria-label="MyHealthWay 연결 준비 단계 5개 모두 대기 중">
-              <p>PRODUCTION READINESS · 0/5</p>
+              <p>연결 준비 0/5</p>
               <ol>
                 {readinessGates.map((gate, index) => (
                   <li key={gate}>
                     <span>{String(index + 1).padStart(2, "0")}</span>
                     <strong>{gate}</strong>
-                    <em>대기</em>
+                    <em>미완료</em>
                   </li>
                 ))}
               </ol>
@@ -134,14 +134,14 @@ export function ConnectionExperience() {
           </div>
 
           <footer>
-            <span>현재 실제 건강정보 API 호출 없음</span>
-            <span>합성 데이터만 표시</span>
+            <span>실제 건강정보 API 요청 0건</span>
+            <span>예시 데이터만 표시</span>
           </footer>
         </section>
 
         <section className="gc-connections__protection" aria-labelledby="protection-title">
           <div className="gc-connections__section-heading">
-            <p>ANTI-HACK WORKFLOW</p>
+            <p>연결 보호</p>
             <div>
               <h2 id="protection-title">연결이 수상하면 먼저 멈춰요</h2>
               <p>편리함보다 계정과 건강 기록의 경계를 우선해요.</p>
@@ -159,10 +159,10 @@ export function ConnectionExperience() {
         </section>
 
         <footer className="gc-connections__footer">
-          <p>연결하지 않아도 PDF·사진 결과지를 직접 가져와 사용할 수 있어요.</p>
+          <p>지금은 PDF, PNG, JPEG 파일 선택 흐름을 체험할 수 있어요.</p>
           <div>
-            <a href="/data-control">동의와 삭제 관리 <ArrowIcon /></a>
-            <a href="/">결과지로 시작하기 <ArrowIcon /></a>
+            <a href="/data-control">동의와 보관 설정 보기 <ArrowIcon /></a>
+            <a href="/">결과지 추가하기 <ArrowIcon /></a>
           </div>
         </footer>
       </div>

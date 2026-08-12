@@ -13,11 +13,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Verified: Story = {
-  name: "검증됨",
+  name: "직접 확인",
 };
 
 export const Stale: Story = {
-  name: "업데이트 필요",
+  name: "최신 정보 확인 필요",
   args: {
     status: "stale",
     caveat: "공개자료의 적용기간이 지나 최신 여부를 다시 확인해야 합니다.",
@@ -25,7 +25,7 @@ export const Stale: Story = {
 };
 
 export const Unknown: Story = {
-  name: "확인되지 않음",
+  name: "출처 확인 전",
   args: {
     value: "확인 필요",
     status: "unknown",
