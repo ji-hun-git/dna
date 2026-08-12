@@ -248,3 +248,29 @@
 @media (prefers-reduced-motion: reduce) {
   .page *, .page *::before, .page *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
+
+/* shadcn-level restraint with Toss-like Korean hierarchy; frame unchanged. */
+.page { color: #0a0a0a; background: #fafafa; }
+.appbar, .stats { border-color: #e4e4e7; }
+.brand span { border-radius: 10px; background: #18181b; }
+.appbar nav a, .appbarState, .heroBody, .explorerHeader > span { color: #71717a; }
+.appbar nav a[aria-current="page"] { color: #09090b; }
+.heroCopy > p:first-child, .explorerHeader p, .nextBoundary p { color: #71717a; }
+.hero h1, .explorerHeader h2, .nextBoundary h2 { color: #09090b; font-weight: 700; line-height: 1.04; letter-spacing: -.055em; }
+.heroProof { border-color: #e4e4e7; border-radius: 20px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 24px rgb(0 0 0 / 4%); }
+.heroProof::before { display: none; }
+.modeSwitch { border: 1px solid #e4e4e7; border-radius: 14px; background: #f4f4f5; }
+.modeSwitch button { border-radius: 10px; }
+.modeSwitch button[aria-pressed="true"] { color: #fafafa; background: #18181b; box-shadow: none; }
+.filters select, .filterBoundary { border-color: #e4e4e7; border-radius: 10px; background: #fff; }
+.filterBoundary { color: #3f3f46; }
+.tableFrame { border-color: #18181b; border-radius: 14px; }
+.tableFrame th, .tableFrame td { border-color: #e4e4e7; }
+.tableFrame summary { color: #2563eb; }
+.syntheticLabel { color: #166534; background: #ecfdf3; }
+.ledger { border: 1px solid #27272a; border-radius: 20px; background: #18181b; box-shadow: 0 12px 32px rgb(0 0 0 / 12%); }
+.unitField { transform: none; }
+.unitField span[data-source="reviewed"] { background: #7dd3c7; box-shadow: none; }
+.ledger li a { color: #7dd3c7; }
+.nextBoundary button { border-color: #e4e4e7; border-radius: 10px; background: #f4f4f5; }
+.page button:focus-visible, .page a:focus-visible, .page select:focus-visible, .page summary:focus-visible { outline-color: #3182f6; }

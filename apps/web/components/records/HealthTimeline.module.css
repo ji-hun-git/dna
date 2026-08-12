@@ -264,3 +264,31 @@
 @media (prefers-reduced-motion: reduce) {
   .metricTabs button { transition: none; }
 }
+
+/* Neutral studio skin; layout and responsive frame intentionally unchanged. */
+.page { color: #0a0a0a; background: #fafafa; }
+.appbar, .timeline, .history { border-color: #e4e4e7; }
+.brand span { border-radius: 10px; background: #18181b; }
+.appbar nav a { color: #71717a; }
+.appbar nav a[aria-current="page"] { color: #09090b; }
+.heroCopy > p:first-child, .sectionHeading p { color: #71717a; }
+.hero h1, .sectionHeading h2 { color: #09090b; font-weight: 700; line-height: 1.04; letter-spacing: -.055em; }
+.heroCopy > p:last-child, .sectionHeading > span { color: #52525b; }
+.truthPanel { border: 1px solid #27272a; border-radius: 20px; background: #18181b; box-shadow: 0 12px 32px rgb(0 0 0 / 12%); }
+.truthPanel header strong { color: #7dd3c7; }
+.metricTabs button { border-color: #e4e4e7; border-radius: 16px; color: #71717a; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 4%); }
+.metricTabs button[aria-pressed="true"] { color: #fafafa; border-color: #18181b; background: #18181b; box-shadow: none; }
+.metricPanel { border-color: #e4e4e7; border-radius: 20px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 24px rgb(0 0 0 / 4%); }
+.metricSummary { border-color: #e4e4e7; }
+.change, .historyDate span, .history summary { color: #2563eb; }
+.reference { border: 1px solid #e4e4e7; border-radius: 10px; background: #fafafa; }
+.metricSummary dl div, .history li { border-color: #e4e4e7; }
+.chartFrame { background: #fafafa; }
+.gridLine { stroke: #e4e4e7; }
+.trendLine { stroke: #18181b; stroke-width: 3; }
+.trendDot { stroke: #18181b; stroke-width: 3; }
+.history ol { border-top-color: #18181b; }
+.boundary { border: 1px solid #27272a; border-radius: 20px; background: #18181b; box-shadow: 0 12px 32px rgb(0 0 0 / 12%); }
+.boundary p { color: #7dd3c7; }
+.boundary a { border-radius: 10px; }
+.page button:focus-visible, .page a:focus-visible, .page summary:focus-visible { outline-color: #3182f6; }

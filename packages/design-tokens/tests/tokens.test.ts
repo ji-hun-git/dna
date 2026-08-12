@@ -28,4 +28,16 @@ describe("Alm Health OS tokens", () => {
     expect(tokens.type.sans).toMatch(/^"Pretendard Variable"/);
     expect(tokens.type.mono).toMatch(/^"IBM Plex Mono"/);
   });
+
+  it("keeps the neutral studio surfaces and compact control radii pinned", () => {
+    expect(tokens.color.surface).toEqual({
+      canvas: "#FAFAFA",
+      raised: "#FFFFFF",
+      soft: "#F4F4F5",
+      inverse: "#18181B",
+    });
+    expect(tokens.color.brand.primary).toBe("#18181B");
+    expect(tokens.color.focus.ring).toBe("#3182F6");
+    expect(tokens.radius).toEqual({ sm: "10px", md: "20px", pill: "999px" });
+  });
 });

@@ -3468,7 +3468,7 @@ svg {
   }
 
   .gc-health-home__hero h1 {
-    font-size: clamp(2.5em, 12vw, 3.25em);
+    font-size: clamp(2.25em, 10.8vw, 2.75em);
   }
 
   .gc-health-home__hero-actions {
@@ -3599,4 +3599,351 @@ svg {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/*
+ * Studio surface refresh
+ *
+ * The information architecture and responsive frame stay unchanged. This
+ * layer only reconciles type, color, lines, radii and elevation with the
+ * restrained shadcn surface language and Toss-like Korean reading rhythm.
+ */
+:root {
+  --gc-studio-control: #18181b;
+  --gc-studio-control-hover: #27272a;
+  --gc-studio-accent: #3182f6;
+  --gc-studio-border: #e4e4e7;
+  --gc-studio-border-strong: #d4d4d8;
+  --gc-studio-muted: #71717a;
+  --gc-studio-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 24px rgb(0 0 0 / 4%);
+}
+
+body {
+  letter-spacing: -0.018em;
+}
+
+:is(.gc-health-home, .gc-import, .gc-evidence-lens, .gc-connections, .gc-data-control) {
+  color: var(--gc-color-text-primary);
+  background: var(--gc-color-surface-canvas);
+}
+
+:is(
+  .gc-health-home__appbar,
+  .gc-import__appbar,
+  .gc-evidence-lens__appbar,
+  .gc-connections__appbar,
+  .gc-data-control__appbar
+) {
+  border-bottom-color: var(--gc-studio-border);
+}
+
+:is(
+  .gc-health-home__brand > span,
+  .gc-import__appbar a > span,
+  .gc-evidence-lens__appbar > a > span,
+  .gc-connections__brand > span,
+  .gc-data-control__brand > span
+) {
+  border-radius: 10px;
+  color: #fafafa;
+  background: var(--gc-studio-control);
+  box-shadow: none;
+}
+
+.gc-health-home__appbar nav {
+  border-color: var(--gc-studio-border);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+}
+
+.gc-health-home__appbar nav a {
+  border-radius: 10px;
+  color: var(--gc-studio-muted);
+  font-weight: 650;
+}
+
+.gc-health-home__appbar nav a[aria-current="page"] {
+  background: #f4f4f5;
+}
+
+.gc-health-home__profile {
+  border: 1px solid var(--gc-studio-border);
+  color: #3f3f46;
+  background: #fff;
+}
+
+:is(.gc-health-home__greeting, .gc-health-home__section-heading p) {
+  color: var(--gc-studio-muted);
+}
+
+:is(
+  .gc-health-home__hero h1,
+  .gc-import h1,
+  .gc-evidence-lens__intro h1,
+  .gc-connections__hero h1,
+  .gc-data-control__hero h1
+) {
+  color: #09090b;
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.055em;
+}
+
+.gc-health-home__hero-copy {
+  color: #52525b;
+  line-height: 1.7;
+}
+
+.gc-button,
+.gc-import__action,
+.gc-health-home__metric-link,
+.gc-health-home__connection > a {
+  border-radius: 10px;
+}
+
+.gc-button--primary,
+.gc-button--compact,
+.gc-import__action--primary {
+  color: #fafafa;
+  background: var(--gc-studio-control);
+  box-shadow: none;
+}
+
+.gc-button--primary:hover,
+.gc-import__action--primary:hover {
+  background: var(--gc-studio-control-hover);
+}
+
+.gc-button--weak,
+.gc-import__action--secondary {
+  border: 1px solid var(--gc-studio-border);
+  color: #18181b;
+  background: #fff;
+}
+
+.gc-text-button,
+.gc-health-home__metric-link,
+.gc-health-home__connection > a {
+  color: #18181b;
+}
+
+.gc-health-home__connection {
+  border-color: var(--gc-studio-border);
+  border-radius: var(--gc-radius-md);
+  background: #fff;
+  box-shadow: var(--gc-studio-shadow);
+}
+
+.gc-health-home__connection-orbit,
+.gc-health-home__connection-orbit::before {
+  border-color: var(--gc-studio-border-strong);
+}
+
+.gc-health-home__connection-orbit > strong {
+  border-radius: 16px;
+  background: var(--gc-studio-control);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 10%);
+}
+
+.gc-health-home__connection-orbit > span {
+  border: 1px solid var(--gc-studio-border);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+}
+
+.gc-health-home__connection > p strong {
+  color: #18181b;
+}
+
+.gc-health-home__review,
+.gc-health-home__saved {
+  border-color: var(--gc-studio-border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.gc-health-home__review-icon,
+.gc-health-home__saved > span {
+  border-radius: 10px;
+}
+
+.gc-health-home__section-heading h2 {
+  color: #09090b;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+:is(
+  .gc-health-home__metric-card,
+  .gc-health-home__task-grid > button,
+  .gc-health-home__task-grid > a,
+  .gc-health-home__records ol,
+  .gc-health-home__privacy,
+  .gc-evidence-card,
+  .gc-evidence-lens__source,
+  .gc-evidence-lens__boundary
+) {
+  border-color: var(--gc-studio-border);
+  border-radius: var(--gc-radius-md);
+  background: #fff;
+  box-shadow: var(--gc-studio-shadow);
+}
+
+.gc-health-home__metric-value strong {
+  color: #09090b;
+  font-weight: 680;
+}
+
+.gc-health-home__trend {
+  border-color: var(--gc-studio-border);
+  border-radius: 14px;
+  background: #fafafa;
+}
+
+.gc-health-home__trend-bars span {
+  border-radius: 4px 4px 0 0;
+  background: #e4e4e7;
+}
+
+.gc-health-home__trend-bars span[data-active="true"] {
+  background: #52525b;
+}
+
+.gc-health-home__task-grid > button:hover,
+.gc-health-home__task-grid > a:hover {
+  border-color: var(--gc-studio-border-strong);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%), 0 10px 28px rgb(0 0 0 / 5%);
+  transform: translateY(-1px);
+}
+
+.gc-health-home__task-icon,
+.gc-health-home__task-icon--teal,
+.gc-health-home__task-icon--gray {
+  border: 1px solid var(--gc-studio-border);
+  border-radius: 10px;
+  color: #18181b;
+  background: #f4f4f5;
+}
+
+.gc-health-home__records li + li,
+.gc-health-home__boundary,
+.gc-health-home__privacy li {
+  border-color: var(--gc-studio-border);
+}
+
+.gc-health-home__record-symbol,
+.gc-health-home__privacy-icon {
+  border-radius: 10px;
+  color: #18181b;
+  background: #f4f4f5;
+}
+
+.gc-import__choices button,
+.gc-import__receipt,
+.gc-import__source-preview,
+.gc-import__candidate,
+.gc-import__summary,
+.gc-edit-dialog__content {
+  border-color: var(--gc-studio-border);
+  border-radius: var(--gc-radius-md);
+  background: #fff;
+  box-shadow: var(--gc-studio-shadow);
+}
+
+.gc-import__choices button:hover {
+  border-color: var(--gc-studio-border-strong);
+  background: #fafafa;
+}
+
+.gc-import__choice-icon,
+.gc-import__choice-icon--camera,
+.gc-import__choice-icon--link,
+.gc-import__processing-mark,
+.gc-import__complete-mark {
+  border-radius: 12px;
+  color: #18181b;
+  background: #f4f4f5;
+}
+
+.gc-import__progress,
+.gc-import__progress span,
+.gc-import__paper-row,
+.gc-import__candidate dl,
+.gc-import__summary > div + div {
+  border-color: var(--gc-studio-border);
+}
+
+.gc-edit-dialog__field {
+  border-color: var(--gc-studio-border-strong);
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.gc-evidence-card {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+}
+
+.gc-status-label {
+  border: 1px solid var(--gc-studio-border);
+  border-radius: 999px;
+  background: #fafafa;
+}
+
+.gc-evidence-lens__ledger,
+.gc-data-control__retention {
+  border: 1px solid #27272a;
+  border-radius: var(--gc-radius-md);
+  background: #18181b;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 12%);
+}
+
+.gc-evidence-lens__paper {
+  border-color: var(--gc-studio-border-strong);
+  border-radius: 10px;
+  background: #fafafa;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 7%);
+  transform: none;
+}
+
+.gc-evidence-lens__history ol,
+.gc-evidence-lens__history li,
+.gc-evidence-lens__source-meta > div,
+.gc-connections__section-heading,
+.gc-connections__protection > ol,
+.gc-connections__protection li,
+.gc-connections__footer,
+.gc-data-control__summary,
+.gc-data-control__summary article + article,
+.gc-data-control__purpose-list,
+.gc-data-control__purpose-list > article,
+.gc-data-control__audit > ol,
+.gc-data-control__audit li {
+  border-color: var(--gc-studio-border);
+}
+
+:is(
+  .gc-connections__health,
+  .gc-connections__provider-card,
+  .gc-connections__protection,
+  .gc-data-control__danger,
+  .gc-consent-dialog__content
+) {
+  border-color: var(--gc-studio-border);
+  border-radius: var(--gc-radius-md);
+  background: #fff;
+  box-shadow: var(--gc-studio-shadow);
+}
+
+.gc-data-control__purpose-list > article > button,
+.gc-data-control__purpose-lock,
+.gc-data-control__danger button,
+.gc-consent-dialog__content button {
+  border-radius: 10px;
+}
+
+.gc-data-control__hero-copy > strong {
+  border: 1px solid var(--gc-studio-border);
+  color: #18181b;
+  background: #fff;
 }
