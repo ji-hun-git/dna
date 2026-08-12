@@ -190,7 +190,7 @@ function ProcessingStage({
           <div><dt>예시 항목</dt><dd>{totalItems}개</dd></div>
         </dl>
         <ol>
-          <li><span aria-hidden="true">✓</span> 허용된 파일 형식과 크기 확인</li>
+          <li><span aria-hidden="true">✓</span> 파일 앞부분이 PDF·PNG·JPEG 형식과 맞는지와 크기 확인</li>
           <li><span aria-hidden="true">✓</span> 이 기기에서 파일 확인값 생성</li>
           <li><span aria-hidden="true">✓</span> 파일 내용과 무관한 예시 항목 준비</li>
         </ol>

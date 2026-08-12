@@ -22,12 +22,12 @@ class RepositoryLayoutTest(unittest.TestCase):
         self.assertEqual([], missing)
 
     def test_gradle_distribution_is_version_and_checksum_pinned(self) -> None:
-        text = (ROOT / "gradle/wrapper/gradle-wrapper.properties").read_text()
+        text = (ROOT / "gradle/wrapper/gradle-wrapper.properties").read_text(encoding="utf-8")
         self.assertIn("gradle-8.14.3-bin.zip", text)
         self.assertRegex(text, r"distributionSha256Sum=[0-9a-f]{64}")
 
     def test_repository_does_not_track_local_state_or_secret_files(self) -> None:
-        ignore = (ROOT / ".gitignore").read_text()
+        ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
         for pattern in (".env", "*.tfstate", "*.tfvars", "build/", ".gradle/"):
             self.assertIn(pattern, ignore)
 

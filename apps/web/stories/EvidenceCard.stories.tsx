@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { EvidenceCard } from "@/components/evidence/EvidenceCard";
 import { verifiedPriceFixture } from "@/tests/fixtures/public";
 

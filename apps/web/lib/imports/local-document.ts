@@ -15,7 +15,7 @@ export type LocalDocumentReceipt = {
   processingBoundary: "local-synthetic-fixture";
 };
 
-export type LocalDocumentErrorCode = "empty" | "too_large" | "unsupported" | "unreadable";
+export type LocalDocumentErrorCode = "empty" | "too_large" | "unsupported" | "content_mismatch" | "unreadable";
 
 export class LocalDocumentError extends Error {
   constructor(public readonly code: LocalDocumentErrorCode, message: string) {
@@ -36,6 +36,25 @@ function formatSize(byteLength: number) {
 
 function bytesToHex(bytes: ArrayBuffer) {
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function startsWith(bytes: Uint8Array, signature: readonly number[]) {
+  return bytes.length >= signature.length && signature.every((byte, index) => bytes[index] === byte);
+}
+
+function assertDocumentSignature(bytes: ArrayBuffer, format: "PDF" | "PNG" | "JPEG") {
+  const view = new Uint8Array(bytes);
+  const matches = format === "PDF"
+    ? startsWith(view, [0x25, 0x50, 0x44, 0x46, 0x2d])
+    : format === "PNG"
+      ? startsWith(view, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      : startsWith(view, [0xff, 0xd8, 0xff]);
+  if (!matches) {
+    throw new LocalDocumentError(
+      "content_mismatch",
+      "파일 내용이 확장자와 맞지 않아요. 원본 PDF, PNG, JPEG 파일을 선택해 주세요.",
+    );
+  }
 }
 
 function readFileBytes(file: File) {
@@ -72,6 +91,7 @@ export async function inspectLocalDocument(file: File): Promise<LocalDocumentRec
   const validated = validateLocalDocument(file);
   try {
     const bytes = await readFileBytes(file);
+    assertDocumentSignature(bytes, validated.format);
     const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
     return {
       format: validated.format,

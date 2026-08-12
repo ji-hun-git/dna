@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { RecordImportConcept } from "@/components/concept/RecordImportConcept";
 
 const syntheticImport = {

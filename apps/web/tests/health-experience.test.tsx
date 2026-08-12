@@ -15,7 +15,7 @@ it("moves from a local PDF receipt through explicit per-item decisions and saves
 
   await user.upload(
     screen.getByLabelText("기기에서 결과지 선택"),
-    new File(["synthetic health result"], "synthetic-result.pdf", { type: "application/pdf" }),
+    new File(["%PDF-1.7\nsynthetic health result"], "synthetic-result.pdf", { type: "application/pdf" }),
   );
   expect(await screen.findByRole("heading", { name: /파일 확인을\s*마쳤어요/ })).toBeVisible();
   expect(screen.getByText("예시 화면이에요")).toBeVisible();
@@ -49,7 +49,7 @@ it("rejects non-numeric corrections and keeps the current item open", async () =
   await user.click(screen.getAllByRole("button", { name: "결과지 추가" })[0]);
   await user.upload(
     screen.getByLabelText("기기에서 결과지 선택"),
-    new File(["synthetic health result"], "synthetic-result.pdf", { type: "application/pdf" }),
+    new File(["%PDF-1.7\nsynthetic health result"], "synthetic-result.pdf", { type: "application/pdf" }),
   );
   await screen.findByRole("heading", { name: /파일 확인을\s*마쳤어요/ });
   await user.click(screen.getByRole("button", { name: "예시 항목 3개 확인하기" }));
@@ -80,6 +80,22 @@ it("rejects unsupported and oversized local files before any review value appear
     new File([new Uint8Array(20 * 1024 * 1024 + 1)], "too-large.pdf", { type: "application/pdf" }),
   );
   expect(await screen.findByRole("alert")).toHaveTextContent("파일은 20MB 이하여야 해요.");
+});
+
+it("rejects a renamed file whose bytes do not match its PDF extension", async () => {
+  const user = userEvent.setup();
+  render(<HealthExperience />);
+  await user.click(screen.getAllByRole("button", { name: "결과지 추가" })[0]);
+
+  await user.upload(
+    screen.getByLabelText("기기에서 결과지 선택"),
+    new File(["plain text renamed as pdf"], "renamed.pdf", { type: "application/pdf" }),
+  );
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "파일 내용이 확장자와 맞지 않아요. 원본 PDF, PNG, JPEG 파일을 선택해 주세요.",
+  );
+  expect(screen.queryByRole("heading", { name: /파일 확인을\s*마쳤어요/ })).not.toBeInTheDocument();
 });
 
 it("continues the pending example review from the home call to action", async () => {
