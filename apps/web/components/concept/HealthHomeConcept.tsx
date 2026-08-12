@@ -81,7 +81,7 @@ export function HealthHomeConcept({
           </a>
           <nav aria-label="주요 메뉴">
             <a href="#home" aria-current="page">홈</a>
-            <a href="#records">기록</a>
+            <a href="/records">기록</a>
             <a href="#privacy">데이터 관리</a>
           </nav>
           <button className="gc-health-home__profile" type="button" aria-label="계정 기능은 아직 사용할 수 없어요" disabled>
@@ -100,7 +100,7 @@ export function HealthHomeConcept({
               <button className="gc-button gc-button--primary" type="button" onClick={onStartImport} disabled={!onStartImport}>
                 <UploadIcon /> 결과지 추가
               </button>
-              <a className="gc-button gc-button--weak" href="#records">최근 기록 보기</a>
+              <a className="gc-button gc-button--weak" href="/records">전체 기록 보기</a>
             </div>
           </div>
 
@@ -200,12 +200,12 @@ export function HealthHomeConcept({
               <span>PDF나 사진으로 시작하세요</span>
               <ArrowIcon />
             </button>
-            <button type="button" onClick={() => recentRecords[0] && onOpenRecord?.(recentRecords[0].id)} disabled={!onOpenRecord || !recentRecords[0]}>
+            <a href="/records">
               <span className="gc-health-home__task-icon gc-health-home__task-icon--teal">↗</span>
               <strong>시간에 따른 변화 보기</strong>
               <span>기록된 값과 출처를 함께 비교해요</span>
               <ArrowIcon />
-            </button>
+            </a>
             <a href="/providers">
               <span className="gc-health-home__task-icon gc-health-home__task-icon--gray">₩</span>
               <strong>비급여 금액 찾아보기</strong>
@@ -258,7 +258,7 @@ export function HealthHomeConcept({
 
       <nav className="gc-health-home__bottom-nav" aria-label="모바일 주요 메뉴">
         <a href="#home" aria-current="page"><span aria-hidden="true">●</span>홈</a>
-        <a href="#records"><span aria-hidden="true">▤</span>기록</a>
+        <a href="/records"><span aria-hidden="true">▤</span>기록</a>
         <button type="button" onClick={onStartImport} disabled={!onStartImport}><span aria-hidden="true">＋</span>결과지 추가</button>
         <a href="/data-control"><span aria-hidden="true">◈</span>관리</a>
       </nav>

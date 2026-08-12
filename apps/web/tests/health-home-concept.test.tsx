@@ -31,6 +31,8 @@ it("renders a calm, evidence-first health home", async () => {
 
   expect(screen.getByRole("heading", { name: /건강 기록을\s*한곳에서 확인하세요/ })).toBeVisible();
   expect(screen.getAllByRole("button", { name: /결과지 추가/ })[0]).toBeVisible();
+  expect(screen.getByRole("link", { name: "전체 기록 보기" })).toHaveAttribute("href", "/records");
+  expect(screen.getByRole("link", { name: /시간에 따른 변화 보기/ })).toHaveAttribute("href", "/records");
   expect(screen.getByRole("link", { name: /연결 준비 상태 보기/ })).toHaveAttribute("href", "/connections");
   expect(screen.getByRole("link", { name: "데이터 관리 열기" })).toHaveAttribute("href", "/data-control");
   expect(screen.getByRole("link", { name: /비급여 금액 찾아보기/ })).toHaveAttribute("href", "/providers");

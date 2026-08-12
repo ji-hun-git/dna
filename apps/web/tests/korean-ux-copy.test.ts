@@ -11,6 +11,7 @@ const userFacingFiles = [
   "components/privacy/DataControlCenter.tsx",
   "components/providers/PublicProviderExplorer.tsx",
   "components/records/EvidenceLens.tsx",
+  "components/records/HealthTimeline.tsx",
 ] as const;
 
 const forbiddenUserTerms = [
@@ -65,6 +66,9 @@ describe("Korean UX language boundary", () => {
     );
     expect(source("components/concept/HealthHomeConcept.tsx")).toContain(
       "질환을 진단하거나 정상·비정상을 판단할 수 없어요",
+    );
+    expect(source("components/records/HealthTimeline.tsx")).toContain(
+      "실제 파일이나 기관 API에서 가져온 기록이 아니에요",
     );
   });
 

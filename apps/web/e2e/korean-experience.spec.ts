@@ -37,3 +37,20 @@ test("데이터 관리 화면은 실행되지 않는 삭제 기능을 명확히 
   await expect(page.getByRole("button", { name: "계정과 데이터 모두 삭제 아직 사용할 수 없음" })).toBeDisabled();
   await expectNoHorizontalOverflow(page);
 });
+
+test("모바일 기록 화면에서 항목을 바꾸고 출처 이력을 확인한다", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/records");
+
+  await expect(page.getByRole("heading", { name: /시간이 지나며\s*무엇이 바뀌었는지 확인하세요/ })).toBeVisible();
+  await expect(page.getByText("실제 파일이나 기관 API에서 가져온 기록이 아니에요")).toBeVisible();
+  await page.getByRole("button", { name: /총콜레스테롤.*188/ }).click();
+  await expect(page.getByRole("img", { name: /총콜레스테롤 예시 기록/ })).toBeVisible();
+  await page.getByText("출처와 확인 이력 보기").first().click();
+  await expect(page.locator("details[open]").getByText("2쪽 · 검사결과 표 · 5행")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("records-mobile.png"), fullPage: true });
+  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+  await expect(page.getByRole("heading", { name: "이 화면은 진단 결과가 아니에요" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});
