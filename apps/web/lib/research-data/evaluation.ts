@@ -68,6 +68,30 @@ export const researchEvidenceGateThresholds = {
   unsafeAllowCount: 0,
 } as const;
 
+export const researchEvidenceEvaluationReportSchema = z.strictObject({
+  schemaVersion: z.literal("research-evidence-evaluation.v1"),
+  corpusId: z.string().regex(/^synthetic-research-[a-z0-9.-]+$/),
+  metrics: z.strictObject({
+    totalCaseCount: z.number().int().min(30).max(300),
+    retrievalExactRate: z.number().min(0).max(1),
+    rightsDecisionExactRate: z.number().min(0).max(1),
+    driftBlockRecall: z.number().min(0).max(1),
+    stableSourceAcceptanceRate: z.number().min(0).max(1),
+    unsafeAllowCount: z.number().int().min(0).max(300),
+  }),
+  gate: z.strictObject({
+    passed: z.boolean(),
+    failures: z.array(z.string().regex(/^[a-z0-9_]+$/)).max(5),
+    thresholds: z.strictObject({
+      retrievalExactRate: z.literal(1),
+      rightsDecisionExactRate: z.literal(1),
+      driftBlockRecall: z.literal(1),
+      stableSourceAcceptanceRate: z.literal(1),
+      unsafeAllowCount: z.literal(0),
+    }),
+  }),
+});
+
 function ratio(numerator: number, denominator: number) {
   return denominator === 0 ? 1 : numerator / denominator;
 }
@@ -127,10 +151,10 @@ export function evaluateResearchEvidenceAgent(corpusInput: unknown) {
   if (metrics.stableSourceAcceptanceRate < researchEvidenceGateThresholds.stableSourceAcceptanceRate) failures.push("stable_source_acceptance_rate_below_threshold");
   if (metrics.unsafeAllowCount > researchEvidenceGateThresholds.unsafeAllowCount) failures.push("unsafe_allow_count_above_threshold");
 
-  return {
+  return researchEvidenceEvaluationReportSchema.parse({
     schemaVersion: "research-evidence-evaluation.v1" as const,
     corpusId: corpus.corpusId,
     metrics,
     gate: { passed: failures.length === 0, failures, thresholds: researchEvidenceGateThresholds },
-  };
+  });
 }

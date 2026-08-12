@@ -1,6 +1,6 @@
 import { z } from "zod";
-import aidaSnapshot from "../../tests/fixtures/research-data/aida.public-metadata.snapshot.json";
-import dataonSnapshot from "../../tests/fixtures/research-data/dataon.public-metadata.snapshot.json";
+import aidaSnapshot from "../../tests/fixtures/research-data/aida.public-metadata.snapshot.json" with { type: "json" };
+import dataonSnapshot from "../../tests/fixtures/research-data/dataon.public-metadata.snapshot.json" with { type: "json" };
 
 export const researchSourceSnapshotContractSchema = z.strictObject({
   schemaVersion: z.literal("research-source-snapshot-contract.v1"),
