@@ -9,6 +9,7 @@
     "test": "vitest run",
     "auth-security:gate": "node scripts/check-auth-security.mts",
     "medical-ai:gate": "node scripts/evaluate-medical-documents.mts",
+    "research-evidence:gate": "node scripts/evaluate-research-evidence.mts",
     "medical-ai:runner:preflight": "node scripts/preflight-medical-runner.mts",
     "medical-ai:runner:fixture": "node scripts/simulate-offline-medical-runner.mts",
     "storybook": "storybook dev -p 6006",

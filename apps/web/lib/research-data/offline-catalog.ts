@@ -1,7 +1,7 @@
 import {
   competitionTrackSchema,
   researchCatalogSchema,
-} from "./contracts";
+} from "./contracts.ts";
 
 export const offlineResearchCatalog = researchCatalogSchema.parse({
   schemaVersion: "research-metadata-catalog.v1",

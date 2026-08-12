@@ -10,6 +10,7 @@
     "web:test": "pnpm --filter @gc/web test",
     "auth-security:gate": "pnpm --filter @gc/web auth-security:gate",
     "medical-ai:gate": "pnpm --filter @gc/web medical-ai:gate",
+    "research-evidence:gate": "pnpm --filter @gc/web research-evidence:gate",
     "medical-ai:runner:preflight": "pnpm --filter @gc/web medical-ai:runner:preflight",
     "medical-ai:runner:fixture": "pnpm --filter @gc/web medical-ai:runner:fixture"
   }

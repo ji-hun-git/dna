@@ -5,8 +5,8 @@ import {
   type ResearchAgentQuery,
   type ResearchResource,
   type RightsDecision,
-} from "./contracts";
-import { offlineResearchCatalog } from "./offline-catalog";
+} from "./contracts.ts";
+import { offlineResearchCatalog } from "./offline-catalog.ts";
 
 export function decideResearchRights(resource: ResearchResource): RightsDecision {
   if (resource.redistribution === "prohibited" || resource.redistribution === "metadata-only") {
