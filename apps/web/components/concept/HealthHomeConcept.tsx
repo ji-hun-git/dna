@@ -243,7 +243,7 @@ export function HealthHomeConcept({
               <li>처리 동의와 삭제 내역 확인</li>
             </ul>
           </div>
-          <a className="gc-button gc-button--weak" href="/connections">내 데이터 관리</a>
+          <a className="gc-button gc-button--weak" href="/data-control">내 데이터 관리</a>
         </section>
 
         <p className="gc-health-home__boundary">
@@ -255,7 +255,7 @@ export function HealthHomeConcept({
         <a href="#home" aria-current="page"><span aria-hidden="true">●</span>홈</a>
         <a href="#records"><span aria-hidden="true">▤</span>기록</a>
         <button type="button" onClick={onStartImport}><span aria-hidden="true">＋</span>결과지 추가</button>
-        <a href="#privacy"><span aria-hidden="true">◈</span>내 데이터</a>
+        <a href="/data-control"><span aria-hidden="true">◈</span>내 데이터</a>
       </nav>
     </main>
   );

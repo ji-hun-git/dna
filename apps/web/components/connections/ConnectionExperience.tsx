@@ -160,7 +160,10 @@ export function ConnectionExperience() {
 
         <footer className="gc-connections__footer">
           <p>연결하지 않아도 PDF·사진 결과지를 직접 가져와 사용할 수 있어요.</p>
-          <a href="/">결과지로 시작하기 <ArrowIcon /></a>
+          <div>
+            <a href="/data-control">동의와 삭제 관리 <ArrowIcon /></a>
+            <a href="/">결과지로 시작하기 <ArrowIcon /></a>
+          </div>
         </footer>
       </div>
     </main>

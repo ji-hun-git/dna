@@ -86,6 +86,7 @@ Exit evidence:
 
 - Korean-first Kakao and Naver sign-in cards follow each provider's brand rules without visual dominance and remain honestly disabled until external registration is complete.
 - A separate “건강정보 연결” screen that explains purpose, data categories, duration, revocation, deletion, and source freshness before any health-data consent.
+- A separate `/data-control` safe-state view now freezes the three native purpose boundaries, default source deletion, synthetic revocation confirmation, and PHI-free audit presentation; real persistence and deletion remain backend-gated.
 - Recent-auth account linking and unlinking; no silent merge; recovery never trusts email alone.
 - Honest states: `준비 중`, `기관 승인 대기`, `연결 가능`, `연결됨`, `재동의 필요`, `중단됨`.
 - WCAG, keyboard, 200% text, reduced-motion, and Korean long-copy tests.

@@ -16,6 +16,7 @@ it("keeps identity and health-data consent visibly separate", async () => {
   expect(screen.getByText("건강정보고속도로 · MyHealthWay")).toBeVisible();
   expect(screen.getByText("비밀번호를 대신 받지 않아요")).toBeVisible();
   expect(screen.getByText("이메일만으로 계정을 합치지 않아요")).toBeVisible();
+  expect(screen.getByRole("link", { name: /동의와 삭제 관리/ })).toHaveAttribute("href", "/data-control");
   expect(await axe(container)).toHaveNoViolations();
 });
 
