@@ -25,4 +25,3 @@ gc:
     quarantine-root: ${GC_QUARANTINE_ROOT:}
     audit-pepper: ${GC_AUDIT_PEPPER:}
     allowed-document-sha256: ${GC_ALLOWED_DOCUMENT_SHA256:}
-

@@ -144,4 +144,3 @@ CREATE TABLE gc_audit_event (
 );
 
 CREATE INDEX gc_audit_subject_idx ON gc_audit_event(subject_hash, audit_sequence);
-

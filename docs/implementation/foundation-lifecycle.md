@@ -80,4 +80,3 @@ The Kotlin integration test is disabled when GC_TEST_POSTGRES_URL is absent. The
 - Local identity is a synthetic credential broker, not Kakao, Naver, OIDC, or production MFA.
 - PostgreSQL roles, TLS, row-level security, backup/restore, production audit storage, KMS, observability, rate limits, and deployed ingress are not implemented.
 - The existing product UI is unchanged; the browser foundation E2E verifies the browser/server lifecycle through same-origin fetch, not a finalized user-visible workflow.
-

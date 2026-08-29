@@ -1,7 +1,9 @@
 # Foundation lifecycle threat model
 
-**Scope:** currently executable synthetic foundation slice only  
-**Status:** reviewed locally on 2026-08-30  
+**Scope:** currently executable synthetic foundation slice only
+
+**Status:** reviewed locally on 2026-08-30
+
 **Real PHI:** prohibited
 
 ## Data flow and trust boundaries
@@ -44,4 +46,3 @@
 ## Release interpretation
 
 Passing this threat model means the named local attacks were exercised against synthetic data. It does not establish penetration-test completion, OWASP ASVS verification, ISMS-P certification, production security, or permission to handle real health information.
-

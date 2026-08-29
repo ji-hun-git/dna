@@ -99,4 +99,3 @@ This is a monolithic foundation path. There is no real OAuth provider, ingress, 
 **PRIVATE BETA NO-GO**
 
 The repository now contains the first durable browser-to-database synthetic foundation and credible negative tests. It remains a local foundation, not a production-shaped private-beta environment, and real PHI is still prohibited.
-
