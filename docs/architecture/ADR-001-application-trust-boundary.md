@@ -62,4 +62,12 @@ The PHI trust boundary includes Spring, its session store, PostgreSQL, quarantin
 - Prohibited public/medical route tests: `apps/core-api/src/test/kotlin/kr/co/genomecompanion/architecture/ProhibitedRouteTest.kt`.
 - External identity remains disabled in `apps/web/app/connections/page.tsx` and the tested experience it renders.
 
-This ADR is an architecture decision, not evidence that the selected backend or infrastructure already exists.
+## Implementation checkpoint
+
+The synthetic foundation now implements a partial form of this decision:
+
+- Spring owns the opaque session, CSRF/origin enforcement, consent, owner-scoped authorization, document metadata, candidate/record persistence, audit, and deletion.
+- Next has a configuration-only same-origin rewrite and no API route handler or duplicate authorization rule.
+- PostgreSQL/Flyway and a local digest-allowlisted quarantine path are verified locally.
+
+The isolated worker, production object store, ingress, production session infrastructure, external connectors, and research deployment separation remain not implemented. This ADR does not imply that those missing boundaries exist.

@@ -3,6 +3,7 @@ package kr.co.genomecompanion
 import ca.uhn.fhir.context.FhirContext
 import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.TypeExcludeFilter
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.FilterType
 
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 @ComponentScan(
     basePackages = ["kr.co.genomecompanion"],
     excludeFilters = [

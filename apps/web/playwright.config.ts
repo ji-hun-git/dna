@@ -5,6 +5,7 @@ const testPort = 3137;
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: "foundation-lifecycle.spec.ts",
   fullyParallel: false,
   reporter: "list",
   webServer: {

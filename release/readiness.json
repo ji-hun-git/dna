@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "release-readiness.v1",
+  "evaluatedAt": "2026-08-30",
+  "target": "REAL_DATA_PRIVATE_BETA",
+  "verdict": "NO_GO",
+  "gates": [
+    {
+      "id": "production_dependencies",
+      "status": "PASS",
+      "blocking": true,
+      "evidence": "pnpm audit --prod --audit-level high: no known vulnerabilities"
+    },
+    {
+      "id": "production_runtime_image",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "production image and immutable digest are not implemented"
+    },
+    {
+      "id": "durable_synthetic_vertical_slice",
+      "status": "PASS",
+      "blocking": true,
+      "evidence": "PostgreSQL integration and browser foundation E2E pass locally"
+    },
+    {
+      "id": "authorization_negative_suite",
+      "status": "PASS",
+      "blocking": true,
+      "evidence": "wrong identity, CSRF, BOLA, revoked consent, rejected document, and old session are denied"
+    },
+    {
+      "id": "quarantine_and_isolated_worker",
+      "status": "PARTIAL",
+      "blocking": true,
+      "evidence": "local quarantine and digest allowlist exist; malware scanning and an isolated worker do not"
+    },
+    {
+      "id": "provenance_and_audit",
+      "status": "PARTIAL",
+      "blocking": true,
+      "evidence": "source digest, evidence page, confirmation, and safe audit persist; production audit storage is absent"
+    },
+    {
+      "id": "deletion_and_session_invalidation",
+      "status": "PASS",
+      "blocking": true,
+      "evidence": "synthetic PostgreSQL E2E deletes records and source object, preserves safe audit, and invalidates the old session"
+    },
+    {
+      "id": "backup_restore",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "no backup or restore drill"
+    },
+    {
+      "id": "hosted_devsecops",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "no hosted SAST, secret, container, IaC, license, SBOM signing, or provenance gate"
+    },
+    {
+      "id": "privacy_regulatory_review",
+      "status": "EXTERNAL_GATE",
+      "blocking": true,
+      "evidence": "privacy, legal, intended-use, MFDS applicability, and real-data authorization remain pending"
+    },
+    {
+      "id": "kakao_naver_myhealthway",
+      "status": "DISABLED",
+      "blocking": false,
+      "evidence": "all external identity and health-data providers remain disabled"
+    }
+  ]
+}

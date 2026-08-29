@@ -9,9 +9,12 @@
   "scripts": {
     "tokens": "pnpm --filter @gc/design-tokens generate",
     "web:test": "pnpm --filter @gc/web test",
+    "foundation:e2e": "pnpm --filter @gc/web e2e:foundation",
     "security:runtime-policy": "node scripts/security/check-runtime-policy.mjs",
     "security:release-policy": "node scripts/security/check-runtime-policy.mjs --release",
     "security:production-audit": "pnpm audit --prod --audit-level high",
+    "release:readiness": "node scripts/release/check-readiness.mjs",
+    "release:gate": "node scripts/security/check-runtime-policy.mjs --release && node scripts/release/check-readiness.mjs",
     "auth-security:gate": "pnpm --filter @gc/web auth-security:gate",
     "medical-ai:synthetic-contract-gate": "pnpm --filter @gc/web medical-ai:synthetic-contract-gate",
     "research-evidence:gate": "pnpm --filter @gc/web research-evidence:gate",

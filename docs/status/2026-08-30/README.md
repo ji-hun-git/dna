@@ -15,6 +15,7 @@ This folder reports what the repository can do now. It does not treat an impleme
 4. [Verification and release-readiness report](verification-and-release-report.md) — commands run against this snapshot, results, limitations, and release verdict.
 5. [Delivery roadmap](delivery-roadmap.md) — the shortest evidence-based path from the current prototype to an authorized private beta.
 6. [Production-foundation stop-ship iteration](production-foundation-stop-ship-iteration.md) — dependency remediation, trust-boundary decision, adversarial results, and the current NO-GO verdict after commit 0605518.
+7. [Durable synthetic foundation iteration](durable-synthetic-foundation-iteration.md) — the first browser-to-Spring-to-PostgreSQL lifecycle, attack results, limitations, and current NO-GO verdict.
 
 ## Status language
 

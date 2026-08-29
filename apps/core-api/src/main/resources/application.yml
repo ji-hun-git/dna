@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: genome-companion-core-api
+  datasource:
+    url: ${GC_DATABASE_URL:}
+    username: ${GC_DATABASE_USERNAME:}
+    password: ${GC_DATABASE_PASSWORD:}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+
+gc:
+  foundation:
+    enabled: false
+    allowed-origin: ${GC_ALLOWED_ORIGIN:}
+    secure-cookies: true
+    session-ttl: 30m
+    quarantine-root: ${GC_QUARANTINE_ROOT:}
+    audit-pepper: ${GC_AUDIT_PEPPER:}
+    allowed-document-sha256: ${GC_ALLOWED_DOCUMENT_SHA256:}
+
