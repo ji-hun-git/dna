@@ -1,7 +1,9 @@
 # Stop-ship security report — 2026-08-30
 
-**Scope:** production-foundation iteration from audited commit 0605518  
-**Method:** dependency advisory verification, source inspection, negative tests, production build, and release-policy attack  
+**Scope:** production-foundation iteration from audited commit 0605518
+
+**Method:** dependency advisory verification, source inspection, negative tests, production build, and release-policy attack
+
 **Real PHI:** not used and still prohibited
 
 ## Executive result

@@ -108,4 +108,3 @@ All remain **EXTERNAL GATE** or **DISABLED**.
 **PRIVATE BETA NO-GO**
 
 The local synthetic founder demo remains usable, but there is no authorization to process real PHI, activate external providers, deploy publicly, or call this a private beta. The next implementation is the Spring-owned durable synthetic vertical slice.
-
