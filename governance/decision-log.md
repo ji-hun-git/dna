@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: 2026-08-10 (Asia/Seoul)
+Last updated: 2026-08-30 (Asia/Seoul)
 
 | ID | Status | Decision | Why | Revisit trigger |
 |---|---|---|---|---|
@@ -37,10 +37,11 @@ Last updated: 2026-08-10 (Asia/Seoul)
 | D-031 | Accepted 2026-08-10 | Use Korean `앎` as the candidate consumer brand and `나를 알아가는 건강` as the preferred launch line; keep `ALM` and public adoption provisional until clearance. | The Korean name directly expresses the approved self-knowledge philosophy, while preliminary collision research makes `NOSCE`, `EONA`, and unqualified international `ALM` adoption weaker. | Any trademark, app-store, domain, language, accessibility, consumer-interpretation, or intended-use clearance failure keeps `Genome Companion` as the working identifier. |
 | D-032 | Accepted 2026-08-10 | Begin dependency-ordered, checkpointed local implementation in an isolated worktree, one indexed task at a time, starting with FND Task 1 and using synthetic data only. | The founder explicitly authorized actual development, design, and implementation after reviewing the final direction. | A named checkpoint fails; scope or data flow changes; real personal data, external accounts, procurement, deployment, or public brand adoption becomes necessary. |
 | D-033 | Accepted 2026-08-12 | Stage Kakao and Naver as OIDC Authorization Code + S256 PKCE identity providers behind the Korea BFF, and keep personal health retrieval on the separately consented Health Information Highway/MyHealthWay route. | Social login reduces onboarding friction, but it must not become health-data consent, a browser token flow, an email-based account merge, or a reason to scrape NHIS. MyHealthWay already supplies the formal dynamic-consent/FHIR route and remains post-MVP until onboarding and conformity approval. | Provider protocol/terms change; exact-domain egress cannot be preserved; account-link or recovery testing finds an takeover path; counsel or MyHealthWay approval requires a narrower design. |
+| D-034 | Accepted 2026-08-30 | Make the source-verifiable longitudinal Health History the product core; admit imported FHIR facts first as deterministic, provenance-preserving candidates and keep the assistant unable to mutate canonical facts. The first executable evidence-graph experiment is synthetic-only Synthea FHIR R4 `Observation` projection, with MyHealthWay disabled. | This converts the product thesis into a testable truth boundary while avoiding false claims of Korean conformance, clinical validity, government connectivity, or real-data readiness. | The candidate model fails correction/provenance tests; the approved KR Core/MyHealthWay implementation guide requires an incompatible model; or clinical/regulatory review narrows the intended use. |
 
 Approval owner and evidence for D-004 and D-017 through D-021: **Founder**, 2026-08-09, [`founder-approval-2026-08-09.md`](founder-approval-2026-08-09.md). That record also reaffirms D-005, D-014, and D-016 as the resolutions of founder gates 2, 7, and 8.
 
-D-030 through D-032 approval owner and evidence: **Founder**, 2026-08-10, [`founder-execution-authorization-2026-08-10.md`](founder-execution-authorization-2026-08-10.md). D-033 approval owner and evidence: **Founder**, 2026-08-12, [`founder-identity-access-authorization-2026-08-12.md`](founder-identity-access-authorization-2026-08-12.md). The brand, external-account, deployment, and personal-data gates remain conditions precedent to public use.
+D-030 through D-032 approval owner and evidence: **Founder**, 2026-08-10, [`founder-execution-authorization-2026-08-10.md`](founder-execution-authorization-2026-08-10.md). D-033 approval owner and evidence: **Founder**, 2026-08-12, [`founder-identity-access-authorization-2026-08-12.md`](founder-identity-access-authorization-2026-08-12.md). D-034 approval owner and evidence: **Founder**, 2026-08-30, [`founder-research-to-engineering-authorization-2026-08-30.md`](founder-research-to-engineering-authorization-2026-08-30.md). The brand, external-account, deployment, and personal-data gates remain conditions precedent to public use.
 
 ## Decision process
 

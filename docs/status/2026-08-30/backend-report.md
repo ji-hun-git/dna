@@ -14,6 +14,15 @@ The authoritative application boundary is Kotlin/Spring Boot. Next.js remains pr
 | Audit | content-free foundation events plus separate hash-chain schema/no-mutation trigger | VERIFIED LOCALLY; no production immutable sink |
 | Telemetry | correlation filter, PHI-safe logger, collector policy | VERIFIED LOCALLY; no hosted collector |
 | Infrastructure | AWS Organizations account/OU/SCP module | OpenTofu tests PASS; no external apply |
+| Synthetic FHIR evidence projection | strict HAPI R4 Bundle parsing into deterministic, provenance-linked quantity candidates with explicit rejection reasons | VERIFIED LOCALLY against unit/red-team fixtures and one pinned Synthea 4.0.0 patient Bundle; pure in-memory boundary only |
+
+## Synthetic evidence-graph boundary
+
+`SyntheticFhirEvidenceProjector` is deliberately not a Spring bean, HTTP endpoint, persistence service, network client, or AI component. It accepts only a synthetic application subject and a bounded FHIR R4 transaction/collection Bundle. The projector requires exactly one Patient; unique Bundle full URLs and Observation identities; a matching subject; final/amended/corrected status; one system+code pair; UCUM Quantity; offset-aware effective time; and a recorded `issued` time.
+
+Accepted results remain `CANDIDATE` and retain Bundle digest, resource/version, original Bundle location, source status, generator version/commit, and import time. Unsupported or ambiguous observations produce typed rejection codes. Source narrative and notes are not projected, so embedded prompt-like text does not become an instruction.
+
+The pinned external experiment used Synthea `4.0.0` commit `0185c09ea9d10a822c6f5f3ef9bdcbcbe960c813`. One 390-entry transaction Bundle contained 99 Observations: 80 strict quantity candidates were admitted and 19 were rejected (18 unsupported values, one ambiguous code). This is structural evidence only—not clinical accuracy, Korean realism, KR Core/MyHealthWay conformance, OCR quality, persistence, or production safety.
 
 ## Persistence
 
@@ -41,7 +50,8 @@ Enabled OIDC configuration requires HTTPS issuer/JWKS endpoints and nonblank bou
 - No production identity broker, provider callback/token store, rate limiter, account recovery, MFA, or step-up flow.
 - The visible frontend is not wired to the durable lifecycle; foundation browser E2E calls the API path directly.
 - No object store, malware scanner, isolated queue/worker, real OCR/model artifact, or network sandbox.
-- The deterministic candidate is a fixture, not extracted medical evidence.
+- The existing durable lifecycle still uses a deterministic fixture; the new Synthea FHIR projector is not wired to its candidate database or confirmation UI.
+- No KR Core validator, MyHealthWay implementation-guide adapter, candidate correction/supersession schema, or multi-source reconciliation exists.
 - No backup/restore, RPO/RTO, deletion replay for backups, production DB role design, TLS evidence, or secret manager.
 - No production ingress, container image/digest, hosted CI/CD, deployment, or observability sink.
 - Separate research deployment is decided but not implemented.
