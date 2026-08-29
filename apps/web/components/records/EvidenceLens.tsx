@@ -17,7 +17,7 @@ export type EvidenceLensRecord = {
   automation?: {
     layoutModel: string;
     semanticModel: string;
-    evaluationGate: string;
+    syntheticContractGate: string;
     executionBoundary: string;
     artifactPolicy: string;
     disposition: string;
@@ -164,7 +164,7 @@ export function EvidenceLens({ record, onBack }: EvidenceLensProps) {
                     <dl>
                       <div><dt>검토 중인 문서 인식 모델</dt><dd>{record.automation.layoutModel}</dd></div>
                       <div><dt>검토 중인 의료 언어 모델</dt><dd>{record.automation.semanticModel}</dd></div>
-                      <div><dt>출시 전 평가 기준</dt><dd>{record.automation.evaluationGate}</dd></div>
+                      <div><dt>현재 검증 수준</dt><dd>{record.automation.syntheticContractGate}</dd></div>
                       <div><dt>실행 방식</dt><dd>{record.automation.executionBoundary}</dd></div>
                       <div><dt>실행 파일 확인</dt><dd>{record.automation.artifactPolicy}</dd></div>
                       <div><dt>결과 처리 원칙</dt><dd>{record.automation.disposition}</dd></div>

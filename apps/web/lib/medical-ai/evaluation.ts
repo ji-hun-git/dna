@@ -21,8 +21,10 @@ export const candidateAdmissionThresholds: MedicalDocumentGateThresholds = {
   requiredAbstentionRecall: 1,
 };
 
-export type MedicalDocumentEvaluation = {
-  schemaVersion: "medical-document-evaluation.v1";
+export type MedicalDocumentSyntheticContractRegression = {
+  schemaVersion: "medical-document-synthetic-contract-regression.v1";
+  evidenceLevel: "synthetic-contract-regression-only";
+  productionAccuracyClaim: false;
   corpusId: string;
   pipelineId: string;
   metrics: {
@@ -81,7 +83,7 @@ export function evaluateMedicalDocumentPipeline(
   corpusInput: unknown,
   runsInput: readonly unknown[],
   thresholds = candidateAdmissionThresholds,
-): MedicalDocumentEvaluation {
+): MedicalDocumentSyntheticContractRegression {
   const corpus = medicalDocumentCorpusSchema.parse(corpusInput);
   const runs = runsInput.map((run) => medicalDocumentRunSchema.parse(run));
   const pipelineIds = new Set(runs.map((run) => run.pipelineId));
@@ -154,7 +156,9 @@ export function evaluateMedicalDocumentPipeline(
   if (hallucinationRate > thresholds.hallucinationRate) failures.push("hallucination_rate_above_threshold");
 
   return {
-    schemaVersion: "medical-document-evaluation.v1",
+    schemaVersion: "medical-document-synthetic-contract-regression.v1",
+    evidenceLevel: "synthetic-contract-regression-only",
+    productionAccuracyClaim: false,
     corpusId: corpus.corpusId,
     pipelineId,
     metrics: {

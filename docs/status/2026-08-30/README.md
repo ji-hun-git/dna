@@ -14,6 +14,7 @@ This folder reports what the repository can do now. It does not treat an impleme
 3. [Security and integrations report](security-and-integrations-report.md) — implemented safeguards, contract-only integrations, external approvals, and security gaps.
 4. [Verification and release-readiness report](verification-and-release-report.md) — commands run against this snapshot, results, limitations, and release verdict.
 5. [Delivery roadmap](delivery-roadmap.md) — the shortest evidence-based path from the current prototype to an authorized private beta.
+6. [Production-foundation stop-ship iteration](production-foundation-stop-ship-iteration.md) — dependency remediation, trust-boundary decision, adversarial results, and the current NO-GO verdict after commit 0605518.
 
 ## Status language
 
@@ -55,4 +56,3 @@ These reports summarize current code. Detailed future designs remain in:
 - [`docs/implementation/medical-document-runner.md`](../../implementation/medical-document-runner.md)
 - [`docs/operations/research-data-external-setup.md`](../../operations/research-data-external-setup.md)
 - [`risks/risk-register.md`](../../../risks/risk-register.md)
-

@@ -1,12 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
 
+async function openHealthApplication(page: Page, path: string) {
+  await page.goto(path);
+  const body = page.locator("body");
+  await expect(body).toHaveAttribute("data-application-id", "genome-companion-korea-web");
+  await expect(body).toHaveAttribute("data-application-instance", "playwright-genome-companion-korea-web");
+}
+
 async function expectNoHorizontalOverflow(page: Page) {
   const hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(hasOverflow).toBe(false);
 }
 
 test("홈에서 미확인 예시 항목 검토를 이어간다", async ({ page }, testInfo) => {
-  await page.goto("/");
+  await openHealthApplication(page, "/");
 
   await expect(page.getByRole("heading", { name: /건강 기록을\s*한곳에서 확인하세요/ })).toBeVisible();
   await expect(page.getByText(/실제 기관 연결 0곳/)).toBeVisible();
@@ -20,7 +27,7 @@ test("홈에서 미확인 예시 항목 검토를 이어간다", async ({ page }
 });
 
 test("파일 내용이 형식과 맞을 때만 확인·수정·제외한 항목을 로컬 시연에 추가한다", async ({ page }, testInfo) => {
-  await page.goto("/");
+  await openHealthApplication(page, "/");
   await page.getByRole("button", { name: "결과지 추가" }).first().click();
 
   const input = page.getByLabel("기기에서 결과지 선택");
@@ -61,7 +68,7 @@ test("파일 내용이 형식과 맞을 때만 확인·수정·제외한 항목�
 
 test("모바일에서도 공개 의료정보의 한계와 출처를 바로 이해한다", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/providers");
+  await openHealthApplication(page, "/providers");
 
   await expect(page.getByRole("heading", { name: /공개 의료정보를 출처와 함께 살펴봐요/ })).toBeVisible();
   await expect(page.getByText(/현재 기관·주소·항목·금액은 모두 화면 확인용 예시예요/)).toBeVisible();
@@ -77,7 +84,7 @@ test("모바일에서도 공개 의료정보의 한계와 출처를 바로 이�
 });
 
 test("데이터 관리 화면은 실행되지 않는 삭제 기능을 명확히 표시한다", async ({ page }) => {
-  await page.goto("/data-control");
+  await openHealthApplication(page, "/data-control");
 
   await expect(page.getByRole("heading", { name: "내 데이터는 내가 정해요" })).toBeVisible();
   await expect(page.getByText("예시 화면 · 서버에는 반영되지 않아요")).toBeVisible();
@@ -92,7 +99,7 @@ test("데이터 관리 화면은 실행되지 않는 삭제 기능을 명확히 
 });
 
 test("로그인과 건강정보 연결은 실제 연동 전 상태를 숨기지 않는다", async ({ page }) => {
-  await page.goto("/connections");
+  await openHealthApplication(page, "/connections");
 
   await expect(page.getByRole("heading", { name: "필요한 정보만 연결해요" })).toBeVisible();
   await expect(page.getByText("로그인은 건강정보 제공 동의가 아니에요")).toBeVisible();
@@ -106,7 +113,7 @@ test("로그인과 건강정보 연결은 실제 연동 전 상태를 숨기지 
 
 test("모바일 기록 화면에서 항목을 바꾸고 출처 이력을 확인한다", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/records");
+  await openHealthApplication(page, "/records");
 
   await expect(page.getByRole("heading", { name: /시간이 지나며\s*무엇이 바뀌었는지 확인하세요/ })).toBeVisible();
   await expect(page.getByText("실제 파일이나 기관 API에서 가져온 기록이 아니에요")).toBeVisible();

@@ -14,7 +14,7 @@ body {
   background: var(--gc-color-surface-canvas);
   font-family: var(--gc-type-sans);
   font-weight: 400;
-  line-height: var(--gc-type-body-line);
+  line-height: var(--gc-type-bodyLine);
   letter-spacing: -0.012em;
   font-synthesis: none;
   text-rendering: optimizeLegibility;

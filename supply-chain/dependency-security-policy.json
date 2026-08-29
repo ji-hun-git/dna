@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "dependency-security-policy.v1",
+  "reviewedAt": "2026-08-30",
+  "releasePolicy": {
+    "unresolvedCriticalMaximum": 0,
+    "unresolvedHighMaximum": 0,
+    "productionAuditCommand": "pnpm audit --prod --audit-level high",
+    "exceptionRegistry": "docs/security/dependency-exceptions.md"
+  },
+  "runtime": {
+    "node": {
+      "exactVersion": "24.20.0",
+      "releaseLine": "Krypton LTS",
+      "officialReleaseUrl": "https://nodejs.org/en/blog/release/v24.20.0",
+      "artifacts": {
+        "linux-x64-tar-xz": {
+          "sha256": "2f2c0da162318f0de47665410c7c8c2ed3d36c8f3105de4bbc61176c70a7cbf2"
+        },
+        "windows-x64-zip": {
+          "sha256": "6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba"
+        }
+      }
+    },
+    "productionImage": {
+      "status": "NOT_IMPLEMENTED",
+      "digest": null,
+      "releaseBlocking": true
+    }
+  },
+  "packageManager": {
+    "name": "pnpm",
+    "exactVersion": "11.20.0"
+  },
+  "frameworks": {
+    "next": {
+      "exactVersion": "16.3.3",
+      "minimumSecurityVersion": "16.3.3",
+      "advisory": "GHSA-p293-qw3h-jr36",
+      "officialSecurityReleaseUrl": "https://nextjs.org/blog/august-2026-security-release"
+    }
+  }
+}

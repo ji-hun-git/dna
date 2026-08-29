@@ -3,13 +3,17 @@
   "private": true,
   "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee",
   "engines": {
-    "node": ">=24 <25"
+    "node": "24.20.0",
+    "pnpm": "11.20.0"
   },
   "scripts": {
     "tokens": "pnpm --filter @gc/design-tokens generate",
     "web:test": "pnpm --filter @gc/web test",
+    "security:runtime-policy": "node scripts/security/check-runtime-policy.mjs",
+    "security:release-policy": "node scripts/security/check-runtime-policy.mjs --release",
+    "security:production-audit": "pnpm audit --prod --audit-level high",
     "auth-security:gate": "pnpm --filter @gc/web auth-security:gate",
-    "medical-ai:gate": "pnpm --filter @gc/web medical-ai:gate",
+    "medical-ai:synthetic-contract-gate": "pnpm --filter @gc/web medical-ai:synthetic-contract-gate",
     "research-evidence:gate": "pnpm --filter @gc/web research-evidence:gate",
     "medical-ai:runner:preflight": "pnpm --filter @gc/web medical-ai:runner:preflight",
     "medical-ai:runner:fixture": "pnpm --filter @gc/web medical-ai:runner:fixture"

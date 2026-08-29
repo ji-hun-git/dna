@@ -11,6 +11,11 @@ import unsafeRuns from "./fixtures/medical-ai/unsafe-general-vlm.runs.json";
 it("admits only an exact candidate-only pipeline with localized evidence and required abstentions", () => {
   const report = evaluateMedicalDocumentPipeline(corpus, referenceRuns);
 
+  expect(report).toMatchObject({
+    schemaVersion: "medical-document-synthetic-contract-regression.v1",
+    evidenceLevel: "synthetic-contract-regression-only",
+    productionAccuracyClaim: false,
+  });
   expect(report.pipelineId).toBe("paddleocr-vl-1.6.medgemma-1.5-4b");
   expect(report.metrics).toMatchObject({
     documentCount: 2,

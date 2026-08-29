@@ -23,7 +23,7 @@ const correctedRecord = {
   automation: {
     layoutModel: "PaddleOCR-VL 1.6",
     semanticModel: "MedGemma 1.5 4B",
-    evaluationGate: "출시 전 의료 문서 평가를 통과해야 함",
+    syntheticContractGate: "현재는 합성 문서 계약 회귀 테스트만 통과함",
     executionBoundary: "기기 안에서 오프라인으로 실행할 계획",
     artifactPolicy: "실행 프로그램과 모델의 파일 확인값이 모두 맞을 때만 사용",
     disposition: "자동 결과는 후보만 보여주고 사용자가 확인하기 전에는 저장하지 않음",
@@ -43,7 +43,7 @@ it("shows exact source location, correction history, and a non-diagnostic bounda
   expect(screen.getByText("아래 도구는 아직 이 예시 기록을 만드는 데 사용하지 않았어요.")).toBeVisible();
   expect(screen.getByText("PaddleOCR-VL 1.6")).toBeVisible();
   expect(screen.getByText("MedGemma 1.5 4B")).toBeVisible();
-  expect(screen.getByText("출시 전 의료 문서 평가를 통과해야 함")).toBeVisible();
+  expect(screen.getByText("현재는 합성 문서 계약 회귀 테스트만 통과함")).toBeVisible();
   expect(screen.getByText("기기 안에서 오프라인으로 실행할 계획")).toBeVisible();
   expect(screen.getByText("실행 프로그램과 모델의 파일 확인값이 모두 맞을 때만 사용")).toBeVisible();
   expect(await axe(container)).toHaveNoViolations();
