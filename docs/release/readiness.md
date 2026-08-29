@@ -12,6 +12,6 @@ It exits:
 
 Current verdict: **NO_GO for a real-data private beta**.
 
-Local dependency, durable synthetic lifecycle, authorization-negative, session invalidation, consent revocation, and synthetic deletion checks pass. Production image, isolated worker, production audit/provenance, backup/restore, hosted DevSecOps, and privacy/regulatory gates do not.
+Local dependency, durable synthetic lifecycle, strict OIDC/purpose-consent boundary, authorization-negative, audit-mutation, session invalidation, consent revocation, and synthetic deletion checks pass. Production image, isolated worker, production audit sink, backup/restore, hosted DevSecOps, and privacy/regulatory gates do not.
 
 This artifact must be updated from evidence. A dependency declaration, mock, UI state, or unit test alone cannot change a gate to PASS.

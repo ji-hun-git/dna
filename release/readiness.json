@@ -26,7 +26,13 @@
       "id": "authorization_negative_suite",
       "status": "PASS",
       "blocking": true,
-      "evidence": "wrong identity, CSRF, BOLA, revoked consent, rejected document, and old session are denied"
+      "evidence": "wrong identity, JWT scope, CSRF, BOLA, cross-subject consent, revoked consent, rejected document, and old session are denied"
+    },
+    {
+      "id": "purpose_consent_oidc_boundary",
+      "status": "PASS",
+      "blocking": true,
+      "evidence": "synthetic JWT through Spring method security persists subject-scoped purpose consent and idempotent revoke outbox in PostgreSQL"
     },
     {
       "id": "quarantine_and_isolated_worker",
@@ -38,7 +44,7 @@
       "id": "provenance_and_audit",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "source digest, evidence page, confirmation, and safe audit persist; production audit storage is absent"
+      "evidence": "source digest, evidence page, confirmation, safe audit, hash-chain schema, and database mutation guard persist locally; production immutable sink is absent"
     },
     {
       "id": "deletion_and_session_invalidation",
@@ -56,7 +62,7 @@
       "id": "hosted_devsecops",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "no hosted SAST, secret, container, IaC, license, SBOM signing, or provenance gate"
+      "evidence": "local OpenTofu organization tests and SBOM generation pass; no hosted SAST, secret, container, IaC, license, SBOM signing, or provenance gate"
     },
     {
       "id": "privacy_regulatory_review",

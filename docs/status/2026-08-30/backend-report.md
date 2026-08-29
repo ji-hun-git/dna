@@ -1,81 +1,51 @@
-# Backend and server-logic report
+# Backend report
 
-## Runtime inventory
+## Current executable backend
 
-The repository contains two different kinds of backend work. They must not be confused.
+The authoritative application boundary is Kotlin/Spring Boot. Next.js remains presentation and validated same-origin forwarding only.
 
-1. `apps/core-api`: a Kotlin/Spring Boot application skeleton intended to become the personal health-record core.
-2. `apps/web/lib`: tested TypeScript contracts and deterministic safety logic, some marked server-only, but not exposed through HTTP routes or connected to production infrastructure.
-
-## Kotlin/Spring core API
-
-### What exists
-
-- Java 21 toolchain and Kotlin/Spring Boot build.
-- Spring Web, Security, OAuth2 resource server, Actuator, JDBC, Validation, Flyway, PostgreSQL, HAPI FHIR R4, ArchUnit, and Testcontainers dependencies.
-- A bootable `CoreApiApplication` with one cached HAPI FHIR R4 context bean.
-- A component-scan exclusion that keeps the public-data package out of the personal-data application.
-- Three public port contracts:
-  - `DocumentIntakePort.requestUpload`
-  - `HealthRecordQuery.findBySubjectAndId`
-  - `ProfileDeletionPort.requestDeletion`
-- Architecture tests for public/personal module separation and absent prohibited medical/genomic/referral/training routes.
-
-### What does not exist
-
-- REST controllers or mapped product endpoints: **0**.
-- Implementations of the three port interfaces: **0**.
-- Database migrations or SQL schemas: **0**.
-- Entities, repositories, transactions, or production datasource configuration: **0**.
-- Implemented identity/account, consent, authorization, audit, export, deletion, document, or health-record modules beyond the three interfaces.
-- FHIR resource parsing, validation, persistence, search, versioning, or provenance endpoints.
-- Object storage, malware scanning, work queue, OCR worker, notification worker, or scheduled deletion jobs.
-
-Declaring JDBC, Flyway, PostgreSQL, and HAPI FHIR dependencies does not make these systems operational. The smoke tests explicitly exclude datasource and Flyway autoconfiguration.
-
-## TypeScript server and domain modules
-
-| Module | Executable local capability | Production connection |
+| Subsystem | Executable capability | Status |
 |---|---|---|
-| OAuth transaction | Creates bounded state/nonce/PKCE material; validates callback state, expiry, replay marker, and PKCE secret; verifies bounded local JWKS ID tokens | **None.** No start/callback route, token exchange, transaction store, session cookie, provider client, or account store |
-| Anti-hack workflow | Strict attack-signal schema, risk/disposition mapping, HMAC-redacted event construction | **None.** Actions such as revoke, rotate, rate-limit, alert, and freeze are returned as instructions, not performed by infrastructure |
-| Local document inspection | Browser-side size/type/signature checks and SHA-256 receipt | **None.** No upload, quarantine, scan, OCR, or persisted receipt |
-| Medical document evaluation | Scores strict synthetic extraction runs and enforces exact candidate-only thresholds | **Synthetic fixture only** |
-| Offline/OCI medical runner | Builds digest-bound, network-free job contracts and verifies signed immutable approvals | **No Docker runtime, downloaded weights, reviewed artifacts, or real inference path** |
-| Research evidence agent | Deterministic offline ranking, rights decisions, source fingerprints, drift blocks, and evidence package | **Offline snapshot only.** Live AIDA/DataON connectors are disabled |
-| Public provider data | Strict schema for synthetic provider and price rows | **No HIRA/NHIS/MOHW network adapter** |
-| Consent and record views | Strict synthetic view models | **No durable consent ledger or record service** |
+| Foundation session | subject-specific local credential, opaque cookie, hashed session/CSRF, expiry/invalidation | VERIFIED LOCALLY, synthetic broker only |
+| Foundation lifecycle | purpose consent, upload request, quarantine, inspection, extraction job, candidate, confirmation, record, reload, revoke, delete | VERIFIED LOCALLY with PostgreSQL/local filesystem |
+| OIDC resource server | issuer/audience/client/claim validation, exact normalized scopes, 401/403 problem responses | VERIFIED LOCALLY with synthetic JWT; external issuer disabled |
+| Purpose consent | durable grants, exact categories/operations, subject-scoped list, idempotent revoke outbox | VERIFIED LOCALLY with PostgreSQL |
+| Workload identity | Ed25519 purpose-token issuer and signed JWKS ceremony contracts | VERIFIED LOCALLY; runtime switch disabled and no KMS |
+| Audit | content-free foundation events plus separate hash-chain schema/no-mutation trigger | VERIFIED LOCALLY; no production immutable sink |
+| Telemetry | correlation filter, PHI-safe logger, collector policy | VERIFIED LOCALLY; no hosted collector |
+| Infrastructure | AWS Organizations account/OU/SCP module | OpenTofu tests PASS; no external apply |
 
-There are **zero** `app/**/route.ts` handlers. The server-marked libraries therefore remain internal code and test harnesses rather than an application backend.
+## Persistence
 
-## Data architecture state
+Flyway applies three ordered migrations:
 
-| Capability | Current state |
-|---|---|
-| Relational database | Not implemented |
-| Schema migrations | Not implemented |
-| Object/document storage | Not implemented |
-| Session/transaction store | Not implemented |
-| Cache/rate-limit store | Not implemented |
-| Queue/job orchestration | Not implemented |
-| Audit-event persistence | Not implemented |
-| Backup/restore/deletion tombstones | Not implemented |
-| Observability pipeline | Not implemented |
-| Secrets manager integration | Contract references only |
+1. `V1__foundation_lifecycle.sql`
+2. `V2__fnd_consent_and_outbox.sql`
+3. `V3__fnd_security_audit.sql`
 
-No real personal health information should enter this repository or application in its current state.
+Local PostgreSQL 16.15 applied all three successfully. The foundation schema stores only synthetic test state in the current environment. Candidate confirmation, revocation, deletion, denial-audit persistence, and DB-enforced audit immutability have integration coverage.
 
-## Boundary strengths already present
+## Security configuration
 
-- Public research/public-provider data and personal record concepts are kept logically separate.
-- Medical extraction output is modeled as a candidate awaiting human confirmation, not clinical truth.
-- OAuth account identity is issuer plus subject, not profile email.
-- Research rights default to blocked or metadata-only.
-- Prohibited diagnosis, prescription, raw-genome, referral-commission, and user-data-training routes are tested as absent.
+All sensitive runtime surfaces default off:
 
-These are good invariants to preserve when real services are added.
+- `security.oidc.enabled=false`
+- `gc.consent.enabled=false`
+- `gc.workload-tokens.enabled=false`
+- `gc.foundation.enabled=false`
+
+Enabled OIDC configuration requires HTTPS issuer/JWKS endpoints and nonblank bounded identifiers. Foundation and OIDC use ordered, path-scoped security chains and one shared UTC clock.
+
+## Remaining backend gaps
+
+- No production identity broker, provider callback/token store, rate limiter, account recovery, MFA, or step-up flow.
+- The visible frontend is not wired to the durable lifecycle; foundation browser E2E calls the API path directly.
+- No object store, malware scanner, isolated queue/worker, real OCR/model artifact, or network sandbox.
+- The deterministic candidate is a fixture, not extracted medical evidence.
+- No backup/restore, RPO/RTO, deletion replay for backups, production DB role design, TLS evidence, or secret manager.
+- No production ingress, container image/digest, hosted CI/CD, deployment, or observability sink.
+- Separate research deployment is decided but not implemented.
 
 ## Backend verdict
 
-The backend is not an MVP backend yet. It is a solid set of domain seams, security contracts, and testable safety invariants around a bootable Spring shell. The next meaningful milestone is one complete, synthetic end-to-end vertical slice with real local persistence—not additional disconnected interfaces.
-
+The backend is now a real durable synthetic foundation, not merely interfaces. It remains deliberately too small and too local for real health information. Private beta with real data is NO-GO.

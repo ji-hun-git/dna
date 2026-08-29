@@ -1,6 +1,6 @@
 # Stop-ship security report — 2026-08-30
 
-**Scope:** production-foundation iteration from audited commit 0605518
+**Scope:** historical production-foundation iteration from audited commit 0605518; current status is in `docs/status/2026-08-30/integrated-security-foundation-iteration.md`
 
 **Method:** dependency advisory verification, source inspection, negative tests, production build, and release-policy attack
 
@@ -8,7 +8,7 @@
 
 ## Executive result
 
-The known Next.js stop-ship version and broad local runtime declaration are remediated in source. The production audit reports no known vulnerable production dependency. Release remains fail-closed because no production runtime image or immutable image digest exists, and there is still no runtime identity, authorization, consent, persistence, document-security, deletion, or audit implementation.
+The known Next.js stop-ship version and broad local runtime declaration were remediated in source. Later commits added a locally verified synthetic identity, authorization, consent, persistence, document lifecycle, deletion, and audit foundation. Release remains fail-closed because the production image, hostile-file worker, backup/restore, hosted controls, and external/privacy gates remain absent.
 
 ## Findings
 
@@ -30,13 +30,13 @@ The known Next.js stop-ship version and broad local runtime declaration are reme
 - **Fix:** exact source/tooling policy plus official artifact checksums.
 - **Residual risk / mitigation:** production image is **NOT IMPLEMENTED** and has no digest. security:release-policy intentionally exits 1 until both are production verified. This remains release-blocking.
 
-### SEC-003 — High — No enforceable sensitive-data backend — open
+### SEC-003 — High — No enforceable sensitive-data backend — partially remediated after this audit
 
 - **Rule:** identity, sessions, authorization, consent, PHI lifecycle, audit, and deletion must be runtime enforced.
 - **Location:** apps/core-api/src/main/kotlin/kr/co/genomecompanion; docs/status/2026-08-30/backend-report.md.
-- **Evidence:** Spring has three port interfaces and zero controllers, migrations, repositories, persistence adapters, or production transactions. Next has zero route handlers.
-- **Impact:** no private-beta user, record, document, or authorization claim can be made; the current controls are contracts and UI behavior only.
-- **Fix:** implement the synthetic Spring-owned BFF vertical slice defined by ADR-001 before feature expansion.
+- **Historical evidence:** at commit 0605518 Spring had three port interfaces and zero controllers, migrations, repositories, persistence adapters, or production transactions.
+- **Current evidence:** the Spring-owned synthetic lifecycle and purpose-consent API now persist through Flyway/PostgreSQL and pass browser/authorization/deletion tests. The visible UI is not yet wired to that authority, and production document/worker/storage/operations are absent.
+- **Impact:** no private-beta or real-data claim can be made.
 - **Mitigation:** external login and health connectors remain disabled; real PHI remains prohibited.
 
 ### SEC-004 — Medium — E2E could exercise an unrelated local application — remediated

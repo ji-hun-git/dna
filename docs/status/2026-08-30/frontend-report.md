@@ -4,14 +4,14 @@
 
 | Layer | Current implementation |
 |---|---|
-| Framework | Next.js `16.3.0`, App Router, React `19.2.8`, TypeScript `5.9.2` |
-| Runtime/tooling | Node `>=24 <25`, pnpm `11.20.0`, Turbopack production build |
+| Framework | Next.js `16.3.3`, App Router, React `19.2.8`, TypeScript `5.9.2` |
+| Runtime/tooling | exact Node `24.20.0`, exact pnpm `11.20.0`, Turbopack production build |
 | Styling | Tailwind CSS `4.3.3`, one large global stylesheet, three CSS Modules, generated `@gc/design-tokens` package |
 | UI primitive | Radix Dialog for correction and consent confirmation dialogs |
 | Fonts | Locally bundled Pretendard Variable for Korean UI; locally bundled IBM Plex Mono 400/500/600 for numerical and evidence-ledger details |
 | Testing | Vitest, Testing Library, jest-axe, Storybook with a11y addon, Playwright |
 
-The production build prerenders every current page as static content. There are no server-rendered account pages and no Next.js API route handlers.
+The production build prerenders every current page as static content. There are no server-rendered account pages and no Next.js API route handlers. A validated configuration-only rewrite can forward `/api/foundation` to Spring; Next does not authorize or persist the request.
 
 ## Route inventory
 
@@ -35,7 +35,7 @@ The strongest implemented flow is the local result-document prototype:
 5. The user confirms, edits, or excludes each example item.
 6. Confirmed counts and edited example values return to the home screen in React state.
 
-Reloading the page clears the state. There is no IndexedDB, local-storage, session-storage, cookie, or backend persistence path for these records.
+Reloading the visible demo clears its React state. A separate browser foundation test proves a durable Spring/PostgreSQL lifecycle through the Next rewrite, but the visible product screens are not yet wired to it.
 
 ## Design and UI state
 
@@ -69,10 +69,10 @@ This is meaningful automated coverage, not a substitute for a manual screen-read
 
 ## What is not frontend-complete
 
-- There is no authenticated application shell or live session state.
+- There is no authenticated application shell or visible server-owned session state.
 - There are no loading, retry, partial-data, token-expiry, provider-outage, or backend-conflict states connected to real services.
 - There is no production upload progress, quarantine result, OCR job status, or server-confirmed save state.
-- Consent revocation and deletion do not reach a server.
+- Visible consent revocation and deletion do not reach the durable Spring lifecycle yet.
 - Public provider results and research results do not refresh from a live connector.
 - Analytics, support tooling, notification settings, account recovery, export, and real deletion experiences are not implemented.
 - There is no visual-regression baseline or supported-browser matrix.
@@ -82,12 +82,11 @@ This is meaningful automated coverage, not a substitute for a manual screen-read
 | Finding | Impact | Recommended action |
 |---|---|---|
 | `apps/web/app/globals.css` is 3,949 lines | Cross-page changes can create hidden cascade regressions | Continue moving route-specific styles to CSS Modules and keep only tokens/reset/shared primitives global |
-| Generated token is `--gc-type-bodyLine`, while body references `--gc-type-body-line` | The intended `1.6` body line height is not applied through that variable | Align the source token name or CSS reference and add a generated-token consumption test |
 | Global styles and three CSS Modules use different organization patterns | Slows component ownership and visual regression diagnosis | Establish a documented component/style boundary before adding more screens |
-| Standard local E2E config may reuse any service already listening on port 3000 | Tests can fail against the wrong application | Use a dedicated port, or validate an app identity endpoint before `reuseExistingServer` |
 | Storybook bundles the full Pretendard variable font and reports chunks above 500 kB | Storybook load is heavier; production impact was not measured in this audit | Measure actual production assets and subset/split only if Korean glyph coverage remains correct |
+
+The earlier token mismatch and wrong-server E2E findings are closed: generated-token consumption is tested, regular E2E owns port 3137 without reuse, foundation E2E owns port 3138, and both assert the application identity.
 
 ## Frontend verdict
 
 The frontend is suitable for founder demos, UX research with synthetic data, copy review, and continued component development. It is not suitable for real user onboarding or health-data processing until authenticated backend vertical slices replace the in-memory fixtures and the production security/privacy gates are met.
-
