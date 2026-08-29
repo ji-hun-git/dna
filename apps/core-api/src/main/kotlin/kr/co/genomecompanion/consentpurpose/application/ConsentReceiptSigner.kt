@@ -12,8 +12,10 @@ import org.springframework.context.annotation.Profile
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kr.co.genomecompanion.consentpurpose.api.SubjectPseudonymizer
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 
 @Component
+@ConditionalOnProperty(prefix = "gc.consent", name = ["enabled"], havingValue = "true")
 class ConsentReceiptSigner(
     private val mapper: ObjectMapper = ObjectMapper(),
 ) {
@@ -40,6 +42,7 @@ class ConsentReceiptSigner(
 
 @Component
 @Profile("!test")
+@ConditionalOnProperty(prefix = "gc.consent", name = ["enabled"], havingValue = "true")
 class HmacSubjectPseudonymizer(
     @Value("\${SUBJECT_PSEUDONYM_HMAC_B64}") encodedKey: String,
 ) : SubjectPseudonymizer {

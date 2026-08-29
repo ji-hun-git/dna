@@ -1,14 +1,23 @@
 package kr.co.genomecompanion.identityaccount.security
 
-import jakarta.validation.constraints.NotBlank
+import java.net.URI
 import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.validation.annotation.Validated
 
 @ConfigurationProperties("security.oidc")
-@Validated
 data class OidcProperties(
-    @field:NotBlank val issuer: String,
-    @field:NotBlank val jwkSetUri: String,
-    @field:NotBlank val audience: String,
-    @field:NotBlank val clientId: String,
-)
+    val issuer: String,
+    val jwkSetUri: String,
+    val audience: String,
+    val clientId: String,
+) {
+    fun validateEnabledConfiguration() {
+        val issuerUri = URI.create(issuer)
+        val jwkUri = URI.create(jwkSetUri)
+        require(issuerUri.scheme == "https" && issuerUri.host != null && issuerUri.userInfo == null)
+        require(issuerUri.query == null && issuerUri.fragment == null)
+        require(jwkUri.scheme == "https" && jwkUri.host != null && jwkUri.userInfo == null)
+        require(jwkUri.fragment == null)
+        require(audience.isNotBlank() && audience.none(Char::isWhitespace))
+        require(clientId.isNotBlank() && clientId.none(Char::isWhitespace))
+    }
+}

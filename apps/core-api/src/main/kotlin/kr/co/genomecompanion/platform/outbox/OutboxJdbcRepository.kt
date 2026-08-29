@@ -1,11 +1,11 @@
 package kr.co.genomecompanion.platform.outbox
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 
 @Repository
-@ConditionalOnBean(JdbcTemplate::class)
+@ConditionalOnProperty(prefix = "gc.consent", name = ["enabled"], havingValue = "true")
 class OutboxJdbcRepository(
     private val jdbc: JdbcTemplate,
 ) : OutboxRepository {

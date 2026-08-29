@@ -69,9 +69,6 @@ class FoundationSecurityConfiguration(
     }
 
     @Bean
-    fun foundationClock(): Clock = Clock.systemUTC()
-
-    @Bean
     @Order(1)
     fun foundationSecurityFilterChain(
         http: HttpSecurity,

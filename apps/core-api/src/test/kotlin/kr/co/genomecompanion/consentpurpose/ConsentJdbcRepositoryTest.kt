@@ -35,7 +35,7 @@ class ConsentJdbcRepositoryTest {
         val jdbc = JdbcTemplate(dataSource)
         jdbc.execute("drop table if exists platform_outbox")
         jdbc.execute("drop table if exists consent_grant")
-        ResourceDatabasePopulator(ClassPathResource("db/migration/V1__fnd_consent_and_outbox.sql")).execute(dataSource)
+        ResourceDatabasePopulator(ClassPathResource("db/migration/V2__fnd_consent_and_outbox.sql")).execute(dataSource)
         repository = ConsentJdbcRepository(jdbc, ObjectMapper())
         outbox = OutboxJdbcRepository(jdbc)
     }

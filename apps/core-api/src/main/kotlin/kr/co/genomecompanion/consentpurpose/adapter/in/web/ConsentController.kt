@@ -6,7 +6,7 @@ import kr.co.genomecompanion.consentpurpose.api.ConsentService
 import kr.co.genomecompanion.consentpurpose.api.ConsentView
 import kr.co.genomecompanion.consentpurpose.api.GrantConsentCommand
 import kr.co.genomecompanion.identityaccount.security.CallerPrincipalResolver
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Profile
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/v1/consents")
-@ConditionalOnBean(ConsentService::class)
+@ConditionalOnProperty(prefix = "gc.consent", name = ["enabled"], havingValue = "true")
 @Profile("!test")
 class ConsentController(
     private val service: ConsentService,

@@ -10,12 +10,12 @@ import kr.co.genomecompanion.consentpurpose.api.DataCategory
 import kr.co.genomecompanion.consentpurpose.api.DataSource
 import kr.co.genomecompanion.consentpurpose.domain.ConsentGrant
 import kr.co.genomecompanion.identityaccount.api.DataRegion
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 
 @Repository
-@ConditionalOnBean(JdbcTemplate::class)
+@ConditionalOnProperty(prefix = "gc.consent", name = ["enabled"], havingValue = "true")
 class ConsentJdbcRepository(
     private val jdbc: JdbcTemplate,
     private val mapper: ObjectMapper,

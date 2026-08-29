@@ -12,8 +12,10 @@ import kr.co.genomecompanion.consentpurpose.api.ConsentOptionsService
 import kr.co.genomecompanion.consentpurpose.api.ConsentOptionsView
 import kr.co.genomecompanion.identityaccount.api.DataRegion
 import org.springframework.stereotype.Component
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 
 @Component
+@ConditionalOnProperty(prefix = "gc.consent", name = ["enabled"], havingValue = "true")
 class ReleasePinnedConsentOptionsService(
     private val resourceName: String = "/consent/consent-options-v1.json",
 ) : ConsentOptionsService {

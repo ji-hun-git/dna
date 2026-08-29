@@ -1,6 +1,7 @@
 package kr.co.genomecompanion
 
 import ca.uhn.fhir.context.FhirContext
+import java.time.Clock
 import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -25,6 +26,9 @@ import org.springframework.context.annotation.FilterType
     ],
 )
 class CoreApiApplication {
+    @Bean
+    fun applicationClock(): Clock = Clock.systemUTC()
+
     @Bean
     fun fhirContext(): FhirContext = FhirContext.forR4Cached()
 }

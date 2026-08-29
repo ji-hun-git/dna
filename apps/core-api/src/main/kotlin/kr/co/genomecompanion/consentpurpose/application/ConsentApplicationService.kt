@@ -20,12 +20,12 @@ import kr.co.genomecompanion.identityaccount.api.CallerPrincipal
 import kr.co.genomecompanion.identityaccount.api.DataRegion
 import kr.co.genomecompanion.platform.outbox.OutboxEvent
 import kr.co.genomecompanion.platform.outbox.OutboxRepository
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-@ConditionalOnBean(ConsentRepository::class, OutboxRepository::class, SubjectPseudonymizer::class)
+@ConditionalOnProperty(prefix = "gc.consent", name = ["enabled"], havingValue = "true")
 class ConsentApplicationService(
     private val repository: ConsentRepository,
     private val outbox: OutboxRepository,

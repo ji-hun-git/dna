@@ -10,6 +10,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.dao.DataAccessException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
@@ -41,6 +42,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
     @BeforeEach
     fun resetSyntheticDatabase() {
+        jdbc.execute("TRUNCATE TABLE security_audit_event")
         jdbc.execute(
             """
             TRUNCATE TABLE
@@ -62,7 +64,46 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun securityAuditRowsAreDatabaseEnforcedAppendOnly() {
+        val eventId = UUID.fromString("00000000-0000-0000-0000-000000000501")
+        jdbc.update(
+            """
+            INSERT INTO security_audit_event(
+                event_id, event_type, actor_digest, resource_digest, purpose, outcome,
+                correlation_id, occurred_at, previous_hash, event_hash
+            ) VALUES (?, ?, ?, NULL, NULL, ?, ?, CURRENT_TIMESTAMP, ?, ?)
+            """.trimIndent(),
+            eventId,
+            "SYNTHETIC_APPEND_ONLY_PROBE",
+            "hmac256:${"a".repeat(64)}",
+            "ALLOW",
+            UUID.fromString("00000000-0000-0000-0000-000000000502"),
+            "0".repeat(64),
+            "b".repeat(64),
+        )
+
+        org.assertj.core.api.Assertions.assertThatThrownBy {
+            jdbc.update(
+                "UPDATE security_audit_event SET event_type = ? WHERE event_id = ?",
+                "MUTATION_MUST_FAIL",
+                eventId,
+            )
+        }.isInstanceOf(DataAccessException::class.java)
+
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT event_type FROM security_audit_event WHERE event_id = ?",
+                String::class.java,
+                eventId,
+            ),
+        ).isEqualTo("SYNTHETIC_APPEND_ONLY_PROBE")
+    }
+
+    @Test
     fun persistsAttacksRevokesAndDeletesOneSyntheticLifecycle() {
+        mockMvc.perform(get("/v1/not-mapped"))
+            .andExpect(status().isUnauthorized)
+
         mockMvc.perform(
             post("/api/foundation/session")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -390,6 +431,11 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             registry.add("spring.datasource.url") { checkNotNull(System.getenv("GC_TEST_POSTGRES_URL")) }
             registry.add("spring.datasource.username") { "postgres" }
             registry.add("spring.datasource.password") { "" }
+            registry.add("security.oidc.enabled") { "true" }
+            registry.add("security.oidc.issuer") { "https://issuer.test.invalid" }
+            registry.add("security.oidc.jwk-set-uri") { "https://issuer.test.invalid/.well-known/jwks.json" }
+            registry.add("security.oidc.audience") { "https://api.genome-companion.test" }
+            registry.add("security.oidc.client-id") { "synthetic-web-client" }
             registry.add("gc.foundation.enabled") { "true" }
             registry.add("gc.foundation.allowed-origin") { allowedOrigin }
             registry.add("gc.foundation.secure-cookies") { "false" }
