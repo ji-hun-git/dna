@@ -68,6 +68,7 @@ jobs:
           clamav_bin=/tmp/gc-clamav-1.5.4/usr/local/bin/clamscan
           test "$(LD_LIBRARY_PATH="$clamav_lib_path" "$clamav_bin" --version)" = "ClamAV 1.5.4"
           echo "LD_LIBRARY_PATH=$clamav_lib_path" >> "$GITHUB_ENV"
+          echo "CVD_CERTS_DIR=/tmp/gc-clamav-1.5.4/usr/local/etc/certs" >> "$GITHUB_ENV"
           echo "GC_TEST_CLAMSCAN_PATH=$clamav_bin" >> "$GITHUB_ENV"
       - name: Install locked JavaScript dependencies
         run: pnpm install --frozen-lockfile
@@ -84,13 +85,23 @@ jobs:
           pnpm research:test
           pnpm research:build
       - name: Test Spring, document boundary, worker, Flyway, and PostgreSQL lifecycle
+        id: jvm-tests
         run: ./gradlew test --no-daemon
+      - name: Preserve JVM failure evidence
+        if: ${{ failure() && steps.jvm-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: foundation-jvm-failure-evidence
+          path: "**/build/test-results/test/**"
+          if-no-files-found: error
+          retention-days: 7
       - name: Install browser used by the bounded lifecycle test
         run: pnpm --dir apps/web exec playwright install --with-deps chromium
       - name: Run browser-to-Spring-to-worker lifecycle
+        id: foundation-e2e
         run: pnpm foundation:e2e
       - name: Preserve browser failure evidence
-        if: failure()
+        if: ${{ failure() && steps.foundation-e2e.outcome == 'failure' }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: foundation-browser-failure-evidence
