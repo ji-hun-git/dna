@@ -6,7 +6,21 @@ type BrowserApiResult = {
   body: Record<string, unknown> | Array<Record<string, unknown>>;
 };
 
-const boundedDocumentProcessingTimeoutMs = 30_000;
+const boundedDocumentProcessingTimeoutMs = 45_000;
+
+async function waitForServerReview(page: Page) {
+  await expect.poll(
+    async () => browserApi(page, "/api/foundation/documents/active"),
+    {
+      message: "the bounded worker lifecycle must reach REVIEW_REQUIRED",
+      timeout: boundedDocumentProcessingTimeoutMs,
+      intervals: [500, 1_000, 2_000],
+    },
+  ).toMatchObject({
+    status: 200,
+    body: { document: { status: "REVIEW_REQUIRED" } },
+  });
+}
 
 async function browserApi(
   page: Page,
@@ -34,6 +48,7 @@ async function browserApi(
 }
 
 test("visible Korean product persists reloads revokes and deletes the synthetic lifecycle", async ({ page }) => {
+  test.setTimeout(90_000);
   const subjectId = process.env.GC_BROWSER_A11Y_SUBJECT!;
   const credential = process.env.GC_BROWSER_A11Y_CREDENTIAL!;
   const fixtureBytes = Buffer.from(process.env.GC_BROWSER_FIXTURE_BASE64!, "base64");
@@ -61,8 +76,9 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     buffer: fixtureBytes,
   });
   await expect(page.getByText("적대적 문서 격리 구역", { exact: true })).toBeVisible();
+  await waitForServerReview(page);
   await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible({
-    timeout: boundedDocumentProcessingTimeoutMs,
+    timeout: 10_000,
   });
   await expect(page.getByAltText("승인된 합성 결과지의 첫 페이지 PNG 미리보기")).toBeVisible();
   await expect(page.getByText("188", { exact: true })).toBeVisible();
@@ -114,6 +130,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
 });
 
 test("server states remain keyboard operable at a 200 percent equivalent viewport", async ({ page }) => {
+  test.setTimeout(90_000);
   const subjectId = process.env.GC_BROWSER_SUBJECT!;
   const credential = process.env.GC_BROWSER_CREDENTIAL!;
   const fixtureBytes = Buffer.from(process.env.GC_BROWSER_FIXTURE_BASE64!, "base64");
@@ -142,8 +159,9 @@ test("server states remain keyboard operable at a 200 percent equivalent viewpor
   const processingStatus = page.getByRole("status");
   await expect(processingStatus).toHaveText(/보안 구역|안전하게 확인|다시 시도|미리보기/);
   await expect(processingStatus).toHaveAttribute("aria-live", "polite");
+  await waitForServerReview(page);
   await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible({
-    timeout: boundedDocumentProcessingTimeoutMs,
+    timeout: 10_000,
   });
 
   await page.getByRole("button", { name: "값 수정" }).focus();

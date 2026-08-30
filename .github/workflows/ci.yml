@@ -75,6 +75,14 @@ jobs:
         run: pnpm --dir apps/web exec playwright install --with-deps chromium
       - name: Run browser-to-Spring-to-worker lifecycle
         run: pnpm foundation:e2e
+      - name: Preserve browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: foundation-browser-failure-evidence
+          path: apps/web/test-results
+          if-no-files-found: error
+          retention-days: 7
       - name: Generate JVM CycloneDX SBOM
         run: ./gradlew :apps:core-api:cyclonedxBom --no-daemon
       - name: Preserve SBOM as a build artifact
