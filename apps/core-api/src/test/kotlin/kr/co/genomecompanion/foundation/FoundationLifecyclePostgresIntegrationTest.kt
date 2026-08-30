@@ -246,7 +246,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 .content(documentRequest(aliceConsentId, fixturePdf)),
             alice,
         ).andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.code").value("active_consent_required"))
+            .andExpect(jsonPath("$.code").value("consent_revoked"))
 
         mutate(
             post("/api/foundation/candidates/$candidateId/confirmation")
@@ -255,7 +255,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 .content(json(mapOf("value" to "191"))),
             alice,
         ).andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.code").value("active_consent_required"))
+            .andExpect(jsonPath("$.code").value("consent_revoked"))
 
         val unsafePdf = "%PDF-1.7\nsynthetic-but-not-allowlisted\n".toByteArray()
         val bobDocumentId = requestDocument(bob, bobConsentId, unsafePdf, "doc-request-bob-bad")
@@ -327,6 +327,182 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         )
         assertThat(repeatedDeletion.deletionId).isEqualTo(deletionId)
         assertThat(count("gc_deletion_request")).isEqualTo(1)
+    }
+
+    @Test
+    fun failsClosedAcrossExclusionCorrectionExpiryAndObjectOwnership() {
+        var alice = login("synthetic-alice")
+        val bob = login("synthetic-bob")
+        val aliceConsentId = grantConsent(alice)
+        grantConsent(bob)
+
+        mockMvc.perform(
+            post("/api/foundation/consents/$aliceConsentId/revocation")
+                .cookie(bob.cookie)
+                .header(HttpHeaders.ORIGIN, allowedOrigin)
+                .header(FOUNDATION_CSRF_HEADER, bob.csrf),
+        ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("consent_not_found"))
+
+        mockMvc.perform(
+            post("/api/foundation/consents/$aliceConsentId/revocation")
+                .cookie(alice.cookie)
+                .header(FOUNDATION_CSRF_HEADER, alice.csrf),
+        ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("origin_denied"))
+
+        val excludedCandidate = createCandidate(alice, aliceConsentId, "exclude")
+        mutate(
+            post("/api/foundation/candidates/$excludedCandidate/exclusion")
+                .header("Idempotency-Key", "exclude-candidate-once"),
+            alice,
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("EXCLUDED"))
+
+        mutate(
+            post("/api/foundation/candidates/$excludedCandidate/exclusion")
+                .header("Idempotency-Key", "exclude-candidate-once"),
+            alice,
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("EXCLUDED"))
+
+        mutate(
+            post("/api/foundation/candidates/$excludedCandidate/confirmation")
+                .header("Idempotency-Key", "confirm-excluded-candidate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("candidate_not_pending"))
+
+        mutate(put("/api/foundation/candidates/$excludedCandidate/confirmation"), alice)
+            .andExpect(status().isMethodNotAllowed)
+
+        val candidateId = createCandidate(alice, aliceConsentId, "correct")
+        val created = responseJson(
+            mutate(
+                post("/api/foundation/candidates/$candidateId/confirmation")
+                    .header("Idempotency-Key", "confirm-before-correction")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json(mapOf("value" to "188"))),
+                alice,
+            ).andExpect(status().isCreated)
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        )
+        val recordId = UUID.fromString(created["recordId"].asText())
+        val originalVersionId = created["recordVersionId"].asText()
+
+        read(get("/api/foundation/records").queryParam("subjectId", "synthetic-bob"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].recordId").value(recordId.toString()))
+
+        read(get("/api/foundation/records/${UUID.randomUUID()}"), alice)
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("record_not_found"))
+
+        mutate(
+            post("/api/foundation/records/$recordId/corrections")
+                .header("Idempotency-Key", "bob-cannot-correct-alice")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "189", "reason" to "합성 공격 테스트"))),
+            bob,
+        ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("record_not_found"))
+
+        val corrected = responseJson(
+            mutate(
+                post("/api/foundation/records/$recordId/corrections")
+                    .header("Idempotency-Key", "alice-correction-version-2")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json(mapOf("value" to "189", "reason" to "합성 원문 재확인"))),
+                alice,
+            ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.value").value("189"))
+                .andExpect(jsonPath("$.supersedesVersionId").value(originalVersionId))
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        )
+        val correctedVersionId = corrected["recordVersionId"].asText()
+        assertThat(correctedVersionId).isNotEqualTo(originalVersionId)
+        assertThat(count("gc_health_record_version")).isEqualTo(2)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM gc_health_record_version WHERE record_id = ? AND status = 'CURRENT'",
+                Long::class.java,
+                recordId,
+            ),
+        ).isEqualTo(1)
+
+        val replay = responseJson(
+            mutate(
+                post("/api/foundation/records/$recordId/corrections")
+                    .header("Idempotency-Key", "alice-correction-version-2")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json(mapOf("value" to "189", "reason" to "합성 원문 재확인"))),
+                alice,
+            ).andExpect(status().isOk)
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        )
+        assertThat(replay["recordVersionId"].asText()).isEqualTo(correctedVersionId)
+        assertThat(count("gc_health_record_version")).isEqualTo(2)
+
+        jdbc.update(
+            """
+            UPDATE gc_session
+            SET created_at = CURRENT_TIMESTAMP - INTERVAL '2 seconds',
+                expires_at = CURRENT_TIMESTAMP - INTERVAL '1 second'
+            WHERE token_hash = ?
+            """.trimIndent(),
+            FoundationHashing.sha256(alice.cookie.value),
+        )
+        read(get("/api/foundation/records"), alice)
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("session_invalid"))
+
+        alice = login("synthetic-alice")
+        mutate(delete("/api/foundation/profile"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+
+        mutate(
+            post("/api/foundation/records/$recordId/corrections")
+                .header("Idempotency-Key", "stale-correction-after-delete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "190", "reason" to "삭제 뒤 재생"))),
+            alice,
+        ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("session_invalid"))
+    }
+
+    private fun createCandidate(
+        client: TestClient,
+        consentId: UUID,
+        keySuffix: String,
+    ): UUID {
+        val documentId = requestDocument(
+            client,
+            consentId,
+            fixturePdf,
+            "document-$keySuffix-request",
+        )
+        mutate(
+            put("/api/foundation/documents/$documentId/content")
+                .contentType(MediaType.APPLICATION_PDF)
+                .content(fixturePdf),
+            client,
+        ).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/inspection"), client)
+            .andExpect(status().isOk)
+        val response = mutate(post("/api/foundation/documents/$documentId/extraction"), client)
+            .andExpect(status().isCreated)
+            .andReturn()
+            .response
+        return UUID.fromString(responseJson(response.contentAsByteArray)["candidateId"].asText())
     }
 
     private fun login(subjectId: String): TestClient {

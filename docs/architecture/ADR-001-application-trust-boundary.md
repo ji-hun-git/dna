@@ -41,7 +41,7 @@ The PHI trust boundary includes Spring, its session store, PostgreSQL, quarantin
 - `apps/web` must not add OAuth callbacks, provider token exchange, durable PHI writes, or independent authorization APIs.
 - Existing TypeScript security modules remain **CONTRACT ONLY** until converted to backend-neutral test vectors or implemented authoritatively in Spring.
 - Spring must centralize authorization rather than scattering ownership checks across controllers.
-- The research evidence agent may stay in the monorepo for now, but must become a distinct build/deployment identity with separate credentials, logs, network policy, and data stores before any PHI-capable environment exists.
+- The research evidence agent stays in the monorepo as `@gc/research-web`, a distinct build identity with a fail-closed health-credential denylist. Separate hosted credentials, logs, network policy and data stores remain mandatory before hosted PHI-capable operation.
 - Production same-origin ingress, object storage, and the ingestion worker are **NOT IMPLEMENTED**. Local Spring sessions and PostgreSQL are now implemented for synthetic verification only.
 
 ## Migration plan
@@ -50,13 +50,14 @@ The PHI trust boundary includes Spring, its session store, PostgreSQL, quarantin
 2. Implement a local identity broker substitute, opaque session, and central authorization service in Spring. **Completed locally for the foundation slice.**
 3. Add PostgreSQL/Flyway and a synthetic-only consent-to-record schema. **Completed locally.**
 4. Add quarantine object storage and a network-isolated deterministic worker.
-5. Route one synthetic lifecycle through Spring and persistence; replace React-memory success states with server state. **Lifecycle verified; visible UI replacement remains open.**
-6. Move `research-data` into its own application target and deny it PHI database/object-store credentials.
+5. Route one synthetic lifecycle through Spring and persistence; replace React-memory success states with server state. **Completed for the integrated synthetic path and visible E2E.**
+6. Move `research-data` into its own application target and deny it PHI database/object-store credentials. **Completed locally as `@gc/research-web`; hosted network/log/storage separation remains open.**
 7. Add same-origin ingress only after the local vertical slice passes negative authorization and deletion tests.
 
 ## Evidence and enforcement
 
-- UI-only route inventory: `apps/web/app/**/page.tsx`; there are no `route.ts` handlers.
+- Health presentation inventory: `apps/web/app/**/page.tsx`; its only local handler is the non-sensitive `/healthz` identity response.
+- Research presentation inventory: `apps/research-web`; the health app contains no research route, component or library.
 - Current Spring capability and remaining gaps are recorded in `docs/status/2026-08-30/backend-report.md`.
 - Current module boundary tests: `apps/core-api/src/test/kotlin/kr/co/genomecompanion/architecture/ModuleBoundaryTest.kt`.
 - Prohibited public/medical route tests: `apps/core-api/src/test/kotlin/kr/co/genomecompanion/architecture/ProhibitedRouteTest.kt`.
@@ -70,4 +71,4 @@ The synthetic foundation now implements a partial form of this decision:
 - Next has a configuration-only same-origin rewrite and no API route handler or duplicate authorization rule.
 - PostgreSQL/Flyway and a local digest-allowlisted quarantine path are verified locally.
 
-The isolated worker, production object store, ingress, production session infrastructure, external connectors, and research deployment separation remain not implemented. This ADR does not imply that those missing boundaries exist.
+The isolated worker, production object store, ingress, production session infrastructure, external connectors, and hosted research network/log/storage deployment remain not implemented. This ADR does not imply that those missing boundaries exist.

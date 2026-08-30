@@ -6,7 +6,6 @@ const webRoot = resolve(import.meta.dirname, "..");
 const globals = readFileSync(resolve(webRoot, "app/globals.css"), "utf8");
 const records = readFileSync(resolve(webRoot, "components/records/HealthTimeline.module.css"), "utf8");
 const providers = readFileSync(resolve(webRoot, "components/providers/PublicProviderExplorer.module.css"), "utf8");
-const research = readFileSync(resolve(webRoot, "components/research-data/ResearchEvidenceAgent.module.css"), "utf8");
 
 describe("neutral studio visual contract", () => {
   it("pins the shared shadcn-like surface and Toss-like Korean hierarchy", () => {
@@ -21,11 +20,10 @@ describe("neutral studio visual contract", () => {
     expect(globals).toContain("grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr)");
     expect(records).toContain("grid-template-columns: minmax(0, 1.2fr) minmax(20rem, 0.8fr)");
     expect(providers).toContain("grid-template-columns: minmax(0, 1.3fr) minmax(21rem, 0.7fr)");
-    expect(research).toContain("grid-template-columns: minmax(0, 1.35fr) minmax(20rem, .65fr)");
   });
 
   it("applies the neutral studio skin to every main product surface", () => {
-    for (const stylesheet of [records, providers, research]) {
+    for (const stylesheet of [records, providers]) {
       expect(stylesheet).toContain("background: #fafafa");
       expect(stylesheet).toContain("border-radius: 20px");
       expect(stylesheet).toContain("outline-color: #3182f6");

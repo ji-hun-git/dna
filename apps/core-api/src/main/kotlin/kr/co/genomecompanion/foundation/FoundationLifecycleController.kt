@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
+import java.time.Duration
 
 
 data class LocalSessionRequest(
@@ -35,13 +36,15 @@ data class LocalSessionRequest(
 
 data class LocalSessionResponse(
     val sessionId: UUID,
-    val csrfToken: String,
+    val subjectId: String,
+    val status: String = "AUTHENTICATED",
     val expiresAt: String,
+    val csrfToken: String? = null,
 )
 
 
 data class ConsentResponse(
-    val consentId: UUID,
+    val consentId: UUID?,
     val purposeCode: String = "DOCUMENT_EXTRACTION",
     val status: String,
 )
@@ -67,6 +70,14 @@ data class CandidateConfirmationRequest(
 )
 
 
+data class RecordCorrectionRequest(
+    @field:Size(min = 1, max = 64)
+    val value: String,
+    @field:Size(min = 1, max = 200)
+    val reason: String,
+)
+
+
 data class ApiProblem(val code: String)
 
 
@@ -87,16 +98,46 @@ class FoundationLifecycleController(
             .path("/api")
             .maxAge(properties.sessionTtl)
             .build()
+        val csrfCookie = ResponseCookie.from(FOUNDATION_CSRF_COOKIE, issued.rawCsrf)
+            .httpOnly(false)
+            .secure(properties.secureCookies)
+            .sameSite("Strict")
+            .path("/")
+            .maxAge(properties.sessionTtl)
+            .build()
         return ResponseEntity.status(HttpStatus.CREATED)
-            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+            .header(HttpHeaders.SET_COOKIE, cookie.toString(), csrfCookie.toString())
             .header(HttpHeaders.CACHE_CONTROL, "no-store")
             .body(
                 LocalSessionResponse(
                     sessionId = issued.sessionId,
-                    csrfToken = issued.rawCsrf,
+                    subjectId = request.subjectId,
                     expiresAt = issued.expiresAt.toString(),
+                    csrfToken = issued.rawCsrf,
                 ),
             )
+    }
+
+    @GetMapping("/session")
+    fun getSession(request: HttpServletRequest): ResponseEntity<LocalSessionResponse> {
+        val principal = request.foundationPrincipal()
+        return ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(
+                LocalSessionResponse(
+                    sessionId = principal.sessionId,
+                    subjectId = principal.subjectId,
+                    expiresAt = principal.expiresAt.toString(),
+                ),
+            )
+    }
+
+    @GetMapping("/consents/document-extraction")
+    fun getDocumentConsent(request: HttpServletRequest): ResponseEntity<ConsentResponse> {
+        val consent = service.getDocumentConsent(request.foundationPrincipal())
+        return ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(ConsentResponse(consentId = consent.consentId, status = consent.status))
     }
 
     @PostMapping("/consents/document-extraction")
@@ -140,6 +181,15 @@ class FoundationLifecycleController(
             .cacheControlNoStore()
             .body(service.uploadDocument(request.foundationPrincipal(), documentId, content))
 
+    @GetMapping("/documents/{documentId}")
+    fun getDocument(
+        request: HttpServletRequest,
+        @PathVariable documentId: UUID,
+    ): ResponseEntity<DocumentReceipt> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(service.getDocument(request.foundationPrincipal(), documentId))
+
     @PostMapping("/documents/{documentId}/inspection")
     fun inspectDocument(
         request: HttpServletRequest,
@@ -176,6 +226,25 @@ class FoundationLifecycleController(
                 ),
             )
 
+    @GetMapping("/candidates/{candidateId}")
+    fun getCandidate(
+        request: HttpServletRequest,
+        @PathVariable candidateId: UUID,
+    ): ResponseEntity<CandidateReceipt> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(service.getCandidate(request.foundationPrincipal(), candidateId))
+
+    @PostMapping("/candidates/{candidateId}/exclusion")
+    fun excludeCandidate(
+        request: HttpServletRequest,
+        @PathVariable candidateId: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+    ): ResponseEntity<CandidateReceipt> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(service.excludeCandidate(request.foundationPrincipal(), candidateId, idempotencyKey))
+
     @GetMapping("/records")
     fun listRecords(request: HttpServletRequest): ResponseEntity<List<RecordReceipt>> =
         ResponseEntity.ok()
@@ -191,6 +260,25 @@ class FoundationLifecycleController(
             .cacheControlNoStore()
             .body(service.getRecord(request.foundationPrincipal(), recordId))
 
+    @PostMapping("/records/{recordId}/corrections")
+    fun correctRecord(
+        request: HttpServletRequest,
+        @PathVariable recordId: UUID,
+        @Valid @RequestBody body: RecordCorrectionRequest,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+    ): ResponseEntity<RecordReceipt> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(
+                service.correctRecord(
+                    request.foundationPrincipal(),
+                    recordId,
+                    body.value,
+                    body.reason,
+                    idempotencyKey,
+                ),
+            )
+
     @PostMapping("/consents/{consentId}/revocation")
     fun revokeConsent(
         request: HttpServletRequest,
@@ -203,10 +291,27 @@ class FoundationLifecycleController(
     }
 
     @DeleteMapping("/profile")
-    fun deleteProfile(request: HttpServletRequest): ResponseEntity<DeletionReceipt> =
-        ResponseEntity.ok()
+    fun deleteProfile(request: HttpServletRequest): ResponseEntity<DeletionReceipt> {
+        val receipt = service.deleteProfile(request.foundationPrincipal())
+        val expiredSession = ResponseCookie.from(FOUNDATION_SESSION_COOKIE, "")
+            .httpOnly(true)
+            .secure(properties.secureCookies)
+            .sameSite("Strict")
+            .path("/api")
+            .maxAge(Duration.ZERO)
+            .build()
+        val expiredCsrf = ResponseCookie.from(FOUNDATION_CSRF_COOKIE, "")
+            .httpOnly(false)
+            .secure(properties.secureCookies)
+            .sameSite("Strict")
+            .path("/")
+            .maxAge(Duration.ZERO)
+            .build()
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, expiredSession.toString(), expiredCsrf.toString())
             .cacheControlNoStore()
-            .body(service.deleteProfile(request.foundationPrincipal()))
+            .body(receipt)
+    }
 
     @ExceptionHandler(FoundationBadRequestException::class)
     fun handleBadRequest(exception: FoundationBadRequestException): ResponseEntity<ApiProblem> =

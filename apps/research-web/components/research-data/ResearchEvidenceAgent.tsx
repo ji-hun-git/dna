@@ -37,8 +37,8 @@ export function ResearchEvidenceAgent() {
   return (
     <main className={styles.page}>
       <header className={styles.appbar}>
-        <a className={styles.brand} href="/" aria-label="앎 홈으로 이동"><span>앎</span><strong>연구근거실</strong></a>
-        <nav aria-label="주요 메뉴"><a href="/records">내 기록</a><a href="/providers">공공정보</a><a href="/research-data" aria-current="page">연구근거</a></nav>
+        <a className={styles.brand} href="/" aria-label="연구근거실 홈으로 이동"><span>앎</span><strong>연구근거실</strong></a>
+        <nav aria-label="연구 제품 메뉴"><a href="/" aria-current="page">연구근거</a></nav>
         <span className={styles.snapshot}>SNAPSHOT · 2026-08-12</span>
       </header>
 

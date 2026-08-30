@@ -18,6 +18,13 @@ data class FoundationSessionRow(
     val subjectId: String,
     val tokenHash: String,
     val csrfHash: String,
+    val expiresAt: Instant,
+)
+
+
+data class FoundationConsentRow(
+    val consentId: UUID,
+    val status: String,
 )
 
 
@@ -44,19 +51,29 @@ data class FoundationCandidateRow(
     val observedOn: LocalDate,
     val evidencePage: Int,
     val sourceTextSha256: String,
+    val documentSha256: String,
+    val createdAt: Instant,
 )
 
 
 data class FoundationRecordRow(
     val recordId: UUID,
+    val recordVersionId: UUID,
+    val supersedesVersionId: UUID?,
     val candidateId: UUID,
     val documentId: UUID,
     val subjectId: String,
+    val status: String,
     val label: String,
-    val confirmedValue: String,
+    val currentValue: String,
+    val originalValue: String,
     val unit: String,
     val observedOn: LocalDate,
     val confirmedAt: Instant,
+    val correctionReason: String?,
+    val evidencePage: Int,
+    val sourceTextSha256: String,
+    val documentSha256: String,
 )
 
 
@@ -71,6 +88,7 @@ class FoundationRepository(
             subjectId = result.getString("subject_id"),
             tokenHash = result.getString("token_hash"),
             csrfHash = result.getString("csrf_hash"),
+            expiresAt = result.getObject("expires_at", OffsetDateTime::class.java).toInstant(),
         )
     }
 
@@ -99,22 +117,45 @@ class FoundationRepository(
             observedOn = result.getObject("observed_on", LocalDate::class.java),
             evidencePage = result.getInt("evidence_page"),
             sourceTextSha256 = result.getString("source_text_sha256"),
+            documentSha256 = result.getString("document_sha256"),
+            createdAt = result.getObject("candidate_created_at", OffsetDateTime::class.java).toInstant(),
         )
     }
 
     private val recordMapper = RowMapper { result, _ ->
         FoundationRecordRow(
             recordId = result.getObject("record_id", UUID::class.java),
+            recordVersionId = result.getObject("record_version_id", UUID::class.java),
+            supersedesVersionId = result.getObject("supersedes_version_id", UUID::class.java),
             candidateId = result.getObject("candidate_id", UUID::class.java),
             documentId = result.getObject("document_id", UUID::class.java),
             subjectId = result.getString("subject_id"),
+            status = result.getString("version_status"),
             label = result.getString("label"),
-            confirmedValue = result.getString("confirmed_value"),
+            currentValue = result.getString("current_value"),
+            originalValue = result.getString("original_value"),
             unit = result.getString("unit"),
             observedOn = result.getObject("observed_on", LocalDate::class.java),
             confirmedAt = result.getObject("confirmed_at", OffsetDateTime::class.java).toInstant(),
+            correctionReason = result.getString("correction_reason"),
+            evidencePage = result.getInt("evidence_page"),
+            sourceTextSha256 = result.getString("source_text_sha256"),
+            documentSha256 = result.getString("document_sha256"),
         )
     }
+
+    private val recordProjection =
+        """
+        SELECT r.record_id, v.version_id AS record_version_id, v.supersedes_version_id,
+               r.candidate_id, r.document_id, r.subject_id, v.status AS version_status,
+               r.label, v.value AS current_value, c.candidate_value AS original_value,
+               r.unit, r.observed_on, v.changed_at AS confirmed_at, v.correction_reason,
+               c.evidence_page, c.source_text_sha256, d.sha256 AS document_sha256
+        FROM gc_health_record r
+        JOIN gc_health_record_version v ON v.record_id = r.record_id
+        JOIN gc_candidate c ON c.candidate_id = r.candidate_id AND c.subject_id = r.subject_id
+        JOIN gc_document d ON d.document_id = r.document_id AND d.subject_id = r.subject_id
+        """.trimIndent()
 
     fun ensureActiveSyntheticSubject(subjectId: String, now: Instant): Boolean {
         jdbc.update(
@@ -158,7 +199,7 @@ class FoundationRepository(
     fun findActiveSession(tokenHash: String, now: Instant): FoundationSessionRow? =
         jdbc.query(
             """
-            SELECT session_id, subject_id, token_hash, csrf_hash
+            SELECT session_id, subject_id, token_hash, csrf_hash, expires_at
             FROM gc_session
             WHERE token_hash = ?
               AND revoked_at IS NULL
@@ -193,6 +234,37 @@ class FoundationRepository(
               AND status = 'ACTIVE'
             """.trimIndent(),
             RowMapper { result, _ -> result.getObject("consent_id", UUID::class.java) },
+            subjectId,
+        ).firstOrNull()
+
+    fun findLatestConsent(subjectId: String): FoundationConsentRow? =
+        jdbc.query(
+            """
+            SELECT consent_id, status
+            FROM gc_consent_grant
+            WHERE subject_id = ?
+              AND purpose_code = 'DOCUMENT_EXTRACTION'
+            ORDER BY granted_at DESC, consent_id DESC
+            LIMIT 1
+            """.trimIndent(),
+            RowMapper { result, _ ->
+                FoundationConsentRow(
+                    consentId = result.getObject("consent_id", UUID::class.java),
+                    status = result.getString("status"),
+                )
+            },
+            subjectId,
+        ).firstOrNull()
+
+    fun findConsentStatus(subjectId: String, consentId: UUID): String? =
+        jdbc.query(
+            """
+            SELECT status
+            FROM gc_consent_grant
+            WHERE consent_id = ? AND subject_id = ? AND purpose_code = 'DOCUMENT_EXTRACTION'
+            """.trimIndent(),
+            RowMapper { result, _ -> result.getString("status") },
+            consentId,
             subjectId,
         ).firstOrNull()
 
@@ -369,10 +441,12 @@ class FoundationRepository(
     fun findCandidateForDocument(subjectId: String, documentId: UUID): FoundationCandidateRow? =
         jdbc.query(
             """
-            SELECT candidate_id, document_id, subject_id, status, label, candidate_value, unit,
-                   observed_on, evidence_page, source_text_sha256
-            FROM gc_candidate
-            WHERE subject_id = ? AND document_id = ?
+            SELECT c.candidate_id, c.document_id, c.subject_id, c.status, c.label, c.candidate_value, c.unit,
+                   c.observed_on, c.evidence_page, c.source_text_sha256,
+                   d.sha256 AS document_sha256, c.created_at AS candidate_created_at
+            FROM gc_candidate c
+            JOIN gc_document d ON d.document_id = c.document_id AND d.subject_id = c.subject_id
+            WHERE c.subject_id = ? AND c.document_id = ?
             """.trimIndent(),
             candidateMapper,
             subjectId,
@@ -382,18 +456,33 @@ class FoundationRepository(
     fun findCandidate(subjectId: String, candidateId: UUID): FoundationCandidateRow? =
         jdbc.query(
             """
-            SELECT candidate_id, document_id, subject_id, status, label, candidate_value, unit,
-                   observed_on, evidence_page, source_text_sha256
-            FROM gc_candidate
-            WHERE subject_id = ? AND candidate_id = ?
+            SELECT c.candidate_id, c.document_id, c.subject_id, c.status, c.label, c.candidate_value, c.unit,
+                   c.observed_on, c.evidence_page, c.source_text_sha256,
+                   d.sha256 AS document_sha256, c.created_at AS candidate_created_at
+            FROM gc_candidate c
+            JOIN gc_document d ON d.document_id = c.document_id AND d.subject_id = c.subject_id
+            WHERE c.subject_id = ? AND c.candidate_id = ?
             """.trimIndent(),
             candidateMapper,
             subjectId,
             candidateId,
         ).firstOrNull()
 
+    fun excludeCandidate(subjectId: String, candidateId: UUID, now: Instant): Boolean =
+        jdbc.update(
+            """
+            UPDATE gc_candidate
+            SET status = 'EXCLUDED', excluded_at = ?
+            WHERE candidate_id = ? AND subject_id = ? AND status = 'PENDING'
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            candidateId,
+            subjectId,
+        ) == 1
+
     fun createRecordFromCandidate(
         recordId: UUID,
+        versionId: UUID,
         candidate: FoundationCandidateRow,
         confirmedValue: String,
         now: Instant,
@@ -426,16 +515,24 @@ class FoundationRepository(
             candidate.observedOn,
             now.atOffset(ZoneOffset.UTC),
         )
+        jdbc.update(
+            """
+            INSERT INTO gc_health_record_version(
+                version_id, record_id, subject_id, status, value,
+                supersedes_version_id, correction_reason, changed_at
+            ) VALUES (?, ?, ?, 'CURRENT', ?, NULL, NULL, ?)
+            """.trimIndent(),
+            versionId,
+            recordId,
+            candidate.subjectId,
+            confirmedValue,
+            now.atOffset(ZoneOffset.UTC),
+        )
     }
 
     fun findRecordForCandidate(subjectId: String, candidateId: UUID): FoundationRecordRow? =
         jdbc.query(
-            """
-            SELECT record_id, candidate_id, document_id, subject_id, label, confirmed_value,
-                   unit, observed_on, confirmed_at
-            FROM gc_health_record
-            WHERE subject_id = ? AND candidate_id = ?
-            """.trimIndent(),
+            "$recordProjection WHERE r.subject_id = ? AND r.candidate_id = ? AND v.status = 'CURRENT'",
             recordMapper,
             subjectId,
             candidateId,
@@ -443,29 +540,64 @@ class FoundationRepository(
 
     fun findRecord(subjectId: String, recordId: UUID): FoundationRecordRow? =
         jdbc.query(
-            """
-            SELECT record_id, candidate_id, document_id, subject_id, label, confirmed_value,
-                   unit, observed_on, confirmed_at
-            FROM gc_health_record
-            WHERE subject_id = ? AND record_id = ?
-            """.trimIndent(),
+            "$recordProjection WHERE r.subject_id = ? AND r.record_id = ? AND v.status = 'CURRENT'",
             recordMapper,
             subjectId,
             recordId,
         ).firstOrNull()
 
+    fun findRecordVersion(subjectId: String, versionId: UUID): FoundationRecordRow? =
+        jdbc.query(
+            "$recordProjection WHERE r.subject_id = ? AND v.version_id = ?",
+            recordMapper,
+            subjectId,
+            versionId,
+        ).firstOrNull()
+
     fun listRecords(subjectId: String): List<FoundationRecordRow> =
         jdbc.query(
-            """
-            SELECT record_id, candidate_id, document_id, subject_id, label, confirmed_value,
-                   unit, observed_on, confirmed_at
-            FROM gc_health_record
-            WHERE subject_id = ?
-            ORDER BY confirmed_at, record_id
-            """.trimIndent(),
+            "$recordProjection WHERE r.subject_id = ? AND v.status = 'CURRENT' ORDER BY v.changed_at, r.record_id",
             recordMapper,
             subjectId,
         )
+
+    fun correctRecord(
+        subjectId: String,
+        recordId: UUID,
+        previousVersionId: UUID,
+        newVersionId: UUID,
+        value: String,
+        reason: String,
+        now: Instant,
+    ): Boolean {
+        val superseded = jdbc.update(
+            """
+            UPDATE gc_health_record_version
+            SET status = 'SUPERSEDED'
+            WHERE version_id = ? AND record_id = ? AND subject_id = ? AND status = 'CURRENT'
+            """.trimIndent(),
+            previousVersionId,
+            recordId,
+            subjectId,
+        )
+        if (superseded != 1) return false
+        jdbc.update(
+            """
+            INSERT INTO gc_health_record_version(
+                version_id, record_id, subject_id, status, value,
+                supersedes_version_id, correction_reason, changed_at
+            ) VALUES (?, ?, ?, 'CURRENT', ?, ?, ?, ?)
+            """.trimIndent(),
+            newVersionId,
+            recordId,
+            subjectId,
+            value,
+            previousVersionId,
+            reason,
+            now.atOffset(ZoneOffset.UTC),
+        )
+        return true
+    }
 
     fun listObjectKeys(subjectId: String): List<String> =
         jdbc.query(

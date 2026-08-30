@@ -26,11 +26,18 @@ data class IssuedFoundationSession(
 )
 
 
+data class DocumentConsentReceipt(
+    val consentId: UUID?,
+    val status: String,
+)
+
+
 data class DocumentReceipt(
     val documentId: UUID,
     val status: String,
     val sha256: String?,
     val contentLength: Long?,
+    val quarantineBoundary: String = "LOGICAL_DEVELOPMENT_STATE",
 )
 
 
@@ -44,18 +51,31 @@ data class CandidateReceipt(
     val observedOn: String,
     val evidencePage: Int,
     val sourceTextSha256: String,
+    val documentSha256: String,
+    val sourceType: String = "SYNTHETIC_FIXED_FIXTURE",
+    val extractionMethod: String = "DETERMINISTIC_FOUNDATION_FIXTURE",
+    val createdAt: Instant,
 )
 
 
 data class RecordReceipt(
     val recordId: UUID,
+    val recordVersionId: UUID,
+    val supersedesVersionId: UUID?,
     val candidateId: UUID,
     val documentId: UUID,
+    val status: String,
+    val reviewDecision: String,
     val label: String,
     val value: String,
+    val originalValue: String,
     val unit: String,
     val observedOn: String,
     val confirmedAt: Instant,
+    val correctionReason: String?,
+    val evidencePage: Int,
+    val sourceTextSha256: String,
+    val documentSha256: String,
 )
 
 
@@ -125,6 +145,15 @@ class FoundationLifecycleService(
         repository.grantConsent(consentId, principal.subjectId, "foundation-v1", Instant.now(clock))
         audit(principal, "CONSENT_GRANTED", "CONSENT", consentId, "SUCCESS")
         return consentId
+    }
+
+    @Transactional(readOnly = true)
+    fun getDocumentConsent(principal: FoundationPrincipal): DocumentConsentReceipt {
+        val consent = repository.findLatestConsent(principal.subjectId)
+        return DocumentConsentReceipt(
+            consentId = consent?.consentId,
+            status = consent?.status ?: "NOT_GRANTED",
+        )
     }
 
     @Transactional
@@ -210,6 +239,10 @@ class FoundationLifecycleService(
         return documentReceipt(requireDocument(principal, documentId))
     }
 
+    @Transactional(readOnly = true)
+    fun getDocument(principal: FoundationPrincipal, documentId: UUID): DocumentReceipt =
+        documentReceipt(requireDocument(principal, documentId))
+
     @Transactional
     fun inspectDocument(principal: FoundationPrincipal, documentId: UUID): DocumentReceipt {
         val document = requireDocument(principal, documentId)
@@ -255,6 +288,46 @@ class FoundationLifecycleService(
         )
     }
 
+    @Transactional(readOnly = true)
+    fun getCandidate(principal: FoundationPrincipal, candidateId: UUID): CandidateReceipt =
+        candidateReceipt(requireCandidate(principal, candidateId))
+
+    @Transactional
+    fun excludeCandidate(
+        principal: FoundationPrincipal,
+        candidateId: UUID,
+        idempotencyKey: String,
+    ): CandidateReceipt {
+        requireIdempotencyKey(idempotencyKey)
+        val candidate = requireCandidate(principal, candidateId)
+        val document = requireDocument(principal, candidate.documentId)
+        requireActiveConsent(principal, document.consentId)
+        if (candidate.status == "EXCLUDED") return candidateReceipt(candidate)
+        if (candidate.status != "PENDING") throw FoundationConflictException("candidate_not_pending")
+
+        val subjectHash = subjectHash(principal.subjectId)
+        repository.findIdempotentResource(subjectHash, "CANDIDATE_EXCLUDE", idempotencyKey)?.let { existingId ->
+            return candidateReceipt(requireCandidate(principal, existingId))
+        }
+        if (!repository.insertIdempotency(
+                subjectHash,
+                "CANDIDATE_EXCLUDE",
+                idempotencyKey,
+                candidateId,
+                Instant.now(clock),
+            )
+        ) {
+            val existingId = repository.findIdempotentResource(subjectHash, "CANDIDATE_EXCLUDE", idempotencyKey)
+                ?: throw FoundationConflictException("idempotency_conflict")
+            return candidateReceipt(requireCandidate(principal, existingId))
+        }
+        if (!repository.excludeCandidate(principal.subjectId, candidateId, Instant.now(clock))) {
+            throw FoundationConflictException("candidate_state_changed")
+        }
+        audit(principal, "CANDIDATE_EXCLUDED", "CANDIDATE", candidateId, "SUCCESS")
+        return candidateReceipt(requireCandidate(principal, candidateId))
+    }
+
     @Transactional
     fun confirmCandidate(
         principal: FoundationPrincipal,
@@ -281,8 +354,14 @@ class FoundationLifecycleService(
                 ?: throw FoundationConflictException("idempotency_conflict")
             return recordReceipt(requireRecord(principal, concurrentId))
         }
-        repository.createRecordFromCandidate(recordId, candidate, confirmedValue, now)
-        audit(principal, "CANDIDATE_CONFIRMED", "RECORD", recordId, "SUCCESS")
+        repository.createRecordFromCandidate(recordId, UUID.randomUUID(), candidate, confirmedValue, now)
+        audit(
+            principal,
+            if (confirmedValue == candidate.candidateValue) "CANDIDATE_CONFIRMED" else "CANDIDATE_CORRECTED",
+            "RECORD",
+            recordId,
+            "SUCCESS",
+        )
         return recordReceipt(requireRecord(principal, recordId))
     }
 
@@ -293,6 +372,60 @@ class FoundationLifecycleService(
     @Transactional
     fun listRecords(principal: FoundationPrincipal): List<RecordReceipt> =
         repository.listRecords(principal.subjectId).map(::recordReceipt)
+
+    @Transactional
+    fun correctRecord(
+        principal: FoundationPrincipal,
+        recordId: UUID,
+        correctedValue: String,
+        reason: String,
+        idempotencyKey: String,
+    ): RecordReceipt {
+        requireIdempotencyKey(idempotencyKey)
+        if (!confirmedValuePattern.matches(correctedValue)) {
+            throw FoundationBadRequestException("confirmed_value_invalid")
+        }
+        val normalizedReason = reason.trim()
+        if (normalizedReason.isEmpty() || normalizedReason.length > 200) {
+            throw FoundationBadRequestException("correction_reason_invalid")
+        }
+        val current = requireRecord(principal, recordId)
+        val candidate = requireCandidate(principal, current.candidateId)
+        val document = requireDocument(principal, candidate.documentId)
+        requireActiveConsent(principal, document.consentId)
+
+        val subjectHash = subjectHash(principal.subjectId)
+        repository.findIdempotentResource(subjectHash, "RECORD_CORRECT", idempotencyKey)?.let { versionId ->
+            return recordReceipt(
+                repository.findRecordVersion(principal.subjectId, versionId)
+                    ?: throw FoundationConflictException("idempotency_resource_missing"),
+            )
+        }
+        val newVersionId = UUID.randomUUID()
+        val now = Instant.now(clock)
+        if (!repository.insertIdempotency(subjectHash, "RECORD_CORRECT", idempotencyKey, newVersionId, now)) {
+            val existingVersionId = repository.findIdempotentResource(subjectHash, "RECORD_CORRECT", idempotencyKey)
+                ?: throw FoundationConflictException("idempotency_conflict")
+            return recordReceipt(
+                repository.findRecordVersion(principal.subjectId, existingVersionId)
+                    ?: throw FoundationConflictException("idempotency_resource_missing"),
+            )
+        }
+        if (!repository.correctRecord(
+                principal.subjectId,
+                recordId,
+                current.recordVersionId,
+                newVersionId,
+                correctedValue,
+                normalizedReason,
+                now,
+            )
+        ) {
+            throw FoundationConflictException("record_state_changed")
+        }
+        audit(principal, "RECORD_CORRECTED", "RECORD", recordId, "SUCCESS")
+        return recordReceipt(requireRecord(principal, recordId))
+    }
 
     @Transactional
     fun revokeConsent(principal: FoundationPrincipal, consentId: UUID): UUID {
@@ -362,9 +495,10 @@ class FoundationLifecycleService(
             ?: deniedNotFound(principal, "RECORD_ACCESS_DENIED", "RECORD", recordId, "record_not_found")
 
     private fun requireActiveConsent(principal: FoundationPrincipal, consentId: UUID) {
-        if (!repository.isConsentActive(principal.subjectId, consentId)) {
+        val status = repository.findConsentStatus(principal.subjectId, consentId)
+        if (status != "ACTIVE") {
             audit(principal, "CONSENT_REQUIRED", "CONSENT", consentId, "DENIED")
-            throw FoundationForbiddenException("active_consent_required")
+            throw FoundationForbiddenException(if (status == "REVOKED") "consent_revoked" else "active_consent_required")
         }
     }
 
@@ -388,18 +522,29 @@ class FoundationLifecycleService(
             observedOn = candidate.observedOn.toString(),
             evidencePage = candidate.evidencePage,
             sourceTextSha256 = candidate.sourceTextSha256,
+            documentSha256 = candidate.documentSha256,
+            createdAt = candidate.createdAt,
         )
 
     private fun recordReceipt(record: FoundationRecordRow): RecordReceipt =
         RecordReceipt(
             recordId = record.recordId,
+            recordVersionId = record.recordVersionId,
+            supersedesVersionId = record.supersedesVersionId,
             candidateId = record.candidateId,
             documentId = record.documentId,
+            status = record.status,
+            reviewDecision = if (record.currentValue == record.originalValue) "CONFIRMED" else "CORRECTED",
             label = record.label,
-            value = record.confirmedValue,
+            value = record.currentValue,
+            originalValue = record.originalValue,
             unit = record.unit,
             observedOn = record.observedOn.toString(),
             confirmedAt = record.confirmedAt,
+            correctionReason = record.correctionReason,
+            evidencePage = record.evidencePage,
+            sourceTextSha256 = record.sourceTextSha256,
+            documentSha256 = record.documentSha256,
         )
 
     private fun subjectHash(subjectId: String): String =

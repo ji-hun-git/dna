@@ -17,7 +17,9 @@
     "release:gate": "node scripts/security/check-runtime-policy.mjs --release && node scripts/release/check-readiness.mjs",
     "auth-security:gate": "pnpm --filter @gc/web auth-security:gate",
     "medical-ai:synthetic-contract-gate": "pnpm --filter @gc/web medical-ai:synthetic-contract-gate",
-    "research-evidence:gate": "pnpm --filter @gc/web research-evidence:gate",
+    "research:test": "pnpm --filter @gc/research-web test",
+    "research:build": "pnpm --filter @gc/research-web build",
+    "research-evidence:gate": "pnpm --filter @gc/research-web research-evidence:gate",
     "medical-ai:runner:preflight": "pnpm --filter @gc/web medical-ai:runner:preflight",
     "medical-ai:runner:fixture": "pnpm --filter @gc/web medical-ai:runner:fixture"
   }

@@ -1,5 +1,18 @@
 import type { NextConfig } from "next";
 
+const researchCredentialNames = [
+  "GC_AIDA_API_KEY",
+  "GC_DATAON_API_KEY",
+  "GC_RESEARCH_DATABASE_URL",
+  "GC_RESEARCH_SECRET_VERSION",
+  "GC_RESEARCH_OBJECT_BUCKET",
+  "GC_RESEARCH_STORAGE_URL",
+];
+const researchCredentialsPresent = researchCredentialNames.filter((name) => process.env[name]);
+if (researchCredentialsPresent.length > 0) {
+  throw new Error(`Health runtime refuses research credentials: ${researchCredentialsPresent.join(", ")}`);
+}
+
 function resolveCoreApiOrigin() {
   const configured = process.env.GC_CORE_API_ORIGIN;
   if (!configured) return null;

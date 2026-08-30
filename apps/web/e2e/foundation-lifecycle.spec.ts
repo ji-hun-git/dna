@@ -8,19 +8,17 @@ type BrowserApiResult = {
 async function browserApi(
   page: Page,
   path: string,
-  options: {
-    method?: string;
-    csrf?: string;
-    idempotencyKey?: string;
-    contentType?: string;
-    body?: string;
-  } = {},
+  options: { method?: string; idempotencyKey?: string; body?: string } = {},
 ): Promise<BrowserApiResult> {
   return page.evaluate(async ({ path: target, options: requestOptions }) => {
-    const headers = new Headers();
-    if (requestOptions.csrf) headers.set("X-GC-CSRF", requestOptions.csrf);
+    const csrf = document.cookie
+      .split(";")
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith("GC_CSRF="))
+      ?.slice("GC_CSRF=".length);
+    const headers = new Headers({ "Content-Type": "application/json" });
+    if (csrf) headers.set("X-GC-CSRF", decodeURIComponent(csrf));
     if (requestOptions.idempotencyKey) headers.set("Idempotency-Key", requestOptions.idempotencyKey);
-    if (requestOptions.contentType) headers.set("Content-Type", requestOptions.contentType);
     const response = await fetch(target, {
       method: requestOptions.method ?? "GET",
       headers,
@@ -28,138 +26,155 @@ async function browserApi(
       credentials: "include",
       cache: "no-store",
     });
-    return {
-      status: response.status,
-      body: await response.json(),
-    };
+    return { status: response.status, body: await response.json() };
   }, { path, options });
 }
 
-test("browser persists reloads revokes and deletes the synthetic lifecycle", async ({ page }) => {
-  const subjectId = process.env.GC_BROWSER_SUBJECT!;
-  const credential = process.env.GC_BROWSER_CREDENTIAL!;
+test("visible Korean product persists reloads revokes and deletes the synthetic lifecycle", async ({ page }) => {
+  const subjectId = process.env.GC_BROWSER_A11Y_SUBJECT!;
+  const credential = process.env.GC_BROWSER_A11Y_CREDENTIAL!;
   const fixtureText = process.env.GC_BROWSER_FIXTURE_TEXT!;
-  const runKey = String(process.pid);
 
   await page.goto("/");
   await expect(page.locator("body")).toHaveAttribute(
     "data-application-instance",
     "playwright-foundation-browser-e2e",
   );
+  await expect(page.getByRole("heading", { name: "합성 사용자로 로그인" })).toBeVisible();
 
-  const session = await browserApi(page, "/api/foundation/session", {
-    method: "POST",
-    contentType: "application/json",
-    body: JSON.stringify({ subjectId, credential }),
+  await page.getByLabel("합성 사용자 ID").fill(subjectId);
+  await page.getByLabel("합성 테스트 자격 증명").fill(credential);
+  await page.getByRole("button", { name: "합성 환경 로그인" }).click();
+  await expect(page.getByRole("heading", { name: /값보다 먼저\s*출처를 확인하세요/ })).toBeVisible();
+
+  await page.getByRole("button", { name: "결과지 추가" }).click();
+  await expect(page.getByRole("heading", { name: "결과지에서 항목을 확인해도 될까요?" })).toBeVisible();
+  await page.getByRole("button", { name: "이 목적에 동의" }).click();
+  await expect(page.getByRole("heading", { name: /허용된 합성 PDF를\s*선택해 주세요/ })).toBeVisible();
+
+  await page.getByLabel("허용된 합성 PDF 선택").setInputFiles({
+    name: "allowlisted-synthetic-result.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from(fixtureText, "utf8"),
   });
-  expect(session.status, JSON.stringify(session.body)).toBe(201);
-  const csrf = String((session.body as Record<string, unknown>).csrfToken);
+  await expect(page.getByText("QUARANTINED", { exact: true })).toBeVisible();
+  await expect(page.getByText("논리 개발 상태 · 보안 격리 아님")).toBeVisible();
 
-  const consent = await browserApi(page, "/api/foundation/consents/document-extraction", {
-    method: "POST",
-    csrf,
-  });
-  expect(consent.status).toBe(201);
-  const consentId = String((consent.body as Record<string, unknown>).consentId);
+  await page.getByRole("button", { name: "서버 검사 계속" }).click();
+  await expect(page.getByText("INSPECTED", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "합성 후보 만들기" }).click();
+  await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  await expect(page.getByText("188", { exact: true })).toBeVisible();
 
-  const documentTicket = await browserApi(page, "/api/foundation/documents", {
-    method: "POST",
-    csrf,
-    idempotencyKey: "browser-document-" + runKey,
-    contentType: "application/json",
-    body: JSON.stringify({
-      consentId,
-      mediaType: "application/pdf",
-      contentLength: new TextEncoder().encode(fixtureText).byteLength,
-    }),
-  });
-  expect(documentTicket.status).toBe(201);
-  const document = (documentTicket.body as Record<string, unknown>).document as Record<string, unknown>;
-  const documentId = String(document.documentId);
+  await page.getByRole("button", { name: "값 수정" }).click();
+  await page.getByLabel("원문과 같은 값으로 수정").fill("190");
+  await page.getByRole("button", { name: "수정한 값 확인" }).click();
+  await expect(page.getByRole("heading", { name: "건강 기록에 저장했어요" })).toBeVisible();
+  await expect(page.getByText("CORRECTED", { exact: true })).toBeVisible();
 
-  const upload = await browserApi(page, "/api/foundation/documents/" + documentId + "/content", {
-    method: "PUT",
-    csrf,
-    contentType: "application/pdf",
-    body: fixtureText,
-  });
-  expect(upload.status).toBe(200);
-  expect((upload.body as Record<string, unknown>).status).toBe("QUARANTINED");
-
-  const inspection = await browserApi(page, "/api/foundation/documents/" + documentId + "/inspection", {
-    method: "POST",
-    csrf,
-  });
-  expect(inspection.status).toBe(200);
-  expect((inspection.body as Record<string, unknown>).status).toBe("INSPECTED");
-
-  const extraction = await browserApi(page, "/api/foundation/documents/" + documentId + "/extraction", {
-    method: "POST",
-    csrf,
-  });
-  expect(extraction.status).toBe(201);
-  const candidateId = String((extraction.body as Record<string, unknown>).candidateId);
-
-  const emptyRecords = await browserApi(page, "/api/foundation/records");
-  expect(emptyRecords.status).toBe(200);
-  expect(emptyRecords.body).toEqual([]);
-
-  const confirmation = await browserApi(
-    page,
-    "/api/foundation/candidates/" + candidateId + "/confirmation",
-    {
-      method: "POST",
-      csrf,
-      idempotencyKey: "browser-confirm-" + runKey,
-      contentType: "application/json",
-      body: JSON.stringify({ value: "190" }),
-    },
-  );
-  expect(confirmation.status).toBe(201);
-  const recordId = String((confirmation.body as Record<string, unknown>).recordId);
-
+  await page.getByRole("link", { name: "저장된 기록 보기" }).click();
+  await expect(page).toHaveURL(/\/records$/);
+  await expect(page.getByTestId("durable-record")).toContainText("190");
   await page.reload();
-  const durableRecord = await browserApi(page, "/api/foundation/records/" + recordId);
-  expect(durableRecord.status).toBe(200);
-  expect(durableRecord.body).toMatchObject({
-    recordId,
-    candidateId,
-    documentId,
-    value: "190",
-    unit: "mg/dL",
-  });
+  await expect(page.getByTestId("durable-record")).toContainText("190");
+  await page.getByText("출처와 버전 보기").click();
+  await expect(page.getByText("원래 후보", { exact: true }).locator("..")).toContainText("188 mg/dL");
 
-  const revocation = await browserApi(page, "/api/foundation/consents/" + consentId + "/revocation", {
-    method: "POST",
-    csrf,
+  await page.goto("/data-control");
+  await expect(page.getByText("ACTIVE", { exact: true }).first()).toBeVisible();
+  const consentId = await page.locator("body").evaluate(async () => {
+    const response = await fetch("/api/foundation/consents/document-extraction", { credentials: "include", cache: "no-store" });
+    return String((await response.json()).consentId);
   });
-  expect(revocation.status).toBe(200);
+  await page.getByRole("button", { name: "동의 철회" }).click();
+  await expect(page.getByText("REVOKED", { exact: true }).first()).toBeVisible();
 
   const blockedAfterRevocation = await browserApi(page, "/api/foundation/documents", {
     method: "POST",
-    csrf,
-    idempotencyKey: "browser-after-revoke-" + runKey,
-    contentType: "application/json",
+    idempotencyKey: `after-revoke-${process.pid}`,
     body: JSON.stringify({
       consentId,
       mediaType: "application/pdf",
-      contentLength: new TextEncoder().encode(fixtureText).byteLength,
+      contentLength: Buffer.byteLength(fixtureText, "utf8"),
     }),
   });
   expect(blockedAfterRevocation.status).toBe(403);
-  expect(blockedAfterRevocation.body).toMatchObject({ code: "active_consent_required" });
+  expect(blockedAfterRevocation.body).toMatchObject({ code: "consent_revoked" });
 
-  const deletion = await browserApi(page, "/api/foundation/profile", {
-    method: "DELETE",
-    csrf,
-  });
-  expect(deletion.status).toBe(200);
-  expect(deletion.body).toMatchObject({
-    status: "COMPLETED",
-    rawHealthValuesPresentInAudit: false,
-  });
+  await page.getByRole("button", { name: "삭제 요청 검토" }).click();
+  await page.getByLabel("위 내용을 확인했습니다").check();
+  await page.getByRole("button", { name: "서버에 삭제 요청" }).click();
+  await expect(page.getByRole("heading", { name: "삭제가 완료됐어요" })).toBeVisible();
+  await expect(page.getByText("없음", { exact: true })).toBeVisible();
 
-  const oldSession = await browserApi(page, "/api/foundation/records");
-  expect(oldSession.status).toBe(401);
-  expect(oldSession.body).toMatchObject({ code: "session_invalid" });
+  await page.reload();
+  await expect(page.getByText("로그인이 필요해요. 다시 로그인해 주세요.")).toBeVisible();
+});
+
+test("server states remain keyboard operable at a 200 percent equivalent viewport", async ({ page }) => {
+  const subjectId = process.env.GC_BROWSER_SUBJECT!;
+  const credential = process.env.GC_BROWSER_CREDENTIAL!;
+  const fixtureText = process.env.GC_BROWSER_FIXTURE_TEXT!;
+
+  await page.setViewportSize({ width: 640, height: 720 });
+  await page.goto("/");
+
+  await page.getByLabel("합성 사용자 ID").focus();
+  await page.keyboard.type(subjectId);
+  await page.keyboard.press("Tab");
+  await page.keyboard.type(credential);
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: /값보다 먼저\s*출처를 확인하세요/ })).toBeVisible();
+
+  await page.getByRole("button", { name: "결과지 추가" }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "이 목적에 동의" }).focus();
+  await page.keyboard.press("Enter");
+
+  await page.getByLabel("허용된 합성 PDF 선택").setInputFiles({
+    name: "allowlisted-keyboard-synthetic-result.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from(fixtureText, "utf8"),
+  });
+  const processingStatus = page.getByRole("status");
+  await expect(processingStatus).toHaveText(/논리 격리 상태/);
+  await expect(processingStatus).toHaveAttribute("aria-live", "polite");
+
+  await page.getByRole("button", { name: "서버 검사 계속" }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "합성 후보 만들기" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+
+  await page.getByRole("button", { name: "값 수정" }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByLabel("원문과 같은 값으로 수정").focus();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("190");
+  await page.getByRole("button", { name: "수정한 값 확인" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "건강 기록에 저장했어요" })).toBeVisible();
+
+  await page.getByRole("link", { name: "저장된 기록 보기" }).focus();
+  await page.keyboard.press("Enter");
+  const provenance = page.getByText("출처와 버전 보기", { exact: true });
+  await provenance.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("원래 후보", { exact: true }).locator("..")).toContainText("188 mg/dL");
+
+  await page.goto("/data-control");
+  await page.getByRole("button", { name: "동의 철회" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("REVOKED", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "삭제 요청 검토" }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByLabel("위 내용을 확인했습니다").focus();
+  await page.keyboard.press("Space");
+  await page.getByRole("button", { name: "서버에 삭제 요청" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "삭제가 완료됐어요" })).toBeVisible();
+
+  await expect.poll(() => page.locator("main").evaluate((node) => node.scrollWidth <= node.clientWidth + 2))
+    .toBe(true);
 });

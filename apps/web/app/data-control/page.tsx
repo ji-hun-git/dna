@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DataControlCenter } from "@/components/privacy/DataControlCenter";
+import { IntegratedDataControl } from "@/components/integrated/IntegratedDataControl";
 
 export const metadata: Metadata = {
   title: "데이터 관리",
@@ -7,5 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default function DataControlPage() {
-  return <DataControlCenter />;
+  return process.env.GC_INTEGRATED_SYNTHETIC_UI === "true"
+    ? <IntegratedDataControl />
+    : <DataControlCenter />;
 }

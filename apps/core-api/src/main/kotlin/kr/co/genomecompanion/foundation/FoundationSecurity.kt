@@ -25,6 +25,7 @@ import java.util.UUID
 
 const val FOUNDATION_PRINCIPAL_ATTRIBUTE = "gc.foundation.principal"
 const val FOUNDATION_SESSION_COOKIE = "GC_SESSION"
+const val FOUNDATION_CSRF_COOKIE = "GC_CSRF"
 const val FOUNDATION_CSRF_HEADER = "X-GC-CSRF"
 
 
@@ -32,6 +33,7 @@ data class FoundationPrincipal(
     val subjectId: String,
     val sessionId: UUID,
     val sessionTokenHash: String,
+    val expiresAt: Instant = Instant.EPOCH,
 )
 
 
@@ -169,6 +171,7 @@ class FoundationSessionFilter(
                 subjectId = session.subjectId,
                 sessionId = session.sessionId,
                 sessionTokenHash = session.tokenHash,
+                expiresAt = session.expiresAt,
             ),
         )
         filterChain.doFilter(request, response)

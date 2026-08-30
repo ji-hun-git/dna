@@ -1,0 +1,5 @@
+html { color-scheme: dark; background: #090a0c; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--gc-type-sans, "Pretendard Variable", sans-serif); }
+button, input, select, textarea { font: inherit; }
+:focus-visible { outline: 3px solid #3182f6; outline-offset: 3px; }
