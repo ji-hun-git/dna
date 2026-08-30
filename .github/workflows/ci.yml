@@ -124,7 +124,12 @@ jobs:
           languages: java-kotlin
           build-mode: manual
       - name: Build JVM sources for analysis
-        run: ./gradlew assemble --no-daemon
+        run: >-
+          ./gradlew
+          :packages:document-boundary:classes
+          :apps:document-worker:classes
+          :apps:core-api:classes
+          --no-daemon
       - name: Analyze
         uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
 

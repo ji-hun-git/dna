@@ -249,7 +249,11 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("consent_revoked"))
 
-        val unsafePdf = "%PDF-1.7\nsynthetic-but-not-allowlisted\n%%EOF\n".toByteArray()
+        val unsafePdf = (
+            "%PDF-1.7\n" +
+                "synthetic-but-not-allowlisted-and-long-enough-to-reach-the-allowlist-boundary\n" +
+                "%%EOF\n"
+            ).toByteArray()
         mutate(
             post("/api/foundation/candidates/$candidateId/confirmation")
                 .header("Idempotency-Key", "confirm-after-revoke")
