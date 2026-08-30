@@ -30,33 +30,33 @@
     },
     {
       "id": "queue_retry_and_duplicate_delivery",
-      "status": "PARTIAL",
+      "status": "PASS",
       "blocking": true,
-      "evidence": "GitHub run 33313462363 executed the PostgreSQL lifecycle and proved a retryable first extraction failure is re-leased as attempt 2 before one completion; SKIP LOCKED leases, attempt bounds, DLQ transition and lease-token-guarded completion exist, but an explicit concurrent duplicate-delivery race was not exercised"
+      "evidence": "GitHub run 33315069682 executed the PostgreSQL lifecycle, proved retry and re-lease behavior, and submitted the same leased extraction completion concurrently from two workers; exactly one completion and one candidate/preview persisted while the stale duplicate was denied"
     },
     {
       "id": "separate_document_worker_artifact",
       "status": "PASS",
       "blocking": true,
-      "evidence": "GitHub run 33313462363 launched Spring, Next and the standalone Java 21 worker as separate processes and completed two browser lifecycles; the worker has no database credential, uses a fixed-origin client, verifies exact leased bytes and emits digest-linked PNG preview output"
+      "evidence": "GitHub run 33315069682 launched Spring, Next and the standalone Java 21 worker as separate processes and completed two browser lifecycles; the worker has no database credential, uses a fixed-origin client, verifies exact leased bytes and emits digest-linked PNG preview output"
     },
     {
       "id": "real_malware_scanner_execution",
-      "status": "FAIL",
+      "status": "PASS",
       "blocking": true,
-      "evidence": "ClamAV 1.5.4 is pinned by worker policy but no local ClamAV executable is installed and no real scan evidence was produced; synthetic scanner results are rejected by default"
+      "evidence": "GitHub run 33315069682 checksum-verified the official ClamAV 1.5.4 Linux package and exercised the real no-shell ClamAvCommandScanner adapter: a clean payload was approved and a harmless synthetic SHA-256 signature marker was rejected as malware. This is engine-contract evidence, not evidence of a hosted scanner or an operational official-signature update feed"
     },
     {
       "id": "safe_preview_boundary",
       "status": "PASS",
       "blocking": true,
-      "evidence": "GitHub run 33313462363 completed the browser-to-Spring-to-separate-worker lifecycle: untrusted PDF bytes were never browser-readable and the UI rendered only the approved digest-linked PNG derivative"
+      "evidence": "GitHub run 33315069682 completed the browser-to-Spring-to-separate-worker lifecycle: untrusted PDF bytes were never browser-readable and the UI rendered only the approved digest-linked PNG derivative"
     },
     {
       "id": "staging_grade_frontend",
       "status": "PASS",
       "blocking": true,
-      "evidence": "GitHub run 33313462363 passed 85 web tests, the production build and two Playwright scenarios with typed async states, bounded polling, refresh reconstruction, retry recovery, nonce CSP and no untrusted preview"
+      "evidence": "GitHub run 33315069682 passed 85 web tests, the production build and two Playwright scenarios with typed async states, bounded polling, refresh reconstruction, retry recovery, nonce CSP and no untrusted preview"
     },
     {
       "id": "real_object_storage_trust_separation",
@@ -74,13 +74,13 @@
       "id": "production_runtime_images_and_supply_chain",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "GitHub run 33313462363 passed SHA-pinned CodeQL, Gitleaks and Trivy gates and uploaded a JVM CycloneDX SBOM; no immutable web/core/worker runtime image digests, container-image scan, signed SBOM, build provenance or deployment evidence exists"
+      "evidence": "GitHub run 33315069682 passed SHA-pinned CodeQL, Gitleaks and Trivy gates and uploaded a JVM CycloneDX SBOM; no immutable web/core/worker runtime image digests, container-image scan, signed SBOM, build provenance or deployment evidence exists"
     },
     {
       "id": "ci_security_pipeline_execution",
       "status": "PASS",
       "blocking": true,
-      "evidence": "GitHub Actions run 33313462363 for commit d169d95 completed successfully: locked tests/builds, PostgreSQL lifecycle, browser-to-Spring-to-worker E2E, Java/Kotlin and JavaScript/TypeScript CodeQL, Gitleaks, Trivy and CycloneDX SBOM artifact generation all passed"
+      "evidence": "GitHub Actions run 33315069682 for commit 1037e50 completed successfully: locked tests/builds, PostgreSQL lifecycle including the concurrent duplicate-delivery race, real ClamAV 1.5.4 adapter execution, browser-to-Spring-to-worker E2E, Java/Kotlin and JavaScript/TypeScript CodeQL, Gitleaks, Trivy and CycloneDX SBOM artifact generation all passed"
     },
     {
       "id": "managed_secrets_and_workload_identity",
@@ -104,13 +104,13 @@
       "id": "accessibility_critical_workflow_smoke",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub run 33313462363 passed axe coverage and a keyboard-operable 200-percent-equivalent browser lifecycle; 400-percent zoom and real screen-reader checks remain absent"
+      "evidence": "GitHub run 33315069682 passed axe coverage and a keyboard-operable 200-percent-equivalent browser lifecycle; 400-percent zoom and real screen-reader checks remain absent"
     },
     {
       "id": "known_vulnerability_coverage",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub run 33313462363 passed Java/Kotlin and JavaScript/TypeScript CodeQL plus Trivy filesystem vulnerability, secret, misconfiguration and license policy scans; production container images and deployed artifacts were not scanned because they do not yet exist"
+      "evidence": "GitHub run 33315069682 passed Java/Kotlin and JavaScript/TypeScript CodeQL plus Trivy filesystem vulnerability, secret, misconfiguration and license policy scans; production container images and deployed artifacts were not scanned because they do not yet exist"
     },
     {
       "id": "backup_restore_and_deletion_replay",

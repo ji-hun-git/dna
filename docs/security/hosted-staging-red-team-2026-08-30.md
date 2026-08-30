@@ -1,6 +1,6 @@
 # Hosted staging red-team judge — 2026-08-30
 
-**Method:** independent read-only sub-agent review of the implementation worktree. No code was changed by the judge. The table was then reconciled with successful GitHub Actions run [33313462363](https://github.com/ji-hun-git/dna/actions/runs/33313462363) for commit `d169d95`. A `PASS` is limited to the executable synthetic CI boundary and is not hosted evidence.
+**Method:** independent read-only sub-agent review of the implementation worktree. No code was changed by the judge. The table was then reconciled with successful GitHub Actions run [33315069682](https://github.com/ji-hun-git/dna/actions/runs/33315069682) for commit `1037e50`. A `PASS` is limited to the executable synthetic CI boundary and is not hosted evidence.
 
 | # | Claim | Result | Evidence summary |
 |---:|---|---|---|
@@ -11,7 +11,7 @@
 | 5 | Inspected and processed bytes are identical | PASS | Upload, finalization, inspection, promotion and extraction independently verify the digest. |
 | 6 | Upload capability replay is bounded | PARTIAL | Identical-byte replay is intentionally allowed only before finalization and before expiry; it is not one-time. |
 | 7 | Replay cannot overwrite trusted state | PASS | Different-byte overwrite is denied and finalization revokes outstanding capability state. |
-| 8 | Duplicate delivery cannot create duplicates | PARTIAL | PostgreSQL retry/re-lease and idempotent record creation executed in CI; an explicit concurrent duplicate-delivery race was not exercised. |
+| 8 | Duplicate delivery cannot create duplicates | PASS | CI submitted the same leased extraction completion concurrently from two workers; PostgreSQL persisted exactly one completion, candidate and preview, and denied the stale duplicate. |
 | 9 | Worker cannot reach arbitrary internet destinations | FAIL | The client constrains its API origin shape, but no deployed egress-deny control exists. |
 | 10 | Worker cannot access unrelated data | FAIL | Reads are lease-scoped, but hosted task-role/object-IAM denial has not been proved. |
 | 11 | Research runtime is denied health-plane access | NOT TESTED | Local source/build separation exists; hosted identity/network denial does not. |
@@ -40,13 +40,12 @@ High blockers:
 
 - No worker egress enforcement, workload identity, or unrelated-object IAM denial.
 - No hosted research-plane denial.
-- No real ClamAV execution.
+- No hosted scanner isolation or operational official-signature update/feed evidence. CI proves only the checksum-pinned engine adapter with a harmless synthetic signature database.
 - No runtime images, image-layer/secret inspection, or hosted observability evidence. CI security gates passed, but they are not hosted-runtime evidence.
 
 Medium findings:
 
 - Upload capability is deliberately replayable for identical bytes before finalization and expiry.
-- An explicit concurrent duplicate-delivery race remains untested; the PostgreSQL cross-subject denial suite passed.
 - Provider deployment gates, PHI-safe telemetry, production-image dependency coverage, and 400%/screen-reader accessibility remain partial.
 
 No material Low finding changes the release decision.

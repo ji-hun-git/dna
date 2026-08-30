@@ -1,6 +1,6 @@
 # Document worker operations
 
-**Current status:** executable local artifact; real scanner run not yet evidenced.
+**Current status:** executable artifact; real ClamAV 1.5.4 command-adapter behavior verified in synthetic CI, not deployed.
 
 The worker is a separate Java 21 process in `apps/document-worker`. It leases one job at a time from the Core API, downloads only the object bound to that lease, verifies the exact length and SHA-256, and returns either a typed inspection result or a controlled PNG derivative. It never receives a subject identifier or health value.
 
@@ -24,4 +24,4 @@ The worker is a separate Java 21 process in `apps/document-worker`. It leases on
 - Extraction reads `APPROVED_SOURCE`, never `UNTRUSTED`.
 - Preview failures retry and do not create a candidate or canonical record.
 
-Do not mark the scanner gate PASS until the real executable version, signature version, input digest, typed result and process exit behavior are captured from a live run.
+GitHub Actions run [33315069682](https://github.com/ji-hun-git/dna/actions/runs/33315069682) checksum-verified the official ClamAV 1.5.4 package and captured clean and detected exit behavior through the real command adapter. Its isolated SHA-256 signature database contains only a harmless synthetic marker; the database digest is recorded as signature provenance. Do not treat this as evidence of an isolated hosted worker, an operational official-signature update feed, freshness monitoring or production malware coverage.

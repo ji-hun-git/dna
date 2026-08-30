@@ -80,7 +80,7 @@ The Kotlin integration test is disabled when GC_TEST_POSTGRES_URL is absent. The
 
 - Trust zones are local filesystem directories, not separately credentialed hosted object storage.
 - The worker is a separate process with leased jobs and no database credential, but it is not yet a containerized network-isolated hosted workload.
-- The executable real scanner boundary is implemented but has not been exercised with the pinned ClamAV runtime in this environment.
+- The real command adapter was exercised in CI with the checksum-pinned ClamAV 1.5.4 engine, clean bytes and a harmless synthetic SHA-256 signature marker. No isolated hosted scanner or operational official-signature update/feed evidence exists.
 - Job delivery is a PostgreSQL lease/retry/dead-letter design, not hosted SQS/DLQ evidence.
 - The only extraction output is a fixed synthetic fixture candidate. It is not OCR or medical-model evidence.
 - Local identity is a synthetic credential broker, not Kakao, Naver, OIDC, or production MFA.
