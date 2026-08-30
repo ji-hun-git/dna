@@ -22,13 +22,32 @@
       }
     },
     "productionImage": {
-      "status": "CI_CANDIDATES_IMPLEMENTED_NOT_VERIFIED",
+      "status": "CI_CANDIDATES_VERIFIED_NOT_PUBLISHED",
       "digest": null,
       "releaseBlocking": true
     },
     "runtimeImageCandidates": {
       "platform": "linux/amd64",
-      "status": "DEFINITIONS_ADDED_CI_EXECUTION_PENDING",
+      "status": "CI_BUILD_SCAN_SBOM_VERIFIED",
+      "evidence": {
+        "runId": 33318715896,
+        "commit": "001a03069341903e93855f31f2d307f19c8434eb",
+        "url": "https://github.com/ji-hun-git/dna/actions/runs/33318715896",
+        "images": {
+          "web": {
+            "localImageId": "sha256:d6507076d9ab7624b575355a28b6600a2ff68ef8a712e71ecb6a5d282a83df9a",
+            "artifactDigest": "sha256:8af500cf5cc172a6802779bb54f88c46190a7892dbdb58d3fc9563ae6294ed22"
+          },
+          "coreApi": {
+            "localImageId": "sha256:cd5b8e64df32bdeb449018e12c04e342eb1abe7c630406b0acaf64f665e4abc6",
+            "artifactDigest": "sha256:3915f95a0ce4e0120c7e832a62114e1909878513d7eb1b00f355c9eebdc2f674"
+          },
+          "documentWorker": {
+            "localImageId": "sha256:5d7b3a83fb75856644cee32a9053a8268312079747b9d0c55264a3f8cea0dc5c",
+            "artifactDigest": "sha256:c339901e76ea587d8244df39fa03c35f825cd80fe2f1ede89c0ede21719fc445"
+          }
+        }
+      },
       "nodeBase": {
         "reference": "node:24.20.0-bookworm-slim",
         "digest": "sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e"

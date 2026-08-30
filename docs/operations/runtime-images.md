@@ -14,6 +14,14 @@ Node 24.20.0 and Temurin Java 21 base images are pinned by full manifest digest.
 
 GitHub Actions builds each image from the repository root, rejects a root runtime user, runs a bounded runtime identity smoke test, records the local content-addressed image ID and full image inspection manifest, generates a CycloneDX image SBOM and fails on unresolved Critical/High vulnerabilities. The CI artifacts are evidence of a local Actions build, not registry repository digests.
 
+GitHub Actions run [33318715896](https://github.com/ji-hun-git/dna/actions/runs/33318715896) for commit `001a030` passed this matrix. The recorded local IDs are:
+
+- web: `sha256:d6507076d9ab7624b575355a28b6600a2ff68ef8a712e71ecb6a5d282a83df9a`
+- core-api: `sha256:cd5b8e64df32bdeb449018e12c04e342eb1abe7c630406b0acaf64f665e4abc6`
+- document-worker: `sha256:5d7b3a83fb75856644cee32a9053a8268312079747b9d0c55264a3f8cea0dc5c`
+
+These values address images in that ephemeral Docker engine only. They must not be represented as pullable registry coordinates or deployed production digests.
+
 ## Deliberate gaps
 
 - No image is pushed to a registry, so there is no immutable registry repository digest.

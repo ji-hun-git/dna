@@ -72,15 +72,15 @@
     },
     {
       "id": "production_runtime_images_and_supply_chain",
-      "status": "FAIL",
+      "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub run 33315069682 passed SHA-pinned CodeQL, Gitleaks and Trivy gates and uploaded a JVM CycloneDX SBOM; no immutable web/core/worker runtime image digests, container-image scan, signed SBOM, build provenance or deployment evidence exists"
+      "evidence": "GitHub run 33318715896 built digest-pinned non-root Linux/amd64 web, core-api and document-worker candidates, smoke-tested each runtime, passed unresolved Critical/High Trivy image gates and preserved local image IDs, inspect manifests and CycloneDX SBOMs. These CI-local image IDs are not registry repository digests; images, SBOMs and provenance are not published/signed and no deployment evidence exists"
     },
     {
       "id": "ci_security_pipeline_execution",
       "status": "PASS",
       "blocking": true,
-      "evidence": "GitHub Actions run 33315069682 for commit 1037e50 completed successfully: locked tests/builds, PostgreSQL lifecycle including the concurrent duplicate-delivery race, real ClamAV 1.5.4 adapter execution, browser-to-Spring-to-worker E2E, Java/Kotlin and JavaScript/TypeScript CodeQL, Gitleaks, Trivy and CycloneDX SBOM artifact generation all passed"
+      "evidence": "GitHub Actions run 33318715896 for commit 001a030 completed successfully: locked tests/builds, PostgreSQL lifecycle including the concurrent duplicate-delivery race, real ClamAV 1.5.4 adapter execution, browser-to-Spring-to-worker E2E, both CodeQL analyses, Gitleaks, filesystem Trivy, JVM SBOM and all three runtime image build/non-root/smoke/Trivy/SBOM gates passed"
     },
     {
       "id": "managed_secrets_and_workload_identity",
@@ -110,7 +110,7 @@
       "id": "known_vulnerability_coverage",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub run 33315069682 passed Java/Kotlin and JavaScript/TypeScript CodeQL plus Trivy filesystem vulnerability, secret, misconfiguration and license policy scans; production container images and deployed artifacts were not scanned because they do not yet exist"
+      "evidence": "GitHub run 33318715896 passed both CodeQL analyses, repository Trivy/Gitleaks gates and unresolved Critical/High Trivy scans for all three CI-built runtime image candidates; no published registry artifact or deployed digest exists to scan"
     },
     {
       "id": "backup_restore_and_deletion_replay",
