@@ -24,4 +24,3 @@ GitHub Actions builds each image from the repository root, rejects a root runtim
 - Real documents and PHI remain prohibited.
 
 The next supply-chain step is a protected registry build that emits repository digests, signed SBOM and provenance attestations. That step requires registry/cloud authority and remains outside this change.
-

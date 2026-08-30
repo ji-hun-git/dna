@@ -1,6 +1,7 @@
 # 실데이터·로그인·MyHealthWay·의료 AI 창업자 실행표
 
-**검토 기준일:** 2026-08-30  
+**검토 기준일:** 2026-08-30
+
 **현재 상태:** 신청 준비만 가능. 이 문서는 실데이터 처리, 외부 계정 변경, 키 발급, 연동 활성화 또는 의료기기 적합성을 승인하지 않는다.
 
 ## 먼저 지킬 경계
@@ -100,4 +101,3 @@
 | 운영 owner | 담당자 역할과 rotation/incident 연락망 |
 
 이 packet이 완성되면 먼저 synthetic staging adapter를 구현하고, provider별 contract/security test를 통과시킨다. 그 뒤에도 `provider_and_real_data_activation`은 별도 founder approval이 있기 전까지 `DISABLED`다.
-
