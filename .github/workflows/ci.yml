@@ -34,7 +34,7 @@ jobs:
           --health-retries 10
     env:
       GC_TEST_POSTGRES_URL: jdbc:postgresql://127.0.0.1:5432/postgres
-      GC_TEST_QUARANTINE_ROOT: ${{ runner.temp }}/genome-companion-hostile-document
+      GC_TEST_QUARANTINE_ROOT: /tmp/genome-companion-hostile-document
     steps:
       - name: Checkout immutable revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
