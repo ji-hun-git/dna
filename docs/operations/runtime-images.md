@@ -10,7 +10,7 @@ The repository now has three independent Linux/amd64 runtime definitions:
 | Core API | `apps/core-api/Dockerfile` | `core-api.jar` | numeric `10001:10001` |
 | Document worker | `apps/document-worker/Dockerfile` | Gradle application distribution plus ClamAV 1.5.4 | numeric `10001:10001` |
 
-Node 24.20.0 and Temurin Java 21 base images are pinned by full manifest digest. The ClamAV 1.5.4 package is fetched only through an HTTPS immutable release URL with its reviewed SHA-256 in the Dockerfile. Builds accept no secret arguments and `.dockerignore` excludes environment files, keys, local data, evidence and build output.
+Node 24.20.0 and Temurin Java 21 base images are pinned by full manifest digest. The web runtime removes npm, Corepack and package-manager launchers after the standalone server is copied because they are build tools, not runtime dependencies. The ClamAV 1.5.4 package is fetched only through an HTTPS immutable release URL with its reviewed SHA-256 in the Dockerfile. Builds accept no secret arguments and `.dockerignore` excludes environment files, keys, local data, evidence and build output.
 
 GitHub Actions builds each image from the repository root, rejects a root runtime user, runs a bounded runtime identity smoke test, records the local content-addressed image ID and full image inspection manifest, generates a CycloneDX image SBOM and fails on unresolved Critical/High vulnerabilities. The CI artifacts are evidence of a local Actions build, not registry repository digests.
 
