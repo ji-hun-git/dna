@@ -24,9 +24,11 @@ import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
 import java.util.Base64
+import java.util.HexFormat
 import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 
@@ -132,15 +134,24 @@ class BoundaryApiClient(
         require(lease.sourcePath == "/internal/document-boundary/jobs/${lease.jobId}/source")
         require(lease.sourceLength in 64..MAX_SOURCE_BYTES)
         val request = authenticatedBuilder(resolve(lease.sourcePath))
+            .setHeader("Accept", "application/octet-stream")
             .header("X-GC-Job-Lease", lease.leaseToken)
             .timeout(Duration.ofSeconds(20))
             .GET()
             .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream())
         if (response.statusCode() !in 200..299) error("worker source request failed: ${response.statusCode()}")
+        val mediaType = response.headers().firstValue("Content-Type").orElse("")
+            .substringBefore(';').trim().lowercase()
+        if (mediaType != "application/octet-stream") error("worker source media type mismatch")
         val bytes = response.body().use { it.readNBytes(MAX_SOURCE_BYTES + 1) }
         if (bytes.size > MAX_SOURCE_BYTES || bytes.size.toLong() != lease.sourceLength) {
             error("worker source length mismatch")
+        }
+        val advertisedDigest = response.headers().firstValue("X-GC-Source-SHA256").orElse("")
+        val actualDigest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
+        if (advertisedDigest != lease.sourceSha256 || actualDigest != lease.sourceSha256) {
+            error("worker source digest mismatch")
         }
         return bytes
     }
