@@ -145,18 +145,25 @@ export function IntegratedHealthExperience() {
       try {
         const current = await client.getDocument(documentId);
         if (cancelled) return;
-        setDocumentReceipt(current);
-        setProcessingState(current.status);
-        setPollingPaused(false);
-        setErrorMessage("");
         if (current.status === "REVIEW_REQUIRED") {
+          // Fetch the candidate before publishing the terminal polling status.
+          // Otherwise the status dependency cleans up this effect while the
+          // candidate request is in flight, leaving the UI stuck in processing.
           const extracted = await client.getCandidateForDocument(current.documentId);
           if (cancelled) return;
+          setDocumentReceipt(current);
+          setProcessingState(current.status);
+          setPollingPaused(false);
+          setErrorMessage("");
           setCandidate(extracted);
           setDraftValue(extracted.value);
           setView("review");
           return;
         }
+        setDocumentReceipt(current);
+        setProcessingState(current.status);
+        setPollingPaused(false);
+        setErrorMessage("");
         if (!pollableStates.has(current.status)) return;
         attempt += 1;
         timer = setTimeout(poll, Math.min(8_000, 750 * (2 ** Math.min(attempt, 4))));
