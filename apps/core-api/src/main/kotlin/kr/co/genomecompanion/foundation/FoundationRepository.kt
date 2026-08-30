@@ -141,7 +141,7 @@ class FoundationRepository(
             status = result.getString("status"),
             expectedLength = result.getLong("expected_length"),
             expectedSha256 = result.getString("expected_sha256"),
-            actualLength = result.getObject("actual_length", java.lang.Long::class.java)?.toLong(),
+            actualLength = result.getObject("actual_length", Long::class.javaObjectType),
             sha256 = result.getString("sha256"),
             objectKey = result.getString("object_key"),
             approvedObjectKey = result.getString("approved_object_key"),

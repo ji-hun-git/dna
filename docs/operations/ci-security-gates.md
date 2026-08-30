@@ -13,6 +13,18 @@
 | Trivy filesystem | Detect Critical/High dependency findings, committed secrets, supported misconfiguration, and license findings | Supply-chain owner | Any unfixed Critical/High finding in configured scanners fails | Risk acceptance must name artifact/version, mitigation, expiry, and approver |
 | CycloneDX SBOM | Preserve a reviewable JVM component inventory | Supply-chain owner | Missing SBOM artifact fails | No exception; repair generation/upload |
 
+## Exact platform exclusion
+
+The Trivy policy excludes one exact license result only: `@img/sharp-win32-x64` with
+`Apache-2.0 AND LGPL-3.0-or-later` in `pnpm-lock.yaml`. Next.js records optional
+Sharp binaries for multiple operating systems, while the hosted-staging artifact
+is Linux-only; the Windows binary is therefore absent from that artifact. The
+Rego rule binds the scanner type, package name, file path, and complete SPDX
+expression. A package rename, license change, target change, or production-image
+introduction fails closed and requires a new review. This is synthetic-staging
+scope only; production license approval remains absent. Owner: supply-chain.
+Review expiry: 2026-09-30.
+
 ## Deliberate non-claims
 
 - The workflow does not scan a production container because no production runtime image exists. The release gate remains failed.

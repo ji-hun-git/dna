@@ -662,7 +662,8 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         private const val allowedOrigin = "http://127.0.0.1:3137"
         private const val aliceCredential = "alice-foundation-test-credential-00000001"
         private const val bobCredential = "bob-foundation-test-credential-00000000002"
-        private val fixturePdf = "%PDF-1.7\nGenome Companion synthetic fixture only\n%%EOF\n".toByteArray()
+        private val fixturePdf =
+            "%PDF-1.7\nGenome Companion synthetic fixture only; no real health data.\n%%EOF\n".toByteArray()
         private val fixtureDigest = FoundationHashing.sha256(fixturePdf)
         private const val onePixelPngBase64 =
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="

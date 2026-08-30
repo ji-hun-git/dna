@@ -31,6 +31,17 @@
     "name": "pnpm",
     "exactVersion": "11.20.0"
   },
+  "buildTools": {
+    "kotlin": {
+      "exactVersion": "2.3.21",
+      "source": "https://github.com/JetBrains/kotlin/releases/tag/v2.3.21"
+    },
+    "bouncyCastle": {
+      "exactVersion": "1.84",
+      "scope": "Kotlin build-time publishing configuration",
+      "reason": "CVE-2026-3505 remediation"
+    }
+  },
   "ciTools": {
     "codeqlAction": {
       "version": "4.37.9",
@@ -55,6 +66,19 @@
     }
   },
   "frameworks": {
+    "springBoot": {
+      "exactVersion": "3.5.16",
+      "springFrameworkVersion": "6.2.19",
+      "springSecurityVersion": "6.5.11",
+      "supportStatus": "FINAL_OSS_RELEASE_FOR_3_5_X",
+      "productionMigrationRequired": true,
+      "source": "https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/"
+    },
+    "jackson": {
+      "exactBomVersion": "2.21.5",
+      "releaseLine": "2.21 LTS",
+      "source": "https://github.com/FasterXML/jackson/wiki/Jackson-Release-2.21"
+    },
     "next": {
       "exactVersion": "16.3.3",
       "minimumSecurityVersion": "16.3.3",

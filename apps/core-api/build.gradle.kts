@@ -6,6 +6,9 @@ plugins {
     alias(libs.plugins.cyclonedx)
 }
 
+extra["jackson-bom.version"] = libs.versions.jackson.get()
+extra["postgresql.version"] = libs.versions.postgresql.get()
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
