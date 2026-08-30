@@ -32,13 +32,13 @@
       "id": "queue_retry_and_duplicate_delivery",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "PostgreSQL queue code uses SKIP LOCKED leases, expiring lease recovery, attempt bounds, retry backoff, DLQ transition and lease-token-guarded completion; the environment-gated PostgreSQL duplicate-delivery path was not executed on this workstation"
+      "evidence": "GitHub run 33313462363 executed the PostgreSQL lifecycle and proved a retryable first extraction failure is re-leased as attempt 2 before one completion; SKIP LOCKED leases, attempt bounds, DLQ transition and lease-token-guarded completion exist, but an explicit concurrent duplicate-delivery race was not exercised"
     },
     {
       "id": "separate_document_worker_artifact",
-      "status": "PARTIAL",
+      "status": "PASS",
       "blocking": true,
-      "evidence": "standalone Java 21 worker, fixed-origin client, PDFBox inspection, ClamAV subprocess adapter and raster preview are implemented and unit-tested; live process E2E was not run on this workstation"
+      "evidence": "GitHub run 33313462363 launched Spring, Next and the standalone Java 21 worker as separate processes and completed two browser lifecycles; the worker has no database credential, uses a fixed-origin client, verifies exact leased bytes and emits digest-linked PNG preview output"
     },
     {
       "id": "real_malware_scanner_execution",
@@ -48,15 +48,15 @@
     },
     {
       "id": "safe_preview_boundary",
-      "status": "PARTIAL",
+      "status": "PASS",
       "blocking": true,
-      "evidence": "browser cannot retrieve untrusted PDF and UI renders only digest-linked PNG derivatives after approval; live full-stack worker/browser evidence remains pending"
+      "evidence": "GitHub run 33313462363 completed the browser-to-Spring-to-separate-worker lifecycle: untrusted PDF bytes were never browser-readable and the UI rendered only the approved digest-linked PNG derivative"
     },
     {
       "id": "staging_grade_frontend",
-      "status": "PARTIAL",
+      "status": "PASS",
       "blocking": true,
-      "evidence": "production build and 84 tests pass with typed async states, bounded polling, refresh reconstruction, network recovery, nonce CSP and no untrusted preview; updated PostgreSQL worker E2E was not executed locally"
+      "evidence": "GitHub run 33313462363 passed 85 web tests, the production build and two Playwright scenarios with typed async states, bounded polling, refresh reconstruction, retry recovery, nonce CSP and no untrusted preview"
     },
     {
       "id": "real_object_storage_trust_separation",
@@ -74,13 +74,13 @@
       "id": "production_runtime_images_and_supply_chain",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "SHA-pinned CI definitions now generate a JVM SBOM and configure CodeQL, Gitleaks and Trivy, but the workflow has not run on GitHub and no immutable deployed web/core/worker image digests, container scan, signed SBOM or build provenance exist"
+      "evidence": "GitHub run 33313462363 passed SHA-pinned CodeQL, Gitleaks and Trivy gates and uploaded a JVM CycloneDX SBOM; no immutable web/core/worker runtime image digests, container-image scan, signed SBOM, build provenance or deployment evidence exists"
     },
     {
       "id": "ci_security_pipeline_execution",
-      "status": "PARTIAL",
+      "status": "PASS",
       "blocking": true,
-      "evidence": "CI code defines locked tests/builds, PostgreSQL lifecycle, browser worker E2E, CodeQL, Gitleaks, Trivy and CycloneDX with full action SHAs; no GitHub run result exists yet"
+      "evidence": "GitHub Actions run 33313462363 for commit d169d95 completed successfully: locked tests/builds, PostgreSQL lifecycle, browser-to-Spring-to-worker E2E, Java/Kotlin and JavaScript/TypeScript CodeQL, Gitleaks, Trivy and CycloneDX SBOM artifact generation all passed"
     },
     {
       "id": "managed_secrets_and_workload_identity",
@@ -104,13 +104,13 @@
       "id": "accessibility_critical_workflow_smoke",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "axe unit coverage plus a keyboard and 200-percent-equivalent E2E specification exist; the full E2E did not run here and 400-percent and real screen-reader checks are absent"
+      "evidence": "GitHub run 33313462363 passed axe coverage and a keyboard-operable 200-percent-equivalent browser lifecycle; 400-percent zoom and real screen-reader checks remain absent"
     },
     {
       "id": "known_vulnerability_coverage",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "live pnpm production audit reports no known vulnerability; Java, Trivy, CodeQL, image and deployed-artifact evidence is not yet executed"
+      "evidence": "GitHub run 33313462363 passed Java/Kotlin and JavaScript/TypeScript CodeQL plus Trivy filesystem vulnerability, secret, misconfiguration and license policy scans; production container images and deployed artifacts were not scanned because they do not yet exist"
     },
     {
       "id": "backup_restore_and_deletion_replay",
