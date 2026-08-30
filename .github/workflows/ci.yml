@@ -1,0 +1,139 @@
+name: genome-companion-ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "codex/**"
+
+permissions: {}
+
+concurrency:
+  group: genome-companion-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: synthetic contract and integration evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GC_TEST_POSTGRES_URL: jdbc:postgresql://127.0.0.1:5432/postgres
+      GC_TEST_QUARANTINE_ROOT: ${{ runner.temp }}/genome-companion-hostile-document
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pinned pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.20.0
+      - name: Install pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.20.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install Java toolchain
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Install locked JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate runtime and truthful readiness contracts
+        run: |
+          pnpm security:runtime-policy
+          pnpm security:github-actions-policy
+          pnpm auth-security:gate
+          pnpm release:readiness:validate
+      - name: Test and build both presentation runtimes
+        run: |
+          pnpm web:test
+          pnpm --dir apps/web build
+          pnpm research:test
+          pnpm research:build
+      - name: Test Spring, document boundary, worker, Flyway, and PostgreSQL lifecycle
+        run: ./gradlew test --no-daemon
+      - name: Install browser used by the bounded lifecycle test
+        run: pnpm --dir apps/web exec playwright install --with-deps chromium
+      - name: Run browser-to-Spring-to-worker lifecycle
+        run: pnpm foundation:e2e
+      - name: Generate JVM CycloneDX SBOM
+        run: ./gradlew :apps:core-api:cyclonedxBom --no-daemon
+      - name: Preserve SBOM as a build artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: core-api-cyclonedx-sbom
+          path: apps/core-api/build/reports/application.cdx.json
+          if-no-files-found: error
+          retention-days: 14
+
+  sast:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Java toolchain
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          languages: javascript-typescript,java-kotlin
+          build-mode: manual
+      - name: Build JVM sources for analysis
+        run: ./gradlew assemble --no-daemon
+      - name: Analyze
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+
+  supply-chain:
+    name: secrets, dependencies, configuration, and license policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout complete history for secret detection
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Scan committed history for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+      - name: Scan filesystem dependencies, secrets, configuration, and licenses
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig,license
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table

@@ -22,16 +22,50 @@ const consentSchema = z.object({
 
 const documentSchema = z.object({
   documentId: uuidSchema,
-  status: z.enum(["REQUESTED", "QUARANTINED", "INSPECTED", "REJECTED"]),
+  status: z.enum([
+    "UPLOAD_PENDING",
+    "UNTRUSTED_OBJECT",
+    "SECURITY_INSPECTION",
+    "SECURITY_REJECTED",
+    "SECURITY_APPROVED",
+    "EXTRACTION_QUEUED",
+    "EXTRACTION_RUNNING",
+    "REVIEW_REQUIRED",
+    "COMPLETED",
+    "DELETION_PENDING",
+    "DELETED",
+    "FAILED_RETRYABLE",
+    "FAILED_TERMINAL",
+  ]),
   sha256: z.string().regex(/^[0-9a-f]{64}$/).nullable().optional(),
   contentLength: z.number().int().nonnegative().nullable().optional(),
-  quarantineBoundary: z.literal("LOGICAL_DEVELOPMENT_STATE"),
+  stateVersion: z.number().int().nonnegative(),
+  failureCode: z.string().regex(/^[a-z0-9_]{3,80}$/).nullable().optional(),
+  previewAvailable: z.boolean(),
+  quarantineBoundary: z.literal("HOSTILE_DOCUMENT_TRUST_ZONE"),
+}).strict();
+
+const uploadCapabilitySchema = z.object({
+  capabilityId: uuidSchema,
+  method: z.literal("PUT"),
+  uploadPath: z.string().regex(/^\/api\/foundation\/documents\/[0-9a-f-]{36}\/content$/),
+  expiresAt: z.string().datetime({ offset: true }),
+  expectedLength: z.number().int().min(64).max(10_485_760),
+  expectedSha256: z.string().regex(/^[0-9a-f]{64}$/),
+  requiredHeaders: z.object({
+    "Content-Type": z.literal("application/pdf"),
+    "X-GC-Upload-Capability-Id": uuidSchema,
+    "X-GC-Upload-Capability": z.string().min(32).max(256),
+  }).strict(),
+  replaySemantics: z.literal("REUSABLE_BEFORE_FINALIZATION_UNTIL_EXPIRY_SAME_OBJECT_SAME_BYTES_ONLY"),
 }).strict();
 
 const documentTicketSchema = z.object({
   document: documentSchema,
-  uploadPath: z.string().regex(/^\/api\/foundation\/documents\/[0-9a-f-]{36}\/content$/),
+  uploadCapability: uploadCapabilitySchema,
 }).strict();
+
+const documentActivitySchema = z.object({ document: documentSchema.nullable() }).strict();
 
 const candidateSchema = z.object({
   candidateId: uuidSchema,
@@ -101,7 +135,8 @@ export type FoundationErrorCode =
   | "rate_limited"
   | "internal_error"
   | "invalid_server_response"
-  | "csrf_unavailable";
+  | "csrf_unavailable"
+  | "network_unavailable";
 
 export class FoundationClientError extends Error {
   constructor(
@@ -172,13 +207,18 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       if (!csrf) throw new FoundationClientError("csrf_unavailable", 0);
       headers.set("X-GC-CSRF", csrf);
     }
-    const response = await fetcher(path, {
-      ...init,
-      headers,
-      credentials: "include",
-      cache: "no-store",
-      redirect: "error",
-    });
+    let response: Response;
+    try {
+      response = await fetcher(path, {
+        ...init,
+        headers,
+        credentials: "include",
+        cache: "no-store",
+        redirect: "error",
+      });
+    } catch {
+      throw new FoundationClientError("network_unavailable", 0);
+    }
     let body: unknown;
     try {
       body = await response.json();
@@ -231,7 +271,12 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       { method: "POST" },
       true,
     ),
-    requestDocument: async (consentId: string, contentLength: number, idempotencyKey: string) => request(
+    requestDocument: async (
+      consentId: string,
+      contentLength: number,
+      sha256: string,
+      idempotencyKey: string,
+    ) => request(
       "/api/foundation/documents",
       documentTicketSchema,
       {
@@ -240,14 +285,28 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
           "Content-Type": "application/json",
           "Idempotency-Key": requireIdempotencyKey(idempotencyKey),
         },
-        body: JSON.stringify({ consentId: requireUuid(consentId), mediaType: "application/pdf", contentLength }),
+        body: JSON.stringify({
+          consentId: requireUuid(consentId),
+          mediaType: "application/pdf",
+          contentLength,
+          sha256,
+        }),
       },
       true,
     ),
-    uploadDocument: async (documentId: string, content: Blob | ArrayBuffer | Uint8Array) => request(
-      `/api/foundation/documents/${requireUuid(documentId)}/content`,
+    uploadDocument: async (
+      capability: z.infer<typeof uploadCapabilitySchema>,
+      content: Blob | ArrayBuffer | Uint8Array,
+    ) => request(
+      capability.uploadPath,
       documentSchema,
-      { method: "PUT", headers: { "Content-Type": "application/pdf" }, body: content as BodyInit },
+      { method: "PUT", headers: capability.requiredHeaders, body: content as BodyInit },
+      true,
+    ),
+    finalizeDocument: async (documentId: string) => request(
+      `/api/foundation/documents/${requireUuid(documentId)}/finalization`,
+      documentSchema,
+      { method: "POST" },
       true,
     ),
     getDocument: async (documentId: string) => request(
@@ -255,17 +314,15 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       documentSchema,
       { method: "GET" },
     ),
-    inspectDocument: async (documentId: string) => request(
-      `/api/foundation/documents/${requireUuid(documentId)}/inspection`,
-      documentSchema,
-      { method: "POST" },
-      true,
+    getActiveDocument: async () => request(
+      "/api/foundation/documents/active",
+      documentActivitySchema,
+      { method: "GET" },
     ),
-    extractCandidate: async (documentId: string) => request(
-      `/api/foundation/documents/${requireUuid(documentId)}/extraction`,
+    getCandidateForDocument: async (documentId: string) => request(
+      `/api/foundation/documents/${requireUuid(documentId)}/candidate`,
       candidateSchema,
-      { method: "POST" },
-      true,
+      { method: "GET" },
     ),
     getCandidate: async (candidateId: string) => request(
       `/api/foundation/candidates/${requireUuid(candidateId)}`,
@@ -318,6 +375,12 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     ),
     deleteProfile: () => request("/api/foundation/profile", deletionSchema, { method: "DELETE" }, true),
   };
+}
+
+export async function sha256Blob(content: Blob): Promise<string> {
+  if (content.size > 10_485_760) throw new FoundationClientError("validation_error", 0);
+  const digest = await crypto.subtle.digest("SHA-256", await content.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export type FoundationClient = ReturnType<typeof createFoundationClient>;

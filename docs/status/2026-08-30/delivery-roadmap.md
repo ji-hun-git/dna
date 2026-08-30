@@ -10,7 +10,7 @@ The first durable synthetic milestone is complete locally. Feature expansion rem
 
 ## P0 — Hostile document boundary
 
-1. Add single-use object-store upload capability and immutable source receipt.
+1. Add a short-lived object-store upload capability bound to one key, exact length and SHA-256; do not claim single-use without one-time enforcement.
 2. Add server-side media identification, structural limits and malware scanning.
 3. Add a queue and network-isolated worker with idempotency, retry and dead-letter behavior.
 4. Admit exact OCR/model/container digests only after rights, vulnerability and representative-corpus review.

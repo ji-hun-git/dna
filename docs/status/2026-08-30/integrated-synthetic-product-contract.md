@@ -1,5 +1,7 @@
 # Integrated Synthetic Product contract
 
+> Historical checkpoint: this vocabulary is superseded for current development by `docs/architecture/hostile-document-boundary.md`. The old `QUARANTINED` and `INSPECTED` states remain documented here only to preserve the completed milestone's evidence.
+
 **Milestone:** Integrated Synthetic Product
 **Baseline:** `54f9bf958c176989a5dea03f6bf391a1fa3e10fc`
 **Data boundary:** allowlisted synthetic PDF only; no PHI, provider credential, external account, or deployment

@@ -1,80 +1,146 @@
 {
   "schemaVersion": "release-readiness.v1",
   "evaluatedAt": "2026-08-30",
-  "target": "REAL_DATA_PRIVATE_BETA",
+  "target": "HOSTED_SYNTHETIC_STAGING",
   "verdict": "NO_GO",
   "gates": [
     {
-      "id": "production_dependencies",
+      "id": "synthetic_only_intake_enforcement",
       "status": "PASS",
       "blocking": true,
-      "evidence": "pnpm audit --prod --audit-level high: no known vulnerabilities"
+      "evidence": "Spring issues intake only for configured lowercase SHA-256 fixture digests; arbitrary PDF digests are rejected before capability creation"
     },
     {
-      "id": "production_runtime_image",
-      "status": "FAIL",
-      "blocking": true,
-      "evidence": "production image and immutable digest are not implemented"
-    },
-    {
-      "id": "durable_synthetic_vertical_slice",
+      "id": "bounded_upload_capability",
       "status": "PASS",
       "blocking": true,
-      "evidence": "PostgreSQL integration and browser foundation E2E pass locally"
+      "evidence": "short-lived hashed capability is bound to one document, exact length and exact SHA-256; identical replay is idempotent only before finalization/expiry and different-byte overwrite is denied"
     },
     {
-      "id": "authorization_negative_suite",
+      "id": "hostile_document_state_machine",
       "status": "PASS",
       "blocking": true,
-      "evidence": "wrong identity, JWT scope, CSRF, BOLA, cross-subject consent, revoked consent, rejected document, and old session are denied"
+      "evidence": "V5 schema and Spring transitions distinguish untrusted, inspection, rejection, approval, queued/running extraction, review, retryable and terminal states"
     },
     {
-      "id": "purpose_consent_oidc_boundary",
+      "id": "digest_bound_promotion",
       "status": "PASS",
       "blocking": true,
-      "evidence": "synthetic JWT through Spring method security persists subject-scoped purpose consent and idempotent revoke outbox in PostgreSQL"
+      "evidence": "local implementation re-hashes exact untrusted bytes before promotion and records inspection and promotion provenance; modified bytes fail closed"
     },
     {
-      "id": "quarantine_and_isolated_worker",
+      "id": "queue_retry_and_duplicate_delivery",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "local quarantine and digest allowlist exist; malware scanning and an isolated worker do not"
+      "evidence": "PostgreSQL queue code uses SKIP LOCKED leases, expiring lease recovery, attempt bounds, retry backoff, DLQ transition and lease-token-guarded completion; the environment-gated PostgreSQL duplicate-delivery path was not executed on this workstation"
     },
     {
-      "id": "provenance_and_audit",
+      "id": "separate_document_worker_artifact",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "source digest, evidence page, confirmation, safe audit, hash-chain schema, and database mutation guard persist locally; production immutable sink is absent"
+      "evidence": "standalone Java 21 worker, fixed-origin client, PDFBox inspection, ClamAV subprocess adapter and raster preview are implemented and unit-tested; live process E2E was not run on this workstation"
     },
     {
-      "id": "deletion_and_session_invalidation",
-      "status": "PASS",
-      "blocking": true,
-      "evidence": "synthetic PostgreSQL E2E deletes records and source object, preserves safe audit, and invalidates the old session"
-    },
-    {
-      "id": "backup_restore",
+      "id": "real_malware_scanner_execution",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "no backup or restore drill"
+      "evidence": "ClamAV 1.5.4 is pinned by worker policy but no local ClamAV executable is installed and no real scan evidence was produced; synthetic scanner results are rejected by default"
     },
     {
-      "id": "hosted_devsecops",
+      "id": "safe_preview_boundary",
+      "status": "PARTIAL",
+      "blocking": true,
+      "evidence": "browser cannot retrieve untrusted PDF and UI renders only digest-linked PNG derivatives after approval; live full-stack worker/browser evidence remains pending"
+    },
+    {
+      "id": "staging_grade_frontend",
+      "status": "PARTIAL",
+      "blocking": true,
+      "evidence": "production build and 84 tests pass with typed async states, bounded polling, refresh reconstruction, network recovery, nonce CSP and no untrusted preview; updated PostgreSQL worker E2E was not executed locally"
+    },
+    {
+      "id": "real_object_storage_trust_separation",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "local OpenTofu organization tests and SBOM generation pass; no hosted SAST, secret, container, IaC, license, SBOM signing, or provenance gate"
+      "evidence": "local normalized filesystem zones exist, but separate hosted buckets, encryption policies and independent IAM evidence do not"
+    },
+    {
+      "id": "hosted_queue_and_worker_isolation",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "no deployed SQS/DLQ, ECS task identity, egress-deny proof or worker-to-unrelated-object denial evidence"
+    },
+    {
+      "id": "production_runtime_images_and_supply_chain",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "SHA-pinned CI definitions now generate a JVM SBOM and configure CodeQL, Gitleaks and Trivy, but the workflow has not run on GitHub and no immutable deployed web/core/worker image digests, container scan, signed SBOM or build provenance exist"
+    },
+    {
+      "id": "ci_security_pipeline_execution",
+      "status": "PARTIAL",
+      "blocking": true,
+      "evidence": "CI code defines locked tests/builds, PostgreSQL lifecycle, browser worker E2E, CodeQL, Gitleaks, Trivy and CycloneDX with full action SHAs; no GitHub run result exists yet"
+    },
+    {
+      "id": "managed_secrets_and_workload_identity",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "local worker uses a hashed shared credential contract; hosted Secrets Manager/KMS/task-role evidence is absent"
+    },
+    {
+      "id": "hosted_observability_phi_safe",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "no deployed queue depth, oldest age, inspection latency, DLQ, deletion backlog, trace or alert evidence"
+    },
+    {
+      "id": "hosted_tls_proxy_and_browser_e2e",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "no TLS ingress, proxy-header/cookie behavior test, or browser E2E against a hosted deployment exists; current Playwright evidence is loopback-only"
+    },
+    {
+      "id": "accessibility_critical_workflow_smoke",
+      "status": "PARTIAL",
+      "blocking": true,
+      "evidence": "axe unit coverage plus a keyboard and 200-percent-equivalent E2E specification exist; the full E2E did not run here and 400-percent and real screen-reader checks are absent"
+    },
+    {
+      "id": "known_vulnerability_coverage",
+      "status": "PARTIAL",
+      "blocking": true,
+      "evidence": "live pnpm production audit reports no known vulnerability; Java, Trivy, CodeQL, image and deployed-artifact evidence is not yet executed"
+    },
+    {
+      "id": "backup_restore_and_deletion_replay",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "no backup restored into a fresh environment and no post-backup deletion tombstone replay exercise"
+    },
+    {
+      "id": "external_audit_anchor",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "database mutation guard exists, but no separately permissioned external chain-head checkpoint has been exercised"
+    },
+    {
+      "id": "hosted_research_runtime_denial",
+      "status": "FAIL",
+      "blocking": true,
+      "evidence": "local research separation tests pass; no hosted runtime identity denial probe against health database, object storage or queue exists"
+    },
+    {
+      "id": "provider_and_real_data_activation",
+      "status": "DISABLED",
+      "blocking": false,
+      "evidence": "real PHI, Kakao, Naver, MyHealthWay, NHIS/HIRA retrieval, OCR, medical AI and diagnosis remain disabled"
     },
     {
       "id": "privacy_regulatory_review",
       "status": "EXTERNAL_GATE",
       "blocking": true,
-      "evidence": "privacy, legal, intended-use, MFDS applicability, and real-data authorization remain pending"
-    },
-    {
-      "id": "kakao_naver_myhealthway",
-      "status": "DISABLED",
-      "blocking": false,
-      "evidence": "all external identity and health-data providers remain disabled"
+      "evidence": "privacy, legal, intended-use, MFDS applicability and real-data authorization remain pending and cannot be satisfied by code"
     }
   ]
 }

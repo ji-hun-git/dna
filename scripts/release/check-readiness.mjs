@@ -22,6 +22,7 @@ for (const gate of readiness.gates ?? []) {
 const blockers = (readiness.gates ?? []).filter(
   (gate) => gate.blocking === true && gate.status !== "PASS",
 );
+const validateOnly = process.argv.includes("--validate-only");
 if (blockers.length > 0 && readiness.verdict !== "NO_GO") {
   failures.push("verdict must be NO_GO while blocking gates remain");
 }
@@ -42,7 +43,7 @@ if (failures.length > 0) {
   process.stderr.write(
     "release-readiness: NO_GO " + blockers.length + " blocking gate(s) are not PASS\n",
   );
-  process.exitCode = 1;
+  if (!validateOnly) process.exitCode = 1;
 } else {
   process.stdout.write("release-readiness: GO\n");
 }

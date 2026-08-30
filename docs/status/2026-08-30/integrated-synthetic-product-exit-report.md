@@ -1,5 +1,7 @@
 # Genome Companion — Integrated Synthetic Product exit report
 
+> Historical checkpoint: current hostile-document work has moved beyond this local logical-quarantine milestone. See `docs/architecture/hostile-document-boundary.md` and `release/readiness.json` for the current truth.
+
 ## CURRENT HEAD
 
 - Branch: `codex/integrated-synthetic-product`

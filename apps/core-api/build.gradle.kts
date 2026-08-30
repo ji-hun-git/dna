@@ -21,6 +21,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":packages:document-boundary"))
     implementation(libs.spring.web)
     implementation(libs.spring.security)
     implementation(libs.spring.oauth2.resource.server)

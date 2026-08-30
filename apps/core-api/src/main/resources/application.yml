@@ -52,6 +52,12 @@ gc:
     allowed-origin: ${GC_ALLOWED_ORIGIN:}
     secure-cookies: true
     session-ttl: 30m
+    document-boundary-enabled: false
+    upload-capability-ttl: 5m
+    worker-lease-ttl: 2m
+    worker-credential-sha256: ${GC_DOCUMENT_WORKER_CREDENTIAL_SHA256:}
+    allow-synthetic-scanner-results: ${GC_ALLOW_SYNTHETIC_SCANNER_RESULTS:false}
+    required-clam-av-version: ${GC_REQUIRED_CLAMAV_VERSION:1.5.4}
     quarantine-root: ${GC_QUARANTINE_ROOT:}
     audit-pepper: ${GC_AUDIT_PEPPER:}
     allowed-document-sha256: ${GC_ALLOWED_DOCUMENT_SHA256:}

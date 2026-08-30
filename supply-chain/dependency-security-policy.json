@@ -31,12 +31,49 @@
     "name": "pnpm",
     "exactVersion": "11.20.0"
   },
+  "ciTools": {
+    "codeqlAction": {
+      "version": "4.37.9",
+      "commit": "cdf488f595d80d6e07e03d4674febd5ab45fa938",
+      "source": "https://github.com/github/codeql-action"
+    },
+    "gitleaksAction": {
+      "version": "3.0.0",
+      "commit": "e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e",
+      "source": "https://github.com/gitleaks/gitleaks-action"
+    },
+    "trivyAction": {
+      "version": "0.36.0",
+      "commit": "ed142fd0673e97e23eac54620cfb913e5ce36c25",
+      "scannerVersion": "0.72.0",
+      "source": "https://github.com/aquasecurity/trivy-action"
+    },
+    "postgresCiImage": {
+      "reference": "postgres:18.6-alpine",
+      "digest": "sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2",
+      "scope": "disposable synthetic CI only"
+    }
+  },
   "frameworks": {
     "next": {
       "exactVersion": "16.3.3",
       "minimumSecurityVersion": "16.3.3",
       "advisory": "GHSA-p293-qw3h-jr36",
       "officialSecurityReleaseUrl": "https://nextjs.org/blog/august-2026-security-release"
+    },
+    "pdfbox": {
+      "exactVersion": "3.0.8",
+      "license": "Apache-2.0",
+      "source": "https://pdfbox.apache.org/download.html",
+      "securityStatus": "UPSTREAM_SECURITY_PAGE_REVIEWED"
+    },
+    "clamav": {
+      "requiredVersion": "1.5.4",
+      "license": "GPL-2.0-only",
+      "source": "https://www.clamav.net/downloads",
+      "artifactDigest": null,
+      "executionStatus": "NOT_TESTED",
+      "releaseBlocking": true
     }
   }
 }

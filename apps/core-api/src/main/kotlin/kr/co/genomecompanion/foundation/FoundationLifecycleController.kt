@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import kr.co.genomecompanion.documentboundary.BoundedUploadCapability
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -55,12 +56,19 @@ data class DocumentRequest(
     @field:Pattern(regexp = "^application/pdf$")
     val mediaType: String,
     val contentLength: Long,
+    @field:Pattern(regexp = "^[0-9a-f]{64}$")
+    val sha256: String,
 )
 
 
 data class DocumentTicketResponse(
     val document: DocumentReceipt,
-    val uploadPath: String,
+    val uploadCapability: BoundedUploadCapability,
+)
+
+
+data class DocumentActivityResponse(
+    val document: DocumentReceipt?,
 )
 
 
@@ -159,14 +167,15 @@ class FoundationLifecycleController(
             consentId = body.consentId,
             mediaType = body.mediaType,
             contentLength = body.contentLength,
+            expectedSha256 = body.sha256,
             idempotencyKey = idempotencyKey,
         )
         return ResponseEntity.status(HttpStatus.CREATED)
             .cacheControlNoStore()
             .body(
                 DocumentTicketResponse(
-                    document = receipt,
-                    uploadPath = "/api/foundation/documents/${receipt.documentId}/content",
+                    document = receipt.document,
+                    uploadCapability = receipt.uploadCapability,
                 ),
             )
     }
@@ -175,11 +184,33 @@ class FoundationLifecycleController(
     fun uploadDocument(
         request: HttpServletRequest,
         @PathVariable documentId: UUID,
-        @RequestBody content: ByteArray,
-    ): ResponseEntity<DocumentReceipt> =
-        ResponseEntity.ok()
+        @RequestHeader("X-GC-Upload-Capability-Id") capabilityId: UUID,
+        @RequestHeader("X-GC-Upload-Capability") rawCapability: String,
+    ): ResponseEntity<DocumentReceipt> {
+        if (request.contentLengthLong > 10_485_760) throw FoundationBadRequestException("document_size_invalid")
+        val content = request.inputStream.readNBytes(10_485_761)
+        if (content.size > 10_485_760) throw FoundationBadRequestException("document_size_invalid")
+        return ResponseEntity.ok()
             .cacheControlNoStore()
-            .body(service.uploadDocument(request.foundationPrincipal(), documentId, content))
+            .body(
+                service.uploadDocument(
+                    request.foundationPrincipal(),
+                    documentId,
+                    capabilityId,
+                    rawCapability,
+                    content,
+                ),
+            )
+    }
+
+    @PostMapping("/documents/{documentId}/finalization")
+    fun finalizeDocument(
+        request: HttpServletRequest,
+        @PathVariable documentId: UUID,
+    ): ResponseEntity<DocumentReceipt> =
+        ResponseEntity.accepted()
+            .cacheControlNoStore()
+            .body(service.finalizeDocument(request.foundationPrincipal(), documentId))
 
     @GetMapping("/documents/{documentId}")
     fun getDocument(
@@ -190,23 +221,31 @@ class FoundationLifecycleController(
             .cacheControlNoStore()
             .body(service.getDocument(request.foundationPrincipal(), documentId))
 
-    @PostMapping("/documents/{documentId}/inspection")
-    fun inspectDocument(
-        request: HttpServletRequest,
-        @PathVariable documentId: UUID,
-    ): ResponseEntity<DocumentReceipt> =
+    @GetMapping("/documents/active")
+    fun getActiveDocument(request: HttpServletRequest): ResponseEntity<DocumentActivityResponse> =
         ResponseEntity.ok()
             .cacheControlNoStore()
-            .body(service.inspectDocument(request.foundationPrincipal(), documentId))
+            .body(DocumentActivityResponse(service.getActiveDocument(request.foundationPrincipal())))
 
-    @PostMapping("/documents/{documentId}/extraction")
-    fun extractCandidate(
+    @GetMapping("/documents/{documentId}/candidate")
+    fun getCandidateForDocument(
         request: HttpServletRequest,
         @PathVariable documentId: UUID,
     ): ResponseEntity<CandidateReceipt> =
-        ResponseEntity.status(HttpStatus.CREATED)
+        ResponseEntity.ok()
             .cacheControlNoStore()
-            .body(service.extractCandidate(request.foundationPrincipal(), documentId))
+            .body(service.getCandidateForDocument(request.foundationPrincipal(), documentId))
+
+    @GetMapping("/documents/{documentId}/preview", produces = [MediaType.IMAGE_PNG_VALUE])
+    fun getDocumentPreview(
+        request: HttpServletRequest,
+        @PathVariable documentId: UUID,
+    ): ResponseEntity<ByteArray> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .header("X-Content-Type-Options", "nosniff")
+            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=approved-synthetic-preview.png")
+            .body(service.getDocumentPreview(request.foundationPrincipal(), documentId))
 
     @PostMapping("/candidates/{candidateId}/confirmation")
     fun confirmCandidate(

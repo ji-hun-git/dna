@@ -17,6 +17,7 @@ const koreanMessage: Record<FoundationErrorCode, string> = {
   internal_error: "서버가 요청을 완료하지 못했어요. 같은 작업을 반복하지 말고 다시 확인해 주세요.",
   invalid_server_response: "서버 응답 형식을 확인할 수 없어 화면에 반영하지 않았어요.",
   csrf_unavailable: "보안 확인값이 없어 작업을 중단했어요. 다시 로그인해 주세요.",
+  network_unavailable: "서버에 연결하지 못했어요. 연결을 확인한 뒤 상태를 다시 불러와 주세요.",
 };
 
 export function describeFoundationError(error: unknown) {

@@ -1,12 +1,12 @@
 package kr.co.genomecompanion.foundation
 
+import kr.co.genomecompanion.documentboundary.BoundedUploadCapability
+import kr.co.genomecompanion.documentboundary.StorageTrustZone
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
@@ -37,7 +37,16 @@ data class DocumentReceipt(
     val status: String,
     val sha256: String?,
     val contentLength: Long?,
-    val quarantineBoundary: String = "LOGICAL_DEVELOPMENT_STATE",
+    val stateVersion: Long,
+    val failureCode: String?,
+    val previewAvailable: Boolean,
+    val quarantineBoundary: String = "HOSTILE_DOCUMENT_TRUST_ZONE",
+)
+
+
+data class IssuedDocumentTicket(
+    val document: DocumentReceipt,
+    val uploadCapability: BoundedUploadCapability,
 )
 
 
@@ -91,6 +100,7 @@ data class DeletionReceipt(
 @ConditionalOnProperty(prefix = "gc.foundation", name = ["enabled"], havingValue = "true")
 class FoundationLifecycleService(
     private val repository: FoundationRepository,
+    private val documentStorage: FoundationDocumentStorage,
     private val properties: FoundationProperties,
     private val clock: Clock,
 ) {
@@ -162,16 +172,25 @@ class FoundationLifecycleService(
         consentId: UUID,
         mediaType: String,
         contentLength: Long,
+        expectedSha256: String,
         idempotencyKey: String,
-    ): DocumentReceipt {
+    ): IssuedDocumentTicket {
         requireIdempotencyKey(idempotencyKey)
         requireActiveConsent(principal, consentId)
         val subjectHash = subjectHash(principal.subjectId)
         repository.findIdempotentResource(subjectHash, "DOCUMENT_REQUEST", idempotencyKey)?.let { existingId ->
-            return documentReceipt(requireDocument(principal, existingId))
+            val existing = requireDocument(principal, existingId)
+            if (existing.status != "UPLOAD_PENDING") throw FoundationConflictException("document_intake_already_finalized")
+            return issueDocumentTicket(existing)
         }
         if (mediaType != "application/pdf") throw FoundationBadRequestException("pdf_required")
-        if (contentLength !in 8..10_485_760) throw FoundationBadRequestException("document_size_invalid")
+        if (contentLength !in 64..10_485_760) throw FoundationBadRequestException("document_size_invalid")
+        if (!expectedSha256.matches(Regex("^[0-9a-f]{64}$"))) {
+            throw FoundationBadRequestException("document_digest_invalid")
+        }
+        if (expectedSha256 !in properties.allowedDocumentSha256) {
+            throw FoundationBadRequestException("synthetic_fixture_required")
+        }
 
         val documentId = UUID.randomUUID()
         val now = Instant.now(clock)
@@ -185,57 +204,108 @@ class FoundationLifecycleService(
         if (!inserted) {
             val concurrentId = repository.findIdempotentResource(subjectHash, "DOCUMENT_REQUEST", idempotencyKey)
                 ?: throw FoundationConflictException("idempotency_conflict")
-            return documentReceipt(requireDocument(principal, concurrentId))
+            val concurrent = requireDocument(principal, concurrentId)
+            if (concurrent.status != "UPLOAD_PENDING") {
+                throw FoundationConflictException("document_intake_already_finalized")
+            }
+            return issueDocumentTicket(concurrent)
         }
-        repository.createDocument(documentId, principal.subjectId, consentId, mediaType, contentLength, now)
+        repository.createDocument(
+            documentId,
+            principal.subjectId,
+            consentId,
+            mediaType,
+            contentLength,
+            expectedSha256,
+            now,
+        )
         audit(principal, "DOCUMENT_REQUESTED", "DOCUMENT", documentId, "SUCCESS")
-        return documentReceipt(requireDocument(principal, documentId))
+        return issueDocumentTicket(requireDocument(principal, documentId))
     }
 
     @Transactional
     fun uploadDocument(
         principal: FoundationPrincipal,
         documentId: UUID,
+        capabilityId: UUID,
+        rawCapability: String,
         content: ByteArray,
     ): DocumentReceipt {
         val document = requireDocument(principal, documentId)
         requireActiveConsent(principal, document.consentId)
-        if (content.size.toLong() != document.expectedLength) throw FoundationBadRequestException("content_length_mismatch")
+        val capability = repository.findActiveUploadCapability(
+            capabilityId,
+            documentId,
+            FoundationHashing.sha256(rawCapability),
+            Instant.now(clock),
+        ) ?: throw FoundationForbiddenException("upload_capability_invalid")
+        if (content.size.toLong() != capability.expectedLength || content.size.toLong() != document.expectedLength) {
+            throw FoundationBadRequestException("content_length_mismatch")
+        }
         val digest = FoundationHashing.sha256(content)
-
-        if (document.status != "REQUESTED") {
+        if (!FoundationHashing.constantTimeHexEquals(digest, capability.expectedSha256)) {
+            throw FoundationBadRequestException("content_digest_mismatch")
+        }
+        if (document.status != "UPLOAD_PENDING") {
             if (document.sha256 == digest && document.actualLength == content.size.toLong()) return documentReceipt(document)
             throw FoundationConflictException("document_already_uploaded")
         }
-
-        val root = properties.quarantineRoot!!.toAbsolutePath().normalize()
-        Files.createDirectories(root)
-        val objectPath = root.resolve("$documentId.pdf").normalize()
-        if (!objectPath.startsWith(root)) throw FoundationForbiddenException("object_path_denied")
+        val stored = documentStorage.putUntrusted(documentId, content)
         try {
-            Files.write(objectPath, content, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
-            TransactionSynchronizationManager.registerSynchronization(
-                object : TransactionSynchronization {
-                    override fun afterCompletion(status: Int) {
-                        if (status != TransactionSynchronization.STATUS_COMMITTED) {
-                            runCatching { Files.deleteIfExists(objectPath) }
+            if (stored.createdNew) {
+                TransactionSynchronizationManager.registerSynchronization(
+                    object : TransactionSynchronization {
+                        override fun afterCompletion(status: Int) {
+                            if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                                runCatching {
+                                    documentStorage.deleteAll(
+                                        listOf(StorageTrustZone.UNTRUSTED to stored.descriptor.objectKey),
+                                    )
+                                }
+                            }
                         }
-                    }
-                },
-            )
-            val updated = repository.markDocumentQuarantined(
+                    },
+                )
+            }
+            val updated = repository.markDocumentUploaded(
                 principal.subjectId,
                 documentId,
                 content.size.toLong(),
                 digest,
-                objectPath.fileName.toString(),
+                stored.descriptor.objectKey,
             )
             if (!updated) throw FoundationConflictException("document_state_changed")
         } catch (exception: Exception) {
-            Files.deleteIfExists(objectPath)
             throw exception
         }
-        audit(principal, "DOCUMENT_QUARANTINED", "DOCUMENT", documentId, "SUCCESS")
+        audit(principal, "UNTRUSTED_OBJECT_RECEIVED", "DOCUMENT", documentId, "SUCCESS")
+        return documentReceipt(requireDocument(principal, documentId))
+    }
+
+    @Transactional
+    fun finalizeDocument(principal: FoundationPrincipal, documentId: UUID): DocumentReceipt {
+        val document = requireDocument(principal, documentId)
+        requireActiveConsent(principal, document.consentId)
+        if (document.status != "UPLOAD_PENDING") return documentReceipt(document)
+        val objectKey = document.objectKey ?: throw FoundationConflictException("document_upload_incomplete")
+        val expectedSha256 = document.expectedSha256 ?: throw FoundationConflictException("document_digest_missing")
+        val bytes = documentStorage.read(StorageTrustZone.UNTRUSTED, objectKey)
+        if (
+            bytes.size.toLong() != document.expectedLength ||
+            !FoundationHashing.constantTimeHexEquals(FoundationHashing.sha256(bytes), expectedSha256)
+        ) {
+            throw FoundationConflictException("finalization_metadata_mismatch")
+        }
+        if (!repository.finalizeDocumentAndQueueInspection(
+                principal.subjectId,
+                documentId,
+                UUID.randomUUID(),
+                Instant.now(clock),
+            )
+        ) {
+            throw FoundationConflictException("document_state_changed")
+        }
+        audit(principal, "DOCUMENT_FINALIZED", "DOCUMENT", documentId, "SUCCESS")
         return documentReceipt(requireDocument(principal, documentId))
     }
 
@@ -243,49 +313,32 @@ class FoundationLifecycleService(
     fun getDocument(principal: FoundationPrincipal, documentId: UUID): DocumentReceipt =
         documentReceipt(requireDocument(principal, documentId))
 
-    @Transactional
-    fun inspectDocument(principal: FoundationPrincipal, documentId: UUID): DocumentReceipt {
+    @Transactional(readOnly = true)
+    fun getActiveDocument(principal: FoundationPrincipal): DocumentReceipt? =
+        repository.findLatestActiveDocument(principal.subjectId)?.let(::documentReceipt)
+
+    @Transactional(readOnly = true)
+    fun getCandidateForDocument(principal: FoundationPrincipal, documentId: UUID): CandidateReceipt {
         val document = requireDocument(principal, documentId)
         requireActiveConsent(principal, document.consentId)
-        if (document.status == "INSPECTED" || document.status == "REJECTED") return documentReceipt(document)
-        if (document.status != "QUARANTINED") throw FoundationConflictException("document_not_quarantined")
-
-        val content = readDocument(document)
-        val digest = FoundationHashing.sha256(content)
-        val hasPdfMagic = content.size >= 5 && content.copyOfRange(0, 5).contentEquals("%PDF-".toByteArray())
-        val accepted = hasPdfMagic &&
-            digest == document.sha256 &&
-            digest in properties.allowedDocumentSha256
-        repository.markDocumentInspected(principal.subjectId, documentId, accepted, Instant.now(clock))
-        audit(
-            principal,
-            if (accepted) "DOCUMENT_INSPECTED" else "DOCUMENT_REJECTED",
-            "DOCUMENT",
-            documentId,
-            if (accepted) "SUCCESS" else "REJECTED",
-        )
-        return documentReceipt(requireDocument(principal, documentId))
+        return repository.findCandidateForDocument(principal.subjectId, documentId)
+            ?.let(::candidateReceipt)
+            ?: throw FoundationNotFoundException("candidate_not_ready")
     }
 
-    @Transactional
-    fun extractCandidate(principal: FoundationPrincipal, documentId: UUID): CandidateReceipt {
+    @Transactional(readOnly = true)
+    fun getDocumentPreview(principal: FoundationPrincipal, documentId: UUID): ByteArray {
         val document = requireDocument(principal, documentId)
         requireActiveConsent(principal, document.consentId)
-        repository.findCandidateForDocument(principal.subjectId, documentId)?.let { return candidateReceipt(it) }
-        if (document.status != "INSPECTED") throw FoundationConflictException("document_not_inspected")
-        val candidateId = UUID.randomUUID()
-        repository.createCompletedExtraction(
-            jobId = UUID.randomUUID(),
-            candidateId = candidateId,
-            document = document,
-            now = Instant.now(clock),
-            sourceTextSha256 = FoundationHashing.sha256("총콜레스테롤|188|mg/dL|2026-07-28"),
-        )
-        audit(principal, "CANDIDATE_CREATED", "CANDIDATE", candidateId, "SUCCESS")
-        return candidateReceipt(
-            repository.findCandidate(principal.subjectId, candidateId)
-                ?: error("candidate insert did not persist"),
-        )
+        val artifact = repository.findPreviewArtifact(principal.subjectId, documentId)
+            ?: throw FoundationNotFoundException("preview_not_ready")
+        val bytes = runCatching {
+            documentStorage.read(StorageTrustZone.DERIVED_SAFE_ARTIFACT, artifact.objectKey)
+        }.getOrElse { throw FoundationNotFoundException("preview_not_ready") }
+        if (!FoundationHashing.constantTimeHexEquals(FoundationHashing.sha256(bytes), artifact.previewSha256)) {
+            throw FoundationConflictException("preview_digest_mismatch")
+        }
+        return bytes
     }
 
     @Transactional(readOnly = true)
@@ -433,7 +486,9 @@ class FoundationLifecycleService(
             audit(principal, "CONSENT_ACCESS_DENIED", "CONSENT", consentId, "DENIED")
             throw FoundationNotFoundException("consent_not_found")
         }
-        if (repository.revokeConsent(principal.subjectId, consentId, Instant.now(clock))) {
+        val now = Instant.now(clock)
+        if (repository.revokeConsent(principal.subjectId, consentId, now)) {
+            repository.terminateDocumentJobsForRevokedConsent(principal.subjectId, consentId, now)
             audit(principal, "CONSENT_REVOKED", "CONSENT", consentId, "SUCCESS")
         }
         return consentId
@@ -443,12 +498,7 @@ class FoundationLifecycleService(
     fun deleteProfile(principal: FoundationPrincipal): DeletionReceipt {
         val subjectHash = subjectHash(principal.subjectId)
         val objectKeys = repository.listObjectKeys(principal.subjectId)
-        val root = properties.quarantineRoot!!.toAbsolutePath().normalize()
-        objectKeys.forEach { objectKey ->
-            val path = root.resolve(objectKey).normalize()
-            if (!path.startsWith(root)) throw FoundationForbiddenException("object_path_denied")
-            Files.deleteIfExists(path)
-        }
+        documentStorage.deleteAll(objectKeys)
         audit(principal, "PROFILE_DELETION_REQUESTED", "PROFILE", null, "SUCCESS")
         val deletionId = repository.completeDeletion(
             principal.subjectId,
@@ -471,15 +521,6 @@ class FoundationLifecycleService(
             auditEventTypes = repository.listAuditEventTypes(subjectHash),
             rawHealthValuesPresentInAudit = repository.countRawHealthValuesInAudit() > 0,
         )
-    }
-
-    private fun readDocument(document: FoundationDocumentRow): ByteArray {
-        val objectKey = document.objectKey ?: throw FoundationConflictException("document_object_missing")
-        val root = properties.quarantineRoot!!.toAbsolutePath().normalize()
-        val path = root.resolve(objectKey).normalize()
-        if (!path.startsWith(root)) throw FoundationForbiddenException("object_path_denied")
-        if (!Files.isRegularFile(path)) throw FoundationConflictException("document_object_missing")
-        return Files.readAllBytes(path)
     }
 
     private fun requireDocument(principal: FoundationPrincipal, documentId: UUID): FoundationDocumentRow =
@@ -508,8 +549,50 @@ class FoundationLifecycleService(
         }
     }
 
+    private fun issueDocumentTicket(document: FoundationDocumentRow): IssuedDocumentTicket {
+        val expectedSha256 = document.expectedSha256
+            ?: throw FoundationConflictException("document_digest_missing")
+        val rawCapability = FoundationHashing.randomToken()
+        val capabilityId = UUID.randomUUID()
+        val issuedAt = Instant.now(clock)
+        val expiresAt = issuedAt.plus(properties.uploadCapabilityTtl)
+        repository.rotateUploadCapability(
+            capabilityId = capabilityId,
+            documentId = document.documentId,
+            tokenHash = FoundationHashing.sha256(rawCapability),
+            expectedLength = document.expectedLength,
+            expectedSha256 = expectedSha256,
+            issuedAt = issuedAt,
+            expiresAt = expiresAt,
+        )
+        return IssuedDocumentTicket(
+            document = documentReceipt(document),
+            uploadCapability = BoundedUploadCapability(
+                capabilityId = capabilityId,
+                method = "PUT",
+                uploadPath = "/api/foundation/documents/${document.documentId}/content",
+                expiresAt = expiresAt,
+                expectedLength = document.expectedLength,
+                expectedSha256 = expectedSha256,
+                requiredHeaders = mapOf(
+                    "Content-Type" to "application/pdf",
+                    "X-GC-Upload-Capability-Id" to capabilityId.toString(),
+                    "X-GC-Upload-Capability" to rawCapability,
+                ),
+            ),
+        )
+    }
+
     private fun documentReceipt(document: FoundationDocumentRow): DocumentReceipt =
-        DocumentReceipt(document.documentId, document.status, document.sha256, document.actualLength)
+        DocumentReceipt(
+            documentId = document.documentId,
+            status = document.status,
+            sha256 = document.sha256,
+            contentLength = document.actualLength,
+            stateVersion = document.stateVersion,
+            failureCode = document.failureCode,
+            previewAvailable = document.previewObjectKey != null,
+        )
 
     private fun candidateReceipt(candidate: FoundationCandidateRow): CandidateReceipt =
         CandidateReceipt(

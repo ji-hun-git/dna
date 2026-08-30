@@ -1,5 +1,8 @@
 package kr.co.genomecompanion.foundation
 
+import kr.co.genomecompanion.documentboundary.InspectionDecision
+import kr.co.genomecompanion.documentboundary.InspectionReport
+import kr.co.genomecompanion.documentboundary.StorageTrustZone
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
@@ -34,9 +37,39 @@ data class FoundationDocumentRow(
     val consentId: UUID,
     val status: String,
     val expectedLength: Long,
+    val expectedSha256: String?,
     val actualLength: Long?,
     val sha256: String?,
     val objectKey: String?,
+    val approvedObjectKey: String?,
+    val previewObjectKey: String?,
+    val stateVersion: Long,
+    val failureCode: String?,
+)
+
+
+data class UploadCapabilityRow(
+    val capabilityId: UUID,
+    val documentId: UUID,
+    val expectedLength: Long,
+    val expectedSha256: String,
+    val expiresAt: Instant,
+)
+
+
+data class DocumentJobRow(
+    val jobId: UUID,
+    val documentId: UUID,
+    val subjectId: String,
+    val jobType: String,
+    val attempt: Int,
+    val maxAttempts: Int,
+    val leaseTokenHash: String,
+    val leaseExpiresAt: Instant,
+    val sourceObjectKey: String,
+    val sourceSha256: String,
+    val sourceLength: Long,
+    val documentStateVersion: Long,
 )
 
 
@@ -53,6 +86,14 @@ data class FoundationCandidateRow(
     val sourceTextSha256: String,
     val documentSha256: String,
     val createdAt: Instant,
+)
+
+
+data class PreviewArtifactRow(
+    val objectKey: String,
+    val sourceSha256: String,
+    val previewSha256: String,
+    val generatorVersion: String,
 )
 
 
@@ -99,9 +140,14 @@ class FoundationRepository(
             consentId = result.getObject("consent_id", UUID::class.java),
             status = result.getString("status"),
             expectedLength = result.getLong("expected_length"),
+            expectedSha256 = result.getString("expected_sha256"),
             actualLength = result.getObject("actual_length", java.lang.Long::class.java)?.toLong(),
             sha256 = result.getString("sha256"),
             objectKey = result.getString("object_key"),
+            approvedObjectKey = result.getString("approved_object_key"),
+            previewObjectKey = result.getString("preview_object_key"),
+            stateVersion = result.getLong("state_version"),
+            failureCode = result.getString("failure_code"),
         )
     }
 
@@ -303,6 +349,46 @@ class FoundationRepository(
             subjectId,
         ) == 1
 
+    fun terminateDocumentJobsForRevokedConsent(subjectId: String, consentId: UUID, now: Instant) {
+        jdbc.update(
+            """
+            UPDATE gc_document_job j
+            SET status = 'DEAD_LETTER', failure_code = 'consent_revoked',
+                lease_token_hash = NULL, lease_expires_at = NULL, worker_id_hash = NULL, updated_at = ?
+            FROM gc_document d
+            WHERE d.document_id = j.document_id AND d.subject_id = ? AND d.consent_id = ?
+              AND j.status IN ('QUEUED', 'LEASED', 'FAILED_RETRYABLE')
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            subjectId,
+            consentId,
+        )
+        jdbc.update(
+            """
+            UPDATE gc_document
+            SET status = 'FAILED_TERMINAL', failure_code = 'consent_revoked',
+                state_version = state_version + 1, updated_at = ?
+            WHERE subject_id = ? AND consent_id = ? AND status IN (
+                'UPLOAD_PENDING', 'UNTRUSTED_OBJECT', 'SECURITY_INSPECTION', 'SECURITY_APPROVED',
+                'EXTRACTION_QUEUED', 'EXTRACTION_RUNNING', 'FAILED_RETRYABLE'
+            )
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            subjectId,
+            consentId,
+        )
+        jdbc.update(
+            """
+            UPDATE gc_upload_capability c SET revoked_at = COALESCE(c.revoked_at, ?)
+            FROM gc_document d
+            WHERE d.document_id = c.document_id AND d.subject_id = ? AND d.consent_id = ?
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            subjectId,
+            consentId,
+        )
+    }
+
     fun insertIdempotency(
         subjectHash: String,
         operation: String,
@@ -342,19 +428,23 @@ class FoundationRepository(
         consentId: UUID,
         mediaType: String,
         expectedLength: Long,
+        expectedSha256: String,
         now: Instant,
     ) {
         jdbc.update(
             """
             INSERT INTO gc_document(
-                document_id, subject_id, consent_id, status, media_type, expected_length, created_at
-            ) VALUES (?, ?, ?, 'REQUESTED', ?, ?, ?)
+                document_id, subject_id, consent_id, status, media_type, expected_length,
+                expected_sha256, created_at, updated_at
+            ) VALUES (?, ?, ?, 'UPLOAD_PENDING', ?, ?, ?, ?, ?)
             """.trimIndent(),
             documentId,
             subjectId,
             consentId,
             mediaType,
             expectedLength,
+            expectedSha256,
+            now.atOffset(ZoneOffset.UTC),
             now.atOffset(ZoneOffset.UTC),
         )
     }
@@ -362,7 +452,9 @@ class FoundationRepository(
     fun findDocument(subjectId: String, documentId: UUID): FoundationDocumentRow? =
         jdbc.query(
             """
-            SELECT document_id, subject_id, consent_id, status, expected_length, actual_length, sha256, object_key
+            SELECT document_id, subject_id, consent_id, status, expected_length, expected_sha256,
+                   actual_length, sha256, object_key, approved_object_key, preview_object_key,
+                   state_version, failure_code
             FROM gc_document
             WHERE subject_id = ? AND document_id = ?
             """.trimIndent(),
@@ -371,7 +463,83 @@ class FoundationRepository(
             documentId,
         ).firstOrNull()
 
-    fun markDocumentQuarantined(
+    fun findLatestActiveDocument(subjectId: String): FoundationDocumentRow? =
+        jdbc.query(
+            """
+            SELECT document_id, subject_id, consent_id, status, expected_length, expected_sha256,
+                   actual_length, sha256, object_key, approved_object_key, preview_object_key,
+                   state_version, failure_code
+            FROM gc_document
+            WHERE subject_id = ? AND status NOT IN (
+                'COMPLETED', 'SECURITY_REJECTED', 'FAILED_TERMINAL', 'DELETED'
+            )
+            ORDER BY created_at DESC
+            LIMIT 1
+            """.trimIndent(),
+            documentMapper,
+            subjectId,
+        ).firstOrNull()
+
+    fun rotateUploadCapability(
+        capabilityId: UUID,
+        documentId: UUID,
+        tokenHash: String,
+        expectedLength: Long,
+        expectedSha256: String,
+        issuedAt: Instant,
+        expiresAt: Instant,
+    ) {
+        jdbc.update(
+            "UPDATE gc_upload_capability SET revoked_at = ? WHERE document_id = ? AND revoked_at IS NULL",
+            issuedAt.atOffset(ZoneOffset.UTC),
+            documentId,
+        )
+        jdbc.update(
+            """
+            INSERT INTO gc_upload_capability(
+                capability_id, document_id, token_hash, expected_length, expected_sha256,
+                issued_at, expires_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            capabilityId,
+            documentId,
+            tokenHash,
+            expectedLength,
+            expectedSha256,
+            issuedAt.atOffset(ZoneOffset.UTC),
+            expiresAt.atOffset(ZoneOffset.UTC),
+        )
+    }
+
+    fun findActiveUploadCapability(
+        capabilityId: UUID,
+        documentId: UUID,
+        tokenHash: String,
+        now: Instant,
+    ): UploadCapabilityRow? =
+        jdbc.query(
+            """
+            SELECT capability_id, document_id, expected_length, expected_sha256, expires_at
+            FROM gc_upload_capability
+            WHERE capability_id = ? AND document_id = ? AND token_hash = ?
+              AND revoked_at IS NULL AND expires_at > ?
+            """.trimIndent(),
+            RowMapper { result, _ ->
+                UploadCapabilityRow(
+                    capabilityId = result.getObject("capability_id", UUID::class.java),
+                    documentId = result.getObject("document_id", UUID::class.java),
+                    expectedLength = result.getLong("expected_length"),
+                    expectedSha256 = result.getString("expected_sha256"),
+                    expiresAt = result.getObject("expires_at", OffsetDateTime::class.java).toInstant(),
+                )
+            },
+            capabilityId,
+            documentId,
+            tokenHash,
+            now.atOffset(ZoneOffset.UTC),
+        ).firstOrNull()
+
+    fun markDocumentUploaded(
         subjectId: String,
         documentId: UUID,
         actualLength: Long,
@@ -381,46 +549,317 @@ class FoundationRepository(
         jdbc.update(
             """
             UPDATE gc_document
-            SET status = 'QUARANTINED', actual_length = ?, sha256 = ?, object_key = ?
-            WHERE document_id = ? AND subject_id = ? AND status = 'REQUESTED'
+            SET actual_length = ?, sha256 = ?, object_key = ?, state_version = state_version + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE document_id = ? AND subject_id = ? AND status = 'UPLOAD_PENDING'
+              AND (sha256 IS NULL OR sha256 = ?)
             """.trimIndent(),
             actualLength,
             sha256,
             objectKey,
             documentId,
             subjectId,
+            sha256,
         ) == 1
 
-    fun markDocumentInspected(subjectId: String, documentId: UUID, accepted: Boolean, now: Instant): Boolean =
-        jdbc.update(
+    fun finalizeDocumentAndQueueInspection(
+        subjectId: String,
+        documentId: UUID,
+        jobId: UUID,
+        now: Instant,
+    ): Boolean {
+        val updated = jdbc.update(
             """
             UPDATE gc_document
-            SET status = ?, inspected_at = ?
-            WHERE document_id = ? AND subject_id = ? AND status = 'QUARANTINED'
+            SET status = 'UNTRUSTED_OBJECT', finalized_at = ?, updated_at = ?,
+                state_version = state_version + 1
+            WHERE document_id = ? AND subject_id = ? AND status = 'UPLOAD_PENDING'
+              AND actual_length = expected_length
+              AND sha256 = expected_sha256
+              AND object_key IS NOT NULL
             """.trimIndent(),
-            if (accepted) "INSPECTED" else "REJECTED",
+            now.atOffset(ZoneOffset.UTC),
             now.atOffset(ZoneOffset.UTC),
             documentId,
             subjectId,
-        ) == 1
+        )
+        if (updated != 1) return false
+        jdbc.update(
+            """
+            INSERT INTO gc_document_job(
+                job_id, document_id, job_type, status, attempt, max_attempts,
+                available_at, created_at, updated_at
+            ) VALUES (?, ?, 'SECURITY_INSPECTION', 'QUEUED', 0, 3, ?, ?, ?)
+            """.trimIndent(),
+            jobId,
+            documentId,
+            now.atOffset(ZoneOffset.UTC),
+            now.atOffset(ZoneOffset.UTC),
+            now.atOffset(ZoneOffset.UTC),
+        )
+        jdbc.update(
+            "UPDATE gc_upload_capability SET revoked_at = ? WHERE document_id = ? AND revoked_at IS NULL",
+            now.atOffset(ZoneOffset.UTC),
+            documentId,
+        )
+        return true
+    }
 
-    fun createCompletedExtraction(
-        jobId: UUID,
+    @Transactional
+    fun leaseNextDocumentJob(
+        workerIdHash: String,
+        leaseTokenHash: String,
+        now: Instant,
+        leaseExpiresAt: Instant,
+    ): DocumentJobRow? {
+        jdbc.update(
+            """
+            UPDATE gc_document d
+            SET status = 'FAILED_TERMINAL', failure_code = 'worker_lease_expired',
+                state_version = state_version + 1, updated_at = ?
+            WHERE EXISTS (
+                SELECT 1 FROM gc_document_job j
+                WHERE j.document_id = d.document_id AND j.status = 'LEASED'
+                  AND j.lease_expires_at <= ? AND j.attempt >= j.max_attempts
+            )
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            now.atOffset(ZoneOffset.UTC),
+        )
+        jdbc.update(
+            """
+            UPDATE gc_document_job
+            SET status = 'DEAD_LETTER', failure_code = 'worker_lease_expired',
+                lease_token_hash = NULL, lease_expires_at = NULL, worker_id_hash = NULL,
+                updated_at = ?
+            WHERE status = 'LEASED' AND lease_expires_at <= ? AND attempt >= max_attempts
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            now.atOffset(ZoneOffset.UTC),
+        )
+        val jobId = jdbc.query(
+            """
+            SELECT j.job_id
+            FROM gc_document_job j
+            JOIN gc_document d ON d.document_id = j.document_id
+            JOIN gc_consent_grant c ON c.consent_id = d.consent_id AND c.status = 'ACTIVE'
+            WHERE j.attempt < j.max_attempts
+              AND (
+                (j.status IN ('QUEUED', 'FAILED_RETRYABLE') AND j.available_at <= ?)
+                OR (j.status = 'LEASED' AND j.lease_expires_at <= ?)
+              )
+              AND (
+                (j.job_type = 'SECURITY_INSPECTION' AND d.status IN (
+                    'UNTRUSTED_OBJECT', 'SECURITY_INSPECTION', 'FAILED_RETRYABLE'
+                ))
+                OR
+                (j.job_type = 'SYNTHETIC_EXTRACTION' AND d.status IN (
+                    'EXTRACTION_QUEUED', 'EXTRACTION_RUNNING', 'FAILED_RETRYABLE'
+                ))
+              )
+            ORDER BY j.available_at, j.created_at
+            FOR UPDATE OF j SKIP LOCKED
+            LIMIT 1
+            """.trimIndent(),
+            RowMapper { result, _ -> result.getObject("job_id", UUID::class.java) },
+            now.atOffset(ZoneOffset.UTC),
+            now.atOffset(ZoneOffset.UTC),
+        ).firstOrNull() ?: return null
+        val updated = jdbc.update(
+            """
+            UPDATE gc_document_job
+            SET status = 'LEASED', attempt = attempt + 1, lease_token_hash = ?,
+                lease_expires_at = ?, worker_id_hash = ?, failure_code = NULL, updated_at = ?
+            WHERE job_id = ?
+            """.trimIndent(),
+            leaseTokenHash,
+            leaseExpiresAt.atOffset(ZoneOffset.UTC),
+            workerIdHash,
+            now.atOffset(ZoneOffset.UTC),
+            jobId,
+        )
+        check(updated == 1) { "leased document job disappeared" }
+        jdbc.update(
+            """
+            UPDATE gc_document d
+            SET status = CASE j.job_type
+                    WHEN 'SECURITY_INSPECTION' THEN 'SECURITY_INSPECTION'
+                    ELSE 'EXTRACTION_RUNNING'
+                END,
+                failure_code = NULL, state_version = state_version + 1, updated_at = ?
+            FROM gc_document_job j
+            WHERE j.job_id = ? AND d.document_id = j.document_id
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            jobId,
+        )
+        return queryLeasedJob(jobId, leaseTokenHash, now, lock = false)
+    }
+
+    fun lockLeasedJob(jobId: UUID, leaseTokenHash: String, now: Instant): DocumentJobRow? =
+        queryLeasedJob(jobId, leaseTokenHash, now, lock = true)
+
+    fun findLeasedJob(jobId: UUID, leaseTokenHash: String, now: Instant): DocumentJobRow? =
+        queryLeasedJob(jobId, leaseTokenHash, now, lock = false)
+
+    fun markInspectionCompleted(
+        job: DocumentJobRow,
+        report: InspectionReport,
+        inspectionId: UUID,
+        promotionId: UUID?,
+        approvedObjectKey: String?,
+        extractionJobId: UUID?,
+        now: Instant,
+    ) {
+        jdbc.update(
+            """
+            INSERT INTO gc_document_inspection(
+                inspection_id, job_id, document_id, source_sha256, source_length,
+                decision, reason, identified_media_type, page_count, indirect_object_count,
+                total_image_pixels, encrypted, active_content, embedded_files,
+                policy_version, scanner_name, scanner_version, signature_version, inspected_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            inspectionId,
+            job.jobId,
+            job.documentId,
+            report.sourceSha256,
+            job.sourceLength,
+            report.decision.name,
+            report.reason.name,
+            report.identifiedMediaType,
+            report.pageCount,
+            report.indirectObjectCount,
+            report.totalImagePixels,
+            report.encrypted,
+            report.activeContent,
+            report.embeddedFiles,
+            report.policyVersion,
+            report.scannerName,
+            report.scannerVersion,
+            report.signatureVersion,
+            now.atOffset(ZoneOffset.UTC),
+        )
+        if (report.decision == InspectionDecision.APPROVED) {
+            require(promotionId != null && approvedObjectKey != null && extractionJobId != null)
+            jdbc.update(
+                """
+                INSERT INTO gc_source_promotion(
+                    promotion_id, document_id, inspection_id, source_sha256,
+                    untrusted_object_key, approved_object_key, promoted_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """.trimIndent(),
+                promotionId,
+                job.documentId,
+                inspectionId,
+                report.sourceSha256,
+                job.sourceObjectKey,
+                approvedObjectKey,
+                now.atOffset(ZoneOffset.UTC),
+            )
+            jdbc.update(
+                """
+                UPDATE gc_document
+                SET status = 'EXTRACTION_QUEUED', approved_object_key = ?, approved_at = ?,
+                    failure_code = NULL, state_version = state_version + 1, updated_at = ?
+                WHERE document_id = ? AND status = 'SECURITY_INSPECTION' AND sha256 = ?
+                """.trimIndent(),
+                approvedObjectKey,
+                now.atOffset(ZoneOffset.UTC),
+                now.atOffset(ZoneOffset.UTC),
+                job.documentId,
+                report.sourceSha256,
+            ).also { check(it == 1) { "document inspection state changed" } }
+            jdbc.update(
+                """
+                INSERT INTO gc_document_job(
+                    job_id, document_id, job_type, status, attempt, max_attempts,
+                    available_at, created_at, updated_at
+                ) VALUES (?, ?, 'SYNTHETIC_EXTRACTION', 'QUEUED', 0, 3, ?, ?, ?)
+                """.trimIndent(),
+                extractionJobId,
+                job.documentId,
+                now.atOffset(ZoneOffset.UTC),
+                now.atOffset(ZoneOffset.UTC),
+                now.atOffset(ZoneOffset.UTC),
+            )
+        } else {
+            jdbc.update(
+                """
+                UPDATE gc_document
+                SET status = 'SECURITY_REJECTED', failure_code = ?, inspected_at = ?,
+                    state_version = state_version + 1, updated_at = ?
+                WHERE document_id = ? AND status = 'SECURITY_INSPECTION'
+                """.trimIndent(),
+                report.reason.name.lowercase(),
+                now.atOffset(ZoneOffset.UTC),
+                now.atOffset(ZoneOffset.UTC),
+                job.documentId,
+            ).also { check(it == 1) { "document inspection state changed" } }
+        }
+        completeJob(job.jobId, now)
+    }
+
+    fun markJobFailed(job: DocumentJobRow, failureCode: String, retryable: Boolean, now: Instant) {
+        val retry = retryable && job.attempt < job.maxAttempts
+        val jobStatus = if (retry) "FAILED_RETRYABLE" else "DEAD_LETTER"
+        val documentStatus = if (retry) "FAILED_RETRYABLE" else "FAILED_TERMINAL"
+        val delaySeconds = minOf(60L, 1L shl minOf(job.attempt, 6))
+        jdbc.update(
+            """
+            UPDATE gc_document_job
+            SET status = ?, failure_code = ?, available_at = ?, lease_token_hash = NULL,
+                lease_expires_at = NULL, worker_id_hash = NULL, updated_at = ?
+            WHERE job_id = ? AND status = 'LEASED'
+            """.trimIndent(),
+            jobStatus,
+            failureCode,
+            now.plusSeconds(delaySeconds).atOffset(ZoneOffset.UTC),
+            now.atOffset(ZoneOffset.UTC),
+            job.jobId,
+        ).also { check(it == 1) { "document job lease changed" } }
+        jdbc.update(
+            """
+            UPDATE gc_document
+            SET status = ?, failure_code = ?, state_version = state_version + 1, updated_at = ?
+            WHERE document_id = ?
+            """.trimIndent(),
+            documentStatus,
+            failureCode,
+            now.atOffset(ZoneOffset.UTC),
+            job.documentId,
+        )
+    }
+
+    fun markExtractionCompleted(
+        workerJob: DocumentJobRow,
+        extractionJobId: UUID,
         candidateId: UUID,
-        document: FoundationDocumentRow,
+        previewId: UUID,
+        previewObjectKey: String,
+        previewSha256: String,
+        workerImageDigest: String,
+        generatorVersion: String,
         now: Instant,
         sourceTextSha256: String,
     ) {
         jdbc.update(
             """
-            INSERT INTO gc_extraction_job(job_id, document_id, subject_id, status, created_at, finished_at)
-            VALUES (?, ?, ?, 'COMPLETED', ?, ?)
+            INSERT INTO gc_extraction_job(
+                job_id, document_id, subject_id, status, created_at, finished_at,
+                worker_job_id, source_sha256, worker_image_digest, generator_version, attempt
+            ) VALUES (?, ?, ?, 'COMPLETED', ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
-            jobId,
-            document.documentId,
-            document.subjectId,
+            extractionJobId,
+            workerJob.documentId,
+            workerJob.subjectId,
             now.atOffset(ZoneOffset.UTC),
             now.atOffset(ZoneOffset.UTC),
+            workerJob.jobId,
+            workerJob.sourceSha256,
+            workerImageDigest,
+            generatorVersion,
+            workerJob.attempt,
         )
         jdbc.update(
             """
@@ -430,12 +869,98 @@ class FoundationRepository(
             ) VALUES (?, ?, ?, ?, 'PENDING', '총콜레스테롤', '188', 'mg/dL', DATE '2026-07-28', 1, ?, ?)
             """.trimIndent(),
             candidateId,
-            jobId,
-            document.documentId,
-            document.subjectId,
+            extractionJobId,
+            workerJob.documentId,
+            workerJob.subjectId,
             sourceTextSha256,
             now.atOffset(ZoneOffset.UTC),
         )
+        jdbc.update(
+            """
+            INSERT INTO gc_preview_artifact(
+                preview_id, document_id, source_sha256, preview_sha256,
+                object_key, media_type, generator_version, generated_at
+            ) VALUES (?, ?, ?, ?, ?, 'image/png', ?, ?)
+            """.trimIndent(),
+            previewId,
+            workerJob.documentId,
+            workerJob.sourceSha256,
+            previewSha256,
+            previewObjectKey,
+            generatorVersion,
+            now.atOffset(ZoneOffset.UTC),
+        )
+        jdbc.update(
+            """
+            UPDATE gc_document
+            SET status = 'REVIEW_REQUIRED', preview_object_key = ?, failure_code = NULL,
+                state_version = state_version + 1, updated_at = ?
+            WHERE document_id = ? AND status = 'EXTRACTION_RUNNING' AND sha256 = ?
+            """.trimIndent(),
+            previewObjectKey,
+            now.atOffset(ZoneOffset.UTC),
+            workerJob.documentId,
+            workerJob.sourceSha256,
+        ).also { check(it == 1) { "document extraction state changed" } }
+        completeJob(workerJob.jobId, now)
+    }
+
+    private fun completeJob(jobId: UUID, now: Instant) {
+        jdbc.update(
+            """
+            UPDATE gc_document_job
+            SET status = 'COMPLETED', completed_at = ?, lease_token_hash = NULL,
+                lease_expires_at = NULL, worker_id_hash = NULL, failure_code = NULL, updated_at = ?
+            WHERE job_id = ? AND status = 'LEASED'
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            now.atOffset(ZoneOffset.UTC),
+            jobId,
+        ).also { check(it == 1) { "document job lease changed" } }
+    }
+
+    private fun queryLeasedJob(
+        jobId: UUID,
+        leaseTokenHash: String,
+        now: Instant,
+        lock: Boolean,
+    ): DocumentJobRow? {
+        val lockClause = if (lock) "FOR UPDATE OF j" else ""
+        return jdbc.query(
+            """
+            SELECT j.job_id, j.document_id, d.subject_id, j.job_type, j.attempt, j.max_attempts,
+                   j.lease_token_hash, j.lease_expires_at,
+                   CASE WHEN j.job_type = 'SECURITY_INSPECTION'
+                        THEN d.object_key ELSE d.approved_object_key END AS source_object_key,
+                   d.sha256 AS source_sha256, d.actual_length AS source_length,
+                   d.state_version AS document_state_version
+            FROM gc_document_job j
+            JOIN gc_document d ON d.document_id = j.document_id
+            JOIN gc_consent_grant c ON c.consent_id = d.consent_id AND c.status = 'ACTIVE'
+            WHERE j.job_id = ? AND j.status = 'LEASED' AND j.lease_token_hash = ?
+              AND j.lease_expires_at > ?
+            $lockClause
+            """.trimIndent(),
+            RowMapper { result, _ ->
+                DocumentJobRow(
+                    jobId = result.getObject("job_id", UUID::class.java),
+                    documentId = result.getObject("document_id", UUID::class.java),
+                    subjectId = result.getString("subject_id"),
+                    jobType = result.getString("job_type"),
+                    attempt = result.getInt("attempt"),
+                    maxAttempts = result.getInt("max_attempts"),
+                    leaseTokenHash = result.getString("lease_token_hash"),
+                    leaseExpiresAt = result.getObject("lease_expires_at", OffsetDateTime::class.java).toInstant(),
+                    sourceObjectKey = result.getString("source_object_key"),
+                    sourceSha256 = result.getString("source_sha256"),
+                    sourceLength = result.getLong("source_length"),
+                    documentStateVersion = result.getLong("document_state_version"),
+                )
+            },
+            jobId,
+            leaseTokenHash,
+            now.atOffset(ZoneOffset.UTC),
+        ).firstOrNull()
     }
 
     fun findCandidateForDocument(subjectId: String, documentId: UUID): FoundationCandidateRow? =
@@ -468,8 +993,30 @@ class FoundationRepository(
             candidateId,
         ).firstOrNull()
 
-    fun excludeCandidate(subjectId: String, candidateId: UUID, now: Instant): Boolean =
-        jdbc.update(
+    fun findPreviewArtifact(subjectId: String, documentId: UUID): PreviewArtifactRow? =
+        jdbc.query(
+            """
+            SELECT p.object_key, p.source_sha256, p.preview_sha256, p.generator_version
+            FROM gc_preview_artifact p
+            JOIN gc_document d ON d.document_id = p.document_id
+            WHERE d.subject_id = ? AND d.document_id = ?
+              AND d.status IN ('REVIEW_REQUIRED', 'COMPLETED')
+              AND d.preview_object_key = p.object_key AND d.sha256 = p.source_sha256
+            """.trimIndent(),
+            RowMapper { result, _ ->
+                PreviewArtifactRow(
+                    objectKey = result.getString("object_key"),
+                    sourceSha256 = result.getString("source_sha256"),
+                    previewSha256 = result.getString("preview_sha256"),
+                    generatorVersion = result.getString("generator_version"),
+                )
+            },
+            subjectId,
+            documentId,
+        ).firstOrNull()
+
+    fun excludeCandidate(subjectId: String, candidateId: UUID, now: Instant): Boolean {
+        val updated = jdbc.update(
             """
             UPDATE gc_candidate
             SET status = 'EXCLUDED', excluded_at = ?
@@ -478,7 +1025,24 @@ class FoundationRepository(
             now.atOffset(ZoneOffset.UTC),
             candidateId,
             subjectId,
-        ) == 1
+        )
+        if (updated == 1) {
+            jdbc.update(
+                """
+                UPDATE gc_document d SET status = 'COMPLETED', completed_at = ?,
+                    state_version = state_version + 1, updated_at = ?
+                FROM gc_candidate c
+                WHERE c.candidate_id = ? AND c.document_id = d.document_id
+                  AND d.subject_id = ? AND d.status = 'REVIEW_REQUIRED'
+                """.trimIndent(),
+                now.atOffset(ZoneOffset.UTC),
+                now.atOffset(ZoneOffset.UTC),
+                candidateId,
+                subjectId,
+            )
+        }
+        return updated == 1
+    }
 
     fun createRecordFromCandidate(
         recordId: UUID,
@@ -527,6 +1091,17 @@ class FoundationRepository(
             candidate.subjectId,
             confirmedValue,
             now.atOffset(ZoneOffset.UTC),
+        )
+        jdbc.update(
+            """
+            UPDATE gc_document
+            SET status = 'COMPLETED', completed_at = ?, state_version = state_version + 1, updated_at = ?
+            WHERE document_id = ? AND subject_id = ? AND status = 'REVIEW_REQUIRED'
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            now.atOffset(ZoneOffset.UTC),
+            candidate.documentId,
+            candidate.subjectId,
         )
     }
 
@@ -599,12 +1174,21 @@ class FoundationRepository(
         return true
     }
 
-    fun listObjectKeys(subjectId: String): List<String> =
+    fun listObjectKeys(subjectId: String): List<Pair<StorageTrustZone, String>> =
         jdbc.query(
-            "SELECT object_key FROM gc_document WHERE subject_id = ? AND object_key IS NOT NULL",
-            RowMapper { result, _ -> result.getString("object_key") },
+            """
+            SELECT object_key, approved_object_key, preview_object_key
+            FROM gc_document WHERE subject_id = ?
+            """.trimIndent(),
+            RowMapper { result, _ ->
+                listOfNotNull(
+                    result.getString("object_key")?.let { StorageTrustZone.UNTRUSTED to it },
+                    result.getString("approved_object_key")?.let { StorageTrustZone.APPROVED_SOURCE to it },
+                    result.getString("preview_object_key")?.let { StorageTrustZone.DERIVED_SAFE_ARTIFACT to it },
+                )
+            },
             subjectId,
-        )
+        ).flatten()
 
     fun completeDeletion(subjectId: String, subjectHash: String, deletionId: UUID, now: Instant): UUID {
         jdbc.update(

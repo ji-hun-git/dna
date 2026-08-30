@@ -12,3 +12,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "genome-companion-korea"
 include(":apps:core-api")
+include(":apps:document-worker")
+include(":packages:document-boundary")

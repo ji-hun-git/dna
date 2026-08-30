@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { EvidenceLens } from "@/components/records/EvidenceLens";
 import {
   createFoundationClient,
+  sha256Blob,
   type FoundationCandidate,
   type FoundationConsent,
   type FoundationDocument,
@@ -22,28 +23,44 @@ type ShellState =
 
 type View = "home" | "consent" | "source" | "processing" | "review" | "complete" | "evidence";
 
-type ProcessingState =
+type LocalProcessingState =
   | "IDLE"
+  | "HASHING"
   | "REQUESTING_UPLOAD"
   | "UPLOADING"
-  | "QUARANTINED"
-  | "INSPECTING"
-  | "INSPECTED"
-  | "EXTRACTING"
-  | "REVIEW_REQUIRED"
-  | "REJECTED";
+  | "UPLOAD_FINALIZING";
+
+type ProcessingState = LocalProcessingState | FoundationDocument["status"];
 
 const processingCopy: Record<ProcessingState, string> = {
   IDLE: "대기 중",
+  HASHING: "브라우저에서 파일 확인값을 계산하고 있어요",
   REQUESTING_UPLOAD: "서버에 업로드 요청을 만들고 있어요",
   UPLOADING: "허용된 합성 PDF를 전송하고 있어요",
-  QUARANTINED: "서버가 논리 격리 상태로 기록했어요",
-  INSPECTING: "서버가 파일 형식과 허용된 확인값을 검사하고 있어요",
-  INSPECTED: "서버 검사를 통과했어요",
-  EXTRACTING: "서버가 합성 후보를 만들고 있어요",
+  UPLOAD_FINALIZING: "서버가 받은 바이트와 요청 정보를 다시 맞추고 있어요",
+  UPLOAD_PENDING: "업로드가 끝나기를 기다리고 있어요",
+  UNTRUSTED_OBJECT: "파일을 신뢰하지 않는 보안 구역에 보관했어요",
+  SECURITY_INSPECTION: "격리된 작업자가 문서를 안전하게 확인하고 있어요",
+  SECURITY_REJECTED: "보안 정책에 따라 이 파일을 처리하지 않았어요",
+  SECURITY_APPROVED: "검사한 바이트가 승인됐어요",
+  EXTRACTION_QUEUED: "승인된 바이트의 합성 후보 생성을 기다리고 있어요",
+  EXTRACTION_RUNNING: "격리된 작업자가 안전한 미리보기를 만들고 있어요",
   REVIEW_REQUIRED: "직접 확인할 합성 후보가 준비됐어요",
-  REJECTED: "서버가 파일을 거부했어요",
+  COMPLETED: "이 문서의 사용자 확인이 끝났어요",
+  DELETION_PENDING: "문서와 파생물을 지우고 있어요",
+  DELETED: "문서와 파생물을 삭제했어요",
+  FAILED_RETRYABLE: "일시적인 문제로 서버가 안전하게 다시 시도할 준비를 하고 있어요",
+  FAILED_TERMINAL: "안전하게 계속할 수 없어 처리를 중단했어요",
 };
+
+const pollableStates = new Set<FoundationDocument["status"]>([
+  "UNTRUSTED_OBJECT",
+  "SECURITY_INSPECTION",
+  "SECURITY_APPROVED",
+  "EXTRACTION_QUEUED",
+  "EXTRACTION_RUNNING",
+  "FAILED_RETRYABLE",
+]);
 
 function newIdempotencyKey(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -72,14 +89,29 @@ export function IntegratedHealthExperience() {
   const [correctionMode, setCorrectionMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pollingPaused, setPollingPaused] = useState(false);
+  const [pollingNonce, setPollingNonce] = useState(0);
 
   const loadProductTruth = useCallback(async () => {
-    const [loadedConsent, loadedRecords] = await Promise.all([
+    const [loadedConsent, loadedRecords, activity] = await Promise.all([
       client.getDocumentConsent(),
       client.getRecords(),
+      client.getActiveDocument(),
     ]);
     setConsent(loadedConsent);
     setRecords(loadedRecords);
+    if (activity.document) {
+      setDocumentReceipt(activity.document);
+      setProcessingState(activity.document.status);
+      if (activity.document.status === "REVIEW_REQUIRED") {
+        const restoredCandidate = await client.getCandidateForDocument(activity.document.documentId);
+        setCandidate(restoredCandidate);
+        setDraftValue(restoredCandidate.value);
+        setView("review");
+      } else {
+        setView("processing");
+      }
+    }
   }, [client]);
 
   const initialize = useCallback(async () => {
@@ -100,6 +132,49 @@ export function IntegratedHealthExperience() {
   useEffect(() => {
     void initialize();
   }, [initialize]);
+
+  useEffect(() => {
+    const documentId = documentReceipt?.documentId;
+    const documentStatus = documentReceipt?.status;
+    if (!documentId || !documentStatus || view !== "processing" || !pollableStates.has(documentStatus)) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+
+    const poll = async () => {
+      try {
+        const current = await client.getDocument(documentId);
+        if (cancelled) return;
+        setDocumentReceipt(current);
+        setProcessingState(current.status);
+        setPollingPaused(false);
+        setErrorMessage("");
+        if (current.status === "REVIEW_REQUIRED") {
+          const extracted = await client.getCandidateForDocument(current.documentId);
+          if (cancelled) return;
+          setCandidate(extracted);
+          setDraftValue(extracted.value);
+          setView("review");
+          return;
+        }
+        if (!pollableStates.has(current.status)) return;
+        attempt += 1;
+        timer = setTimeout(poll, Math.min(8_000, 750 * (2 ** Math.min(attempt, 4))));
+      } catch (error) {
+        if (cancelled) return;
+        setPollingPaused(true);
+        setErrorMessage(describeFoundationError(error));
+        const nextShell = foundationShellState(error);
+        if (nextShell === "SESSION_EXPIRED" || nextShell === "UNAUTHENTICATED") setShellState(nextShell);
+      }
+    };
+
+    timer = setTimeout(poll, 600);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [client, documentReceipt?.documentId, documentReceipt?.status, pollingNonce, view]);
 
   const signIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -126,6 +201,7 @@ export function IntegratedHealthExperience() {
     setCandidate(undefined);
     setSavedRecord(undefined);
     setProcessingState("IDLE");
+    setPollingPaused(false);
     setView(consent?.status === "ACTIVE" ? "source" : "consent");
   };
 
@@ -150,8 +226,8 @@ export function IntegratedHealthExperience() {
       setErrorMessage("이 통합 단계에서는 허용된 합성 PDF만 선택할 수 있어요.");
       return;
     }
-    if (file.size < 8 || file.size > 10_485_760) {
-      setErrorMessage("PDF 크기는 8바이트 이상 10MB 이하여야 해요.");
+    if (file.size < 64 || file.size > 10_485_760) {
+      setErrorMessage("PDF 크기는 64바이트 이상 10MB 이하여야 해요.");
       return;
     }
     if (!consent?.consentId || consent.status !== "ACTIVE") {
@@ -161,57 +237,26 @@ export function IntegratedHealthExperience() {
     }
     setBusy(true);
     try {
-      setProcessingState("REQUESTING_UPLOAD");
+      setProcessingState("HASHING");
       setView("processing");
+      const digest = await sha256Blob(file);
+      setProcessingState("REQUESTING_UPLOAD");
       const ticket = await client.requestDocument(
         consent.consentId,
         file.size,
+        digest,
         newIdempotencyKey("document"),
       );
       setDocumentReceipt(ticket.document);
       setProcessingState("UPLOADING");
-      const uploaded = await client.uploadDocument(ticket.document.documentId, file);
+      const uploaded = await client.uploadDocument(ticket.uploadCapability, file);
       setDocumentReceipt(uploaded);
-      setProcessingState(uploaded.status === "QUARANTINED" ? "QUARANTINED" : "REJECTED");
-    } catch (error) {
-      setProcessingState("REJECTED");
-      setErrorMessage(describeFoundationError(error));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const inspectDocument = async () => {
-    if (!documentReceipt) return;
-    setBusy(true);
-    setErrorMessage("");
-    setProcessingState("INSPECTING");
-    try {
-      const inspected = await client.inspectDocument(documentReceipt.documentId);
-      setDocumentReceipt(inspected);
-      setProcessingState(inspected.status === "INSPECTED" ? "INSPECTED" : "REJECTED");
-    } catch (error) {
-      setProcessingState("REJECTED");
-      setErrorMessage(describeFoundationError(error));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const extractCandidate = async () => {
-    if (!documentReceipt) return;
-    setBusy(true);
-    setErrorMessage("");
-    setProcessingState("EXTRACTING");
-    try {
-      const extracted = await client.extractCandidate(documentReceipt.documentId);
-      setCandidate(extracted);
-      setDraftValue(extracted.value);
-      setProcessingState("REVIEW_REQUIRED");
-      setView("review");
+      setProcessingState("UPLOAD_FINALIZING");
+      const finalized = await client.finalizeDocument(ticket.document.documentId);
+      setDocumentReceipt(finalized);
+      setProcessingState(finalized.status);
     } catch (error) {
       setErrorMessage(describeFoundationError(error));
-      setProcessingState("REJECTED");
     } finally {
       setBusy(false);
     }
@@ -361,7 +406,7 @@ export function IntegratedHealthExperience() {
                 event.currentTarget.value = "";
               }}
             />
-            <p className="gc-import__privacy-note">선택한 파일은 로컬 개발 서버의 논리 격리 경로로 전송됩니다. 악성 파일 보안 격리와 OCR은 아직 구현하지 않았어요.</p>
+            <p className="gc-import__privacy-note">선택한 파일은 신뢰하지 않는 보안 구역으로만 전송됩니다. 서버가 허용한 합성 PDF 확인값과 일치하지 않으면 업로드 요청 자체를 만들지 않아요.</p>
             {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
           </section>
         </div>
@@ -382,13 +427,13 @@ export function IntegratedHealthExperience() {
               <dl className="gc-integrated-facts">
                 <div><dt>문서 상태</dt><dd>{documentReceipt.status}</dd></div>
                 <div><dt>파일 확인값</dt><dd><code>{documentReceipt.sha256 ? shortDigest(documentReceipt.sha256) : "아직 없음"}</code></dd></div>
-                <div><dt>격리 경계</dt><dd>논리 개발 상태 · 보안 격리 아님</dd></div>
+                <div><dt>신뢰 경계</dt><dd>적대적 문서 격리 구역</dd></div>
+                <div><dt>안전한 미리보기</dt><dd>{documentReceipt.previewAvailable ? "승인된 PNG 준비됨" : "승인 전에는 표시하지 않음"}</dd></div>
               </dl>
             )}
             <div className="gc-integrated-actions">
-              {processingState === "QUARANTINED" && <button type="button" onClick={inspectDocument} disabled={busy}>서버 검사 계속</button>}
-              {processingState === "INSPECTED" && <button type="button" onClick={extractCandidate} disabled={busy}>합성 후보 만들기</button>}
-              {processingState === "REJECTED" && <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>}
+              {pollingPaused && <button type="button" onClick={() => { setErrorMessage(""); setPollingPaused(false); setPollingNonce((value) => value + 1); }}>상태 다시 확인</button>}
+              {(processingState === "SECURITY_REJECTED" || processingState === "FAILED_TERMINAL") && <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>}
             </div>
             {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
           </section>
@@ -418,6 +463,16 @@ export function IntegratedHealthExperience() {
                 <div><dt>생성 방식</dt><dd>결정적 합성 fixture</dd></div>
               </dl>
             </article>
+            {documentReceipt?.previewAvailable && (
+              <figure className="gc-import__safe-preview">
+                <img
+                  src={`/api/foundation/documents/${documentReceipt.documentId}/preview`}
+                  alt="승인된 합성 결과지의 첫 페이지 PNG 미리보기"
+                  loading="lazy"
+                />
+                <figcaption>검사를 통과한 바이트에서 격리 작업자가 만든 PNG예요. 업로드한 PDF를 브라우저에서 직접 열지 않습니다.</figcaption>
+              </figure>
+            )}
             {correctionMode ? (
               <form className="gc-integrated-correction" onSubmit={(event) => { event.preventDefault(); void confirmCandidate(draftValue.trim()); }}>
                 <label htmlFor="integrated-candidate-value">원문과 같은 값으로 수정</label>
@@ -493,7 +548,7 @@ export function IntegratedHealthExperience() {
             </article>
           ) : <p className="gc-integrated-empty">허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다.</p>}
         </section>
-        <section className="gc-health-home__privacy" aria-labelledby="integrated-boundary-title"><div><p>현재 허용 범위</p><h2 id="integrated-boundary-title">합성 데이터만 처리해요</h2><ul><li>실제 카카오·네이버·MyHealthWay 비활성화</li><li>OCR·의료 AI 비활성화</li><li>논리 격리 상태이며 보안 격리 경계는 미구현</li></ul></div><a className="gc-button gc-button--weak" href="/data-control">데이터 관리</a></section>
+        <section className="gc-health-home__privacy" aria-labelledby="integrated-boundary-title"><div><p>현재 허용 범위</p><h2 id="integrated-boundary-title">합성 데이터만 처리해요</h2><ul><li>실제 카카오·네이버·MyHealthWay 비활성화</li><li>OCR·의료 AI 비활성화</li><li>문서는 승인 전까지 적대적 입력으로 격리</li></ul></div><a className="gc-button gc-button--weak" href="/data-control">데이터 관리</a></section>
         {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
       </div>
     </main>

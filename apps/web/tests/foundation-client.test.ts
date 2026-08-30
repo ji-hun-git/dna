@@ -61,23 +61,41 @@ describe("foundation same-origin client", () => {
     });
   });
 
-  it("accepts an initial document ticket before digest and byte count exist", async () => {
+  it("accepts only a digest-bound bounded upload capability", async () => {
     const documentId = "e64ddaae-a326-4f23-88a9-05ac59a48625";
+    const capabilityId = "8df1e2d3-9f19-4dd0-91bc-0566dc36f9d0";
+    const digest = "a".repeat(64);
     const fetcher = vi.fn(async () => jsonResponse({
       document: {
         documentId,
-        status: "REQUESTED",
-        quarantineBoundary: "LOGICAL_DEVELOPMENT_STATE",
+        status: "UPLOAD_PENDING",
+        stateVersion: 0,
+        previewAvailable: false,
+        quarantineBoundary: "HOSTILE_DOCUMENT_TRUST_ZONE",
       },
-      uploadPath: `/api/foundation/documents/${documentId}/content`,
+      uploadCapability: {
+        capabilityId,
+        method: "PUT",
+        uploadPath: `/api/foundation/documents/${documentId}/content`,
+        expiresAt: "2026-08-30T08:05:00Z",
+        expectedLength: 64,
+        expectedSha256: digest,
+        requiredHeaders: {
+          "Content-Type": "application/pdf",
+          "X-GC-Upload-Capability-Id": capabilityId,
+          "X-GC-Upload-Capability": "bounded-synthetic-capability-value-0001",
+        },
+        replaySemantics: "REUSABLE_BEFORE_FINALIZATION_UNTIL_EXPIRY_SAME_OBJECT_SAME_BYTES_ONLY",
+      },
     }, 201));
     const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
 
     await expect(client.requestDocument(
       "89116f1a-2026-457e-8942-409ff8f8fc4f",
       64,
+      digest,
       "document-test-key",
-    )).resolves.toMatchObject({ document: { documentId, status: "REQUESTED" } });
+    )).resolves.toMatchObject({ document: { documentId, status: "UPLOAD_PENDING" } });
   });
 
   it("fails closed before a mutation when the CSRF value is unavailable", async () => {

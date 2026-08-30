@@ -10,8 +10,8 @@ It exits:
 - 1 when the file is valid but one or more blocking gates are not PASS.
 - 2 when the artifact is structurally or logically invalid.
 
-Current verdict: **NO_GO for a real-data private beta**.
+Current target: **HOSTED SYNTHETIC STAGING**. Current verdict: **NO_GO**.
 
-Local dependency, durable synthetic lifecycle, strict OIDC/purpose-consent boundary, authorization-negative, audit-mutation, session invalidation, consent revocation, and synthetic deletion checks pass. Production image, isolated worker, production audit sink, backup/restore, hosted DevSecOps, and privacy/regulatory gates do not.
+The digest-bound hostile-document state machine, bounded upload capability, local trust zones, transactional job leases/retries/DLQ and separate worker artifact now exist. The frontend production build and local unit suites pass. SHA-pinned GitHub CI now defines PostgreSQL/Flyway and browser/worker E2E plus CodeQL, Gitleaks, Trivy and CycloneDX gates, but no GitHub run is evidence until it actually executes. A real ClamAV run, full-stack PostgreSQL worker/browser E2E, hosted object/IAM/queue/network controls, immutable runtime images, observability, external audit anchoring, backup/restore, deletion replay and hosted research-denial evidence do not yet pass.
 
 This artifact must be updated from evidence. A dependency declaration, mock, UI state, or unit test alone cannot change a gate to PASS.

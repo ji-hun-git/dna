@@ -13,8 +13,10 @@ Browser
 → Spring foundation API
 → opaque cookie session and CSRF/origin enforcement
 → PostgreSQL/Flyway
-→ local quarantine directory
-→ digest-allowlisted deterministic synthetic extraction
+→ bounded synthetic upload capability
+→ local untrusted storage zone
+→ separately executable inspection/extraction worker
+→ digest-bound approved source and PNG derivative
 → pending candidate
 → explicit confirmation
 → durable record and provenance fields
@@ -31,7 +33,9 @@ Next forwards the local /api path only when GC_CORE_API_ORIGIN is set. It does n
 - Startup fails when foundation mode is enabled without an HTTPS/loopback origin, 32-character audit pepper, explicit synthetic identity credential hashes, quarantine root, and allowlisted SHA-256 document digest.
 - Session cookies default to Secure, HttpOnly, SameSite=Strict, and /api path scope.
 - Only application/pdf requests between 8 bytes and 10 MiB are admitted.
-- Inspection accepts only PDF magic bytes whose SHA-256 is in the configured synthetic fixture allowlist.
+- Intake accepts only exact SHA-256 values in the configured synthetic fixture allowlist.
+- The worker fails closed when the required scanner is absent, unavailable, or has the wrong version. A local synthetic scanner result is accepted only behind an explicit test flag.
+- Quarantined PDFs are never served to the browser; only bounded worker-generated PNG derivatives are previewable.
 - OCR/model-like output is a PENDING candidate and cannot become a record without the confirmation endpoint.
 - Health values and source content are absent from gc_audit_event by schema and API design.
 
@@ -74,8 +78,10 @@ The Kotlin integration test is disabled when GC_TEST_POSTGRES_URL is absent. The
 
 ## Known limitations
 
-- Quarantine is local filesystem, not separately credentialed object storage.
-- Inspection and deterministic extraction run synchronously in Spring; there is no malware scanner, queue, or network-isolated worker.
+- Trust zones are local filesystem directories, not separately credentialed hosted object storage.
+- The worker is a separate process with leased jobs and no database credential, but it is not yet a containerized network-isolated hosted workload.
+- The executable real scanner boundary is implemented but has not been exercised with the pinned ClamAV runtime in this environment.
+- Job delivery is a PostgreSQL lease/retry/dead-letter design, not hosted SQS/DLQ evidence.
 - The only extraction output is a fixed synthetic fixture candidate. It is not OCR or medical-model evidence.
 - Local identity is a synthetic credential broker, not Kakao, Naver, OIDC, or production MFA.
 - PostgreSQL roles, TLS, row-level security, backup/restore, production audit storage, KMS, observability, rate limits, and deployed ingress are not implemented.

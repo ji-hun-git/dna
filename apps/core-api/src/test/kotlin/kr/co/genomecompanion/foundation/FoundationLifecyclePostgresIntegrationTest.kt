@@ -37,8 +37,12 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     private val objectMapper: ObjectMapper,
     private val jdbc: JdbcTemplate,
     private val service: FoundationLifecycleService,
+    private val workerService: DocumentWorkerBoundaryService,
 ) {
     data class TestClient(val cookie: Cookie, val csrf: String)
+    data class TestUploadCapability(val capabilityId: UUID, val rawToken: String)
+
+    private val uploadCapabilities = mutableMapOf<UUID, TestUploadCapability>()
 
     @BeforeEach
     fun resetSyntheticDatabase() {
@@ -60,7 +64,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             """.trimIndent(),
         )
         Files.createDirectories(quarantineRoot)
-        Files.list(quarantineRoot).use { paths -> paths.forEach(Files::deleteIfExists) }
+        uploadCapabilities.clear()
     }
 
     @Test
@@ -158,22 +162,19 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(requestDocument(alice, aliceConsentId, fixturePdf, "doc-request-alice"))
             .isEqualTo(aliceDocumentId)
 
-        mutate(
-            put("/api/foundation/documents/$aliceDocumentId/content")
-                .contentType(MediaType.APPLICATION_PDF)
-                .content(fixturePdf),
-            alice,
-        ).andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("QUARANTINED"))
+        uploadDocument(alice, aliceDocumentId, fixturePdf)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("UPLOAD_PENDING"))
             .andExpect(jsonPath("$.sha256").value(fixtureDigest))
 
-        mutate(post("/api/foundation/documents/$aliceDocumentId/inspection"), alice)
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("INSPECTED"))
+        mutate(post("/api/foundation/documents/$aliceDocumentId/finalization"), alice)
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.status").value("UNTRUSTED_OBJECT"))
 
+        runWorkerPipeline(aliceDocumentId, simulateTransientExtractionFailure = true)
         val candidateNode = responseJson(
-            mutate(post("/api/foundation/documents/$aliceDocumentId/extraction"), alice)
-                .andExpect(status().isCreated)
+            read(get("/api/foundation/documents/$aliceDocumentId/candidate"), alice)
+                .andExpect(status().isOk)
                 .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.label").value("총콜레스테롤"))
                 .andReturn()
@@ -248,6 +249,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("consent_revoked"))
 
+        val unsafePdf = "%PDF-1.7\nsynthetic-but-not-allowlisted\n%%EOF\n".toByteArray()
         mutate(
             post("/api/foundation/candidates/$candidateId/confirmation")
                 .header("Idempotency-Key", "confirm-after-revoke")
@@ -257,20 +259,14 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("consent_revoked"))
 
-        val unsafePdf = "%PDF-1.7\nsynthetic-but-not-allowlisted\n".toByteArray()
-        val bobDocumentId = requestDocument(bob, bobConsentId, unsafePdf, "doc-request-bob-bad")
         mutate(
-            put("/api/foundation/documents/$bobDocumentId/content")
-                .contentType(MediaType.APPLICATION_PDF)
-                .content(unsafePdf),
+            post("/api/foundation/documents")
+                .header("Idempotency-Key", "doc-request-bob-bad")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(documentRequest(bobConsentId, unsafePdf)),
             bob,
-        ).andExpect(status().isOk)
-        mutate(post("/api/foundation/documents/$bobDocumentId/inspection"), bob)
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("REJECTED"))
-        mutate(post("/api/foundation/documents/$bobDocumentId/extraction"), bob)
-            .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.code").value("document_not_inspected"))
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("synthetic_fixture_required"))
 
         val deletionNode = responseJson(
             mutate(delete("/api/foundation/profile"), alice)
@@ -316,7 +312,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 Long::class.java,
             ),
         ).isZero()
-        assertThat(Files.exists(quarantineRoot.resolve("$aliceDocumentId.pdf"))).isFalse()
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$aliceDocumentId.pdf"))).isFalse()
 
         val repeatedDeletion = service.deleteProfile(
             FoundationPrincipal(
@@ -490,16 +486,12 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             fixturePdf,
             "document-$keySuffix-request",
         )
-        mutate(
-            put("/api/foundation/documents/$documentId/content")
-                .contentType(MediaType.APPLICATION_PDF)
-                .content(fixturePdf),
-            client,
-        ).andExpect(status().isOk)
-        mutate(post("/api/foundation/documents/$documentId/inspection"), client)
+        uploadDocument(client, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), client)
+            .andExpect(status().isAccepted)
+        runWorkerPipeline(documentId)
+        val response = read(get("/api/foundation/documents/$documentId/candidate"), client)
             .andExpect(status().isOk)
-        val response = mutate(post("/api/foundation/documents/$documentId/extraction"), client)
-            .andExpect(status().isCreated)
             .andReturn()
             .response
         return UUID.fromString(responseJson(response.contentAsByteArray)["candidateId"].asText())
@@ -552,9 +544,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).andExpect(status().isCreated)
             .andReturn()
             .response
-        return UUID.fromString(
-            responseJson(response.contentAsByteArray)["document"]["documentId"].asText(),
+        val body = responseJson(response.contentAsByteArray)
+        val documentId = UUID.fromString(body["document"]["documentId"].asText())
+        uploadCapabilities[documentId] = TestUploadCapability(
+            capabilityId = UUID.fromString(body["uploadCapability"]["capabilityId"].asText()),
+            rawToken = body["uploadCapability"]["requiredHeaders"]["X-GC-Upload-Capability"].asText(),
         )
+        return documentId
     }
 
     private fun documentRequest(consentId: UUID, content: ByteArray): String =
@@ -563,8 +559,79 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 "consentId" to consentId,
                 "mediaType" to "application/pdf",
                 "contentLength" to content.size,
+                "sha256" to FoundationHashing.sha256(content),
             ),
         )
+
+    private fun uploadDocument(client: TestClient, documentId: UUID, content: ByteArray) =
+        uploadCapabilities.getValue(documentId).let { capability ->
+            mutate(
+                put("/api/foundation/documents/$documentId/content")
+                    .header("X-GC-Upload-Capability-Id", capability.capabilityId)
+                    .header("X-GC-Upload-Capability", capability.rawToken)
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .content(content),
+                client,
+            )
+        }
+
+    private fun runWorkerPipeline(documentId: UUID, simulateTransientExtractionFailure: Boolean = false) {
+        val inspectionLease = checkNotNull(workerService.lease("a".repeat(64)))
+        assertThat(inspectionLease.jobType).isEqualTo("SECURITY_INSPECTION")
+        assertThat(inspectionLease.jobId).isNotNull()
+        workerService.completeInspection(
+            inspectionLease.jobId,
+            inspectionLease.leaseToken,
+            InspectionResultRequest(
+                decision = kr.co.genomecompanion.documentboundary.InspectionDecision.APPROVED,
+                reason = kr.co.genomecompanion.documentboundary.InspectionReason.CLEAN,
+                sourceSha256 = fixtureDigest,
+                identifiedMediaType = "application/pdf",
+                pageCount = 1,
+                indirectObjectCount = 8,
+                totalImagePixels = 0,
+                encrypted = false,
+                activeContent = false,
+                embeddedFiles = false,
+                policyVersion = "pdf-security-v1",
+                scannerName = "SyntheticManifestScanner",
+                scannerVersion = "test-only-v1",
+                signatureVersion = "allowlisted-fixture",
+            ),
+        )
+        var extractionLease = checkNotNull(workerService.lease("a".repeat(64)))
+        assertThat(extractionLease.jobType).isEqualTo("SYNTHETIC_EXTRACTION")
+        if (simulateTransientExtractionFailure) {
+            workerService.failJob(
+                extractionLease.jobId,
+                extractionLease.leaseToken,
+                WorkerFailureRequest("simulated_transient_preview_failure", retryable = true),
+            )
+            jdbc.update(
+                "UPDATE gc_document_job SET available_at = CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE job_id = ?",
+                extractionLease.jobId,
+            )
+            extractionLease = checkNotNull(workerService.lease("a".repeat(64)))
+            assertThat(extractionLease.attempt).isEqualTo(2)
+        }
+        workerService.completeExtraction(
+            extractionLease.jobId,
+            extractionLease.leaseToken,
+            ExtractionResultRequest(
+                sourceSha256 = fixtureDigest,
+                workerImageDigest = "b".repeat(64),
+                generatorVersion = "test-worker-v1",
+                previewPngBase64 = onePixelPngBase64,
+            ),
+        )
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM gc_document WHERE document_id = ?",
+                String::class.java,
+                documentId,
+            ),
+        ).isEqualTo("REVIEW_REQUIRED")
+    }
 
     private fun mutate(builder: MockHttpServletRequestBuilder, client: TestClient) =
         mockMvc.perform(
@@ -597,6 +664,8 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         private const val bobCredential = "bob-foundation-test-credential-00000000002"
         private val fixturePdf = "%PDF-1.7\nGenome Companion synthetic fixture only\n%%EOF\n".toByteArray()
         private val fixtureDigest = FoundationHashing.sha256(fixturePdf)
+        private const val onePixelPngBase64 =
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
         private val quarantineRoot: Path = Path.of(
             System.getenv("GC_TEST_QUARANTINE_ROOT") ?: System.getProperty("java.io.tmpdir"),
         ).resolve("gc-foundation-postgres-integration").toAbsolutePath().normalize()
@@ -613,6 +682,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             registry.add("security.oidc.audience") { "https://api.genome-companion.test" }
             registry.add("security.oidc.client-id") { "synthetic-web-client" }
             registry.add("gc.foundation.enabled") { "true" }
+            registry.add("gc.foundation.document-boundary-enabled") { "true" }
+            registry.add("gc.foundation.worker-credential-sha256") { "c".repeat(64) }
+            registry.add("gc.foundation.allow-synthetic-scanner-results") { "true" }
             registry.add("gc.foundation.allowed-origin") { allowedOrigin }
             registry.add("gc.foundation.secure-cookies") { "false" }
             registry.add("gc.foundation.quarantine-root") { quarantineRoot.toString() }

@@ -1695,6 +1695,30 @@ svg {
   box-shadow: 0 8px 28px rgb(15 23 42 / 6%);
 }
 
+.gc-import__safe-preview {
+  margin: 24px 0 0;
+  padding: 16px;
+  border: 1px solid var(--gc-line, #e5e7eb);
+  border-radius: 20px;
+  background: #f8fafc;
+}
+
+.gc-import__safe-preview img {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.gc-import__safe-preview figcaption {
+  margin-top: 12px;
+  color: #596579;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
 .gc-import__source-preview {
   display: flex;
   min-height: 25rem;

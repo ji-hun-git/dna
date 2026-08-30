@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 type BrowserApiResult = {
@@ -33,7 +34,7 @@ async function browserApi(
 test("visible Korean product persists reloads revokes and deletes the synthetic lifecycle", async ({ page }) => {
   const subjectId = process.env.GC_BROWSER_A11Y_SUBJECT!;
   const credential = process.env.GC_BROWSER_A11Y_CREDENTIAL!;
-  const fixtureText = process.env.GC_BROWSER_FIXTURE_TEXT!;
+  const fixtureBytes = Buffer.from(process.env.GC_BROWSER_FIXTURE_BASE64!, "base64");
 
   await page.goto("/");
   await expect(page.locator("body")).toHaveAttribute(
@@ -55,15 +56,11 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.getByLabel("허용된 합성 PDF 선택").setInputFiles({
     name: "allowlisted-synthetic-result.pdf",
     mimeType: "application/pdf",
-    buffer: Buffer.from(fixtureText, "utf8"),
+    buffer: fixtureBytes,
   });
-  await expect(page.getByText("QUARANTINED", { exact: true })).toBeVisible();
-  await expect(page.getByText("논리 개발 상태 · 보안 격리 아님")).toBeVisible();
-
-  await page.getByRole("button", { name: "서버 검사 계속" }).click();
-  await expect(page.getByText("INSPECTED", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "합성 후보 만들기" }).click();
+  await expect(page.getByText("적대적 문서 격리 구역", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  await expect(page.getByAltText("승인된 합성 결과지의 첫 페이지 PNG 미리보기")).toBeVisible();
   await expect(page.getByText("188", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "값 수정" }).click();
@@ -95,7 +92,8 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     body: JSON.stringify({
       consentId,
       mediaType: "application/pdf",
-      contentLength: Buffer.byteLength(fixtureText, "utf8"),
+      contentLength: fixtureBytes.length,
+      sha256: createHash("sha256").update(fixtureBytes).digest("hex"),
     }),
   });
   expect(blockedAfterRevocation.status).toBe(403);
@@ -114,7 +112,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
 test("server states remain keyboard operable at a 200 percent equivalent viewport", async ({ page }) => {
   const subjectId = process.env.GC_BROWSER_SUBJECT!;
   const credential = process.env.GC_BROWSER_CREDENTIAL!;
-  const fixtureText = process.env.GC_BROWSER_FIXTURE_TEXT!;
+  const fixtureBytes = Buffer.from(process.env.GC_BROWSER_FIXTURE_BASE64!, "base64");
 
   await page.setViewportSize({ width: 640, height: 720 });
   await page.goto("/");
@@ -135,16 +133,11 @@ test("server states remain keyboard operable at a 200 percent equivalent viewpor
   await page.getByLabel("허용된 합성 PDF 선택").setInputFiles({
     name: "allowlisted-keyboard-synthetic-result.pdf",
     mimeType: "application/pdf",
-    buffer: Buffer.from(fixtureText, "utf8"),
+    buffer: fixtureBytes,
   });
   const processingStatus = page.getByRole("status");
-  await expect(processingStatus).toHaveText(/논리 격리 상태/);
+  await expect(processingStatus).toHaveText(/보안 구역|안전하게 확인|다시 시도|미리보기/);
   await expect(processingStatus).toHaveAttribute("aria-live", "polite");
-
-  await page.getByRole("button", { name: "서버 검사 계속" }).focus();
-  await page.keyboard.press("Enter");
-  await page.getByRole("button", { name: "합성 후보 만들기" }).focus();
-  await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
 
   await page.getByRole("button", { name: "값 수정" }).focus();
