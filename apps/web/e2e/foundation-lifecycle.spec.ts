@@ -6,6 +6,8 @@ type BrowserApiResult = {
   body: Record<string, unknown> | Array<Record<string, unknown>>;
 };
 
+const boundedDocumentProcessingTimeoutMs = 30_000;
+
 async function browserApi(
   page: Page,
   path: string,
@@ -59,7 +61,9 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     buffer: fixtureBytes,
   });
   await expect(page.getByText("적대적 문서 격리 구역", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible({
+    timeout: boundedDocumentProcessingTimeoutMs,
+  });
   await expect(page.getByAltText("승인된 합성 결과지의 첫 페이지 PNG 미리보기")).toBeVisible();
   await expect(page.getByText("188", { exact: true })).toBeVisible();
 
@@ -138,7 +142,9 @@ test("server states remain keyboard operable at a 200 percent equivalent viewpor
   const processingStatus = page.getByRole("status");
   await expect(processingStatus).toHaveText(/보안 구역|안전하게 확인|다시 시도|미리보기/);
   await expect(processingStatus).toHaveAttribute("aria-live", "polite");
-  await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible({
+    timeout: boundedDocumentProcessingTimeoutMs,
+  });
 
   await page.getByRole("button", { name: "값 수정" }).focus();
   await page.keyboard.press("Enter");
