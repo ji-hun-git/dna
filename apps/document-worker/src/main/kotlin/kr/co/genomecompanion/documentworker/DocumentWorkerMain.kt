@@ -240,14 +240,19 @@ class BoundaryApiClient(
 class ClamAvCommandScanner(
     private val executable: Path,
     private val requiredVersion: String,
+    private val database: Path? = null,
     private val timeout: Duration = Duration.ofSeconds(30),
 ) : MalwareScanner {
     override fun scan(bytes: ByteArray): MalwareScanResult {
         if (!Files.isRegularFile(executable)) return unavailable("executable-missing")
+        if (database != null && !Files.isRegularFile(database)) return unavailable("database-missing")
         val version = readVersion() ?: return unavailable("version-unavailable")
-        if (version.first != requiredVersion) return unavailable("version-mismatch")
+        if (version.engine != requiredVersion) return unavailable("version-mismatch")
+        val command = mutableListOf(executable.toString(), "--no-summary", "--stdout")
+        database?.let { command += "--database=${it.toAbsolutePath().normalize()}" }
+        command += "-"
         val process = runCatching {
-            ProcessBuilder(executable.toString(), "--no-summary", "--stdout", "-")
+            ProcessBuilder(command)
                 .redirectErrorStream(true)
                 .start()
         }.getOrElse { return unavailable("process-start-failed") }
@@ -263,15 +268,15 @@ class ClamAvCommandScanner(
                     InspectionDecision.APPROVED,
                     InspectionReason.CLEAN,
                     "ClamAV",
-                    version.first,
-                    version.second,
+                    version.engine,
+                    version.signatures,
                 )
                 1 -> MalwareScanResult(
                     InspectionDecision.REJECTED,
                     InspectionReason.MALWARE_DETECTED,
                     "ClamAV",
-                    version.first,
-                    version.second,
+                    version.engine,
+                    version.signatures,
                 )
                 else -> unavailable("scan-error-${output.length}")
             }
@@ -280,16 +285,21 @@ class ClamAvCommandScanner(
         }
     }
 
-    private fun readVersion(): Pair<String, String>? {
+    private fun readVersion(): ClamAvVersion? {
+        val command = mutableListOf(executable.toString(), "--version")
+        database?.let { command += "--database=${it.toAbsolutePath().normalize()}" }
         val process = runCatching {
-            ProcessBuilder(executable.toString(), "--version").redirectErrorStream(true).start()
+            ProcessBuilder(command).redirectErrorStream(true).start()
         }.getOrNull() ?: return null
         return try {
             if (!process.waitFor(5, TimeUnit.SECONDS) || process.exitValue() != 0) return null
             val output = process.inputStream.readNBytes(4096).toString(StandardCharsets.UTF_8).trim()
-            val parts = output.split("/")
-            if (parts.size < 2) return null
-            parts[0].removePrefix("ClamAV ").trim() to parts.drop(1).joinToString("/").take(120)
+            val match = Regex("^ClamAV ([0-9]+[.][0-9]+[.][0-9]+)(?:/(.+))?$")
+                .matchEntire(output.lineSequence().firstOrNull() ?: return null) ?: return null
+            val signatureVersion = match.groupValues[2].takeIf(String::isNotBlank)?.take(120)
+                ?: database?.let { "sha256:${sha256File(it)}" }
+                ?: return null
+            ClamAvVersion(match.groupValues[1], signatureVersion)
         } finally {
             process.destroyForcibly()
         }
@@ -302,6 +312,21 @@ class ClamAvCommandScanner(
         "unavailable",
         signature,
     )
+
+    private fun sha256File(path: Path): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        Files.newInputStream(path).use { input ->
+            val buffer = ByteArray(8_192)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return HexFormat.of().formatHex(digest.digest())
+    }
+
+    private data class ClamAvVersion(val engine: String, val signatures: String)
 }
 
 

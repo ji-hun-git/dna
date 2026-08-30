@@ -55,6 +55,20 @@ jobs:
           java-version: "21"
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Prepare checksum-verified ClamAV 1.5.4 engine
+        env:
+          CLAMAV_DEB_URL: https://github.com/Cisco-Talos/clamav/releases/download/clamav-1.5.4/clamav-1.5.4.linux.x86_64.deb
+          CLAMAV_DEB_SHA256: 28d6efc5b4423e7830c3559339552eb53870a9eac51ac4efb37d60530d329886
+        run: |
+          curl --fail --location --retry 3 --output /tmp/clamav-1.5.4.deb "$CLAMAV_DEB_URL"
+          echo "$CLAMAV_DEB_SHA256  /tmp/clamav-1.5.4.deb" | sha256sum --check --strict
+          mkdir --parents /tmp/gc-clamav-1.5.4
+          dpkg-deb --extract /tmp/clamav-1.5.4.deb /tmp/gc-clamav-1.5.4
+          clamav_lib_path=/tmp/gc-clamav-1.5.4/usr/local/lib64:/tmp/gc-clamav-1.5.4/usr/local/lib
+          clamav_bin=/tmp/gc-clamav-1.5.4/usr/local/bin/clamscan
+          test "$(LD_LIBRARY_PATH="$clamav_lib_path" "$clamav_bin" --version)" = "ClamAV 1.5.4"
+          echo "LD_LIBRARY_PATH=$clamav_lib_path" >> "$GITHUB_ENV"
+          echo "GC_TEST_CLAMSCAN_PATH=$clamav_bin" >> "$GITHUB_ENV"
       - name: Install locked JavaScript dependencies
         run: pnpm install --frozen-lockfile
       - name: Validate runtime and truthful readiness contracts

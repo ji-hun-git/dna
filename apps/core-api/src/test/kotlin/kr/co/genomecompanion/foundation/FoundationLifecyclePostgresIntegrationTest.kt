@@ -27,6 +27,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 
 @SpringBootTest
@@ -101,6 +104,69 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 eventId,
             ),
         ).isEqualTo("SYNTHETIC_APPEND_ONLY_PROBE")
+    }
+
+    @Test
+    fun concurrentDuplicateWorkerCompletionCreatesExactlyOneResult() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "duplicate-worker-result")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice)
+            .andExpect(status().isAccepted)
+
+        val inspectionLease = checkNotNull(workerService.lease("a".repeat(64)))
+        workerService.completeInspection(
+            inspectionLease.jobId,
+            inspectionLease.leaseToken,
+            approvedInspectionRequest(),
+        )
+        val extractionLease = checkNotNull(workerService.lease("a".repeat(64)))
+        val resultRequest = ExtractionResultRequest(
+            sourceSha256 = fixtureDigest,
+            workerImageDigest = "b".repeat(64),
+            generatorVersion = "test-worker-v1",
+            previewPngBase64 = onePixelPngBase64,
+        )
+        val executor = Executors.newFixedThreadPool(2)
+        val ready = CountDownLatch(2)
+        val start = CountDownLatch(1)
+
+        try {
+            val futures = (1..2).map {
+                executor.submit<Result<WorkerResultReceipt>> {
+                    ready.countDown()
+                    check(start.await(5, TimeUnit.SECONDS))
+                    runCatching {
+                        workerService.completeExtraction(
+                            extractionLease.jobId,
+                            extractionLease.leaseToken,
+                            resultRequest,
+                        )
+                    }
+                }
+            }
+            check(ready.await(5, TimeUnit.SECONDS))
+            start.countDown()
+            val results = futures.map { it.get(15, TimeUnit.SECONDS) }
+
+            assertThat(results.count { it.getOrNull()?.status == "COMPLETED" }).isEqualTo(1)
+            assertThat(results.count { it.exceptionOrNull() is FoundationForbiddenException }).isEqualTo(1)
+            assertThat(count("gc_extraction_job")).isEqualTo(1)
+            assertThat(count("gc_candidate")).isEqualTo(1)
+            assertThat(count("gc_preview_artifact")).isEqualTo(1)
+            assertThat(
+                jdbc.queryForObject(
+                    "SELECT status FROM gc_document_job WHERE job_id = ?",
+                    String::class.java,
+                    extractionLease.jobId,
+                ),
+            ).isEqualTo("COMPLETED")
+        } finally {
+            start.countDown()
+            executor.shutdownNow()
+            check(executor.awaitTermination(5, TimeUnit.SECONDS))
+        }
     }
 
     @Test
@@ -586,22 +652,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         workerService.completeInspection(
             inspectionLease.jobId,
             inspectionLease.leaseToken,
-            InspectionResultRequest(
-                decision = kr.co.genomecompanion.documentboundary.InspectionDecision.APPROVED,
-                reason = kr.co.genomecompanion.documentboundary.InspectionReason.CLEAN,
-                sourceSha256 = fixtureDigest,
-                identifiedMediaType = "application/pdf",
-                pageCount = 1,
-                indirectObjectCount = 8,
-                totalImagePixels = 0,
-                encrypted = false,
-                activeContent = false,
-                embeddedFiles = false,
-                policyVersion = "pdf-security-v1",
-                scannerName = "SyntheticManifestScanner",
-                scannerVersion = "test-only-v1",
-                signatureVersion = "allowlisted-fixture",
-            ),
+            approvedInspectionRequest(),
         )
         var extractionLease = checkNotNull(workerService.lease("a".repeat(64)))
         assertThat(extractionLease.jobType).isEqualTo("SYNTHETIC_EXTRACTION")
@@ -636,6 +687,23 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             ),
         ).isEqualTo("REVIEW_REQUIRED")
     }
+
+    private fun approvedInspectionRequest() = InspectionResultRequest(
+        decision = kr.co.genomecompanion.documentboundary.InspectionDecision.APPROVED,
+        reason = kr.co.genomecompanion.documentboundary.InspectionReason.CLEAN,
+        sourceSha256 = fixtureDigest,
+        identifiedMediaType = "application/pdf",
+        pageCount = 1,
+        indirectObjectCount = 8,
+        totalImagePixels = 0,
+        encrypted = false,
+        activeContent = false,
+        embeddedFiles = false,
+        policyVersion = "pdf-security-v1",
+        scannerName = "SyntheticManifestScanner",
+        scannerVersion = "test-only-v1",
+        signatureVersion = "allowlisted-fixture",
+    )
 
     private fun mutate(builder: MockHttpServletRequestBuilder, client: TestClient) =
         mockMvc.perform(
