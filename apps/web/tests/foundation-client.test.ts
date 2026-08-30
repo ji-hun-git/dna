@@ -61,6 +61,13 @@ describe("foundation same-origin client", () => {
     });
   });
 
+  it("accepts the truthful empty active-document shape when null fields are omitted", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({}));
+    const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
+
+    await expect(client.getActiveDocument()).resolves.toEqual({});
+  });
+
   it("accepts only a digest-bound bounded upload capability", async () => {
     const documentId = "e64ddaae-a326-4f23-88a9-05ac59a48625";
     const capabilityId = "8df1e2d3-9f19-4dd0-91bc-0566dc36f9d0";

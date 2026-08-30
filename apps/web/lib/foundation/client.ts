@@ -65,7 +65,9 @@ const documentTicketSchema = z.object({
   uploadCapability: uploadCapabilitySchema,
 }).strict();
 
-const documentActivitySchema = z.object({ document: documentSchema.nullable() }).strict();
+// Spring omits null properties. A subject without an active document therefore
+// receives `{}`, while an active lifecycle receives a validated document.
+const documentActivitySchema = z.object({ document: documentSchema.nullable().optional() }).strict();
 
 const candidateSchema = z.object({
   candidateId: uuidSchema,
