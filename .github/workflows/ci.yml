@@ -84,6 +84,17 @@ jobs:
           pnpm --dir apps/web build
           pnpm research:test
           pnpm research:build
+      - name: Resolve JVM build plugins with bounded network retry
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew help --no-daemon; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep "$((attempt * 10))"
+          done
       - name: Test Spring, document boundary, worker, Flyway, and PostgreSQL lifecycle
         id: jvm-tests
         run: ./gradlew test --no-daemon
@@ -93,7 +104,7 @@ jobs:
         with:
           name: foundation-jvm-failure-evidence
           path: "**/build/test-results/test/**"
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
       - name: Install browser used by the bounded lifecycle test
         run: pnpm --dir apps/web exec playwright install --with-deps chromium
