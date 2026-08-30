@@ -22,9 +22,25 @@
       }
     },
     "productionImage": {
-      "status": "NOT_IMPLEMENTED",
+      "status": "CI_CANDIDATES_IMPLEMENTED_NOT_VERIFIED",
       "digest": null,
       "releaseBlocking": true
+    },
+    "runtimeImageCandidates": {
+      "platform": "linux/amd64",
+      "status": "DEFINITIONS_ADDED_CI_EXECUTION_PENDING",
+      "nodeBase": {
+        "reference": "node:24.20.0-bookworm-slim",
+        "digest": "sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e"
+      },
+      "temurinJdkBase": {
+        "reference": "eclipse-temurin:21-jdk-jammy",
+        "digest": "sha256:ce5767b7222312d42395f5bab033cd91f09e44032a2f21bdfd7b5b912dbe1e77"
+      },
+      "temurinJreBase": {
+        "reference": "eclipse-temurin:21-jre-jammy",
+        "digest": "sha256:eebd356ad7358b7094758e5787a6726f332917cfd56feab6457c56dab895cdbf"
+      }
     }
   },
   "packageManager": {
@@ -95,8 +111,8 @@
       "requiredVersion": "1.5.4",
       "license": "GPL-2.0-only",
       "source": "https://www.clamav.net/downloads",
-      "artifactDigest": null,
-      "executionStatus": "NOT_TESTED",
+      "artifactDigest": "sha256:28d6efc5b4423e7830c3559339552eb53870a9eac51ac4efb37d60530d329886",
+      "executionStatus": "SYNTHETIC_CI_ENGINE_CONTRACT_VERIFIED",
       "releaseBlocking": true
     }
   }

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { resolve } from "node:path";
 
 const researchCredentialNames = [
   "GC_AIDA_API_KEY",
@@ -30,6 +31,8 @@ function resolveCoreApiOrigin() {
 const coreApiOrigin = resolveCoreApiOrigin();
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  outputFileTracingRoot: resolve(import.meta.dirname, "../.."),
   poweredByHeader: false,
   async headers() {
     return [

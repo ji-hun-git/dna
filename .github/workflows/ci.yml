@@ -177,6 +177,94 @@ jobs:
       - name: Analyze
         uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
 
+  runtime-images:
+    name: runtime image (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: web
+            dockerfile: apps/web/Dockerfile
+          - name: core-api
+            dockerfile: apps/core-api/Dockerfile
+          - name: document-worker
+            dockerfile: apps/document-worker/Dockerfile
+    env:
+      IMAGE_REF: genome-companion/${{ matrix.name }}:${{ github.sha }}
+      DOCKER_BUILDKIT: "1"
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build digest-pinned Linux runtime image
+        run: >-
+          docker build
+          --pull
+          --platform linux/amd64
+          --label org.opencontainers.image.revision=${GITHUB_SHA}
+          --file "${{ matrix.dockerfile }}"
+          --tag "${IMAGE_REF}"
+          .
+      - name: Verify runtime identity and non-root user
+        run: |
+          runtime_user="$(docker image inspect --format '{{.Config.User}}' "${IMAGE_REF}")"
+          case "${runtime_user}" in
+            ""|"0"|"root"|"0:0")
+              echo "runtime image must declare a non-root user" >&2
+              exit 1
+              ;;
+          esac
+          case "${{ matrix.name }}" in
+            web)
+              docker run --rm --entrypoint node "${IMAGE_REF}" --version
+              ;;
+            core-api)
+              docker run --rm --entrypoint java "${IMAGE_REF}" -version
+              ;;
+            document-worker)
+              test "$(docker run --rm --entrypoint /usr/local/bin/clamscan "${IMAGE_REF}" --version)" = "ClamAV 1.5.4"
+              ;;
+          esac
+      - name: Record immutable build evidence
+        run: |
+          mkdir --parents runtime-image-evidence
+          docker image inspect "${IMAGE_REF}" > "runtime-image-evidence/${{ matrix.name }}-inspect.json"
+          docker image inspect --format '{{.Id}}' "${IMAGE_REF}" > "runtime-image-evidence/${{ matrix.name }}-image-id.txt"
+      - name: Generate runtime image CycloneDX SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          image-ref: ${{ env.IMAGE_REF }}
+          scan-type: image
+          scanners: vuln
+          ignore-unfixed: true
+          exit-code: "0"
+          format: cyclonedx
+          output: runtime-image-evidence/${{ matrix.name }}.cdx.json
+      - name: Fail on unresolved Critical or High image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          skip-setup-trivy: true
+          image-ref: ${{ env.IMAGE_REF }}
+          scan-type: image
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+      - name: Preserve image ID, manifest, and SBOM evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: runtime-image-${{ matrix.name }}-evidence
+          path: runtime-image-evidence
+          if-no-files-found: error
+          retention-days: 14
+
   supply-chain:
     name: secrets, dependencies, configuration, and license policy
     runs-on: ubuntu-latest
