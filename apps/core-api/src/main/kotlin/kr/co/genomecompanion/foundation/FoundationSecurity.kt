@@ -78,6 +78,8 @@ class FoundationSecurityConfiguration(
     ): SecurityFilterChain =
         http
             .securityMatcher("/api/foundation/**", "/actuator/health/**")
+            // FoundationSessionFilter owns CSRF: exact Origin plus a random,
+            // server-session-bound header is mandatory for every state change.
             .csrf { csrf -> csrf.disable() }
             .cors { cors -> cors.disable() }
             .httpBasic { basic -> basic.disable() }

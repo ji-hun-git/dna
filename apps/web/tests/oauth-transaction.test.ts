@@ -38,6 +38,7 @@ it("builds a five-minute Kakao transaction with exact callback, state, nonce, an
   expect(url.searchParams.get("state")).toBe(transaction.secrets.state);
   expect(url.searchParams.get("nonce")).toBe(transaction.secrets.nonce);
   expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+  // RFC 7636 PKCE hashes a fresh high-entropy verifier, not a human password.
   expect(url.searchParams.get("code_challenge")).toBe(
     createHash("sha256").update(transaction.secrets.codeVerifier).digest("base64url"),
   );

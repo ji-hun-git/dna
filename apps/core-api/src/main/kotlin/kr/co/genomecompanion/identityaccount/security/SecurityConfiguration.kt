@@ -25,6 +25,7 @@ class SecurityConfiguration(
     @Order(2)
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain = http
         .securityMatcher("/v1/**", "/actuator/health/**")
+        // Stateless bearer-JWT resource server: no ambient cookie authenticates /v1.
         .csrf { it.disable() }
         .httpBasic { it.disable() }
         .formLogin { it.disable() }

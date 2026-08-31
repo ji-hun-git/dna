@@ -1,0 +1,15 @@
+title = "Genome Companion secret scanning"
+minVersion = "8.24.3"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+description = "Generated design-token manifest contains public SHA-256 integrity digests, not credentials"
+condition = "AND"
+paths = ['''^packages/design-tokens/dist/tokens[.]manifest[.]json$''']
+regexTarget = "line"
+regexes = ['''^[+]?\s*"tokens[.](css|dart)":\s*"[0-9a-f]{64}",?\s*$''']

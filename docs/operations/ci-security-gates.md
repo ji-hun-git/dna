@@ -28,6 +28,18 @@ introduction fails closed and requires a new review. This is synthetic-staging
 scope only; production license approval remains absent. Owner: supply-chain.
 Review expiry: 2026-09-30.
 
+Gitleaks has one equally narrow false-positive rule: only `generic-api-key`
+matches on the two `tokens.css`/`tokens.dart` lines in
+`packages/design-tokens/dist/tokens.manifest.json` are ignored, and only when
+the value is exactly a lowercase 64-character public SHA-256 integrity digest.
+The path, rule, line shape, or value shape changing fails closed. This does not
+allowlist any commit, credential type, source file, or arbitrary hexadecimal
+value. Four historical documentation-only `generic-api-key` false positives are
+also pinned by their complete commit/path/rule/line fingerprints in
+`.gitleaksignore`: two prose sentences, one KMS architecture paragraph, and one
+synthetic leak-canary literal in a test-plan excerpt. No path or commit wildcard
+is used.
+
 ## Deliberate non-claims
 
 - The ordinary CI workflow builds and scans local runtime-image candidates. A separate manual protected workflow can publish, sign, and attest an exact green `main` revision, but it has not run. Local Docker image IDs are not registry repository digests, so the runtime-image release gate cannot be PASS.

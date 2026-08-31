@@ -99,6 +99,8 @@
     "gitleaksAction": {
       "version": "3.0.0",
       "commit": "e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e",
+      "scannerVersion": "8.24.3",
+      "configuration": ".gitleaks.toml",
       "source": "https://github.com/gitleaks/gitleaks-action"
     },
     "trivyAction": {

@@ -469,6 +469,8 @@ class DocumentWorkerSecurityConfiguration {
         documentWorkerCredentialFilter: DocumentWorkerCredentialFilter,
     ): SecurityFilterChain = http
         .securityMatcher("/internal/document-boundary/**")
+        // This is a stateless, non-browser worker API. A worker credential and
+        // per-job lease capability authenticate every operation; no cookie is accepted.
         .csrf { it.disable() }
         .cors { it.disable() }
         .httpBasic { it.disable() }
