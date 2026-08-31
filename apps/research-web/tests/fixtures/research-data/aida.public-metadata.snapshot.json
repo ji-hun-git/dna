@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "research-source-snapshot-contract.v1",
+  "source": "aida",
+  "normalizationMode": "public-metadata-page",
+  "wireContractStatus": "pending-approved-key-capture",
+  "wirePayloadCaptured": false,
+  "apiKeyPresent": false,
+  "liveApiCalls": 0,
+  "documentedOperations": ["search-metadata", "get-metadata-detail"],
+  "fileDownloadIncluded": false,
+  "snapshotDate": "2026-08-12",
+  "resourceIds": [
+    "aida-life-science-terms",
+    "aida-infectious-disease-events",
+    "aida-medibio-deberta"
+  ]
+}

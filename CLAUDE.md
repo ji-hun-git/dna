@@ -4,10 +4,11 @@
 들어 있고, 구현은 창업자의 실행 모드 선택 이후에 시작합니다. 새 세션은 아래 순서대로
 읽으면 맥락이 복원됩니다.
 
-This repository is a **planning workspace with no implementation yet**. There is no build,
-no test suite, no dependency manifest, and no application code. Everything here is a
-reviewed document. Do not "fix" that by scaffolding an app — implementation is gated
-(see [Gates](#gates)).
+This repository began as a planning workspace. The founder authorized checkpointed local
+implementation on 2026-08-10. Implementation must occur in an isolated worktree, one indexed
+task at a time, using the plan's RED → minimal implementation → GREEN → commit cycle and
+synthetic fixtures only. Deployment, external accounts, procurement, public brand adoption,
+and personal-health-data processing remain gated (see [Gates](#gates)).
 
 ## Read in this order
 
@@ -30,19 +31,27 @@ Those are long (1.4k–6.2k lines); read the one you are working on, not all six
 - **Design: approved** (2026-08-09, all eight gates).
 - **Plans: written and reviewable, none executed.** Every workstream row in the roadmap
   says "Plan-ready; not executed".
-- **Implementation: not started, and not authorized to start.**
-- **Open input, not yet integrated:** [`research/source-materials/2026-08-10-founder-brief-ko.txt`](research/source-materials/2026-08-10-founder-brief-ko.txt)
+- **Implementation: authorized on 2026-08-10; begin with FND Task 1 in an isolated worktree.**
+- **Open input, decision proposal prepared but not approved:** [`research/source-materials/2026-08-10-founder-brief-ko.txt`](research/source-materials/2026-08-10-founder-brief-ko.txt)
   (2026-08-10, Korean). It reframes category/brand — *AI-native Preventive Health*,
   product = *Personal Health Intelligence*, core asset = *Longitudinal Personal Health Model*,
   Collect → Connect → Know, and proposes the service name **앎 (ALM)** with
-  "Health is knowledge of oneself" as the brand line. **None of this is reflected in the
-  spec, the decision log, or D-016's visual direction yet.** Treat it as a founder input
-  awaiting a decision-log row, not as an approved change.
+  "Health is knowledge of oneself" as the brand line. D-030/D-031 and
+  [`governance/founder-brand-positioning-decision-proposal-2026-08-10.md`](governance/founder-brand-positioning-decision-proposal-2026-08-10.md)
+  now isolate the decisions and retained boundaries. **The proposal is not approval:** the
+  spec, D-016, product plans, workstream status, and implementation gate remain unchanged.
+- **Direction recommendation prepared but not approved:**
+  [`governance/founder-final-direction-recommendation-2026-08-10.md`](governance/founder-final-direction-recommendation-2026-08-10.md)
+  recommends `앎` as the Korean-first consumer brand and a source-verifiable Health History
+  as the defining product object after checking the founder conversation against current
+  competitor/category evidence. The founder approved this direction in
+  [`governance/founder-execution-authorization-2026-08-10.md`](governance/founder-execution-authorization-2026-08-10.md),
+  while public brand adoption, external accounts, deployment, and personal-data gates remain.
 
 ## Gates — do not cross these without a written approval in `governance/`
 
-- No implementation phase begins until the founder reviews the indexed plans and explicitly
-  selects an execution mode (D-021).
+- Implementation follows the founder-selected dependency-ordered local execution mode in
+  D-032; every named checkpoint still stops progression on failure.
 - No real personal health data, ever, in this repository or in any lower environment.
   Synthetic fixtures only, marked `SYNTHETIC`.
 - No paid medical referral or success-fee workflow without a written Korean legal opinion (D-005).

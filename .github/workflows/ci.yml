@@ -1,0 +1,319 @@
+name: genome-companion-ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "codex/**"
+
+permissions: {}
+
+concurrency:
+  group: genome-companion-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: synthetic contract and integration evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GC_TEST_POSTGRES_URL: jdbc:postgresql://127.0.0.1:5432/postgres
+      GC_TEST_QUARANTINE_ROOT: /tmp/genome-companion-hostile-document
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pinned pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.20.0
+      - name: Install pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.20.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install Java toolchain
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Install checksum-verified OpenTofu 1.10.6
+        env:
+          OPENTOFU_URL: https://github.com/opentofu/opentofu/releases/download/v1.10.6/tofu_1.10.6_linux_amd64.zip
+          OPENTOFU_SHA256: 15b7bed76420b50da3e121769c43341df8cd57d751ca14e6dbe9c850124c6dac
+        run: |
+          curl --fail --location --retry 3 --output /tmp/opentofu-1.10.6.zip "$OPENTOFU_URL"
+          echo "$OPENTOFU_SHA256  /tmp/opentofu-1.10.6.zip" | sha256sum --check --strict
+          mkdir --parents /tmp/gc-opentofu-1.10.6 /tmp/gc-tofu-plugin-cache
+          unzip -q /tmp/opentofu-1.10.6.zip -d /tmp/gc-opentofu-1.10.6
+          test "$(/tmp/gc-opentofu-1.10.6/tofu version -json | jq -r .terraform_version)" = "1.10.6"
+          echo "/tmp/gc-opentofu-1.10.6" >> "$GITHUB_PATH"
+          echo "TF_PLUGIN_CACHE_DIR=/tmp/gc-tofu-plugin-cache" >> "$GITHUB_ENV"
+      - name: Prepare checksum-verified ClamAV 1.5.4 engine
+        env:
+          CLAMAV_DEB_URL: https://github.com/Cisco-Talos/clamav/releases/download/clamav-1.5.4/clamav-1.5.4.linux.x86_64.deb
+          CLAMAV_DEB_SHA256: 28d6efc5b4423e7830c3559339552eb53870a9eac51ac4efb37d60530d329886
+        run: |
+          curl --fail --location --retry 3 --output /tmp/clamav-1.5.4.deb "$CLAMAV_DEB_URL"
+          echo "$CLAMAV_DEB_SHA256  /tmp/clamav-1.5.4.deb" | sha256sum --check --strict
+          mkdir --parents /tmp/gc-clamav-1.5.4
+          dpkg-deb --extract /tmp/clamav-1.5.4.deb /tmp/gc-clamav-1.5.4
+          clamav_lib_path=/tmp/gc-clamav-1.5.4/usr/local/lib64:/tmp/gc-clamav-1.5.4/usr/local/lib
+          clamav_bin=/tmp/gc-clamav-1.5.4/usr/local/bin/clamscan
+          test "$(LD_LIBRARY_PATH="$clamav_lib_path" "$clamav_bin" --version)" = "ClamAV 1.5.4"
+          echo "LD_LIBRARY_PATH=$clamav_lib_path" >> "$GITHUB_ENV"
+          echo "CVD_CERTS_DIR=/tmp/gc-clamav-1.5.4/usr/local/etc/certs" >> "$GITHUB_ENV"
+          echo "GC_TEST_CLAMSCAN_PATH=$clamav_bin" >> "$GITHUB_ENV"
+      - name: Install locked JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate runtime and truthful readiness contracts
+        run: |
+          pnpm security:runtime-policy
+          pnpm security:github-actions-policy
+          pnpm auth-security:gate
+          pnpm release:readiness:validate
+      - name: Validate infrastructure policy and synthetic-only boundaries
+        run: |
+          tofu fmt -check -recursive infra
+          tofu -chdir=infra/modules/organization init -backend=false -lockfile=readonly
+          tofu -chdir=infra/modules/organization validate
+          tofu -chdir=infra/modules/organization test
+          tofu -chdir=infra/modules/synthetic-staging init -backend=false -lockfile=readonly
+          tofu -chdir=infra/modules/synthetic-staging validate
+          tofu -chdir=infra/modules/synthetic-staging test
+          tofu -chdir=infra/live/synthetic-staging init -backend=false -lockfile=readonly
+          tofu -chdir=infra/live/synthetic-staging validate
+      - name: Test and build both presentation runtimes
+        run: |
+          pnpm web:test
+          pnpm --dir apps/web build
+          pnpm research:test
+          pnpm research:build
+      - name: Resolve JVM build plugins with bounded network retry
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew help --no-daemon; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep "$((attempt * 10))"
+          done
+      - name: Test Spring, document boundary, worker, Flyway, and PostgreSQL lifecycle
+        id: jvm-tests
+        run: ./gradlew test --no-daemon
+      - name: Preserve JVM failure evidence
+        if: ${{ failure() && steps.jvm-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: foundation-jvm-failure-evidence
+          path: "**/build/test-results/test/**"
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Install browser used by the bounded lifecycle test
+        run: pnpm --dir apps/web exec playwright install --with-deps chromium
+      - name: Run browser-to-Spring-to-worker lifecycle
+        id: foundation-e2e
+        run: pnpm foundation:e2e
+      - name: Preserve browser failure evidence
+        if: ${{ failure() && steps.foundation-e2e.outcome == 'failure' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: foundation-browser-failure-evidence
+          path: apps/web/test-results
+          if-no-files-found: error
+          retention-days: 7
+      - name: Generate JVM CycloneDX SBOM
+        run: ./gradlew :apps:core-api:cyclonedxBom --no-daemon
+      - name: Preserve SBOM as a build artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: core-api-cyclonedx-sbom
+          path: apps/core-api/build/reports/application.cdx.json
+          if-no-files-found: error
+          retention-days: 14
+
+  sast-javascript:
+    name: CodeQL SAST (JavaScript/TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - name: Analyze
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+
+  sast-jvm:
+    name: CodeQL SAST (Java/Kotlin)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Java toolchain
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          languages: java-kotlin
+          build-mode: manual
+      - name: Build JVM sources for analysis
+        run: >-
+          ./gradlew
+          :packages:document-boundary:classes
+          :apps:document-worker:classes
+          :apps:core-api:classes
+          --no-daemon
+      - name: Analyze
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+
+  runtime-images:
+    name: runtime image (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: web
+            dockerfile: apps/web/Dockerfile
+          - name: core-api
+            dockerfile: apps/core-api/Dockerfile
+          - name: document-worker
+            dockerfile: apps/document-worker/Dockerfile
+    env:
+      IMAGE_REF: genome-companion/${{ matrix.name }}:${{ github.sha }}
+      DOCKER_BUILDKIT: "1"
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build digest-pinned Linux runtime image
+        run: >-
+          docker build
+          --pull
+          --platform linux/amd64
+          --label org.opencontainers.image.revision=${GITHUB_SHA}
+          --file "${{ matrix.dockerfile }}"
+          --tag "${IMAGE_REF}"
+          .
+      - name: Verify runtime identity and non-root user
+        run: |
+          runtime_user="$(docker image inspect --format '{{.Config.User}}' "${IMAGE_REF}")"
+          case "${runtime_user}" in
+            ""|"0"|"root"|"0:0")
+              echo "runtime image must declare a non-root user" >&2
+              exit 1
+              ;;
+          esac
+          case "${{ matrix.name }}" in
+            web)
+              docker run --rm --entrypoint node "${IMAGE_REF}" --version
+              ;;
+            core-api)
+              docker run --rm --entrypoint java "${IMAGE_REF}" -version
+              ;;
+            document-worker)
+              test "$(docker run --rm --entrypoint /usr/local/bin/clamscan "${IMAGE_REF}" --version)" = "ClamAV 1.5.4"
+              ;;
+          esac
+      - name: Record immutable build evidence
+        id: image-evidence
+        run: |
+          mkdir --parents runtime-image-evidence
+          docker image inspect "${IMAGE_REF}" > "runtime-image-evidence/${{ matrix.name }}-inspect.json"
+          docker image inspect --format '{{.Id}}' "${IMAGE_REF}" > "runtime-image-evidence/${{ matrix.name }}-image-id.txt"
+      - name: Generate runtime image CycloneDX SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          image-ref: ${{ env.IMAGE_REF }}
+          scan-type: image
+          scanners: vuln
+          ignore-unfixed: true
+          exit-code: "0"
+          format: cyclonedx
+          output: runtime-image-evidence/${{ matrix.name }}.cdx.json
+      - name: Fail on unresolved Critical or High image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          skip-setup-trivy: true
+          image-ref: ${{ env.IMAGE_REF }}
+          scan-type: image
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+      - name: Preserve image ID, manifest, and SBOM evidence
+        if: ${{ always() && steps.image-evidence.outcome == 'success' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: runtime-image-${{ matrix.name }}-evidence
+          path: runtime-image-evidence
+          if-no-files-found: error
+          retention-days: 14
+
+  supply-chain:
+    name: secrets, dependencies, configuration, and license policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout complete history for secret detection
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Scan committed history for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+      - name: Scan filesystem dependencies, secrets, configuration, and licenses
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig,license
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          ignore-policy: scripts/security/trivy-ignore-policy.rego
+          exit-code: "1"
+          format: table

@@ -21,7 +21,7 @@ Authoritative record: [`../../../governance/founder-approval-2026-08-09.md`](../
 
 | ID | Workstream | Working deliverable | Dependencies | Execution status |
 |---|---|---|---|---|
-| FND | [`2026-08-09-platform-foundation-security.md`](2026-08-09-platform-foundation-security.md) | Korea-region, testable modular-monolith foundation with identity, consent, IaC, CI, audit, recovery, and security controls | Founder execution choice; counsel/classification work may run in parallel | Plan-ready; not executed |
+| FND | [`2026-08-09-platform-foundation-security.md`](2026-08-09-platform-foundation-security.md) | Korea-region, testable modular-monolith foundation with identity, consent, IaC, CI, audit, recovery, and security controls | Founder execution choice; counsel/classification work may run in parallel | Tasks 1–2 implemented and locally committed through `codex/fnd-task-2-api-skeleton`; Linux/Python 3.12.13 full-host gate remains for CI; Tasks 3–11 not started |
 | PUB | [`2026-08-09-public-data-comparison.md`](2026-08-09-public-data-comparison.md) | Governed HIRA/MOHW/KDCA connector set with immutable bronze data, schema-drift/conflict quarantine, provenance APIs, non-covered item discovery/prices, provider directory, corrections, and source-faithful caveats | FND contracts, public-only runtime, and source approvals | Plan-ready; not executed |
 | REC | [`2026-08-09-personal-record-fhir.md`](2026-08-09-personal-record-fhir.md) | Consented document-to-user-verified-record flow, HAPI/KR Core validation, timeline, signed export, retention, profile reset, and deletion | FND identity/consent/storage; synthetic documents only at first | Plan-ready; not executed |
 | AI | [`2026-08-09-ai-explanation-safety.md`](2026-08-09-ai-explanation-safety.md) | Korea-hosted private deterministic template explanation worker with its own governed signed evidence release, S0-S3 policy, citations, recall/kill switches, and release evals | REC verified `FactPacket`; FND purpose/workload-token and private-runtime contracts; independent clinical evidence review | Plan-ready; not executed |
@@ -29,6 +29,10 @@ Authoritative record: [`../../../governance/founder-approval-2026-08-09.md`](../
 | GEN | [`2026-08-09-certified-genetic-wallet-conditional.md`](2026-08-09-certified-genetic-wallet-conditional.md) | Signed certified-result import, device-only encrypted wallet, deterministic knowledge join, safety side-load, recall/export/delete, and zero-egress proof | Signed Genetics G0; UX vault/keystore/platform/privacy contracts; FND Android/iOS CI markers; approved lab/assay/trait/result tuples | Conditional plan-ready; Task 1 governance/tooling may execute pre-G0, while Tasks 2–9 stay blocked until CI verifies the immutable seven-role production G0 envelope, exact tuple/content allowlists, and release-root bootstrap; not MVP baseline |
 
 ## Architecture and dependency flow
+
+Supplemental identity/security slice: [`2026-08-12-identity-health-access-antihack.md`](2026-08-12-identity-health-access-antihack.md) freezes Kakao/Naver OIDC contracts, a fail-closed anti-hack workflow, and the still-disabled formal MyHealthWay connector. Its local Task 1 may execute with synthetic identifiers; its broker, external registration, deployment, and personal-data tasks remain gated by FND and the existing external-state/privacy approvals.
+
+Deferred founder setup: [`../../../governance/founder-external-setup-runbook-2026-08-12.md`](../../../governance/founder-external-setup-runbook-2026-08-12.md) consolidates domains, GitHub/AWS access, Kakao/Naver applications, Korean public-data keys, MyHealthWay onboarding, mobile stores, regulatory review, and the exact one-day execution order. It stores no secret value.
 
 ```mermaid
 flowchart LR

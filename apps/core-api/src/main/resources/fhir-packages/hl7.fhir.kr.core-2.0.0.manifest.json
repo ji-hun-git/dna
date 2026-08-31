@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "gc-fhir-package-pin.v1",
+  "packageName": "hl7.fhir.kr.core",
+  "packageVersion": "2.0.0",
+  "fhirVersion": "4.0.1",
+  "standardsStatus": "trial-use",
+  "sourceUrl": "https://www.hl7korea.or.kr/fhir/krcore/package.tgz",
+  "downloadPage": "https://www.hl7korea.or.kr/fhir/krcore/downloads.html",
+  "publishedAt": "2025-08-29",
+  "verifiedAt": "2026-08-30",
+  "artifact": "hl7.fhir.kr.core-2.0.0.tgz",
+  "bytes": 756913,
+  "sha256": "14e0eeff8458d728258094c8234dbfc8e5efa590a55a44b14ee910d0fae2b868",
+  "license": "CC0-1.0",
+  "runtime": "HAPI FHIR 8.10.1",
+  "networkPolicy": "vendored-only-no-runtime-download"
+}

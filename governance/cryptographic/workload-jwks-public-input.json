@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "workload-jwks-public-input.v1",
+  "issuer": "genome-companion-core-api",
+  "audience": "explanation-worker",
+  "tokenLifetimeSeconds": 120,
+  "desiredRole": "current",
+  "notBefore": "2026-08-09T00:00:00Z",
+  "notAfter": "2026-11-07T00:00:00Z",
+  "sourceSha": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "inputDigest": "sha256:9edb7b86a868cf4c2dc04445604a16ea9c6f7d60e613cd83a7071c302b27bd0b"
+}

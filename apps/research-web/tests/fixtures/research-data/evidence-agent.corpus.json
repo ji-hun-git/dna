@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "research-evidence-evaluation-corpus.v1",
+  "corpusId": "synthetic-research-evidence-v1",
+  "syntheticOnly": true,
+  "containsPersonalData": false,
+  "retrievalCases": [
+    { "caseId": "retrieval-life-discover", "query": { "schemaVersion": "research-evidence-query.v1", "topicCode": "life-science-terminology", "intent": "discover-resources", "personalData": false, "diagnosticUse": false }, "expectedResourceIds": ["aida-life-science-terms", "dataon-research-data-api"] },
+    { "caseId": "retrieval-life-compare", "query": { "schemaVersion": "research-evidence-query.v1", "topicCode": "life-science-terminology", "intent": "compare-fitness", "personalData": false, "diagnosticUse": false }, "expectedResourceIds": ["aida-life-science-terms", "dataon-research-data-api"] },
+    { "caseId": "retrieval-life-gaps", "query": { "schemaVersion": "research-evidence-query.v1", "topicCode": "life-science-terminology", "intent": "identify-data-gaps", "personalData": false, "diagnosticUse": false }, "expectedResourceIds": ["aida-life-science-terms", "dataon-research-data-api"] },
+    { "caseId": "retrieval-infection-discover", "query": { "schemaVersion": "research-evidence-query.v1", "topicCode": "infectious-disease-events", "intent": "discover-resources", "personalData": false, "diagnosticUse": false }, "expectedResourceIds": ["aida-infectious-disease-events", "dataon-research-data-api"] },
+    { "caseId": "retrieval-infection-compare", "query": { "schemaVersion": "research-evidence-query.v1", "topicCode": "infectious-disease-events", "intent": "compare-fitness", "personalData": false, "diagnosticUse": false }, "expectedResourceIds": ["aida-infectious-disease-events", "dataon-research-data-api"] },
+    { "caseId": "retrieval-infection-gaps", "query": { "schemaVersion": "research-evidence-query.v1", "topicCode": "infectious-disease-events", "intent": "identify-data-gaps", "personalData": false, "diagnosticUse": false }, "expectedResourceIds": ["aida-infectious-disease-events", "dataon-research-data-api"] },
+    { "caseId": "retrieval-literature-discover", "query": { "schemaVersion": "research-evidence-query.v1", "topicCode": "biomedical-literature", "intent": "discover-resources", "personalData": false, "diagnosticUse": false }, "expectedResourceIds": ["aida-life-science-terms", "aida-infectious-disease-events", "aida-medibio-deberta", "dataon-research-data-api"] },
+    { "caseId": "retrieval-literature-compare", "query": { "schemaVersion": "research-evidence-query.v1", "topicCode": "biomedical-literature", "intent": "compare-fitness", "personalData": false, "diagnosticUse": false }, "expectedResourceIds": ["aida-life-science-terms", "aida-infectious-disease-events", "aida-medibio-deberta", "dataon-research-data-api"] },
+    { "caseId": "retrieval-literature-gaps", "query": { "schemaVersion": "research-evidence-query.v1", "topicCode": "biomedical-literature", "intent": "identify-data-gaps", "personalData": false, "diagnosticUse": false }, "expectedResourceIds": ["aida-life-science-terms", "aida-infectious-disease-events", "aida-medibio-deberta", "dataon-research-data-api"] }
+  ],
+  "rightsCases": [
+    { "caseId": "rights-life-metadata", "resourceId": "aida-life-science-terms", "proposedUse": "metadata-display", "expectedDecision": "allowed" },
+    { "caseId": "rights-life-download", "resourceId": "aida-life-science-terms", "proposedUse": "source-file-download", "expectedDecision": "blocked" },
+    { "caseId": "rights-life-model", "resourceId": "aida-life-science-terms", "proposedUse": "model-execution", "expectedDecision": "blocked" },
+    { "caseId": "rights-infection-metadata", "resourceId": "aida-infectious-disease-events", "proposedUse": "metadata-display", "expectedDecision": "allowed" },
+    { "caseId": "rights-infection-download", "resourceId": "aida-infectious-disease-events", "proposedUse": "source-file-download", "expectedDecision": "blocked" },
+    { "caseId": "rights-infection-model", "resourceId": "aida-infectious-disease-events", "proposedUse": "model-execution", "expectedDecision": "blocked" },
+    { "caseId": "rights-medibio-metadata", "resourceId": "aida-medibio-deberta", "proposedUse": "metadata-display", "expectedDecision": "allowed" },
+    { "caseId": "rights-medibio-download", "resourceId": "aida-medibio-deberta", "proposedUse": "source-file-download", "expectedDecision": "blocked" },
+    { "caseId": "rights-medibio-model", "resourceId": "aida-medibio-deberta", "proposedUse": "model-execution", "expectedDecision": "blocked" },
+    { "caseId": "rights-dataon-metadata", "resourceId": "dataon-research-data-api", "proposedUse": "metadata-display", "expectedDecision": "allowed" },
+    { "caseId": "rights-dataon-download", "resourceId": "dataon-research-data-api", "proposedUse": "source-file-download", "expectedDecision": "blocked" },
+    { "caseId": "rights-dataon-model", "resourceId": "dataon-research-data-api", "proposedUse": "model-execution", "expectedDecision": "blocked" }
+  ],
+  "driftCases": [
+    { "caseId": "drift-none", "resourceId": "aida-life-science-terms", "mutation": "none", "expectedBlocked": false },
+    { "caseId": "drift-title", "resourceId": "aida-life-science-terms", "mutation": "title", "expectedBlocked": true },
+    { "caseId": "drift-doi", "resourceId": "aida-life-science-terms", "mutation": "doi", "expectedBlocked": true },
+    { "caseId": "drift-license", "resourceId": "aida-life-science-terms", "mutation": "license-class", "expectedBlocked": true },
+    { "caseId": "drift-redistribution", "resourceId": "aida-life-science-terms", "mutation": "redistribution", "expectedBlocked": true },
+    { "caseId": "drift-url", "resourceId": "aida-life-science-terms", "mutation": "source-url", "expectedBlocked": true },
+    { "caseId": "drift-warning", "resourceId": "aida-life-science-terms", "mutation": "quality-warning", "expectedBlocked": true },
+    { "caseId": "drift-access", "resourceId": "aida-life-science-terms", "mutation": "access-state", "expectedBlocked": true },
+    { "caseId": "drift-format", "resourceId": "aida-life-science-terms", "mutation": "data-type", "expectedBlocked": true },
+    { "caseId": "drift-platform", "resourceId": "aida-life-science-terms", "mutation": "source-platform", "expectedBlocked": true },
+    { "caseId": "drift-topics", "resourceId": "aida-life-science-terms", "mutation": "topic-codes", "expectedBlocked": true }
+  ]
+}

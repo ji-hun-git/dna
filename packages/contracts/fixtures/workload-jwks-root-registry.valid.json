@@ -1,0 +1,18 @@
+{
+  "registry": {
+    "schemaVersion": "workload-jwks-root-registry.v1",
+    "sequence": 1,
+    "generatedAt": "2026-08-09T00:00:00Z",
+    "roots": [{
+      "releaseKeyId": "release-2026-08",
+      "publicKeyRawBase64Url": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+      "publicKeySha256": "sha256:6a3803d5f059902a1c6dafbc9ba4729212f7caac08634cc3ae76b27529f03827",
+      "notBefore": "2026-08-09T00:00:00Z",
+      "notAfter": "2026-11-07T00:00:00Z",
+      "state": "active"
+    }],
+    "registryDigest": "sha256:3ec4b50c43a9faef9bb7aa59e3d5766f3753ba3662156403b57bc68c2280b1f3"
+  },
+  "signatureBase64Url": "ALvkcZ5cMQ6lYtoDelqZh6N2KZoRPKeJKRiKixc_6f-exKuZc6cWJ84MrHV-hEdbwMe8CVVy0Ws2wNQd6s6gDA",
+  "registrySigningKeyId": "broker-root-2026-08"
+}

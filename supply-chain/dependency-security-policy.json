@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "dependency-security-policy.v1",
+  "reviewedAt": "2026-08-31",
+  "releasePolicy": {
+    "unresolvedCriticalMaximum": 0,
+    "unresolvedHighMaximum": 0,
+    "productionAuditCommand": "pnpm audit --prod --audit-level high",
+    "exceptionRegistry": "docs/security/dependency-exceptions.md"
+  },
+  "runtime": {
+    "node": {
+      "exactVersion": "24.20.0",
+      "releaseLine": "Krypton LTS",
+      "officialReleaseUrl": "https://nodejs.org/en/blog/release/v24.20.0",
+      "artifacts": {
+        "linux-x64-tar-xz": {
+          "sha256": "2f2c0da162318f0de47665410c7c8c2ed3d36c8f3105de4bbc61176c70a7cbf2"
+        },
+        "windows-x64-zip": {
+          "sha256": "6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba"
+        }
+      }
+    },
+    "productionImage": {
+      "status": "PROTECTED_WORKFLOW_IMPLEMENTED_NOT_EXECUTED",
+      "digest": null,
+      "releaseBlocking": true
+    },
+    "registryPublication": {
+      "workflow": ".github/workflows/publish-runtime-images.yml",
+      "registry": "ghcr.io",
+      "environment": "synthetic-staging-registry",
+      "status": "PROTECTED_ENVIRONMENT_CONFIGURED_NOT_EXECUTED",
+      "deployableCoordinatePolicy": "repository@sha256:digest",
+      "mutableTagsProhibited": true,
+      "signature": "cosign-keyless-github-oidc",
+      "attestations": [
+        "https://slsa.dev/provenance/v1",
+        "https://cyclonedx.org/bom"
+      ]
+    },
+    "runtimeImageCandidates": {
+      "platform": "linux/amd64",
+      "status": "CI_BUILD_SCAN_SBOM_VERIFIED",
+      "evidence": {
+        "runId": 33318715896,
+        "commit": "001a03069341903e93855f31f2d307f19c8434eb",
+        "url": "https://github.com/ji-hun-git/dna/actions/runs/33318715896",
+        "images": {
+          "web": {
+            "localImageId": "sha256:d6507076d9ab7624b575355a28b6600a2ff68ef8a712e71ecb6a5d282a83df9a",
+            "artifactDigest": "sha256:8af500cf5cc172a6802779bb54f88c46190a7892dbdb58d3fc9563ae6294ed22"
+          },
+          "coreApi": {
+            "localImageId": "sha256:cd5b8e64df32bdeb449018e12c04e342eb1abe7c630406b0acaf64f665e4abc6",
+            "artifactDigest": "sha256:3915f95a0ce4e0120c7e832a62114e1909878513d7eb1b00f355c9eebdc2f674"
+          },
+          "documentWorker": {
+            "localImageId": "sha256:5d7b3a83fb75856644cee32a9053a8268312079747b9d0c55264a3f8cea0dc5c",
+            "artifactDigest": "sha256:c339901e76ea587d8244df39fa03c35f825cd80fe2f1ede89c0ede21719fc445"
+          }
+        }
+      },
+      "nodeBase": {
+        "reference": "node:24.20.0-bookworm-slim",
+        "digest": "sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e"
+      },
+      "temurinJdkBase": {
+        "reference": "eclipse-temurin:21-jdk-jammy",
+        "digest": "sha256:ce5767b7222312d42395f5bab033cd91f09e44032a2f21bdfd7b5b912dbe1e77"
+      },
+      "temurinJreBase": {
+        "reference": "eclipse-temurin:21-jre-jammy",
+        "digest": "sha256:eebd356ad7358b7094758e5787a6726f332917cfd56feab6457c56dab895cdbf"
+      }
+    }
+  },
+  "packageManager": {
+    "name": "pnpm",
+    "exactVersion": "11.20.0"
+  },
+  "buildTools": {
+    "kotlin": {
+      "exactVersion": "2.3.21",
+      "source": "https://github.com/JetBrains/kotlin/releases/tag/v2.3.21"
+    },
+    "bouncyCastle": {
+      "exactVersion": "1.84",
+      "scope": "Kotlin build-time publishing configuration",
+      "reason": "CVE-2026-3505 remediation"
+    }
+  },
+  "ciTools": {
+    "codeqlAction": {
+      "version": "4.37.9",
+      "commit": "cdf488f595d80d6e07e03d4674febd5ab45fa938",
+      "source": "https://github.com/github/codeql-action"
+    },
+    "gitleaksAction": {
+      "version": "3.0.0",
+      "commit": "e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e",
+      "scannerVersion": "8.24.3",
+      "configuration": ".gitleaks.toml",
+      "source": "https://github.com/gitleaks/gitleaks-action"
+    },
+    "trivyAction": {
+      "version": "0.36.0",
+      "commit": "ed142fd0673e97e23eac54620cfb913e5ce36c25",
+      "scannerVersion": "0.72.0",
+      "source": "https://github.com/aquasecurity/trivy-action"
+    },
+    "attestAction": {
+      "version": "4.2.2",
+      "commit": "1e69f48acb82d1966a394da916b4c1698aa569d6",
+      "source": "https://github.com/actions/attest"
+    },
+    "dockerLoginAction": {
+      "version": "4.6.0",
+      "commit": "dbcb813823bdd20940b903addbd779551569679f",
+      "source": "https://github.com/docker/login-action"
+    },
+    "dockerBuildxAction": {
+      "version": "4.3.0",
+      "commit": "37fe631027851001ddb9b187196cc803df7f5f0e",
+      "source": "https://github.com/docker/setup-buildx-action"
+    },
+    "dockerBuildPushAction": {
+      "version": "7.3.0",
+      "commit": "53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
+      "source": "https://github.com/docker/build-push-action"
+    },
+    "cosignInstallerAction": {
+      "version": "4.1.2",
+      "commit": "6f9f17788090df1f26f669e9d70d6ae9567deba6",
+      "cosignVersion": "3.0.6",
+      "source": "https://github.com/sigstore/cosign-installer"
+    },
+    "postgresCiImage": {
+      "reference": "postgres:18.6-alpine",
+      "digest": "sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2",
+      "scope": "disposable synthetic CI only"
+    }
+  },
+  "frameworks": {
+    "springBoot": {
+      "exactVersion": "3.5.16",
+      "springFrameworkVersion": "6.2.19",
+      "springSecurityVersion": "6.5.11",
+      "supportStatus": "FINAL_OSS_RELEASE_FOR_3_5_X",
+      "productionMigrationRequired": true,
+      "source": "https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/"
+    },
+    "jackson": {
+      "exactBomVersion": "2.21.5",
+      "releaseLine": "2.21 LTS",
+      "source": "https://github.com/FasterXML/jackson/wiki/Jackson-Release-2.21"
+    },
+    "next": {
+      "exactVersion": "16.3.3",
+      "minimumSecurityVersion": "16.3.3",
+      "advisory": "GHSA-p293-qw3h-jr36",
+      "officialSecurityReleaseUrl": "https://nextjs.org/blog/august-2026-security-release"
+    },
+    "pdfbox": {
+      "exactVersion": "3.0.8",
+      "license": "Apache-2.0",
+      "source": "https://pdfbox.apache.org/download.html",
+      "securityStatus": "UPSTREAM_SECURITY_PAGE_REVIEWED"
+    },
+    "clamav": {
+      "requiredVersion": "1.5.4",
+      "license": "GPL-2.0-only",
+      "source": "https://www.clamav.net/downloads",
+      "artifactDigest": "sha256:28d6efc5b4423e7830c3559339552eb53870a9eac51ac4efb37d60530d329886",
+      "executionStatus": "SYNTHETIC_CI_ENGINE_CONTRACT_VERIFIED",
+      "releaseBlocking": true
+    }
+  }
+}

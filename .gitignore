@@ -19,6 +19,23 @@ node_modules/
 build/
 dist/
 coverage/
+storybook-static/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.gradle/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+out/
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/consentpurpose/adapter/out/
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/consentpurpose/adapter/out/**
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/audit/adapter/out/
+!apps/core-api/src/main/kotlin/kr/co/genomecompanion/audit/adapter/out/**
+evidence/
+!apps/web/components/evidence/
+!apps/web/components/evidence/**
 .pytest_cache/
 __pycache__/
 *.pyc
@@ -40,3 +57,6 @@ exports/
 rendered/
 tmp/
 temp/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+graft/

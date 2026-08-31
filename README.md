@@ -4,9 +4,9 @@ Planning workspace for a Korea-first consumer health-data company. The project c
 
 ## Current status
 
-**Founder-approved planning. No product implementation has started.**
+**Founder-approved direction and checkpointed local implementation. No deployment or personal-data processing is authorized.**
 
-The founder approved all eight design decisions on 2026-08-09. The specification has been converted into a sequenced set of separate, test-first implementation plans and cross-workstream contracts. Product implementation remains gated on founder review and an explicit execution choice; production/beta additionally remains gated on Korean healthcare/privacy counsel and an MFDS intended-use classification review of the actual build.
+The founder approved all eight design decisions on 2026-08-09 and selected dependency-ordered local implementation on 2026-08-10. Work begins with one indexed task at a time in an isolated worktree, using synthetic fixtures only. Production/beta remains gated on Korean healthcare/privacy counsel and an MFDS intended-use classification review of the actual build; deployment, external-account changes, procurement, public brand adoption, and real personal-health-data processing remain unauthorized.
 
 ## Strategic direction
 
@@ -28,6 +28,9 @@ It gives the reading order, the current state, and the gates that must not be cr
 - [`governance/decision-log.md`](governance/decision-log.md) — decisions, assumptions, owners, and review triggers.
 - [`risks/risk-register.md`](risks/risk-register.md) — initial product, technical, security, scientific, and regulatory risks.
 - [`governance/founder-approval-2026-08-09.md`](governance/founder-approval-2026-08-09.md) — recorded resolution of all eight founder decision gates.
+- [`governance/founder-brand-positioning-decision-proposal-2026-08-10.md`](governance/founder-brand-positioning-decision-proposal-2026-08-10.md) — unapproved category, longitudinal-model, experience-loop, and `앎 (ALM)` decision proposal derived from the later founder brief.
+- [`governance/founder-final-direction-recommendation-2026-08-10.md`](governance/founder-final-direction-recommendation-2026-08-10.md) — founder-approved synthesis of the conversation, current competitor/category evidence, and the `앎`/Health History direction; public-brand clearance remains pending.
+- [`governance/founder-execution-authorization-2026-08-10.md`](governance/founder-execution-authorization-2026-08-10.md) — founder approval of the `앎`/Health History direction and the bounded local execution mode.
 - [`docs/superpowers/plans/README.md`](docs/superpowers/plans/README.md) — sequenced implementation roadmap and executable workstream plans.
 
 ## Workspace rules
