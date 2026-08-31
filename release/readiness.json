@@ -1,6 +1,6 @@
 {
   "schemaVersion": "release-readiness.v1",
-  "evaluatedAt": "2026-08-30",
+  "evaluatedAt": "2026-08-31",
   "target": "HOSTED_SYNTHETIC_STAGING",
   "verdict": "NO_GO",
   "gates": [
@@ -62,19 +62,19 @@
       "id": "real_object_storage_trust_separation",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "local normalized filesystem zones exist, but separate hosted buckets, encryption policies and independent IAM evidence do not"
+      "evidence": "local normalized filesystem zones exist and an unapplied OpenTofu module now defines separate synthetic-only S3 zones, per-zone KMS keys, retention, public-access blocks and scoped task policies. No account-backed plan, apply, hosted bucket, or live IAM denial evidence exists"
     },
     {
       "id": "hosted_queue_and_worker_isolation",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "no deployed SQS/DLQ, ECS task identity, egress-deny proof or worker-to-unrelated-object denial evidence"
+      "evidence": "an unapplied OpenTofu module defines encrypted SQS/DLQ and separate future core/worker task roles, but application SQS adapters, deployed queues, ECS tasks, egress-deny proof and live worker-to-unrelated-object denial evidence do not exist"
     },
     {
       "id": "production_runtime_images_and_supply_chain",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub run 33318715896 built digest-pinned non-root Linux/amd64 web, core-api and document-worker candidates, smoke-tested each runtime, passed unresolved Critical/High Trivy image gates and preserved local image IDs, inspect manifests and CycloneDX SBOMs. These CI-local image IDs are not registry repository digests; images, SBOMs and provenance are not published/signed and no deployment evidence exists"
+      "evidence": "GitHub run 33318715896 built and scanned non-root Linux/amd64 candidates and preserved local image/SBOM evidence. A manual protected main-only GHCR workflow now defines digest-only publication, Critical/High gating, keyless Cosign signing and verified SLSA/CycloneDX attestations, but it has not executed; no registry digest, signature, attestation or deployment evidence exists"
     },
     {
       "id": "ci_security_pipeline_execution",
@@ -86,13 +86,13 @@
       "id": "managed_secrets_and_workload_identity",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "local worker uses a hashed shared credential contract; hosted Secrets Manager/KMS/task-role evidence is absent"
+      "evidence": "local worker uses a hashed shared credential contract. Unapplied OpenTofu now defines KMS keys, empty secret containers, GitHub OIDC and scoped future task roles without storing secret values, but no secret version, identity assumption, injection, rotation or live denial evidence exists"
     },
     {
       "id": "hosted_observability_phi_safe",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "no deployed queue depth, oldest age, inspection latency, DLQ, deletion backlog, trace or alert evidence"
+      "evidence": "unapplied OpenTofu defines KMS-encrypted payload-prohibited log groups and payload-free queue-age/DLQ alarms; no deployed metric, inspection latency, deletion backlog, trace, alert delivery or PHI-log denial evidence exists"
     },
     {
       "id": "hosted_tls_proxy_and_browser_e2e",

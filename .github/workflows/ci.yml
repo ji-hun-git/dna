@@ -55,6 +55,18 @@ jobs:
           java-version: "21"
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Install checksum-verified OpenTofu 1.10.6
+        env:
+          OPENTOFU_URL: https://github.com/opentofu/opentofu/releases/download/v1.10.6/tofu_1.10.6_linux_amd64.zip
+          OPENTOFU_SHA256: 15b7bed76420b50da3e121769c43341df8cd57d751ca14e6dbe9c850124c6dac
+        run: |
+          curl --fail --location --retry 3 --output /tmp/opentofu-1.10.6.zip "$OPENTOFU_URL"
+          echo "$OPENTOFU_SHA256  /tmp/opentofu-1.10.6.zip" | sha256sum --check --strict
+          mkdir --parents /tmp/gc-opentofu-1.10.6 /tmp/gc-tofu-plugin-cache
+          unzip -q /tmp/opentofu-1.10.6.zip -d /tmp/gc-opentofu-1.10.6
+          test "$(/tmp/gc-opentofu-1.10.6/tofu version -json | jq -r .terraform_version)" = "1.10.6"
+          echo "/tmp/gc-opentofu-1.10.6" >> "$GITHUB_PATH"
+          echo "TF_PLUGIN_CACHE_DIR=/tmp/gc-tofu-plugin-cache" >> "$GITHUB_ENV"
       - name: Prepare checksum-verified ClamAV 1.5.4 engine
         env:
           CLAMAV_DEB_URL: https://github.com/Cisco-Talos/clamav/releases/download/clamav-1.5.4/clamav-1.5.4.linux.x86_64.deb
@@ -78,6 +90,17 @@ jobs:
           pnpm security:github-actions-policy
           pnpm auth-security:gate
           pnpm release:readiness:validate
+      - name: Validate infrastructure policy and synthetic-only boundaries
+        run: |
+          tofu fmt -check -recursive infra
+          tofu -chdir=infra/modules/organization init -backend=false -lockfile=readonly
+          tofu -chdir=infra/modules/organization validate
+          tofu -chdir=infra/modules/organization test
+          tofu -chdir=infra/modules/synthetic-staging init -backend=false -lockfile=readonly
+          tofu -chdir=infra/modules/synthetic-staging validate
+          tofu -chdir=infra/modules/synthetic-staging test
+          tofu -chdir=infra/live/synthetic-staging init -backend=false -lockfile=readonly
+          tofu -chdir=infra/live/synthetic-staging validate
       - name: Test and build both presentation runtimes
         run: |
           pnpm web:test

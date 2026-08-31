@@ -1,6 +1,6 @@
 # Runtime image contract
 
-**Scope:** reproducible synthetic-only build evidence. These images are not published, signed, deployed, or approved for PHI.
+**Scope:** reproducible synthetic-only build evidence. A protected publication workflow now exists, but it has not run; these images are not yet published, signed, deployed, or approved for PHI.
 
 The repository now has three independent Linux/amd64 runtime definitions:
 
@@ -24,11 +24,10 @@ These values address images in that ephemeral Docker engine only. They must not 
 
 ## Deliberate gaps
 
-- No image is pushed to a registry, so there is no immutable registry repository digest.
-- No SBOM or provenance is signed and no attestation is published.
+- `.github/workflows/publish-runtime-images.yml` defines protected, digest-only GHCR publication plus verified Cosign, SLSA provenance, and CycloneDX attestations. It has not executed from `main`, so no immutable registry repository digest or signed attestation exists yet.
 - No deployment plane, workload identity, KMS secret injection, read-only root filesystem, resource limit, network policy, TLS ingress or hosted denial probe is exercised.
 - The worker image contains the engine but not an operational official ClamAV signature feed. A deployment must mount or provision a freshness-monitored, independently verified signature database. Missing/stale/unavailable scanner operation must fail closed.
 - `GC_WORKER_CREDENTIAL` and `GC_WORKER_IMAGE_DIGEST` are deployment-time server secrets/metadata and are never baked into the worker image.
 - Real documents and PHI remain prohibited.
 
-The next supply-chain step is a protected registry build that emits repository digests, signed SBOM and provenance attestations. That step requires registry/cloud authority and remains outside this change.
+The next supply-chain step is to merge a green revision to `main`, approve its exact SHA through the protected `synthetic-staging-registry` environment, and execute the publication workflow. See `docs/operations/attested-runtime-registry.md`.

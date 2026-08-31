@@ -1,0 +1,231 @@
+name: publish-attested-runtime-images
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact 40-character main-branch commit already verified by genome-companion-ci
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: publish-attested-runtime-images-${{ inputs.source_sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish signed runtime image (${{ matrix.name }})
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: synthetic-staging-registry
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: web
+            dockerfile: apps/web/Dockerfile
+          - name: core-api
+            dockerfile: apps/core-api/Dockerfile
+          - name: document-worker
+            dockerfile: apps/document-worker/Dockerfile
+    env:
+      REGISTRY: ghcr.io
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/dna-${{ matrix.name }}
+      EXPECTED_SIGNER_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/publish-runtime-images.yml@refs/heads/main
+    steps:
+      - name: Reject anything except the exact dispatched main revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! [[ "${SOURCE_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "source_sha must be one lowercase 40-character Git commit" >&2
+            exit 1
+          fi
+          if [[ "${SOURCE_SHA}" != "${GITHUB_SHA}" ]]; then
+            echo "source_sha must equal the current main revision" >&2
+            exit 1
+          fi
+          successful_runs="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&head_sha=${SOURCE_SHA}&per_page=10" \
+            --jq '.total_count')"
+          if [[ "${successful_runs}" -lt 1 ]]; then
+            echo "the exact source_sha has no successful main push CI run" >&2
+            exit 1
+          fi
+
+      - name: Checkout the immutable verified revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+
+      - name: Log in to the private GitHub Container Registry namespace
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Install the pinned Buildx driver
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Build and push immutable-SHA runtime image
+        id: push
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          pull: true
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ env.IMAGE_NAME }}:sha-${{ inputs.source_sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ inputs.source_sha }}
+            org.opencontainers.image.title=genome-companion-${{ matrix.name }}
+
+      - name: Resolve the only deployable coordinate
+        id: coordinate
+        run: |
+          set -euo pipefail
+          if ! [[ "${{ steps.push.outputs.digest }}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "registry did not return a sha256 repository digest" >&2
+            exit 1
+          fi
+          mkdir --parents runtime-image-evidence
+          echo "subject=${IMAGE_NAME}@${{ steps.push.outputs.digest }}" >> "${GITHUB_OUTPUT}"
+
+      - name: Generate the registry-image CycloneDX SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          image-ref: ${{ steps.coordinate.outputs.subject }}
+          scan-type: image
+          scanners: vuln
+          ignore-unfixed: true
+          exit-code: "0"
+          format: cyclonedx
+          output: runtime-image-evidence/${{ matrix.name }}.cdx.json
+
+      - name: Reject unresolved Critical or High registry-image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          skip-setup-trivy: true
+          image-ref: ${{ steps.coordinate.outputs.subject }}
+          scan-type: image
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      - name: Install checksum-verified Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.0.6
+
+      - name: Sign the immutable image with GitHub OIDC
+        run: cosign sign --yes "${{ steps.coordinate.outputs.subject }}"
+
+      - name: Create signed SLSA provenance
+        id: provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+
+      - name: Create signed CycloneDX SBOM attestation
+        id: sbom-attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          sbom-path: runtime-image-evidence/${{ matrix.name }}.cdx.json
+          push-to-registry: true
+          create-storage-record: false
+
+      - name: Verify image signature and both signed attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          SBOM_BUNDLE: ${{ steps.sbom-attestation.outputs.bundle-path }}
+          SUBJECT: ${{ steps.coordinate.outputs.subject }}
+        run: |
+          set -euo pipefail
+          mkdir --parents runtime-image-evidence
+          cosign verify \
+            --certificate-identity "${EXPECTED_SIGNER_IDENTITY}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --output json \
+            "${SUBJECT}" > "runtime-image-evidence/${{ matrix.name }}-cosign-verification.json"
+          gh attestation verify \
+            "oci://${SUBJECT}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --bundle "${PROVENANCE_BUNDLE}" \
+            --cert-identity "${EXPECTED_SIGNER_IDENTITY}" \
+            --source-digest "${SOURCE_SHA}" \
+            --source-ref "refs/heads/main" \
+            --predicate-type "https://slsa.dev/provenance/v1" \
+            --format json > "runtime-image-evidence/${{ matrix.name }}-provenance-verification.json"
+          gh attestation verify \
+            "oci://${SUBJECT}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --bundle "${SBOM_BUNDLE}" \
+            --cert-identity "${EXPECTED_SIGNER_IDENTITY}" \
+            --source-digest "${SOURCE_SHA}" \
+            --source-ref "refs/heads/main" \
+            --predicate-type "https://cyclonedx.org/bom" \
+            --format json > "runtime-image-evidence/${{ matrix.name }}-sbom-verification.json"
+          cp "${PROVENANCE_BUNDLE}" "runtime-image-evidence/${{ matrix.name }}-provenance.sigstore.json"
+          cp "${SBOM_BUNDLE}" "runtime-image-evidence/${{ matrix.name }}-sbom.sigstore.json"
+
+      - name: Record registry evidence without credentials
+        env:
+          SUBJECT: ${{ steps.coordinate.outputs.subject }}
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          PROVENANCE_ID: ${{ steps.provenance.outputs.attestation-id }}
+          PROVENANCE_URL: ${{ steps.provenance.outputs.attestation-url }}
+          SBOM_ATTESTATION_ID: ${{ steps.sbom-attestation.outputs.attestation-id }}
+          SBOM_ATTESTATION_URL: ${{ steps.sbom-attestation.outputs.attestation-url }}
+        run: |
+          set -euo pipefail
+          sbom_sha256="$(sha256sum "runtime-image-evidence/${{ matrix.name }}.cdx.json" | cut -d ' ' -f 1)"
+          jq -n \
+            --arg schemaVersion "runtime-registry-evidence.v1" \
+            --arg image "${SUBJECT}" \
+            --arg digest "${IMAGE_DIGEST}" \
+            --arg sourceSha "${SOURCE_SHA}" \
+            --arg sourceRef "refs/heads/main" \
+            --arg workflowRun "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg sbomSha256 "sha256:${sbom_sha256}" \
+            --arg provenanceAttestationId "${PROVENANCE_ID}" \
+            --arg provenanceAttestationUrl "${PROVENANCE_URL}" \
+            --arg sbomAttestationId "${SBOM_ATTESTATION_ID}" \
+            --arg sbomAttestationUrl "${SBOM_ATTESTATION_URL}" \
+            '{schemaVersion:$schemaVersion,image:$image,digest:$digest,sourceSha:$sourceSha,sourceRef:$sourceRef,workflowRun:$workflowRun,sbomSha256:$sbomSha256,provenanceAttestationId:$provenanceAttestationId,provenanceAttestationUrl:$provenanceAttestationUrl,sbomAttestationId:$sbomAttestationId,sbomAttestationUrl:$sbomAttestationUrl}' \
+            > "runtime-image-evidence/${{ matrix.name }}-registry-evidence.json"
+
+      - name: Preserve signed registry evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: signed-runtime-image-${{ matrix.name }}-evidence
+          path: runtime-image-evidence
+          if-no-files-found: error
+          retention-days: 30
