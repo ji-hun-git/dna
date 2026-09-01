@@ -42,7 +42,7 @@ is used.
 
 ## Deliberate non-claims
 
-- The ordinary CI workflow builds and scans local runtime-image candidates. A separate manual protected workflow can publish, sign, and attest an exact green `main` revision, but it has not run. Local Docker image IDs are not registry repository digests, so the runtime-image release gate cannot be PASS.
+- The ordinary CI workflow builds and scans local runtime-image candidates. Protected publication run 33370021596 published, registry-scanned, signed and attested exact `main` revision `937361c5ee995174bcce7648957a02b430bdf450`. The runtime-image release gate still cannot be PASS because all three GHCR packages were anonymously pullable on 2026-09-02 despite the intended private-package policy, and no deployment evidence exists.
 - OpenTofu validation is code evidence only. It is not an AWS plan, apply, live-policy probe, or denial test.
 - Filesystem misconfiguration scanning is not proof that hosted IAM, network egress, TLS, KMS, or object-store separation exists.
 - The PostgreSQL service is disposable CI infrastructure, not backup/restore evidence.
