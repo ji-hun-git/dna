@@ -1,6 +1,6 @@
 # System context
 
-**Evidence date:** 2026-08-30  
+**Evidence date:** 2026-09-02
 **Scope:** executable local system with synthetic data only  
 **Real PHI:** prohibited
 
@@ -14,9 +14,10 @@ Next.js web (presentation only)
   |  validated rewrite when GC_CORE_API_ORIGIN is set
   v
 Spring core API (session, authorization, consent, lifecycle authority)
-  |                         |
-  v                         v
-PostgreSQL 16.15       Local quarantine directory
+  |                         |                         |
+  v                         v                         v
+PostgreSQL 16.15       Local trust-zone storage    Separate document worker
+                                                (ClamAV/PDF boundary + leases)
 ```
 
 The browser E2E test executes this entire path with a digest-allowlisted synthetic PDF. Next exposes only a non-sensitive `/healthz` identity handler and does not own provider tokens, authorization decisions, consent, or durable health state.
@@ -33,7 +34,8 @@ The browser E2E test executes this entire path with a digest-allowlisted synthet
 | `infra/modules/organization` | Seven-account AWS Organizations boundary and Seoul-region/security SCP tests | VERIFIED LOCALLY with OpenTofu; no AWS apply |
 | `apps/research-web` | Offline DataON/AIDA public-metadata product with separate package, build, application/readiness identity and fail-closed credential policy | VERIFIED LOCALLY; hosted network/log/storage separation NOT DEPLOYED |
 | External providers | Kakao, Naver, MyHealthWay, DataON, AIDA, public health datasets | DISABLED / EXTERNAL GATE |
-| OCR/model worker | No admitted production artifact or isolated worker | NOT IMPLEMENTED |
+| Document worker | Separate Kotlin/ClamAV runtime, digest-bound promotion, leases/retries/DLQ and safe-preview contract | VERIFIED IN CI; hosted object/queue/network isolation NOT DEPLOYED |
+| OCR/medical model inference | Synthetic evaluation and isolated-runner contracts only | NOT IMPLEMENTED FOR PRODUCTION / PHI DISABLED |
 
 ## Trust decisions
 
@@ -41,6 +43,7 @@ The browser E2E test executes this entire path with a digest-allowlisted synthet
 - Next remains presentation and same-origin forwarding only.
 - External provider tokens must never enter browser JavaScript.
 - The research product now has a separate build identity and mutually exclusive credential policy. Separate hosted network, logs and storage remain a staging gate.
-- The local filesystem quarantine is test evidence, not a production object store.
+- The local filesystem trust zones and PostgreSQL leases are test evidence, not hosted S3/SQS isolation.
+- Published runtime digests are signed and attested, but their current public GHCR visibility is stop-ship.
 
 See [ADR-001](ADR-001-application-trust-boundary.md), [data flow](data-flow.md), and the [release gate](../release/readiness.md).

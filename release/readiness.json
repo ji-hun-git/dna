@@ -1,6 +1,6 @@
 {
   "schemaVersion": "release-readiness.v1",
-  "evaluatedAt": "2026-08-31",
+  "evaluatedAt": "2026-09-02",
   "target": "HOSTED_SYNTHETIC_STAGING",
   "verdict": "NO_GO",
   "gates": [
@@ -74,7 +74,7 @@
       "id": "production_runtime_images_and_supply_chain",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub run 33318715896 built and scanned non-root Linux/amd64 candidates and preserved local image/SBOM evidence. A manual protected main-only GHCR workflow now defines digest-only publication, Critical/High gating, keyless Cosign signing and verified SLSA/CycloneDX attestations, but it has not executed; no registry digest, signature, attestation or deployment evidence exists"
+      "evidence": "GitHub run 33370021596 published three immutable GHCR digests for main revision 937361c5ee995174bcce7648957a02b430bdf450, passed registry Critical/High scanning, keyless Cosign verification and SLSA/CycloneDX attestation verification, and preserved evidence artifacts. An anonymous manifest probe on 2026-09-02 returned HTTP 200 for all three packages despite the intended private-package policy, so the artifacts are stop-ship and no deployment evidence exists"
     },
     {
       "id": "ci_security_pipeline_execution",
@@ -110,7 +110,7 @@
       "id": "known_vulnerability_coverage",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub run 33318715896 passed both CodeQL analyses, repository Trivy/Gitleaks gates and unresolved Critical/High Trivy scans for all three CI-built runtime image candidates; no published registry artifact or deployed digest exists to scan"
+      "evidence": "GitHub main run 33367429797 passed both CodeQL analyses and repository Trivy/Gitleaks gates. Publication run 33370021596 scanned all three exact published registry digests and reported zero unresolved Critical/High findings before signing and attestation; no hosted workload or deployed digest evidence exists yet"
     },
     {
       "id": "backup_restore_and_deletion_replay",

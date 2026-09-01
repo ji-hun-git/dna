@@ -1,8 +1,8 @@
 # Intended-use matrix
 
 - **Status:** Foundation boundary; founder/regulatory approval required before expansion
-- **Reviewed:** 2026-08-30
-- **Environment:** synthetic local development only
+- **Reviewed:** 2026-09-02
+- **Environment:** synthetic local/CI evidence only; no hosted application deployment
 
 ## Product claim boundary
 
@@ -10,11 +10,11 @@ The product may organize user-provided health-document information, expose sourc
 
 | Capability | Boundary | Current status | Executable evidence |
 |---|---|---|---|
-| Accept a local synthetic PDF for UX review | File signature/size UX check only; no server security claim | DEMO ONLY | `apps/web/tests/health-experience.test.tsx`, Playwright Korean experience suite |
-| Produce measurement candidates | Candidate only, synthetic fixtures, no clinical truth claim | CONTRACT ONLY | strict `medicalDocumentRunSchema`; `medical-document-synthetic-contract-regression.v1` |
-| Confirm or correct a candidate | Explicit per-item user action required before demo save | DEMO ONLY | `apps/web/tests/record-import-concept.test.tsx`, `health-experience.test.tsx` |
-| Show source and history | Provenance-shaped UI using synthetic records | DEMO ONLY | `apps/web/tests/evidence-lens.test.tsx`, `health-timeline.test.tsx` |
-| Persist a confirmed record | Must preserve source, decision, actor, and time | NOT IMPLEMENTED | no database/migration/repository exists |
+| Accept an allowlisted synthetic PDF | Bounded capability, exact length/digest, hostile-document state machine; no real-document authorization | VERIFIED SYNTHETIC ONLY | Spring/PostgreSQL lifecycle and browser-to-worker CI evidence |
+| Produce measurement candidates | Candidate only, synthetic fixtures, no clinical truth claim | VERIFIED SYNTHETIC CONTRACT | strict output schema, worker lifecycle and synthetic regression corpus |
+| Confirm or correct a candidate | Explicit per-item human action required before record promotion | VERIFIED SYNTHETIC ONLY | candidate confirmation-bypass and PostgreSQL lifecycle tests |
+| Show source and history | Source page/digest and provenance retained for synthetic records | VERIFIED SYNTHETIC ONLY | evidence UI tests plus reload from PostgreSQL lifecycle |
+| Persist a confirmed record | Preserve source, decision, actor, time and owner scope | VERIFIED SYNTHETIC ONLY | Flyway schema, JDBC lifecycle, reload/revocation/deletion integration tests |
 | Retrieve external health records | Separate app identity, consent, provider authorization, and approval gates | DISABLED / EXTERNAL GATE | connections UI and provider contracts only |
 | Diagnose or assign a disease | Prohibited | NOT IMPLEMENTED BY DESIGN | strict schema rejects extra diagnosis fields; Spring prohibited-route test |
 | Label normal/abnormal | Prohibited | NOT IMPLEMENTED BY DESIGN | strict schema rejects `normality`; UI says it does not judge health state |
@@ -35,10 +35,10 @@ The product may organize user-provided health-document information, expose sourc
 
 | Rule | Present test | Gap that blocks beta |
 |---|---|---|
-| Candidate-only schema | `apps/web/tests/medical-document-evaluation.test.ts` | No server/database state transition constraint |
-| Human confirmation UI | `apps/web/tests/health-experience.test.tsx` | React memory only; reload loses state |
-| Non-diagnostic language | `apps/web/tests/korean-ux-copy.test.ts`, `evidence-lens.test.tsx` | No reviewed production claim inventory |
-| Prohibited backend routes | `apps/core-api/.../ProhibitedRouteTest.kt` | No backend application routes exist yet |
+| Candidate-only schema | web medical-document evaluation plus Spring hostile-document lifecycle | No hosted OCR/model evaluation or real-document authorization |
+| Human confirmation UI | browser-to-Spring lifecycle and PostgreSQL confirmation-bypass tests | No hosted lifecycle or support/recovery path |
+| Non-diagnostic language | `apps/web/tests/korean-ux-copy.test.ts`, `evidence-lens.test.tsx` | No final counsel/MFDS-reviewed production claim inventory |
+| Prohibited backend routes | `apps/core-api/.../ProhibitedRouteTest.kt` | Must be repeated against hosted ingress after deployment |
 | Synthetic-only corpus | `medicalDocumentCorpusSchema` requires `syntheticOnly: true` | No controlled real-world evaluation protocol |
 
-Passing these tests proves the stated local contract only. It is not medical-model accuracy evidence, regulatory clearance, or permission to process real health data.
+Passing these tests proves the stated synthetic local/CI contract only. It is not medical-model accuracy evidence, regulatory clearance, hosted readiness, or permission to process real health data.

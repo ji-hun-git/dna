@@ -10,8 +10,8 @@ local credential
   -> purpose consent
   -> upload request
   -> digest-allowlisted synthetic PDF in local quarantine
-  -> deterministic inspection
-  -> extraction job
+  -> deterministic inspection and real ClamAV adapter contract
+  -> leased extraction job processed by the separate worker
   -> candidate with source page/digest
   -> explicit user confirmation
   -> durable record + provenance
@@ -43,7 +43,7 @@ Provider login and health-data authorization are separate future flows. Kakao/Na
 | Store | Current content | Current protection | Production gap |
 |---|---|---|---|
 | PostgreSQL | synthetic subjects, sessions, consent, document metadata, candidates, records, deletion, audit, outbox | constraints, parameterized SQL, transactions, subject predicates | TLS/roles/RLS/backup/restore/managed encryption absent |
-| Local quarantine | one allowlisted synthetic PDF fixture | generated UUID path, normalized root, size/type/digest gate | object storage, malware scanning, immutability and worker isolation absent |
+| Local trust zones | allowlisted synthetic PDF fixtures and safe previews | generated UUID path, normalized roots, size/type/digest gate, exact-byte rehash, ClamAV adapter and worker contract | hosted object storage, official-signature operations, IAM and network isolation absent |
 | Browser | UI state and opaque cookie only | no provider tokens or durable PHI path | production CSP/session edge evidence absent |
 | Logs | correlation and enumerated safe events | request details disabled; PHI-safe facade | centralized immutable production sink absent |
 
@@ -52,5 +52,5 @@ Provider login and health-data authorization are separate future flows. Kakao/Na
 - No Kakao/Naver authorization callback or token exchange.
 - No MyHealthWay request.
 - No live DataON/AIDA or public-health connector.
-- No arbitrary PDF parser, malware scanner, OCR/model inference, or GPU worker.
+- No unrestricted real-document parser, hosted operational malware-signature feed, OCR/model inference, or GPU worker.
 - No production export, backup, restore, support, analytics, or administrator access path.

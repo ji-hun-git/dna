@@ -22,7 +22,7 @@ The module fails validation if the provider account differs from the declared ac
 - No VPC, egress policy, load balancer, TLS certificate, WAF, ECS service, RDS database, DNS record, backup vault, or external audit anchor is created yet.
 - The application still uses its local filesystem storage boundary and PostgreSQL job leases. Production S3 and SQS runtime adapters do not yet exist.
 - Empty task roles and secret containers are prerequisites, not workload-identity or secret-injection evidence.
-- ECR repositories are a future AWS registry boundary; the current signed publication workflow targets protected GHCR and has not yet run.
+- ECR repositories are a future private AWS registry boundary. Protected GHCR publication run 33370021596 succeeded, but the three resulting packages are anonymously pullable and therefore stop-ship under the intended private-package policy. No ECR repository has been created because this OpenTofu foundation remains unapplied.
 - No real-data, provider, or medical-AI path is permitted.
 
 ## Validation contract
