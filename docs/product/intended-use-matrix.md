@@ -1,7 +1,7 @@
 # Intended-use matrix
 
 - **Status:** Foundation boundary; founder/regulatory approval required before expansion
-- **Reviewed:** 2026-09-02
+- **Reviewed:** 2026-09-02 (visit-preparation row added by the multi-candidate wave)
 - **Environment:** synthetic local/CI evidence only; no hosted application deployment
 
 ## Product claim boundary
@@ -15,6 +15,7 @@ The product may organize user-provided health-document information, expose sourc
 | Confirm or correct a candidate | Explicit per-item human action required before record promotion | VERIFIED SYNTHETIC ONLY | candidate confirmation-bypass and PostgreSQL lifecycle tests |
 | Show source and history | Source page/digest and provenance retained for synthetic records | VERIFIED SYNTHETIC ONLY | evidence UI tests plus reload from PostgreSQL lifecycle |
 | Persist a confirmed record | Preserve source, decision, actor, time and owner scope | VERIFIED SYNTHETIC ONLY | Flyway schema, JDBC lifecycle, reload/revocation/deletion integration tests |
+| Prepare questions for a professional | Fixed, neutral, source-linked question set attached to user-confirmed records; no interpretation, threshold, or advice | IMPLEMENTED 2026-09-02 WAVE (synthetic only; browser lifecycle evidence in CI) | `apps/web/tests/visit-preparation.test.tsx`, copy scan, `foundation-lifecycle.spec.ts` |
 | Retrieve external health records | Separate app identity, consent, provider authorization, and approval gates | DISABLED / EXTERNAL GATE | connections UI and provider contracts only |
 | Diagnose or assign a disease | Prohibited | NOT IMPLEMENTED BY DESIGN | strict schema rejects extra diagnosis fields; Spring prohibited-route test |
 | Label normal/abnormal | Prohibited | NOT IMPLEMENTED BY DESIGN | strict schema rejects `normality`; UI says it does not judge health state |

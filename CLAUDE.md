@@ -9,6 +9,10 @@ document, and the nearest `AGENTS.md`.
 
 Use [`SANITY_CHECK_PROMPT.md`](SANITY_CHECK_PROMPT.md) to start an evidence-first takeover audit.
 
+The short operating contract for agents is [`AGENTS.md`](AGENTS.md). Project skills live in
+`.claude/skills/` and agent roles in `.claude/agents/`; load the matching skill before editing.
+The reviewed roadmap is [`docs/roadmap/2026-09-02-roadmap.md`](docs/roadmap/2026-09-02-roadmap.md).
+
 Current non-negotiable facts as of 2026-09-02:
 
 - release target: `HOSTED_SYNTHETIC_STAGING`;

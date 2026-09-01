@@ -1,5 +1,12 @@
 # Genome Companion Korea — Implementation Roadmap
 
+> **Status note (2026-09-02):** the execution-status column below is historical. The codebase
+> now implements consent, audit, PHI-safe telemetry, the hostile-document boundary, a separate
+> worker and research runtime, attested images, and an unapplied AWS foundation under different
+> names than these plans use. Current sequencing authority is
+> [`../../roadmap/2026-09-02-roadmap.md`](../../roadmap/2026-09-02-roadmap.md); the plans here
+> remain design references.
+
 This is the sequencing and governance index for the founder-approved design. It is not an authorization to build, deploy, procure, mutate an external account, or process real personal health data. Each linked implementation plan is independently reviewable and produces a working, testable slice.
 
 ## Approved baseline
