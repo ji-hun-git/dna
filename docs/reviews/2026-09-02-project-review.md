@@ -100,4 +100,4 @@ Action: delete merged/abandoned remote branches after founder confirmation; keep
 
 ## 6. Skill check results
 
-Recorded after Task 4 (see the roadmap document's appendix for the exact scenarios and outcomes).
+One smoke run per skill, recorded in the appendix of `docs/roadmap/2026-09-02-roadmap.md`. The copy skill changed behaviour (the baseline produced two forbidden judgement phrases; the skill arm produced none). The readiness skill did not need to change behaviour because the control already refused to flip a gate without evidence; it remains a reference skill.

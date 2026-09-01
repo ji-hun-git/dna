@@ -24,7 +24,7 @@ A dependency, UI mock, IaC resource, workflow file, test double, or passing unit
 
 - Change a gate's `status` only with a run URL, digest, or probe you can paste into `evidence`.
 - Allowed statuses: `PASS`, `PARTIAL`, `FAIL`, `DISABLED`, `EXTERNAL_GATE`. Blocking gates stay blocking.
-- Keep `evaluatedAt` as the date of the evidence review.
+- `evaluatedAt` exists only at the top level of the file; set it to the date of the evidence review. Gates carry only `id`, `status`, `blocking`, `evidence`.
 - Run `pnpm release:readiness:validate` (must exit 0) and `pnpm release:readiness` (expected non-zero while `NO_GO`). Paste both outputs into the report.
 - Never edit the checker to make the file pass.
 
