@@ -306,6 +306,11 @@ class DocumentWorkerBoundaryService(
                 repository.markJobFailed(job, "preview_artifact_invalid", retryable = false, now)
                 return WorkerResultReceipt(jobId, "DEAD_LETTER")
             }
+        val candidates = runCatching { SyntheticCandidateFixture.candidatesFor(job.sourceSha256) }
+            .getOrElse {
+                repository.markJobFailed(job, "synthetic_candidate_set_unavailable", retryable = false, now)
+                return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            }
         registerRollbackDelete(preview, StorageTrustZone.DERIVED_SAFE_ARTIFACT)
         repository.markExtractionCompleted(
             workerJob = job,
@@ -316,7 +321,7 @@ class DocumentWorkerBoundaryService(
             workerImageDigest = request.workerImageDigest,
             generatorVersion = request.generatorVersion,
             now = now,
-            candidates = SyntheticCandidateFixture.candidatesFor(job.sourceSha256),
+            candidates = candidates,
         )
         audit(job, "SYNTHETIC_CANDIDATE_CREATED", "SUCCESS", now)
         return WorkerResultReceipt(jobId, "COMPLETED")

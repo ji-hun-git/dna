@@ -11,7 +11,7 @@ data class SyntheticCandidate(
     val observedOn: LocalDate,
     val evidencePage: Int,
 ) {
-    val sourceTextSha256: String get() = FoundationHashing.sha256("$label|$value|$unit|$observedOn")
+    val sourceTextSha256: String = FoundationHashing.sha256("$label|$value|$unit|$observedOn")
 }
 
 

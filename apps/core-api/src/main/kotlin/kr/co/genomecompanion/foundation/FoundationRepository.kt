@@ -197,7 +197,7 @@ class FoundationRepository(
     private val candidateProjection =
         """
         SELECT c.candidate_id, c.document_id, c.subject_id, c.status, c.ordinal,
-               (SELECT COUNT(*) FROM gc_candidate t WHERE t.document_id = c.document_id) AS total_candidates,
+               (SELECT COUNT(*) FROM gc_candidate t WHERE t.document_id = c.document_id AND t.subject_id = c.subject_id) AS total_candidates,
                c.label, c.candidate_value, c.unit,
                c.observed_on, c.evidence_page, c.source_text_sha256,
                d.sha256 AS document_sha256, c.created_at AS candidate_created_at
