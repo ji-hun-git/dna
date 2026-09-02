@@ -25,6 +25,8 @@ it("shows the review position of the candidate the server asked about", () => {
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3");
   expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toBeVisible();
   expect(screen.getByText("2026. 7. 28.")).toBeVisible();
+  expect(screen.getByText("확인 대기")).toBeVisible();
+  expect(screen.queryByText("PENDING")).toBeNull();
 });
 
 it("confirms the untouched candidate value", async () => {

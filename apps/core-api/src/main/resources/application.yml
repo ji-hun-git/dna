@@ -61,3 +61,10 @@ gc:
     quarantine-root: ${GC_QUARANTINE_ROOT:}
     audit-pepper: ${GC_AUDIT_PEPPER:}
     allowed-document-sha256: ${GC_ALLOWED_DOCUMENT_SHA256:}
+    # synthetic-documents binds an allow-listed synthetic source digest to one named candidate set in
+    # SyntheticCandidateFixture (ids: checkup-2026-07 (default), checkup-2026-01). It selects a fixture;
+    # it never authorizes a document and never implies the bytes were parsed. Unbound digests use the
+    # default set. Bound by relaxed indexed properties, like local-identities:
+    #   gc.foundation.synthetic-documents[0].sha256  (env GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SHA256)
+    #   gc.foundation.synthetic-documents[0].set-id  (env GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SET_ID)
+    # Left undeclared here (like local-identities) so an indexed environment binding is not shadowed.

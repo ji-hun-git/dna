@@ -9,6 +9,7 @@ import {
 } from "@/lib/foundation/client";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { describeFoundationError } from "@/lib/foundation/messages";
+import { labelConsentStatus } from "@/lib/format/status-labels";
 
 export function IntegratedDataControl() {
   const client = useMemo(() => createFoundationClient(), []);
@@ -93,7 +94,7 @@ export function IntegratedDataControl() {
             <>
               <section className="gc-data-control__summary" aria-label="현재 서버 데이터 상태">
                 <article><span>합성 세션</span><strong>활성</strong><p>{session.subjectId}</p></article>
-                <article><span>결과지 처리 동의</span><strong>{consent?.status ?? "NOT_GRANTED"}</strong><p>DOCUMENT_EXTRACTION</p></article>
+                <article><span>결과지 처리 동의</span><strong>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</strong><p>DOCUMENT_EXTRACTION</p></article>
                 <article><span>외부 연결</span><strong>0</strong><p>카카오·네이버·MyHealthWay 비활성화</p><a href="/connections">외부 연결 상태</a></article>
               </section>
 
@@ -103,7 +104,7 @@ export function IntegratedDataControl() {
                   <article data-status={consent?.status === "ACTIVE" ? "active" : "revoked"}>
                     <span className="gc-data-control__purpose-index">01</span>
                     <div className="gc-data-control__purpose-copy">
-                      <div><h3>합성 결과지 후보 확인</h3><strong>{consent?.status ?? "NOT_GRANTED"}</strong></div>
+                      <div><h3>합성 결과지 후보 확인</h3><strong>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</strong></div>
                       <p>허용된 합성 PDF에 대해 문서 요청, 논리 격리, 검사, 합성 후보 확인을 허용합니다.</p>
                       <dl><div><dt>목적 코드</dt><dd>DOCUMENT_EXTRACTION</dd></div><div><dt>실제 외부 제공</dt><dd>없음</dd></div></dl>
                     </div>

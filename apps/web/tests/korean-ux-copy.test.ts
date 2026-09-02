@@ -10,6 +10,7 @@ const userFacingFiles = [
   "components/integrated/IntegratedHealthExperience.tsx",
   "components/integrated/IntegratedRecords.tsx",
   "components/integrated/IntegratedShell.tsx",
+  "components/integrated/RecordComparison.tsx",
   "components/integrated/PrepareConceptNotice.tsx",
   "components/integrated/VisitPreparation.tsx",
   "components/concept/RecordImportConcept.tsx",
@@ -49,6 +50,17 @@ const forbiddenUserTerms = [
   "강남세브란스",
 ] as const;
 
+// The server enums must never reach the screen unlabelled. Each entry is the
+// exact JSX a component would use to print the raw word: CORRECTED, REVOKED and
+// NOT_GRANTED are server states, not Korean copy.
+const rawServerEnumRenders = [
+  "{candidate.status}",
+  '{consent?.status ?? "NOT_GRANTED"}',
+  "{record.status}",
+  "{record.reviewDecision}",
+  "{latest.status}",
+] as const;
+
 function source(path: string) {
   return readFileSync(resolve(process.cwd(), path), "utf8");
 }
@@ -83,6 +95,32 @@ describe("Korean UX language boundary", () => {
     expect(source("components/integrated/VisitPreparation.tsx")).toContain(
       "이 값은 서버가 미리 정한 예시 값이에요. 실제 파일이나 기관에서 가져오지 않았어요.",
     );
+  });
+
+  it("labels every server enum in Korean instead of rendering it raw", () => {
+    const integratedFiles = userFacingFiles.filter((path) => path.startsWith("components/integrated/"));
+    expect(integratedFiles.length).toBeGreaterThan(0);
+    for (const path of integratedFiles) {
+      const content = source(path);
+      for (const raw of rawServerEnumRenders) {
+        expect(content, `${path} renders ${raw} without a Korean label`).not.toContain(raw);
+      }
+    }
+  });
+
+  it("states the comparison limit in the words the reader sees", () => {
+    expect(source("components/integrated/RecordComparison.tsx")).toContain(
+      "같은 항목의 두 날짜 값을 그대로 나란히 둔 목록이에요. 변화의 의미는 판단하지 않아요.",
+    );
+    expect(source("components/integrated/RecordComparison.tsx")).toContain(
+      "두 날짜 이상 확인한 항목이 아직 없어요.",
+    );
+  });
+
+  it("keeps the server status word out of visible copy unless it is labelled as a code", () => {
+    const content = source("components/integrated/IntegratedHealthExperience.tsx");
+    expect(content).toContain('<code aria-label="서버 상태 코드">{documentReceipt.status}</code>');
+    expect(content).toContain("{processingCopy[documentReceipt.status]} ");
   });
 
   it("shows Korean dates without exposing ISO punctuation in visible copy", () => {

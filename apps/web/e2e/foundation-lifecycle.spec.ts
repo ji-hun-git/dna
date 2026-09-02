@@ -48,10 +48,13 @@ async function browserApi(
 }
 
 test("visible Korean product persists reloads revokes and deletes the synthetic lifecycle", async ({ page }) => {
-  test.setTimeout(90_000);
+  // Two documents run through the bounded worker lifecycle in this test, and the
+  // worker fails the first extraction attempt of each job on purpose.
+  test.setTimeout(150_000);
   const subjectId = process.env.GC_BROWSER_A11Y_SUBJECT!;
   const credential = process.env.GC_BROWSER_A11Y_CREDENTIAL!;
   const fixtureBytes = Buffer.from(process.env.GC_BROWSER_FIXTURE_BASE64!, "base64");
+  const secondFixtureBytes = Buffer.from(process.env.GC_BROWSER_FIXTURE_2_BASE64!, "base64");
 
   await page.goto("/");
   await expect(page.locator("body")).toHaveAttribute(
@@ -98,33 +101,78 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
 
   await expect(page.getByRole("heading", { name: "이 결과지 확인을 마쳤어요" })).toBeVisible();
   await expect(page.getByText("저장 2개 · 제외 1개")).toBeVisible();
-  await expect(page.getByText("CORRECTED", { exact: true })).toBeVisible();
+  await expect(page.getByText("값을 수정함", { exact: true })).toBeVisible();
+
+  // The second allow-listed document is bound to the 2026-01 candidate set, so
+  // the same three items come back with their own values and observation date.
+  await page.getByRole("button", { name: "홈으로" }).click();
+  await expect(page.getByRole("heading", { name: /값보다 먼저\s*출처를 확인하세요/ })).toBeVisible();
+  await page.getByRole("button", { name: "결과지 추가" }).click();
+  await expect(page.getByRole("heading", { name: /허용된 합성 PDF를\s*선택해 주세요/ })).toBeVisible();
+  await page.getByLabel("허용된 합성 PDF 선택").setInputFiles({
+    name: "allowlisted-synthetic-result-2026-01.pdf",
+    mimeType: "application/pdf",
+    buffer: secondFixtureBytes,
+  });
+  await waitForServerReview(page);
+  await expect(page.getByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.getByLabel("검토 진행")).toHaveText("1 / 3");
+  await expect(page.getByText("194", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "원문과 같아요" }).click();
+
+  await expect(page.getByLabel("검토 진행")).toHaveText("2 / 3");
+  await expect(page.getByText("5.4", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "원문과 같아요" }).click();
+
+  await expect(page.getByLabel("검토 진행")).toHaveText("3 / 3");
+  await expect(page.getByText("45", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "원문과 같아요" }).click();
+
+  await expect(page.getByRole("heading", { name: "이 결과지 확인을 마쳤어요" })).toBeVisible();
+  await expect(page.getByText("저장 3개 · 제외 0개")).toBeVisible();
 
   await page.getByRole("link", { name: "저장된 기록 보기" }).click();
   await expect(page).toHaveURL(/\/records$/);
-  await expect(page.getByTestId("durable-record")).toHaveCount(2);
-  const correctedRecord = page.getByTestId("durable-record").filter({ hasText: "총콜레스테롤" });
+  await expect(page.getByTestId("durable-record")).toHaveCount(5);
+  const groupHeadings = page.locator(".gc-records-group h3");
+  await expect(groupHeadings).toHaveCount(2);
+  await expect(groupHeadings.nth(0)).toContainText("2026. 7. 28.");
+  await expect(groupHeadings.nth(1)).toContainText("2026. 1. 15.");
+
+  await expect(page.getByRole("heading", { name: "날짜별로 본 내 기록" })).toBeVisible();
+  await expect(page.getByText(
+    "같은 항목의 두 날짜 값을 그대로 나란히 둔 목록이에요. 변화의 의미는 판단하지 않아요.",
+  )).toBeVisible();
+  await expect(page.getByTestId("record-comparison-item")).toHaveCount(2);
+  await expect(page.getByTestId("record-comparison-item").filter({ hasText: "총콜레스테롤" }))
+    .toHaveText("총콜레스테롤 · 2026. 1. 15. 194 mg/dL → 2026. 7. 28. 190 mg/dL");
+
+  const julyGroup = page.locator(".gc-records-group").filter({ hasText: "2026. 7. 28." });
+  const correctedRecord = julyGroup.getByTestId("durable-record").filter({ hasText: "총콜레스테롤" });
   await expect(correctedRecord).toBeVisible();
   await page.reload();
   await expect(correctedRecord).toBeVisible();
   await correctedRecord.getByText("출처와 버전 보기").click();
   await expect(correctedRecord.getByText("원래 후보", { exact: true }).locator("..")).toContainText("188 mg/dL");
+  await expect(correctedRecord.getByText("현재 상태", { exact: true }).locator("..")).toContainText("현재 값");
 
   await page.goto("/prepare");
   await expect(page.getByRole("heading", { name: "다음 진료에서 물어볼 것" })).toBeVisible();
-  await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(page.getByRole("article")).toHaveCount(5);
   await expect(page.getByText(
     "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.",
   )).toBeVisible();
 
   await page.goto("/data-control");
-  await expect(page.getByText("ACTIVE", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("동의함", { exact: true }).first()).toBeVisible();
   const consentId = await page.locator("body").evaluate(async () => {
     const response = await fetch("/api/foundation/consents/document-extraction", { credentials: "include", cache: "no-store" });
     return String((await response.json()).consentId);
   });
   await page.getByRole("button", { name: "동의 철회" }).click();
-  await expect(page.getByText("REVOKED", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("철회함", { exact: true }).first()).toBeVisible();
 
   const blockedAfterRevocation = await browserApi(page, "/api/foundation/documents", {
     method: "POST",
@@ -218,7 +266,7 @@ test("server states remain keyboard operable at a 200 percent equivalent viewpor
   await page.goto("/data-control");
   await page.getByRole("button", { name: "동의 철회" }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByText("REVOKED", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("철회함", { exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "삭제 요청 검토" }).focus();
   await page.keyboard.press("Enter");
   await page.getByLabel("위 내용을 확인했습니다").focus();

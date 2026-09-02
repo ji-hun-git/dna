@@ -259,6 +259,43 @@ html {
   font-weight: 700;
 }
 
+.gc-records-comparison {
+  margin-top: 26px;
+  padding: 18px 20px;
+  border: 1px solid var(--gc-color-line-subtle, #e3e3df);
+  border-radius: 14px;
+  background: var(--gc-color-surface-raised, #fff);
+}
+
+.gc-records-comparison h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.gc-records-comparison__note {
+  margin: 10px 0 0;
+  color: var(--gc-color-text-secondary, #5c5c57);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.gc-records-comparison__list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gc-records-comparison__list li {
+  padding: 12px 15px;
+  border: 1px solid var(--gc-color-line-subtle, #e3e3df);
+  border-radius: 12px;
+  background: var(--gc-color-surface-canvas, #fafafa);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+}
+
 .gc-prepare {
   box-sizing: border-box;
   max-width: 780px;

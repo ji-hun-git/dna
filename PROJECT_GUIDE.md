@@ -43,7 +43,7 @@ remain outside the approved foundation.
 | Area | Evidence-backed status |
 |---|---|
 | Product and program design | Founder-approved direction; public brand clearance remains separate |
-| Korean consumer web | Implemented and tested with synthetic/demo content; integrated flow reviews an ordered three-candidate synthetic set per document, groups records by date, and prints neutral visit-preparation questions (2026-09-02 wave); CI evidence run 33576825427 (33e6ac8) |
+| Korean consumer web | Implemented and tested with synthetic/demo content; integrated flow reviews an ordered three-candidate synthetic set per document, groups records by date and document, lists two dated values of the same item side by side without interpretation, shows Korean status labels instead of server enums, and prints neutral visit-preparation questions (2026-09-02 waves 1 and 2); CI evidence run 33576825427 (33e6ac8) and main run 33592526743 (merge 07d77fe) |
 | Core API | Spring/Kotlin authority for sessions, CSRF/origin checks, consent, lifecycle, provenance, audit, and deletion in the synthetic foundation |
 | Durable store | PostgreSQL/Flyway lifecycle verified in CI with synthetic data |
 | Hostile-document boundary | Digest-bound upload, quarantine/approval states, ClamAV contract, separate worker artifact, retry/DLQ behavior, and safe-preview boundary verified in CI |
