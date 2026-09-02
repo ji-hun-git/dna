@@ -18,7 +18,7 @@
 - Toolchain exact: Node `24.20.0`, pnpm `11.20.0`, Java `21`. Implementers do not commit; the controller commits.
 - Catalogue (set id → ordered candidates; all evidencePage 1):
   - `checkup-2026-07` (default, unchanged from today): (1, 총콜레스테롤, 188, mg/dL, 2026-07-28), (2, 당화혈색소, 5.2, %, 2026-07-28), (3, 비타민 D, 42, ng/mL, 2026-07-28)
-  - `checkup-2026-01`: (1, 총콜레스테롤, 194, mg/dL, 2026-01-15), (2, 당화혈색소, 5.4, %, 2026-01-15), (3, 비타민 D, 38, ng/mL, 2026-01-15)
+  - `checkup-2026-01`: (1, 총콜레스테롤, 194, mg/dL, 2026-01-15), (2, 당화혈색소, 5.4, %, 2026-01-15), (3, 비타민 D, 45, ng/mL, 2026-01-15)
 - Korean label map (single source of truth, `apps/web/lib/format/status-labels.ts`):
   - candidate status: `PENDING` → `확인 대기`, `CONFIRMED` → `확인함`, `EXCLUDED` → `제외함`
   - consent status: `NOT_GRANTED` → `동의 전`, `ACTIVE` → `동의함`, `REVOKED` → `철회함`

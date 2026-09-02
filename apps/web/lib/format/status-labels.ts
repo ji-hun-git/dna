@@ -5,7 +5,7 @@ import type {
 } from "@/lib/foundation/client";
 
 /**
- * The single source of truth for turning a Spring enum into visible Korean.
+ * The shared map for the integrated screens (a few components keep their own longer sentences) for turning a Spring enum into visible Korean.
  *
  * The server owns the state words; the product never invents a state the server
  * has not reported, and never adds a judgement to one. A value the map does not

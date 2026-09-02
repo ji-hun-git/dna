@@ -33,7 +33,7 @@ class SyntheticCandidateFixtureTest {
 
         assertThat(set.map { it.ordinal }).containsExactly(1, 2, 3)
         assertThat(set.map { it.label }).containsExactly("총콜레스테롤", "당화혈색소", "비타민 D")
-        assertThat(set.map { it.value }).containsExactly("194", "5.4", "38")
+        assertThat(set.map { it.value }).containsExactly("194", "5.4", "45")
         assertThat(set.map { it.unit }).containsExactly("mg/dL", "%", "ng/mL")
         assertThat(set[0].sourceTextSha256)
             .isEqualTo(FoundationHashing.sha256("총콜레스테롤|194|mg/dL|2026-01-15"))

@@ -124,4 +124,12 @@ describe("compareRecords", () => {
   it("returns nothing for an empty record list", () => {
     expect(compareRecords([])).toEqual([]);
   });
+
+  it("skips a label whose two dated records disagree on the unit", () => {
+    const comparisons = compareRecords([
+      januaryRecord({ recordId: "u1", label: "비타민 D", value: "45", unit: "ng/mL" }),
+      julyRecord({ recordId: "u2", label: "비타민 D", value: "112", unit: "nmol/L" }),
+    ]);
+    expect(comparisons).toEqual([]);
+  });
 });

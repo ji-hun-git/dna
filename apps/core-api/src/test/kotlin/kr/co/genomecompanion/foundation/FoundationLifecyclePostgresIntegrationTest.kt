@@ -691,7 +691,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             importSyntheticDocument(alice, consentId, januaryFixturePdf, januaryFixtureDigest, "january")
         assertThat(januaryCandidates.map { it["label"].asText() })
             .containsExactly("총콜레스테롤", "당화혈색소", "비타민 D")
-        assertThat(januaryCandidates.map { it["value"].asText() }).containsExactly("194", "5.4", "38")
+        assertThat(januaryCandidates.map { it["value"].asText() }).containsExactly("194", "5.4", "45")
         assertThat(januaryCandidates.map { it["observedOn"].asText() }.distinct())
             .containsExactly("2026-01-15")
         confirmEveryCandidate(alice, januaryCandidates, "january")
@@ -726,7 +726,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).containsExactlyInAnyOrder(
             "총콜레스테롤|194|mg/dL|2026-01-15",
             "당화혈색소|5.4|%|2026-01-15",
-            "비타민 D|38|ng/mL|2026-01-15",
+            "비타민 D|45|ng/mL|2026-01-15",
             "총콜레스테롤|188|mg/dL|2026-07-28",
             "당화혈색소|5.2|%|2026-07-28",
             "비타민 D|42|ng/mL|2026-07-28",

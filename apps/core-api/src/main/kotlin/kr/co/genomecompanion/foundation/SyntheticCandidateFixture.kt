@@ -40,7 +40,7 @@ object SyntheticCandidateFixture {
             listOf(
                 SyntheticCandidate(1, "총콜레스테롤", "194", "mg/dL", observed, 1),
                 SyntheticCandidate(2, "당화혈색소", "5.4", "%", observed, 1),
-                SyntheticCandidate(3, "비타민 D", "38", "ng/mL", observed, 1),
+                SyntheticCandidate(3, "비타민 D", "45", "ng/mL", observed, 1),
             )
         },
     )

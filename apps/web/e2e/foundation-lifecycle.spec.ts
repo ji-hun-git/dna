@@ -127,7 +127,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.getByRole("button", { name: "원문과 같아요" }).click();
 
   await expect(page.getByLabel("검토 진행")).toHaveText("3 / 3");
-  await expect(page.getByText("38", { exact: true })).toBeVisible();
+  await expect(page.getByText("45", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "원문과 같아요" }).click();
 
   await expect(page.getByRole("heading", { name: "이 결과지 확인을 마쳤어요" })).toBeVisible();
