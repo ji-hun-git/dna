@@ -103,7 +103,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.getByRole("link", { name: "저장된 기록 보기" }).click();
   await expect(page).toHaveURL(/\/records$/);
   await expect(page.getByTestId("durable-record")).toHaveCount(2);
-  const correctedRecord = page.getByTestId("durable-record").filter({ hasText: "190" });
+  const correctedRecord = page.getByTestId("durable-record").filter({ hasText: "총콜레스테롤" });
   await expect(correctedRecord).toBeVisible();
   await page.reload();
   await expect(correctedRecord).toBeVisible();
@@ -176,7 +176,7 @@ test("server states remain keyboard operable at a 200 percent equivalent viewpor
     mimeType: "application/pdf",
     buffer: fixtureBytes,
   });
-  const processingStatus = page.getByRole("status");
+  const processingStatus = page.locator("main[data-stage='processing'] [role='status']");
   await expect(processingStatus).toHaveText(/보안 구역|안전하게 확인|다시 시도|미리보기/);
   await expect(processingStatus).toHaveAttribute("aria-live", "polite");
   await waitForServerReview(page);
@@ -205,7 +205,7 @@ test("server states remain keyboard operable at a 200 percent equivalent viewpor
 
   await page.getByRole("link", { name: "저장된 기록 보기" }).focus();
   await page.keyboard.press("Enter");
-  const correctedRecord = page.getByTestId("durable-record").filter({ hasText: "190" });
+  const correctedRecord = page.getByTestId("durable-record").filter({ hasText: "총콜레스테롤" });
   const provenance = correctedRecord.getByText("출처와 버전 보기", { exact: true });
   await provenance.focus();
   await page.keyboard.press("Enter");

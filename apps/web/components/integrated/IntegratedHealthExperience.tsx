@@ -271,9 +271,11 @@ export function IntegratedHealthExperience() {
   const activeCandidate = candidates.find((item) => item.status === "PENDING");
 
   const applyDecision = (decided: FoundationCandidate) => {
-    const remaining = candidates.map((item) => item.candidateId === decided.candidateId ? decided : item);
-    setCandidates(remaining);
-    if (!remaining.some((item) => item.status === "PENDING")) setView("complete");
+    setCandidates((current) => {
+      const remaining = current.map((item) => item.candidateId === decided.candidateId ? decided : item);
+      if (!remaining.some((item) => item.status === "PENDING")) setView("complete");
+      return remaining;
+    });
   };
 
   const confirmCandidate = async (value: string) => {
