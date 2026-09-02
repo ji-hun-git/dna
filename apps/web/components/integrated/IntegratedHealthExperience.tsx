@@ -16,6 +16,11 @@ import {
 } from "@/lib/foundation/client";
 import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import {
+  labelConsentStatus,
+  labelRecordStatus,
+  labelReviewDecision,
+} from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
 
 type ShellState =
@@ -398,7 +403,7 @@ export function IntegratedHealthExperience() {
           <p>허용된 합성 PDF의 파일 확인값을 검사하고, 합성 후보를 만들어 직접 확인하는 목적에만 사용해요.</p>
           <dl className="gc-integrated-facts">
             <div><dt>목적</dt><dd>DOCUMENT_EXTRACTION</dd></div>
-            <div><dt>현재 상태</dt><dd>{consent?.status ?? "NOT_GRANTED"}</dd></div>
+            <div><dt>현재 상태</dt><dd>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</dd></div>
             <div><dt>외부 제공</dt><dd>없음</dd></div>
           </dl>
           <div className="gc-integrated-actions">
@@ -452,7 +457,7 @@ export function IntegratedHealthExperience() {
             <p className="gc-import__lead" role="status" aria-live="polite">{processingCopy[processingState]}</p>
             {documentReceipt && (
               <dl className="gc-integrated-facts">
-                <div><dt>문서 상태</dt><dd>{documentReceipt.status}</dd></div>
+                <div><dt>문서 상태</dt><dd>{processingCopy[documentReceipt.status]} <code aria-label="서버 상태 코드">{documentReceipt.status}</code></dd></div>
                 <div><dt>파일 확인값</dt><dd><code>{documentReceipt.sha256 ? shortDigest(documentReceipt.sha256) : "아직 없음"}</code></dd></div>
                 <div><dt>신뢰 경계</dt><dd>적대적 문서 격리 구역</dd></div>
                 <div><dt>안전한 미리보기</dt><dd>{documentReceipt.previewAvailable ? "승인된 PNG 준비됨" : "승인 전에는 표시하지 않음"}</dd></div>
@@ -502,7 +507,7 @@ export function IntegratedHealthExperience() {
                 <li key={record.recordVersionId}>
                   <strong>{record.label}</strong>
                   <span>{record.value} {record.unit}</span>
-                  <span>{record.reviewDecision}</span>
+                  <span>{labelReviewDecision(record.reviewDecision)}</span>
                 </li>
               ))}
             </ul>
@@ -542,7 +547,7 @@ export function IntegratedHealthExperience() {
             <div className="gc-health-home__section-heading"><div><p>PostgreSQL에서 불러온 기록</p><h2 id="integrated-records-title">{latest ? "가장 최근에 확인한 값" : "아직 저장된 기록이 없어요"}</h2></div><span>{records.length}개</span></div>
             {latest ? (
               <article className="gc-health-home__metric-card">
-                <div className="gc-health-home__metric-copy"><div className="gc-health-home__metric-topline"><span>{latest.label}</span><strong>{latest.status}</strong></div><p className="gc-health-home__metric-value"><strong>{latest.value}</strong><span>{latest.unit}</span></p><p className="gc-health-home__metric-source">허용된 합성 PDF · {formatKoreanDate(latest.observedOn)}</p></div>
+                <div className="gc-health-home__metric-copy"><div className="gc-health-home__metric-topline"><span>{latest.label}</span><strong>{labelRecordStatus(latest.status)}</strong></div><p className="gc-health-home__metric-value"><strong>{latest.value}</strong><span>{latest.unit}</span></p><p className="gc-health-home__metric-source">허용된 합성 PDF · {formatKoreanDate(latest.observedOn)}</p></div>
                 <button className="gc-button gc-button--weak" type="button" onClick={() => { setSelectedRecord(latest); setView("evidence"); }}>이 값의 근거 보기</button>
               </article>
             ) : <p className="gc-integrated-empty">허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다.</p>}

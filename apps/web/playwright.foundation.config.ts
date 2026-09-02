@@ -7,8 +7,10 @@ if (!databaseUrl || !quarantineRoot) {
   throw new Error("GC_TEST_POSTGRES_URL and GC_TEST_QUARANTINE_ROOT are required");
 }
 
-function buildSyntheticPdf() {
-  const content = "BT /F1 18 Tf 72 740 Td (Genome Companion synthetic fixture) Tj ET";
+// `text` is the only thing that differs between the generated documents, so the
+// bytes stay deterministic and the first document keeps the digest it has today.
+function buildSyntheticPdf(text: string) {
+  const content = `BT /F1 18 Tf 72 740 Td (${text}) Tj ET`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -30,8 +32,12 @@ function buildSyntheticPdf() {
   return Buffer.from(pdf, "ascii");
 }
 
-const fixtureBytes = buildSyntheticPdf();
+const fixtureBytes = buildSyntheticPdf("Genome Companion synthetic fixture");
 const fixtureDigest = createHash("sha256").update(fixtureBytes).digest("hex");
+// A second allow-listed document, bound below to the `checkup-2026-01` candidate
+// set so the browser sees confirmed values from two different dates.
+const secondFixtureBytes = buildSyntheticPdf("Genome Companion synthetic fixture 2026-01");
+const secondFixtureDigest = createHash("sha256").update(secondFixtureBytes).digest("hex");
 const browserSubject = process.env.GC_BROWSER_SUBJECT ?? ("synthetic-browser-" + process.pid);
 const browserCredential = process.env.GC_BROWSER_CREDENTIAL ??
   ("browser-foundation-credential-" + process.pid + "-0000000000000000");
@@ -53,6 +59,7 @@ process.env.GC_BROWSER_CREDENTIAL = browserCredential;
 process.env.GC_BROWSER_A11Y_SUBJECT = browserA11ySubject;
 process.env.GC_BROWSER_A11Y_CREDENTIAL = browserA11yCredential;
 process.env.GC_BROWSER_FIXTURE_BASE64 = fixtureBytes.toString("base64");
+process.env.GC_BROWSER_FIXTURE_2_BASE64 = secondFixtureBytes.toString("base64");
 const workerCredential = "browser-document-worker-credential-000000000001";
 const workerCredentialDigest = createHash("sha256").update(workerCredential, "utf8").digest("hex");
 
@@ -83,7 +90,9 @@ export default defineConfig({
         GC_FOUNDATION_SECURE_COOKIES: "false",
         GC_QUARANTINE_ROOT: quarantineRoot,
         GC_AUDIT_PEPPER: "foundation-browser-e2e-pepper-with-at-least-32-characters",
-        GC_ALLOWED_DOCUMENT_SHA256: fixtureDigest,
+        GC_ALLOWED_DOCUMENT_SHA256: [fixtureDigest, secondFixtureDigest].join(","),
+        GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SHA256: secondFixtureDigest,
+        GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SET_ID: "checkup-2026-01",
         GC_FOUNDATION_LOCAL_IDENTITIES_0_SUBJECT_ID: browserSubject,
         GC_FOUNDATION_LOCAL_IDENTITIES_0_CREDENTIAL_SHA256: credentialDigest,
         GC_FOUNDATION_LOCAL_IDENTITIES_1_SUBJECT_ID: browserA11ySubject,
@@ -121,6 +130,7 @@ export default defineConfig({
         GC_BROWSER_A11Y_SUBJECT: browserA11ySubject,
         GC_BROWSER_A11Y_CREDENTIAL: browserA11yCredential,
         GC_BROWSER_FIXTURE_BASE64: fixtureBytes.toString("base64"),
+        GC_BROWSER_FIXTURE_2_BASE64: secondFixtureBytes.toString("base64"),
       },
     },
   ],

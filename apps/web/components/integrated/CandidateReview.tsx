@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FoundationCandidate } from "@/lib/foundation/client";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import { labelCandidateStatus } from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
 
 type CandidateReviewProps = {
@@ -58,7 +59,7 @@ export function CandidateReview({
               <h1 id="server-candidate-title">이 합성 후보가 맞나요?</h1>
               <p className="gc-import__lead">후보는 서버가 미리 정한 예시 값이에요. 실제 문자 인식 결과가 아닙니다.</p>
             </div>
-            <span className="gc-import__review-state">{candidate.status}</span>
+            <span className="gc-import__review-state">{labelCandidateStatus(candidate.status)}</span>
           </div>
           <article className="gc-import__candidate">
             <p className="gc-import__candidate-label">확인할 항목</p>

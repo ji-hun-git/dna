@@ -3,8 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createFoundationClient, type FoundationRecord } from "@/lib/foundation/client";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
+import { RecordComparison } from "@/components/integrated/RecordComparison";
 import { describeFoundationError } from "@/lib/foundation/messages";
 import { formatKoreanDate, formatKoreanDateTime } from "@/lib/format/korean-date";
+import { labelRecordStatus } from "@/lib/format/status-labels";
+import { compareRecords } from "@/lib/records/compare-records";
 import { shortDigest } from "@/lib/format/short-digest";
 import styles from "@/components/records/HealthTimeline.module.css";
 
@@ -44,6 +47,7 @@ export function IntegratedRecords() {
   const [draftValue, setDraftValue] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const comparisons = useMemo(() => compareRecords(records), [records]);
 
   useEffect(() => {
     let active = true;
@@ -109,6 +113,8 @@ export function IntegratedRecords() {
             <p className="gc-integrated-empty">아직 저장된 합성 기록이 없어요. 홈에서 허용된 합성 PDF를 확인해 주세요.</p>
           )}
 
+          {!loading && comparisons.length > 0 && <RecordComparison comparisons={comparisons} />}
+
           {!loading && records.length > 0 && (
             <section className={styles.history} aria-labelledby="durable-history-title">
               <header className={styles.sectionHeading}><div><p>출처와 버전</p><h2 id="durable-history-title">현재 기록 {records.length}개</h2></div><span>서버 응답만 표시해요</span></header>
@@ -124,7 +130,7 @@ export function IntegratedRecords() {
                         <details>
                           <summary>출처와 버전 보기</summary>
                           <dl>
-                            <div><dt>현재 상태</dt><dd>{record.status}</dd></div>
+                            <div><dt>현재 상태</dt><dd>{labelRecordStatus(record.status)}</dd></div>
                             <div><dt>원래 후보</dt><dd>{record.originalValue} {record.unit}</dd></div>
                             <div><dt>현재 버전</dt><dd><code>{record.recordVersionId}</code></dd></div>
                             <div><dt>이전 버전</dt><dd>{record.supersedesVersionId ? <code>{record.supersedesVersionId}</code> : "없음"}</dd></div>
