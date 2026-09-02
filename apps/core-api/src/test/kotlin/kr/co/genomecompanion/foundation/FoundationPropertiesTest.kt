@@ -4,6 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource
 import java.nio.file.Path
 
 
@@ -16,6 +18,23 @@ class FoundationPropertiesTest {
             .isEqualTo(SyntheticCandidateFixture.DEFAULT_SET_ID)
         assertThat(properties().copy(syntheticDocuments = emptyList()).candidateSetFor(firstDigest))
             .isEqualTo(SyntheticCandidateFixture.DEFAULT_SET_ID)
+    }
+
+    @Test
+    fun relaxedBindingMapsTheIndexedSyntheticDocumentList() {
+        val source = MapConfigurationPropertySource(
+            mapOf(
+                "gc.foundation.synthetic-documents[0].sha256" to firstDigest,
+                "gc.foundation.synthetic-documents[0].set-id" to "checkup-2026-01",
+                "gc.foundation.allowed-document-sha256" to "$firstDigest,$secondDigest",
+            ),
+        )
+        val bound = Binder(source).bind("gc.foundation", FoundationProperties::class.java).get()
+
+        assertThat(bound.syntheticDocuments).containsExactly(SyntheticDocumentBinding(firstDigest, "checkup-2026-01"))
+        assertThat(bound.allowedDocumentSha256).containsExactlyInAnyOrder(firstDigest, secondDigest)
+        assertThat(bound.candidateSetFor(firstDigest)).isEqualTo("checkup-2026-01")
+        assertThat(bound.candidateSetFor(secondDigest)).isEqualTo(SyntheticCandidateFixture.DEFAULT_SET_ID)
     }
 
     @Test
