@@ -16,25 +16,37 @@ data class SyntheticCandidate(
 
 
 /**
- * Deterministic synthetic candidate set for foundation extraction.
+ * Deterministic catalogue of named synthetic candidate sets for foundation extraction.
  *
- * Nothing here reads document bytes. [candidatesFor] only checks that the argument has the *shape*
- * of a sha256 source digest; it is not an authorization check. The allow-list of approved source
- * digests lives upstream in `FoundationLifecycleService.requestDocument`. The set carries no
- * diagnosis, normality, reference-range, risk, treatment, or medication meaning.
+ * Nothing here reads document bytes. A set is chosen by *configuration*: an approved source digest
+ * is bound to a set id through `gc.foundation.synthetic-documents[n]`, and unbound digests fall back
+ * to [DEFAULT_SET_ID]. Neither [setIds] nor [candidatesFor] is an authorization check; the allow-list
+ * of approved source digests lives upstream in `FoundationLifecycleService.requestDocument`. The sets
+ * carry no diagnosis, normality, reference-range, risk, treatment, or medication meaning; the two
+ * dated sets exist only so a synthetic subject can hold the same label on two dates.
  */
 object SyntheticCandidateFixture {
-    private val sourceDigestShape = Regex("^[0-9a-f]{64}$")
-    private val observed: LocalDate = LocalDate.of(2026, 7, 28)
+    const val DEFAULT_SET_ID = "checkup-2026-07"
 
-    private val set = listOf(
-        SyntheticCandidate(1, "총콜레스테롤", "188", "mg/dL", observed, 1),
-        SyntheticCandidate(2, "당화혈색소", "5.2", "%", observed, 1),
-        SyntheticCandidate(3, "비타민 D", "42", "ng/mL", observed, 1),
+    private val catalogue: Map<String, List<SyntheticCandidate>> = mapOf(
+        DEFAULT_SET_ID to LocalDate.of(2026, 7, 28).let { observed ->
+            listOf(
+                SyntheticCandidate(1, "총콜레스테롤", "188", "mg/dL", observed, 1),
+                SyntheticCandidate(2, "당화혈색소", "5.2", "%", observed, 1),
+                SyntheticCandidate(3, "비타민 D", "42", "ng/mL", observed, 1),
+            )
+        },
+        "checkup-2026-01" to LocalDate.of(2026, 1, 15).let { observed ->
+            listOf(
+                SyntheticCandidate(1, "총콜레스테롤", "194", "mg/dL", observed, 1),
+                SyntheticCandidate(2, "당화혈색소", "5.4", "%", observed, 1),
+                SyntheticCandidate(3, "비타민 D", "38", "ng/mL", observed, 1),
+            )
+        },
     )
 
-    fun candidatesFor(sourceSha256: String): List<SyntheticCandidate> {
-        require(sourceDigestShape.matches(sourceSha256)) { "source digest shape required" }
-        return set
-    }
+    fun setIds(): Set<String> = catalogue.keys.toSet()
+
+    fun candidatesFor(setId: String): List<SyntheticCandidate> =
+        requireNotNull(catalogue[setId]) { "unknown synthetic candidate set id" }
 }

@@ -11,6 +11,18 @@ data class LocalSyntheticIdentity(
 )
 
 
+/**
+ * Binds one approved synthetic source digest to one named set in [SyntheticCandidateFixture].
+ *
+ * This is a fixture-selection binding only. It never authorizes a document, and it never means the
+ * bytes were parsed: the allow-list still decides which digests may be uploaded at all.
+ */
+data class SyntheticDocumentBinding(
+    val sha256: String = "",
+    val setId: String = "",
+)
+
+
 @ConfigurationProperties("gc.foundation")
 data class FoundationProperties(
     val enabled: Boolean = false,
@@ -27,7 +39,16 @@ data class FoundationProperties(
     val auditPepper: String = "",
     val allowedDocumentSha256: Set<String> = emptySet(),
     val localIdentities: List<LocalSyntheticIdentity> = emptyList(),
+    val syntheticDocuments: List<SyntheticDocumentBinding> = emptyList(),
 ) {
+    /**
+     * Resolves the synthetic candidate set id bound to [sourceSha256], or the default set when the
+     * digest carries no explicit binding. Configuration, not document content, decides this.
+     */
+    fun candidateSetFor(sourceSha256: String): String =
+        syntheticDocuments.firstOrNull { it.sha256 == sourceSha256 }?.setId
+            ?: SyntheticCandidateFixture.DEFAULT_SET_ID
+
     fun validateEnabledConfiguration() {
         if (!enabled) return
         require(allowedOrigin.startsWith("https://") || allowedOrigin.startsWith("http://127.0.0.1:")) {
@@ -39,6 +60,18 @@ data class FoundationProperties(
         require(allowedDocumentSha256.all { it.matches(Regex("^[0-9a-f]{64}$")) }) {
             "foundation document digests must be lowercase SHA-256"
         }
+        require(syntheticDocuments.all { it.sha256.matches(Regex("^[0-9a-f]{64}$")) }) {
+            "foundation synthetic document bindings must use a lowercase SHA-256 digest"
+        }
+        require(syntheticDocuments.all { it.sha256 in allowedDocumentSha256 }) {
+            "foundation synthetic document bindings must reference an allow-listed document digest"
+        }
+        require(syntheticDocuments.all { it.setId in SyntheticCandidateFixture.setIds() }) {
+            "foundation synthetic document bindings must reference a known synthetic candidate set id"
+        }
+        require(
+            syntheticDocuments.map(SyntheticDocumentBinding::sha256).distinct().size == syntheticDocuments.size,
+        ) { "foundation synthetic document bindings must be unique per document digest" }
         require(uploadCapabilityTtl in Duration.ofMinutes(1)..Duration.ofMinutes(15)) {
             "foundation upload capability TTL must be between one and fifteen minutes"
         }

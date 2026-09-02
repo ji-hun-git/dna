@@ -682,6 +682,98 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.code").value("consent_revoked"))
     }
 
+    @Test
+    fun boundDigestSelectsItsNamedCandidateSetWhileAnUnboundDigestKeepsTheDefault() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+
+        val januaryCandidates =
+            importSyntheticDocument(alice, consentId, januaryFixturePdf, januaryFixtureDigest, "january")
+        assertThat(januaryCandidates.map { it["label"].asText() })
+            .containsExactly("총콜레스테롤", "당화혈색소", "비타민 D")
+        assertThat(januaryCandidates.map { it["value"].asText() }).containsExactly("194", "5.4", "38")
+        assertThat(januaryCandidates.map { it["observedOn"].asText() }.distinct())
+            .containsExactly("2026-01-15")
+        confirmEveryCandidate(alice, januaryCandidates, "january")
+
+        val julyCandidates =
+            importSyntheticDocument(alice, consentId, fixturePdf, fixtureDigest, "july")
+        assertThat(julyCandidates.map { it["label"].asText() })
+            .containsExactly("총콜레스테롤", "당화혈색소", "비타민 D")
+        assertThat(julyCandidates.map { it["value"].asText() }).containsExactly("188", "5.2", "42")
+        assertThat(julyCandidates.map { it["observedOn"].asText() }.distinct())
+            .containsExactly("2026-07-28")
+        confirmEveryCandidate(alice, julyCandidates, "july")
+
+        val records = responseJson(
+            read(get("/api/foundation/records"), alice)
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.length()").value(6))
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        ).toList()
+
+        assertThat(
+            records.map {
+                listOf(
+                    it["label"].asText(),
+                    it["value"].asText(),
+                    it["unit"].asText(),
+                    it["observedOn"].asText(),
+                ).joinToString("|")
+            },
+        ).containsExactlyInAnyOrder(
+            "총콜레스테롤|194|mg/dL|2026-01-15",
+            "당화혈색소|5.4|%|2026-01-15",
+            "비타민 D|38|ng/mL|2026-01-15",
+            "총콜레스테롤|188|mg/dL|2026-07-28",
+            "당화혈색소|5.2|%|2026-07-28",
+            "비타민 D|42|ng/mL|2026-07-28",
+        )
+        assertThat(records.map { it["status"].asText() }.distinct()).containsExactly("CURRENT")
+        assertThat(records.map { it["documentSha256"].asText() }.distinct())
+            .containsExactlyInAnyOrder(fixtureDigest, januaryFixtureDigest)
+    }
+
+    private fun importSyntheticDocument(
+        client: TestClient,
+        consentId: UUID,
+        pdf: ByteArray,
+        digest: String,
+        keyPrefix: String,
+    ): List<JsonNode> {
+        val documentId = requestDocument(client, consentId, pdf, "$keyPrefix-document-request")
+        uploadDocument(client, documentId, pdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), client)
+            .andExpect(status().isAccepted)
+        runWorkerPipeline(documentId, sourceSha256 = digest)
+        return responseJson(
+            read(get("/api/foundation/documents/$documentId/candidates"), client)
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.length()").value(3))
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        ).toList()
+    }
+
+    private fun confirmEveryCandidate(
+        client: TestClient,
+        candidates: List<JsonNode>,
+        keyPrefix: String,
+    ) {
+        candidates.forEach { candidate ->
+            mutate(
+                post("/api/foundation/candidates/${candidate["candidateId"].asText()}/confirmation")
+                    .header("Idempotency-Key", "$keyPrefix-confirm-${candidate["ordinal"].asInt()}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json(mapOf("value" to candidate["value"].asText()))),
+                client,
+            ).andExpect(status().isCreated)
+        }
+    }
+
     private fun createCandidate(
         client: TestClient,
         consentId: UUID,
@@ -782,14 +874,18 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             )
         }
 
-    private fun runWorkerPipeline(documentId: UUID, simulateTransientExtractionFailure: Boolean = false) {
+    private fun runWorkerPipeline(
+        documentId: UUID,
+        simulateTransientExtractionFailure: Boolean = false,
+        sourceSha256: String = fixtureDigest,
+    ) {
         val inspectionLease = checkNotNull(workerService.lease("a".repeat(64)))
         assertThat(inspectionLease.jobType).isEqualTo("SECURITY_INSPECTION")
         assertThat(inspectionLease.jobId).isNotNull()
         workerService.completeInspection(
             inspectionLease.jobId,
             inspectionLease.leaseToken,
-            approvedInspectionRequest(),
+            approvedInspectionRequest(sourceSha256),
         )
         var extractionLease = checkNotNull(workerService.lease("a".repeat(64)))
         assertThat(extractionLease.jobType).isEqualTo("SYNTHETIC_EXTRACTION")
@@ -810,7 +906,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             extractionLease.jobId,
             extractionLease.leaseToken,
             ExtractionResultRequest(
-                sourceSha256 = fixtureDigest,
+                sourceSha256 = sourceSha256,
                 workerImageDigest = "b".repeat(64),
                 generatorVersion = "test-worker-v1",
                 previewPngBase64 = onePixelPngBase64,
@@ -825,10 +921,10 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).isEqualTo("REVIEW_REQUIRED")
     }
 
-    private fun approvedInspectionRequest() = InspectionResultRequest(
+    private fun approvedInspectionRequest(sourceSha256: String = fixtureDigest) = InspectionResultRequest(
         decision = kr.co.genomecompanion.documentboundary.InspectionDecision.APPROVED,
         reason = kr.co.genomecompanion.documentboundary.InspectionReason.CLEAN,
-        sourceSha256 = fixtureDigest,
+        sourceSha256 = sourceSha256,
         identifiedMediaType = "application/pdf",
         pageCount = 1,
         indirectObjectCount = 8,
@@ -881,6 +977,10 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         private val fixturePdf =
             "%PDF-1.7\nGenome Companion synthetic fixture only; no real health data.\n%%EOF\n".toByteArray()
         private val fixtureDigest = FoundationHashing.sha256(fixturePdf)
+        private val januaryFixturePdf =
+            "%PDF-1.7\nGenome Companion synthetic fixture 2026-01 only; no real health data.\n%%EOF\n"
+                .toByteArray()
+        private val januaryFixtureDigest = FoundationHashing.sha256(januaryFixturePdf)
         private const val onePixelPngBase64 =
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
         private val quarantineRoot: Path = Path.of(
@@ -908,7 +1008,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             registry.add("gc.foundation.audit-pepper") {
                 "foundation-integration-test-pepper-64-characters-minimum-value"
             }
-            registry.add("gc.foundation.allowed-document-sha256") { fixtureDigest }
+            registry.add("gc.foundation.allowed-document-sha256") { "$fixtureDigest,$januaryFixtureDigest" }
+            registry.add("gc.foundation.synthetic-documents[0].sha256") { januaryFixtureDigest }
+            registry.add("gc.foundation.synthetic-documents[0].set-id") { "checkup-2026-01" }
             registry.add("gc.foundation.local-identities[0].subject-id") { "synthetic-alice" }
             registry.add("gc.foundation.local-identities[0].credential-sha256") {
                 FoundationHashing.sha256(aliceCredential)
