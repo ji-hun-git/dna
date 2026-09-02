@@ -1,9 +1,12 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CandidateReview } from "@/components/integrated/CandidateReview";
+import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { EvidenceLens } from "@/components/records/EvidenceLens";
 import {
   createFoundationClient,
+  FoundationClientError,
   sha256Blob,
   type FoundationCandidate,
   type FoundationConsent,
@@ -13,6 +16,7 @@ import {
 } from "@/lib/foundation/client";
 import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import { shortDigest } from "@/lib/format/short-digest";
 
 type ShellState =
   | "INITIALIZING_SESSION"
@@ -66,10 +70,6 @@ function newIdempotencyKey(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
-function shortDigest(value: string) {
-  return `${value.slice(0, 12)}…${value.slice(-8)}`;
-}
-
 export function IntegratedHealthExperience() {
   const client = useMemo(() => createFoundationClient(), []);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -80,13 +80,11 @@ export function IntegratedHealthExperience() {
   const [view, setView] = useState<View>("home");
   const [processingState, setProcessingState] = useState<ProcessingState>("IDLE");
   const [documentReceipt, setDocumentReceipt] = useState<FoundationDocument>();
-  const [candidate, setCandidate] = useState<FoundationCandidate>();
-  const [savedRecord, setSavedRecord] = useState<FoundationRecord>();
+  const [candidates, setCandidates] = useState<FoundationCandidate[]>([]);
+  const [savedRecords, setSavedRecords] = useState<FoundationRecord[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<FoundationRecord>();
   const [subjectId, setSubjectId] = useState("");
   const [credential, setCredential] = useState("");
-  const [draftValue, setDraftValue] = useState("");
-  const [correctionMode, setCorrectionMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [pollingPaused, setPollingPaused] = useState(false);
@@ -104,10 +102,9 @@ export function IntegratedHealthExperience() {
       setDocumentReceipt(activity.document);
       setProcessingState(activity.document.status);
       if (activity.document.status === "REVIEW_REQUIRED") {
-        const restoredCandidate = await client.getCandidateForDocument(activity.document.documentId);
-        setCandidate(restoredCandidate);
-        setDraftValue(restoredCandidate.value);
-        setView("review");
+        const restored = await client.getCandidatesForDocument(activity.document.documentId);
+        setCandidates(restored);
+        setView(restored.some((item) => item.status === "PENDING") ? "review" : "complete");
       } else {
         setView("processing");
       }
@@ -146,18 +143,17 @@ export function IntegratedHealthExperience() {
         const current = await client.getDocument(documentId);
         if (cancelled) return;
         if (current.status === "REVIEW_REQUIRED") {
-          // Fetch the candidate before publishing the terminal polling status.
+          // Fetch the candidates before publishing the terminal polling status.
           // Otherwise the status dependency cleans up this effect while the
           // candidate request is in flight, leaving the UI stuck in processing.
-          const extracted = await client.getCandidateForDocument(current.documentId);
+          const extracted = await client.getCandidatesForDocument(current.documentId);
           if (cancelled) return;
           setDocumentReceipt(current);
           setProcessingState(current.status);
           setPollingPaused(false);
           setErrorMessage("");
-          setCandidate(extracted);
-          setDraftValue(extracted.value);
-          setView("review");
+          setCandidates(extracted);
+          setView(extracted.some((item) => item.status === "PENDING") ? "review" : "complete");
           return;
         }
         setDocumentReceipt(current);
@@ -205,8 +201,8 @@ export function IntegratedHealthExperience() {
   const beginImport = () => {
     setErrorMessage("");
     setDocumentReceipt(undefined);
-    setCandidate(undefined);
-    setSavedRecord(undefined);
+    setCandidates([]);
+    setSavedRecords([]);
     setProcessingState("IDLE");
     setPollingPaused(false);
     setView(consent?.status === "ACTIVE" ? "source" : "consent");
@@ -269,18 +265,43 @@ export function IntegratedHealthExperience() {
     }
   };
 
+  // The server decides a document is finished only when no candidate is left
+  // pending, so the review screen stays until this list runs out of decisions.
+  const activeCandidate = candidates.find((item) => item.status === "PENDING");
+
+  // Both setters run from the same event handler: the next list is computed from the current
+  // `candidates` value so the view change never happens inside a state updater.
+  const applyDecision = (decided: FoundationCandidate) => {
+    const remaining = candidates.map((item) => item.candidateId === decided.candidateId ? decided : item);
+    setCandidates(remaining);
+    if (!remaining.some((item) => item.status === "PENDING")) setView("complete");
+  };
+
+  // The server rejects a decision on a candidate it no longer holds as PENDING. Re-read its list
+  // so the review loop resumes from the server's truth instead of this browser's stale copy.
+  const resyncAfterConflict = async (error: unknown) => {
+    const stale = error instanceof FoundationClientError && error.problemCode === "candidate_not_pending";
+    if (!stale || !documentReceipt) return;
+    try {
+      const refreshed = await client.getCandidatesForDocument(documentReceipt.documentId);
+      setCandidates(refreshed);
+      if (!refreshed.some((item) => item.status === "PENDING")) setView("complete");
+    } catch {
+      // Keep the original message; the person can retry from the same screen.
+    }
+  };
+
   const confirmCandidate = async (value: string) => {
-    if (!candidate) return;
+    if (!activeCandidate) return;
     setBusy(true);
     setErrorMessage("");
     try {
-      const record = await client.confirmCandidate(candidate.candidateId, value, newIdempotencyKey("confirm"));
-      setSavedRecord(record);
+      const record = await client.confirmCandidate(activeCandidate.candidateId, value, newIdempotencyKey("confirm"));
+      setSavedRecords((current) => [...current, record]);
       setRecords((current) => [...current.filter((item) => item.recordId !== record.recordId), record]);
-      setCandidate({ ...candidate, status: "CONFIRMED" });
-      setCorrectionMode(false);
-      setView("complete");
+      applyDecision({ ...activeCandidate, status: "CONFIRMED" });
     } catch (error) {
+      await resyncAfterConflict(error);
       setErrorMessage(describeFoundationError(error));
     } finally {
       setBusy(false);
@@ -288,14 +309,13 @@ export function IntegratedHealthExperience() {
   };
 
   const excludeCandidate = async () => {
-    if (!candidate) return;
+    if (!activeCandidate) return;
     setBusy(true);
     setErrorMessage("");
     try {
-      const excluded = await client.excludeCandidate(candidate.candidateId, newIdempotencyKey("exclude"));
-      setCandidate(excluded);
-      setView("complete");
+      applyDecision(await client.excludeCandidate(activeCandidate.candidateId, newIdempotencyKey("exclude")));
     } catch (error) {
+      await resyncAfterConflict(error);
       setErrorMessage(describeFoundationError(error));
     } finally {
       setBusy(false);
@@ -359,7 +379,7 @@ export function IntegratedHealthExperience() {
           reference: "기관 참고치 미제공",
           sourceName: "허용된 합성 PDF",
           observedAt: selectedRecord.observedOn,
-          sourceLocation: `${selectedRecord.evidencePage}쪽 · 합성 검증 fixture`,
+          sourceLocation: `${selectedRecord.evidencePage}쪽 · 서버가 미리 정한 예시 값`,
           sourceDigest: `sha256:${selectedRecord.documentSha256}`,
           extractedAt: selectedRecord.confirmedAt,
           confirmedAt: selectedRecord.confirmedAt,
@@ -399,7 +419,7 @@ export function IntegratedHealthExperience() {
           <section className="gc-import__question" aria-labelledby="integrated-source-title">
             <p className="gc-import__eyebrow">1. 합성 결과지 선택</p>
             <h1 id="integrated-source-title">허용된 합성 PDF를<br />선택해 주세요</h1>
-            <p className="gc-import__lead">이 통합 단계에서는 서버가 미리 허용한 합성 fixture만 처리합니다.</p>
+            <p className="gc-import__lead">이 단계에서는 서버가 미리 허용한 합성 PDF만 처리합니다.</p>
             <button className="gc-import__action gc-import__action--primary" type="button" onClick={() => fileInput.current?.click()}>합성 PDF 선택</button>
             <input
               ref={fileInput}
@@ -449,75 +469,48 @@ export function IntegratedHealthExperience() {
     );
   }
 
-  if (view === "review" && candidate) {
+  if (view === "review" && activeCandidate) {
     return (
-      <main className="gc-import" data-stage="review">
-        <header className="gc-import__appbar"><button type="button" onClick={() => setView("processing")}>이전</button><span>앎</span><button type="button" onClick={() => setView("home")}>닫기</button></header>
-        <div className="gc-import__shell">
-          <section className="gc-import__review" aria-labelledby="server-candidate-title">
-            <div className="gc-import__review-heading">
-              <div><p className="gc-import__eyebrow">3. 출처부터 확인</p><h1 id="server-candidate-title">이 합성 후보가 맞나요?</h1><p className="gc-import__lead">후보는 서버가 만든 결정적 fixture예요. 실제 OCR 결과가 아닙니다.</p></div>
-              <span className="gc-import__review-state">{candidate.status}</span>
-            </div>
-            <article className="gc-import__candidate">
-              <p className="gc-import__candidate-label">확인할 합성 항목</p>
-              <h2>{candidate.label}</h2>
-              <p className="gc-import__candidate-value"><strong>{candidate.value}</strong><span>{candidate.unit}</span></p>
-              <dl>
-                <div><dt>검사일</dt><dd>{formatKoreanDate(candidate.observedOn)}</dd></div>
-                <div><dt>문서 확인값</dt><dd><code>{shortDigest(candidate.documentSha256)}</code></dd></div>
-                <div><dt>후보 근거값</dt><dd><code>{shortDigest(candidate.sourceTextSha256)}</code></dd></div>
-                <div><dt>생성 방식</dt><dd>결정적 합성 fixture</dd></div>
-              </dl>
-            </article>
-            {documentReceipt?.previewAvailable && (
-              <figure className="gc-import__safe-preview">
-                <img
-                  src={`/api/foundation/documents/${documentReceipt.documentId}/preview`}
-                  alt="승인된 합성 결과지의 첫 페이지 PNG 미리보기"
-                  loading="lazy"
-                />
-                <figcaption>검사를 통과한 바이트에서 격리 작업자가 만든 PNG예요. 업로드한 PDF를 브라우저에서 직접 열지 않습니다.</figcaption>
-              </figure>
-            )}
-            {correctionMode ? (
-              <form className="gc-integrated-correction" onSubmit={(event) => { event.preventDefault(); void confirmCandidate(draftValue.trim()); }}>
-                <label htmlFor="integrated-candidate-value">원문과 같은 값으로 수정</label>
-                <input id="integrated-candidate-value" value={draftValue} onChange={(event) => setDraftValue(event.target.value)} inputMode="decimal" pattern="[0-9]{1,4}([.][0-9]{1,2})?" required />
-                <div className="gc-integrated-actions"><button type="button" onClick={() => setCorrectionMode(false)}>취소</button><button type="submit" disabled={busy}>수정한 값 확인</button></div>
-              </form>
-            ) : (
-              <div className="gc-import__review-actions">
-                <button className="gc-import__action gc-import__action--primary" type="button" onClick={() => void confirmCandidate(candidate.value)} disabled={busy}>원문과 같아요</button>
-                <button className="gc-import__action gc-import__action--secondary" type="button" onClick={() => setCorrectionMode(true)} disabled={busy}>값 수정</button>
-                <button className="gc-import__action gc-import__action--text" type="button" onClick={() => void excludeCandidate()} disabled={busy}>이 항목 빼기</button>
-              </div>
-            )}
-            {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
-          </section>
-        </div>
-      </main>
+      <CandidateReview
+        candidate={activeCandidate}
+        previewUrl={documentReceipt?.previewAvailable
+          ? `/api/foundation/documents/${documentReceipt.documentId}/preview`
+          : undefined}
+        busy={busy}
+        errorMessage={errorMessage}
+        onConfirm={(value) => void confirmCandidate(value)}
+        onExclude={() => void excludeCandidate()}
+        onBack={() => setView("processing")}
+        onClose={() => setView("home")}
+      />
     );
   }
 
   if (view === "complete") {
+    const confirmedCount = candidates.filter((item) => item.status === "CONFIRMED").length;
+    const excludedCount = candidates.filter((item) => item.status === "EXCLUDED").length;
     return (
       <main className="gc-integrated-shell gc-integrated-shell--center">
         <section className="gc-integrated-auth" aria-labelledby="integrated-complete-title" role="status" aria-live="polite">
           <p>서버 처리 완료</p>
-          <h1 id="integrated-complete-title">{savedRecord ? "건강 기록에 저장했어요" : "이 후보를 제외했어요"}</h1>
-          <p>{savedRecord ? "Spring이 PostgreSQL에 값과 출처, 확인 버전을 함께 저장했습니다." : "서버가 후보 상태를 EXCLUDED로 기록했고 건강 기록은 만들지 않았습니다."}</p>
-          {savedRecord && (
-            <dl className="gc-integrated-facts">
-              <div><dt>항목</dt><dd>{savedRecord.label}</dd></div>
-              <div><dt>확인한 값</dt><dd>{savedRecord.value} {savedRecord.unit}</dd></div>
-              <div><dt>확인 방식</dt><dd>{savedRecord.reviewDecision}</dd></div>
-              <div><dt>기록 버전</dt><dd><code>{savedRecord.recordVersionId}</code></dd></div>
-            </dl>
+          <h1 id="integrated-complete-title">이 결과지 확인을 마쳤어요</h1>
+          <p className="gc-review-summary">저장 {confirmedCount}개 · 제외 {excludedCount}개</p>
+          <p>저장한 값은 출처와 확인 버전을 함께 남겼어요. 제외한 항목은 건강 기록으로 만들지 않았습니다.</p>
+          {savedRecords.length > 0 && (
+            <ul className="gc-review-saved">
+              {savedRecords.map((record) => (
+                <li key={record.recordVersionId}>
+                  <strong>{record.label}</strong>
+                  <span>{record.value} {record.unit}</span>
+                  <span>{record.reviewDecision}</span>
+                </li>
+              ))}
+            </ul>
           )}
           <div className="gc-integrated-actions">
             <button type="button" onClick={() => { setView("home"); void loadProductTruth(); }}>홈으로</button>
-            {savedRecord && <a href="/records">저장된 기록 보기</a>}
+            <a href="/records">저장된 기록 보기</a>
+            <a href="/prepare">진료 준비 목록 보기</a>
           </div>
         </section>
       </main>
@@ -526,38 +519,38 @@ export function IntegratedHealthExperience() {
 
   const latest = records.at(-1);
   return (
-    <main className="gc-health-home">
-      <div className="gc-health-home__shell">
-        <header className="gc-health-home__appbar">
-          <a className="gc-health-home__brand" href="#home" aria-label="앎 건강 홈"><span aria-hidden="true">앎</span><strong>앎</strong></a>
-          <nav aria-label="주요 메뉴"><a href="#home" aria-current="page">홈</a><a href="/records">기록</a><a href="/data-control">데이터 관리</a></nav>
-          <span className="gc-integrated-session">합성 세션 · {session?.subjectId}</span>
-        </header>
-        <section className="gc-health-home__hero" id="home" aria-labelledby="integrated-home-title">
-          <div>
-            <p className="gc-health-home__greeting">서버와 연결된 합성 건강 기록</p>
-            <h1 id="integrated-home-title">값보다 먼저<br />출처를 확인하세요</h1>
-            <p className="gc-health-home__hero-copy">화면의 기록은 Spring과 PostgreSQL이 소유하며, 새로고침해도 같은 합성 상태를 불러옵니다.</p>
-            <div className="gc-health-home__hero-actions"><button className="gc-button gc-button--primary" type="button" onClick={beginImport}>결과지 추가</button><a className="gc-button gc-button--weak" href="/records">전체 기록 보기</a></div>
-          </div>
-          <aside className="gc-health-home__connection" aria-label="통합 합성 제품 상태">
-            <p><strong>INTEGRATED SYNTHETIC</strong></p>
-            <span>실제 개인정보 0건 · 외부 기관 연결 0곳 · 저장된 합성 기록 {records.length}개</span>
-            <a href="/data-control">동의와 삭제 상태 보기</a>
-          </aside>
-        </section>
-        <section className="gc-health-home__overview" aria-labelledby="integrated-records-title">
-          <div className="gc-health-home__section-heading"><div><p>PostgreSQL에서 불러온 기록</p><h2 id="integrated-records-title">{latest ? "가장 최근에 확인한 값" : "아직 저장된 기록이 없어요"}</h2></div><span>{records.length}개</span></div>
-          {latest ? (
-            <article className="gc-health-home__metric-card">
-              <div className="gc-health-home__metric-copy"><div className="gc-health-home__metric-topline"><span>{latest.label}</span><strong>{latest.status}</strong></div><p className="gc-health-home__metric-value"><strong>{latest.value}</strong><span>{latest.unit}</span></p><p className="gc-health-home__metric-source">허용된 합성 PDF · {formatKoreanDate(latest.observedOn)}</p></div>
-              <button className="gc-button gc-button--weak" type="button" onClick={() => { setSelectedRecord(latest); setView("evidence"); }}>이 값의 근거 보기</button>
-            </article>
-          ) : <p className="gc-integrated-empty">허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다.</p>}
-        </section>
-        <section className="gc-health-home__privacy" aria-labelledby="integrated-boundary-title"><div><p>현재 허용 범위</p><h2 id="integrated-boundary-title">합성 데이터만 처리해요</h2><ul><li>실제 카카오·네이버·MyHealthWay 비활성화</li><li>OCR·의료 AI 비활성화</li><li>문서는 승인 전까지 적대적 입력으로 격리</li></ul></div><a className="gc-button gc-button--weak" href="/data-control">데이터 관리</a></section>
-        {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
-      </div>
-    </main>
+    <IntegratedShell
+      current="home"
+      status={session ? `합성 세션 · ${session.subjectId}` : undefined}
+    >
+      <main className="gc-health-home">
+        <div className="gc-health-home__shell">
+          <section className="gc-health-home__hero" id="home" aria-labelledby="integrated-home-title">
+            <div>
+              <p className="gc-health-home__greeting">서버와 연결된 합성 건강 기록</p>
+              <h1 id="integrated-home-title">값보다 먼저<br />출처를 확인하세요</h1>
+              <p className="gc-health-home__hero-copy">화면의 기록은 Spring과 PostgreSQL이 소유하며, 새로고침해도 같은 합성 상태를 불러옵니다.</p>
+              <div className="gc-health-home__hero-actions"><button className="gc-button gc-button--primary" type="button" onClick={beginImport}>결과지 추가</button><a className="gc-button gc-button--weak" href="/records">전체 기록 보기</a></div>
+            </div>
+            <aside className="gc-health-home__connection" aria-label="통합 합성 제품 상태">
+              <p><strong>합성 데이터 전용 연결</strong></p>
+              <span>실제 개인정보 0건 · 외부 기관 연결 0곳 · 저장된 합성 기록 {records.length}개</span>
+              <a href="/data-control">동의와 삭제 상태 보기</a>
+            </aside>
+          </section>
+          <section className="gc-health-home__overview" aria-labelledby="integrated-records-title">
+            <div className="gc-health-home__section-heading"><div><p>PostgreSQL에서 불러온 기록</p><h2 id="integrated-records-title">{latest ? "가장 최근에 확인한 값" : "아직 저장된 기록이 없어요"}</h2></div><span>{records.length}개</span></div>
+            {latest ? (
+              <article className="gc-health-home__metric-card">
+                <div className="gc-health-home__metric-copy"><div className="gc-health-home__metric-topline"><span>{latest.label}</span><strong>{latest.status}</strong></div><p className="gc-health-home__metric-value"><strong>{latest.value}</strong><span>{latest.unit}</span></p><p className="gc-health-home__metric-source">허용된 합성 PDF · {formatKoreanDate(latest.observedOn)}</p></div>
+                <button className="gc-button gc-button--weak" type="button" onClick={() => { setSelectedRecord(latest); setView("evidence"); }}>이 값의 근거 보기</button>
+              </article>
+            ) : <p className="gc-integrated-empty">허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다.</p>}
+          </section>
+          <section className="gc-health-home__privacy" aria-labelledby="integrated-boundary-title"><div><p>현재 허용 범위</p><h2 id="integrated-boundary-title">합성 데이터만 처리해요</h2><ul><li>실제 카카오·네이버·MyHealthWay 비활성화</li><li>OCR·의료 AI 비활성화</li><li>문서는 승인 전까지 적대적 입력으로 격리</li></ul></div><a className="gc-button gc-button--weak" href="/data-control">데이터 관리</a></section>
+          {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
+        </div>
+      </main>
+    </IntegratedShell>
   );
 }

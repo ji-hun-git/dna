@@ -306,18 +306,22 @@ class DocumentWorkerBoundaryService(
                 repository.markJobFailed(job, "preview_artifact_invalid", retryable = false, now)
                 return WorkerResultReceipt(jobId, "DEAD_LETTER")
             }
+        val candidates = runCatching { SyntheticCandidateFixture.candidatesFor(job.sourceSha256) }
+            .getOrElse {
+                repository.markJobFailed(job, "synthetic_candidate_set_unavailable", retryable = false, now)
+                return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            }
         registerRollbackDelete(preview, StorageTrustZone.DERIVED_SAFE_ARTIFACT)
         repository.markExtractionCompleted(
             workerJob = job,
             extractionJobId = UUID.randomUUID(),
-            candidateId = UUID.randomUUID(),
             previewId = UUID.randomUUID(),
             previewObjectKey = preview.descriptor.objectKey,
             previewSha256 = preview.descriptor.sha256,
             workerImageDigest = request.workerImageDigest,
             generatorVersion = request.generatorVersion,
             now = now,
-            sourceTextSha256 = FoundationHashing.sha256("총콜레스테롤|188|mg/dL|2026-07-28"),
+            candidates = candidates,
         )
         audit(job, "SYNTHETIC_CANDIDATE_CREATED", "SUCCESS", now)
         return WorkerResultReceipt(jobId, "COMPLETED")

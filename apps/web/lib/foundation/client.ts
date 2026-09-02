@@ -83,6 +83,10 @@ const candidateSchema = z.object({
   sourceType: z.literal("SYNTHETIC_FIXED_FIXTURE"),
   extractionMethod: z.literal("DETERMINISTIC_FOUNDATION_FIXTURE"),
   createdAt: z.string().datetime({ offset: true }),
+  // One document yields several ordered candidates. `ordinal` is the review
+  // position within `totalCandidates`, both 1-based and server-owned.
+  ordinal: z.number().int().positive(),
+  totalCandidates: z.number().int().positive(),
 }).strict();
 
 const recordSchema = z.object({
@@ -144,6 +148,8 @@ export class FoundationClientError extends Error {
   constructor(
     public readonly code: FoundationErrorCode,
     public readonly status: number,
+    /** The untranslated `code` the server sent, when the failure came from a server response. */
+    public readonly problemCode?: string,
   ) {
     super(code);
     this.name = "FoundationClientError";
@@ -232,6 +238,7 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       throw new FoundationClientError(
         mapProblem(problem.success ? problem.data.code : "internal_error", response.status),
         response.status,
+        problem.success ? problem.data.code : undefined,
       );
     }
     const parsed = schema.safeParse(body);
@@ -324,6 +331,11 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     getCandidateForDocument: async (documentId: string) => request(
       `/api/foundation/documents/${requireUuid(documentId)}/candidate`,
       candidateSchema,
+      { method: "GET" },
+    ),
+    getCandidatesForDocument: async (documentId: string) => request(
+      `/api/foundation/documents/${requireUuid(documentId)}/candidates`,
+      z.array(candidateSchema),
       { method: "GET" },
     ),
     getCandidate: async (candidateId: string) => request(

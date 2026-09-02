@@ -81,21 +81,41 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     timeout: 10_000,
   });
   await expect(page.getByAltText("승인된 합성 결과지의 첫 페이지 PNG 미리보기")).toBeVisible();
+  await expect(page.getByLabel("검토 진행")).toHaveText("1 / 3");
   await expect(page.getByText("188", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "값 수정" }).click();
   await page.getByLabel("원문과 같은 값으로 수정").fill("190");
   await page.getByRole("button", { name: "수정한 값 확인" }).click();
-  await expect(page.getByRole("heading", { name: "건강 기록에 저장했어요" })).toBeVisible();
+
+  await expect(page.getByLabel("검토 진행")).toHaveText("2 / 3");
+  await expect(page.getByText("5.2", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "원문과 같아요" }).click();
+
+  await expect(page.getByLabel("검토 진행")).toHaveText("3 / 3");
+  await expect(page.getByText("42", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "이 항목 빼기" }).click();
+
+  await expect(page.getByRole("heading", { name: "이 결과지 확인을 마쳤어요" })).toBeVisible();
+  await expect(page.getByText("저장 2개 · 제외 1개")).toBeVisible();
   await expect(page.getByText("CORRECTED", { exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "저장된 기록 보기" }).click();
   await expect(page).toHaveURL(/\/records$/);
-  await expect(page.getByTestId("durable-record")).toContainText("190");
+  await expect(page.getByTestId("durable-record")).toHaveCount(2);
+  const correctedRecord = page.getByTestId("durable-record").filter({ hasText: "총콜레스테롤" });
+  await expect(correctedRecord).toBeVisible();
   await page.reload();
-  await expect(page.getByTestId("durable-record")).toContainText("190");
-  await page.getByText("출처와 버전 보기").click();
-  await expect(page.getByText("원래 후보", { exact: true }).locator("..")).toContainText("188 mg/dL");
+  await expect(correctedRecord).toBeVisible();
+  await correctedRecord.getByText("출처와 버전 보기").click();
+  await expect(correctedRecord.getByText("원래 후보", { exact: true }).locator("..")).toContainText("188 mg/dL");
+
+  await page.goto("/prepare");
+  await expect(page.getByRole("heading", { name: "다음 진료에서 물어볼 것" })).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(page.getByText(
+    "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.",
+  )).toBeVisible();
 
   await page.goto("/data-control");
   await expect(page.getByText("ACTIVE", { exact: true }).first()).toBeVisible();
@@ -156,7 +176,7 @@ test("server states remain keyboard operable at a 200 percent equivalent viewpor
     mimeType: "application/pdf",
     buffer: fixtureBytes,
   });
-  const processingStatus = page.getByRole("status");
+  const processingStatus = page.locator("main[data-stage='processing'] [role='status']");
   await expect(processingStatus).toHaveText(/보안 구역|안전하게 확인|다시 시도|미리보기/);
   await expect(processingStatus).toHaveAttribute("aria-live", "polite");
   await waitForServerReview(page);
@@ -164,6 +184,7 @@ test("server states remain keyboard operable at a 200 percent equivalent viewpor
     timeout: 10_000,
   });
 
+  await expect(page.getByLabel("검토 진행")).toHaveText("1 / 3");
   await page.getByRole("button", { name: "값 수정" }).focus();
   await page.keyboard.press("Enter");
   await page.getByLabel("원문과 같은 값으로 수정").focus();
@@ -171,14 +192,28 @@ test("server states remain keyboard operable at a 200 percent equivalent viewpor
   await page.keyboard.type("190");
   await page.getByRole("button", { name: "수정한 값 확인" }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "건강 기록에 저장했어요" })).toBeVisible();
+
+  await expect(page.getByLabel("검토 진행")).toHaveText("2 / 3");
+  await page.getByRole("button", { name: "원문과 같아요" }).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByLabel("검토 진행")).toHaveText("3 / 3");
+  await page.getByRole("button", { name: "이 항목 빼기" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "이 결과지 확인을 마쳤어요" })).toBeVisible();
+  await expect(page.getByText("저장 2개 · 제외 1개")).toBeVisible();
 
   await page.getByRole("link", { name: "저장된 기록 보기" }).focus();
   await page.keyboard.press("Enter");
-  const provenance = page.getByText("출처와 버전 보기", { exact: true });
+  const correctedRecord = page.getByTestId("durable-record").filter({ hasText: "총콜레스테롤" });
+  const provenance = correctedRecord.getByText("출처와 버전 보기", { exact: true });
   await provenance.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByText("원래 후보", { exact: true }).locator("..")).toContainText("188 mg/dL");
+  await expect(correctedRecord.getByText("원래 후보", { exact: true }).locator("..")).toContainText("188 mg/dL");
+
+  await page.goto("/prepare");
+  await page.getByRole("button", { name: "인쇄하기" }).focus();
+  await expect(page.getByRole("button", { name: "인쇄하기" })).toBeFocused();
 
   await page.goto("/data-control");
   await page.getByRole("button", { name: "동의 철회" }).focus();

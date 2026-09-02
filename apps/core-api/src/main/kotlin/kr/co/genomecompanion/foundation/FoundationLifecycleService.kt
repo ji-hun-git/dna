@@ -54,6 +54,8 @@ data class CandidateReceipt(
     val candidateId: UUID,
     val documentId: UUID,
     val status: String,
+    val ordinal: Int,
+    val totalCandidates: Int,
     val label: String,
     val value: String,
     val unit: String,
@@ -324,6 +326,15 @@ class FoundationLifecycleService(
         return repository.findCandidateForDocument(principal.subjectId, documentId)
             ?.let(::candidateReceipt)
             ?: throw FoundationNotFoundException("candidate_not_ready")
+    }
+
+    @Transactional(readOnly = true)
+    fun listCandidatesForDocument(principal: FoundationPrincipal, documentId: UUID): List<CandidateReceipt> {
+        val document = requireDocument(principal, documentId)
+        requireActiveConsent(principal, document.consentId)
+        val candidates = repository.listCandidatesForDocument(principal.subjectId, documentId)
+        if (candidates.isEmpty()) throw FoundationNotFoundException("candidate_not_ready")
+        return candidates.map(::candidateReceipt)
     }
 
     @Transactional(readOnly = true)
@@ -599,6 +610,8 @@ class FoundationLifecycleService(
             candidateId = candidate.candidateId,
             documentId = candidate.documentId,
             status = candidate.status,
+            ordinal = candidate.ordinal,
+            totalCandidates = candidate.totalCandidates,
             label = candidate.label,
             value = candidate.candidateValue,
             unit = candidate.unit,

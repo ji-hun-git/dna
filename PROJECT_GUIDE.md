@@ -14,6 +14,11 @@
 > changed back to private; deletion and controlled republishing therefore require a separate,
 > explicit founder decision. Do not deploy these images or dispatch the publication workflow
 > again until that decision is recorded.
+>
+> Root cause (2026-09-02 review): `publish-runtime-images.yml` logs in to GHCR with the
+> repository's own `github.token`, so the packages are linked to this public repository and
+> inherit its visibility. Republishing the same way would make them public again. The remedy
+> options are recorded in `docs/reviews/2026-09-02-project-review.md` finding F-2.
 
 ## 1. What this product is
 
@@ -38,7 +43,7 @@ remain outside the approved foundation.
 | Area | Evidence-backed status |
 |---|---|
 | Product and program design | Founder-approved direction; public brand clearance remains separate |
-| Korean consumer web | Implemented and tested with synthetic/demo content |
+| Korean consumer web | Implemented and tested with synthetic/demo content; integrated flow reviews an ordered three-candidate synthetic set per document, groups records by date, and prints neutral visit-preparation questions (2026-09-02 wave); CI evidence run 33576825427 (33e6ac8) |
 | Core API | Spring/Kotlin authority for sessions, CSRF/origin checks, consent, lifecycle, provenance, audit, and deletion in the synthetic foundation |
 | Durable store | PostgreSQL/Flyway lifecycle verified in CI with synthetic data |
 | Hostile-document boundary | Digest-bound upload, quarantine/approval states, ClamAV contract, separate worker artifact, retry/DLQ behavior, and safe-preview boundary verified in CI |
@@ -211,8 +216,9 @@ clinical judgment, or automatic interpretation.
 
 The safe order from here is:
 
-1. Resolve the public-GHCR stop-ship with a founder-approved delete/republish or private-registry
-   migration plan.
+1. Resolve the public-GHCR stop-ship with a founder-approved private-ECR migration (recommended),
+   PAT-based private republish, or an explicit accept-public decision; then protect `main`
+   (required PR and CI, no force-push). See the roadmap, Track B.
 2. Add production S3/SQS runtime adapters and the hosted network boundary.
 3. Obtain only the non-secret identifiers needed for a reviewed AWS account-backed OpenTofu plan.
 4. Review the plan; authorize apply separately.
@@ -249,6 +255,10 @@ See `docs/operations/founder-real-data-and-provider-activation.md` for the compl
 
 ## 11. Where to go next
 
+- Agent operating contract: [`AGENTS.md`](AGENTS.md); project skills in `.claude/skills/`; agent roles in `.claude/agents/`
+- Independent review and critique: [`docs/reviews/2026-09-02-project-review.md`](docs/reviews/2026-09-02-project-review.md)
+- Reviewed roadmap (sequencing authority): [`docs/roadmap/2026-09-02-roadmap.md`](docs/roadmap/2026-09-02-roadmap.md)
+- Current wave spec: [`docs/superpowers/specs/2026-09-02-mvp-multi-candidate-and-agent-os-design.md`](docs/superpowers/specs/2026-09-02-mvp-multi-candidate-and-agent-os-design.md)
 - Reusable takeover/audit prompt: [`SANITY_CHECK_PROMPT.md`](SANITY_CHECK_PROMPT.md)
 - Latest sanity report: [`docs/status/2026-09-02/sanity-check.md`](docs/status/2026-09-02/sanity-check.md)
 - Machine release truth: [`release/readiness.json`](release/readiness.json)

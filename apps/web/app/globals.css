@@ -159,11 +159,6 @@ html {
 }
 
 .gc-integrated-facts code,
-.gc-integrated-session {
-  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
-  font-size: 12px;
-}
-
 .gc-integrated-error {
   margin: 18px 0 0;
   padding: 13px 15px;
@@ -172,10 +167,6 @@ html {
   background: #fff3f3;
   color: #9b2424;
   line-height: 1.55;
-}
-
-.gc-integrated-session {
-  color: #666;
 }
 
 .gc-integrated-empty {
@@ -197,15 +188,373 @@ html {
 }
 
 @media (max-width: 720px) {
-  .gc-integrated-session {
-    display: none;
-  }
-
   .gc-integrated-facts div {
     grid-template-columns: 1fr;
     gap: 4px;
   }
 }
+
+/* Multi-candidate review progress, grouped records, and the visit-preparation sheet. */
+.gc-review-progress {
+  display: inline-flex;
+  min-height: 1.5rem;
+  align-items: center;
+  padding: 0 0.5rem;
+  border: 1px solid var(--gc-color-line-subtle);
+  border-radius: var(--gc-radius-pill);
+  background: var(--gc-color-surface-raised);
+  color: var(--gc-color-text-primary);
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gc-review-summary {
+  margin: 20px 0 0;
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.gc-review-saved {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gc-review-saved li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 15px;
+  border: 1px solid #e3e3df;
+  border-radius: 12px;
+  background: #fafaf8;
+}
+
+.gc-review-saved span {
+  color: #666;
+  font-size: 13px;
+}
+
+.gc-records-group {
+  margin-top: 26px;
+}
+
+.gc-records-group + .gc-records-group {
+  margin-top: 34px;
+}
+
+.gc-records-group h3 {
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--gc-color-line-subtle);
+  color: var(--gc-color-text-secondary);
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gc-prepare {
+  box-sizing: border-box;
+  max-width: 780px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 56px) 20px;
+  background: var(--gc-color-surface-canvas, #f7f7f5);
+  color: var(--gc-color-text-primary, #151515);
+  font-family: var(--gc-type-sans, "Pretendard Variable", sans-serif);
+}
+
+.gc-prepare__heading p:first-child {
+  margin: 0;
+  color: #74746f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gc-prepare__heading h1 {
+  margin: 10px 0 0;
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.25;
+}
+
+.gc-prepare__note {
+  margin: 14px 0 0;
+  color: #5c5c57;
+  line-height: 1.6;
+}
+
+.gc-prepare__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.gc-prepare__actions button,
+.gc-prepare__actions a,
+.gc-prepare__empty a {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 1px solid #171717;
+  border-radius: 10px;
+  background: #171717;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.gc-prepare__actions a {
+  border-color: #d8d8d3;
+  background: #fff;
+  color: #171717;
+}
+
+.gc-prepare__actions button:focus-visible,
+.gc-prepare__actions a:focus-visible,
+.gc-prepare__empty a:focus-visible {
+  outline: 3px solid #3182f6;
+  outline-offset: 2px;
+}
+
+.gc-prepare__list {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gc-prepare__list article {
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid #e3e3df;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.gc-prepare__list h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.gc-prepare__value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.gc-prepare__value strong {
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-size: 30px;
+  font-weight: 560;
+}
+
+.gc-prepare__value span {
+  color: var(--gc-color-text-secondary);
+  font-size: 13px;
+}
+
+.gc-prepare dl {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+
+.gc-prepare dl div {
+  display: grid;
+  grid-template-columns: minmax(96px, .6fr) 1.4fr;
+  gap: 12px;
+}
+
+.gc-prepare dt {
+  color: var(--gc-color-text-secondary);
+  font-size: 13px;
+}
+
+.gc-prepare dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.gc-prepare code {
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-size: 12px;
+}
+
+.gc-prepare__questions {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding-left: 20px;
+  color: #3a3a35;
+  line-height: 1.6;
+}
+
+.gc-prepare__empty {
+  margin-top: 24px;
+  padding: clamp(28px, 5vw, 40px);
+  border: 1px dashed #cdcdc7;
+  border-radius: 18px;
+  background: #fff;
+  text-align: center;
+}
+
+.gc-prepare__empty h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.gc-prepare__empty p {
+  color: #666;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .gc-prepare dl div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+/* Shared integrated app bar: one brand, one menu, one optional server-state pill. */
+.gc-shell {
+  border-bottom: 1px solid var(--gc-color-line-subtle);
+  background: var(--gc-color-surface-canvas);
+}
+
+.gc-shell__bar {
+  display: grid;
+  box-sizing: border-box;
+  width: min(100% - 3rem, 70rem);
+  min-height: 4.75rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--gc-space-4);
+  margin-inline: auto;
+}
+
+.gc-shell__brand {
+  display: inline-flex;
+  min-height: var(--gc-target-minimum);
+  align-items: center;
+  justify-self: start;
+  gap: var(--gc-space-3);
+  font-size: 1.0625em;
+  font-weight: 750;
+}
+
+.gc-shell__brand > span {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: var(--gc-radius-sm);
+  color: var(--gc-color-text-inverse);
+  background: var(--gc-color-brand-primary);
+  font-size: 0.95rem;
+  font-weight: 760;
+  letter-spacing: -0.06em;
+}
+
+.gc-shell__nav {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: var(--gc-space-1);
+  padding: 0.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--gc-color-line-subtle);
+  border-radius: 14px;
+  background: var(--gc-color-surface-raised);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+  scrollbar-width: none;
+}
+
+.gc-shell__nav a {
+  display: inline-flex;
+  box-sizing: border-box;
+  min-width: 3.5rem;
+  min-height: var(--gc-target-minimum);
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  border-radius: var(--gc-radius-sm);
+  color: var(--gc-color-text-secondary);
+  font-size: 0.875em;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.gc-shell__nav a[aria-current="page"] {
+  color: var(--gc-color-text-primary);
+  background: var(--gc-color-surface-soft);
+}
+
+.gc-shell__status {
+  min-width: 0;
+  justify-self: end;
+  overflow-wrap: anywhere;
+  color: var(--gc-color-text-secondary);
+  font-family: var(--gc-type-mono);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-align: right;
+}
+
+.gc-shell a:focus-visible {
+  outline: 3px solid var(--gc-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The bar owns the top of the page, so the screen below it stops claiming a
+   full viewport of its own and no longer forces a phantom scrollbar. */
+.gc-shell + main {
+  min-height: calc(100dvh - 4.75rem);
+}
+
+@media (max-width: 42rem) {
+  .gc-shell__bar {
+    width: min(100% - 2rem, 70rem);
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    gap: var(--gc-space-3);
+  }
+
+  .gc-shell__brand strong,
+  .gc-shell__status {
+    display: none;
+  }
+
+  .gc-shell__nav {
+    justify-self: end;
+  }
+
+  .gc-shell__brand,
+  .gc-shell__nav a {
+    min-width: var(--gc-target-minimum, 44px);
+    justify-content: center;
+  }
+
+  .gc-shell__nav a {
+    padding: 0 0.6rem;
+    font-size: 0.8125em;
+  }
+}
+
 
 body {
   margin: 0;
@@ -1316,6 +1665,20 @@ svg {
   height: 2.25rem;
   place-items: center;
   border-radius: 0.75rem;
+  color: var(--gc-color-text-inverse);
+  background: var(--gc-color-brand-primary);
+  font-size: 0.875em;
+  font-weight: 760;
+  letter-spacing: -0.06em;
+}
+
+.gc-import__appbar > span {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  justify-self: center;
+  border-radius: var(--gc-radius-sm);
   color: var(--gc-color-text-inverse);
   background: var(--gc-color-brand-primary);
   font-size: 0.875em;
@@ -3149,6 +3512,17 @@ svg {
   font-size: 0.78rem;
 }
 
+.gc-data-control__summary a {
+  display: inline-flex;
+  min-height: var(--gc-target-minimum);
+  align-items: center;
+  color: var(--gc-color-text-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
 .gc-data-control__purposes,
 .gc-data-control__audit {
   padding-block: clamp(4.5rem, 9vw, 7rem);
@@ -4169,4 +4543,30 @@ body {
   border: 1px solid var(--gc-studio-border);
   color: #18181b;
   background: #fff;
+}
+
+/* Print rules stay last so they win same-specificity screen rules declared above. */
+@media print {
+  .gc-shell,
+  .gc-health-home__appbar,
+  .gc-prepare__actions,
+  .gc-prepare__empty a,
+  .gc-integrated-actions {
+    display: none;
+  }
+
+  .gc-shell + main {
+    min-height: 0;
+  }
+
+  .gc-prepare {
+    max-width: none;
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .gc-prepare__list article {
+    break-inside: avoid;
+  }
 }

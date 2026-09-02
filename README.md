@@ -38,7 +38,10 @@ The genetic wallet remains a differentiated post-MVP module and may proceed only
 - [`governance/founder-brand-positioning-decision-proposal-2026-08-10.md`](governance/founder-brand-positioning-decision-proposal-2026-08-10.md) — unapproved category, longitudinal-model, experience-loop, and `앎 (ALM)` decision proposal derived from the later founder brief.
 - [`governance/founder-final-direction-recommendation-2026-08-10.md`](governance/founder-final-direction-recommendation-2026-08-10.md) — founder-approved synthesis of the conversation, current competitor/category evidence, and the `앎`/Health History direction; public-brand clearance remains pending.
 - [`governance/founder-execution-authorization-2026-08-10.md`](governance/founder-execution-authorization-2026-08-10.md) — founder approval of the `앎`/Health History direction and the bounded local execution mode.
-- [`docs/superpowers/plans/README.md`](docs/superpowers/plans/README.md) — sequenced implementation roadmap and executable workstream plans.
+- [`docs/roadmap/2026-09-02-roadmap.md`](docs/roadmap/2026-09-02-roadmap.md) — reviewed roadmap and current sequencing authority (four parallel tracks).
+- [`docs/reviews/2026-09-02-project-review.md`](docs/reviews/2026-09-02-project-review.md) — independent review, ranked findings, and the GHCR root cause.
+- [`AGENTS.md`](AGENTS.md) — short operating contract for agents; skills in `.claude/skills/`, roles in `.claude/agents/`.
+- [`docs/superpowers/plans/README.md`](docs/superpowers/plans/README.md) — 2026-08-09 workstream plans, kept as design references; execution status lives in the roadmap.
 
 ## Workspace rules
 

@@ -5,6 +5,13 @@ import { formatKoreanDate, formatKoreanDateTime } from "@/lib/format/korean-date
 
 const userFacingFiles = [
   "components/concept/HealthHomeConcept.tsx",
+  "components/integrated/CandidateReview.tsx",
+  "components/integrated/IntegratedDataControl.tsx",
+  "components/integrated/IntegratedHealthExperience.tsx",
+  "components/integrated/IntegratedRecords.tsx",
+  "components/integrated/IntegratedShell.tsx",
+  "components/integrated/PrepareConceptNotice.tsx",
+  "components/integrated/VisitPreparation.tsx",
   "components/concept/RecordImportConcept.tsx",
   "components/connections/ConnectionExperience.tsx",
   "components/experience/HealthExperience.tsx",
@@ -69,6 +76,12 @@ describe("Korean UX language boundary", () => {
     );
     expect(source("components/records/HealthTimeline.tsx")).toContain(
       "실제 파일이나 기관 API에서 가져온 기록이 아니에요",
+    );
+    expect(source("components/integrated/VisitPreparation.tsx")).toContain(
+      "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.",
+    );
+    expect(source("components/integrated/VisitPreparation.tsx")).toContain(
+      "이 값은 서버가 미리 정한 예시 값이에요. 실제 파일이나 기관에서 가져오지 않았어요.",
     );
   });
 
