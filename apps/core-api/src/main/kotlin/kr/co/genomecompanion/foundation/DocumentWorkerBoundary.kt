@@ -310,14 +310,13 @@ class DocumentWorkerBoundaryService(
         repository.markExtractionCompleted(
             workerJob = job,
             extractionJobId = UUID.randomUUID(),
-            candidateId = UUID.randomUUID(),
             previewId = UUID.randomUUID(),
             previewObjectKey = preview.descriptor.objectKey,
             previewSha256 = preview.descriptor.sha256,
             workerImageDigest = request.workerImageDigest,
             generatorVersion = request.generatorVersion,
             now = now,
-            sourceTextSha256 = FoundationHashing.sha256("총콜레스테롤|188|mg/dL|2026-07-28"),
+            candidates = SyntheticCandidateFixture.candidatesFor(job.sourceSha256),
         )
         audit(job, "SYNTHETIC_CANDIDATE_CREATED", "SUCCESS", now)
         return WorkerResultReceipt(jobId, "COMPLETED")

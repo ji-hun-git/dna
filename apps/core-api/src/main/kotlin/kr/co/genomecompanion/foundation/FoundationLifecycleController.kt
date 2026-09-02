@@ -236,6 +236,15 @@ class FoundationLifecycleController(
             .cacheControlNoStore()
             .body(service.getCandidateForDocument(request.foundationPrincipal(), documentId))
 
+    @GetMapping("/documents/{documentId}/candidates")
+    fun listCandidatesForDocument(
+        request: HttpServletRequest,
+        @PathVariable documentId: UUID,
+    ): ResponseEntity<List<CandidateReceipt>> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(service.listCandidatesForDocument(request.foundationPrincipal(), documentId))
+
     @GetMapping("/documents/{documentId}/preview", produces = [MediaType.IMAGE_PNG_VALUE])
     fun getDocumentPreview(
         request: HttpServletRequest,

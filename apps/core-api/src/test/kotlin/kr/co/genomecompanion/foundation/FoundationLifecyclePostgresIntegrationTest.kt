@@ -153,7 +153,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             assertThat(results.count { it.getOrNull()?.status == "COMPLETED" }).isEqualTo(1)
             assertThat(results.count { it.exceptionOrNull() is FoundationForbiddenException }).isEqualTo(1)
             assertThat(count("gc_extraction_job")).isEqualTo(1)
-            assertThat(count("gc_candidate")).isEqualTo(1)
+            assertThat(count("gc_candidate")).isEqualTo(3)
             assertThat(count("gc_preview_artifact")).isEqualTo(1)
             assertThat(
                 jdbc.queryForObject(
@@ -545,6 +545,143 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.code").value("session_invalid"))
     }
 
+    @Test
+    fun completesTheDocumentOnlyAfterEveryOrderedCandidateIsReviewed() {
+        val alice = login("synthetic-alice")
+        val bob = login("synthetic-bob")
+        val aliceConsentId = grantConsent(alice)
+        grantConsent(bob)
+
+        val documentId = requestDocument(alice, aliceConsentId, fixturePdf, "multi-candidate-review")
+
+        read(get("/api/foundation/documents/$documentId/candidates"), alice)
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("candidate_not_ready"))
+
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice)
+            .andExpect(status().isAccepted)
+        runWorkerPipeline(documentId)
+
+        assertThat(count("gc_candidate")).isEqualTo(3)
+
+        val listed = responseJson(
+            read(get("/api/foundation/documents/$documentId/candidates"), alice)
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].ordinal").value(1))
+                .andExpect(jsonPath("$[0].label").value("총콜레스테롤"))
+                .andExpect(jsonPath("$[0].value").value("188"))
+                .andExpect(jsonPath("$[1].ordinal").value(2))
+                .andExpect(jsonPath("$[1].label").value("당화혈색소"))
+                .andExpect(jsonPath("$[1].value").value("6.1"))
+                .andExpect(jsonPath("$[2].ordinal").value(3))
+                .andExpect(jsonPath("$[2].label").value("비타민 D"))
+                .andExpect(jsonPath("$[2].value").value("31"))
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        )
+        assertThat(listed.map { it["totalCandidates"].asInt() }).containsExactly(3, 3, 3)
+        assertThat(listed.map { it["status"].asText() }).containsExactly("PENDING", "PENDING", "PENDING")
+        val candidateIds = listed.map { UUID.fromString(it["candidateId"].asText()) }
+
+        read(get("/api/foundation/documents/$documentId/candidates"), bob)
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("document_not_found"))
+        read(get("/api/foundation/documents/$documentId/candidate"), bob)
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("document_not_found"))
+        read(get("/api/foundation/documents/${UUID.randomUUID()}/candidates"), alice)
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("document_not_found"))
+
+        val firstRecord = responseJson(
+            mutate(
+                post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
+                    .header("Idempotency-Key", "confirm-multi-ordinal-1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json(mapOf("value" to "188"))),
+                alice,
+            ).andExpect(status().isCreated)
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        )
+        assertThat(documentStatus(documentId)).isEqualTo("REVIEW_REQUIRED")
+
+        read(get("/api/foundation/documents/$documentId/candidate"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.ordinal").value(2))
+            .andExpect(jsonPath("$.status").value("PENDING"))
+            .andExpect(jsonPath("$.totalCandidates").value(3))
+
+        val replayedRecord = responseJson(
+            mutate(
+                post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
+                    .header("Idempotency-Key", "confirm-multi-ordinal-1-replay")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json(mapOf("value" to "188"))),
+                alice,
+            ).andExpect(status().isCreated)
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        )
+        assertThat(replayedRecord["recordId"].asText()).isEqualTo(firstRecord["recordId"].asText())
+        assertThat(count("gc_health_record")).isEqualTo(1)
+        assertThat(documentStatus(documentId)).isEqualTo("REVIEW_REQUIRED")
+
+        mutate(
+            post("/api/foundation/candidates/${candidateIds[1]}/exclusion")
+                .header("Idempotency-Key", "exclude-multi-ordinal-2"),
+            alice,
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("EXCLUDED"))
+            .andExpect(jsonPath("$.ordinal").value(2))
+        assertThat(documentStatus(documentId)).isEqualTo("REVIEW_REQUIRED")
+
+        read(get("/api/foundation/documents/$documentId/candidate"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.ordinal").value(3))
+            .andExpect(jsonPath("$.status").value("PENDING"))
+
+        mutate(
+            post("/api/foundation/candidates/${candidateIds[2]}/confirmation")
+                .header("Idempotency-Key", "confirm-multi-ordinal-3")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "31"))),
+            alice,
+        ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.value").value("31"))
+        assertThat(documentStatus(documentId)).isEqualTo("COMPLETED")
+
+        read(get("/api/foundation/records"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(2))
+
+        read(get("/api/foundation/documents/$documentId/candidate"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.ordinal").value(1))
+            .andExpect(jsonPath("$.status").value("CONFIRMED"))
+
+        read(get("/api/foundation/documents/$documentId/candidates"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(3))
+            .andExpect(jsonPath("$[0].status").value("CONFIRMED"))
+            .andExpect(jsonPath("$[1].status").value("EXCLUDED"))
+            .andExpect(jsonPath("$[2].status").value("CONFIRMED"))
+
+        mutate(post("/api/foundation/consents/$aliceConsentId/revocation"), alice)
+            .andExpect(status().isOk)
+        read(get("/api/foundation/documents/$documentId/candidates"), alice)
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("consent_revoked"))
+        read(get("/api/foundation/documents/$documentId/candidate"), alice)
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("consent_revoked"))
+    }
+
     private fun createCandidate(
         client: TestClient,
         consentId: UUID,
@@ -719,6 +856,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     private fun responseJson(bytes: ByteArray): JsonNode = objectMapper.readTree(bytes)
 
     private fun json(value: Any): String = objectMapper.writeValueAsString(value)
+
+    private fun documentStatus(documentId: UUID): String? =
+        jdbc.queryForObject(
+            "SELECT status FROM gc_document WHERE document_id = ?",
+            String::class.java,
+            documentId,
+        )
 
     private fun count(table: String): Long =
         jdbc.queryForObject("SELECT COUNT(*) FROM $table", Long::class.java) ?: 0L

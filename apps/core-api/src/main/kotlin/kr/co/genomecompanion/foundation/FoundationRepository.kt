@@ -78,6 +78,8 @@ data class FoundationCandidateRow(
     val documentId: UUID,
     val subjectId: String,
     val status: String,
+    val ordinal: Int,
+    val totalCandidates: Int,
     val label: String,
     val candidateValue: String,
     val unit: String,
@@ -157,6 +159,8 @@ class FoundationRepository(
             documentId = result.getObject("document_id", UUID::class.java),
             subjectId = result.getString("subject_id"),
             status = result.getString("status"),
+            ordinal = result.getInt("ordinal"),
+            totalCandidates = result.getInt("total_candidates"),
             label = result.getString("label"),
             candidateValue = result.getString("candidate_value"),
             unit = result.getString("unit"),
@@ -189,6 +193,17 @@ class FoundationRepository(
             documentSha256 = result.getString("document_sha256"),
         )
     }
+
+    private val candidateProjection =
+        """
+        SELECT c.candidate_id, c.document_id, c.subject_id, c.status, c.ordinal,
+               (SELECT COUNT(*) FROM gc_candidate t WHERE t.document_id = c.document_id) AS total_candidates,
+               c.label, c.candidate_value, c.unit,
+               c.observed_on, c.evidence_page, c.source_text_sha256,
+               d.sha256 AS document_sha256, c.created_at AS candidate_created_at
+        FROM gc_candidate c
+        JOIN gc_document d ON d.document_id = c.document_id AND d.subject_id = c.subject_id
+        """.trimIndent()
 
     private val recordProjection =
         """
@@ -834,14 +849,13 @@ class FoundationRepository(
     fun markExtractionCompleted(
         workerJob: DocumentJobRow,
         extractionJobId: UUID,
-        candidateId: UUID,
         previewId: UUID,
         previewObjectKey: String,
         previewSha256: String,
         workerImageDigest: String,
         generatorVersion: String,
         now: Instant,
-        sourceTextSha256: String,
+        candidates: List<SyntheticCandidate>,
     ) {
         jdbc.update(
             """
@@ -861,20 +875,28 @@ class FoundationRepository(
             generatorVersion,
             workerJob.attempt,
         )
-        jdbc.update(
-            """
-            INSERT INTO gc_candidate(
-                candidate_id, job_id, document_id, subject_id, status, label, candidate_value,
-                unit, observed_on, evidence_page, source_text_sha256, created_at
-            ) VALUES (?, ?, ?, ?, 'PENDING', '총콜레스테롤', '188', 'mg/dL', DATE '2026-07-28', 1, ?, ?)
-            """.trimIndent(),
-            candidateId,
-            extractionJobId,
-            workerJob.documentId,
-            workerJob.subjectId,
-            sourceTextSha256,
-            now.atOffset(ZoneOffset.UTC),
-        )
+        candidates.forEach { candidate ->
+            jdbc.update(
+                """
+                INSERT INTO gc_candidate(
+                    candidate_id, job_id, document_id, subject_id, status, ordinal, label, candidate_value,
+                    unit, observed_on, evidence_page, source_text_sha256, created_at
+                ) VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?)
+                """.trimIndent(),
+                UUID.randomUUID(),
+                extractionJobId,
+                workerJob.documentId,
+                workerJob.subjectId,
+                candidate.ordinal,
+                candidate.label,
+                candidate.value,
+                candidate.unit,
+                candidate.observedOn,
+                candidate.evidencePage,
+                candidate.sourceTextSha256,
+                now.atOffset(ZoneOffset.UTC),
+            )
+        }
         jdbc.update(
             """
             INSERT INTO gc_preview_artifact(
@@ -966,26 +988,32 @@ class FoundationRepository(
     fun findCandidateForDocument(subjectId: String, documentId: UUID): FoundationCandidateRow? =
         jdbc.query(
             """
-            SELECT c.candidate_id, c.document_id, c.subject_id, c.status, c.label, c.candidate_value, c.unit,
-                   c.observed_on, c.evidence_page, c.source_text_sha256,
-                   d.sha256 AS document_sha256, c.created_at AS candidate_created_at
-            FROM gc_candidate c
-            JOIN gc_document d ON d.document_id = c.document_id AND d.subject_id = c.subject_id
+            $candidateProjection
             WHERE c.subject_id = ? AND c.document_id = ?
+            ORDER BY CASE WHEN c.status = 'PENDING' THEN 0 ELSE 1 END, c.ordinal
+            LIMIT 1
             """.trimIndent(),
             candidateMapper,
             subjectId,
             documentId,
         ).firstOrNull()
 
+    fun listCandidatesForDocument(subjectId: String, documentId: UUID): List<FoundationCandidateRow> =
+        jdbc.query(
+            """
+            $candidateProjection
+            WHERE c.subject_id = ? AND c.document_id = ?
+            ORDER BY c.ordinal
+            """.trimIndent(),
+            candidateMapper,
+            subjectId,
+            documentId,
+        )
+
     fun findCandidate(subjectId: String, candidateId: UUID): FoundationCandidateRow? =
         jdbc.query(
             """
-            SELECT c.candidate_id, c.document_id, c.subject_id, c.status, c.label, c.candidate_value, c.unit,
-                   c.observed_on, c.evidence_page, c.source_text_sha256,
-                   d.sha256 AS document_sha256, c.created_at AS candidate_created_at
-            FROM gc_candidate c
-            JOIN gc_document d ON d.document_id = c.document_id AND d.subject_id = c.subject_id
+            $candidateProjection
             WHERE c.subject_id = ? AND c.candidate_id = ?
             """.trimIndent(),
             candidateMapper,
@@ -1034,6 +1062,10 @@ class FoundationRepository(
                 FROM gc_candidate c
                 WHERE c.candidate_id = ? AND c.document_id = d.document_id
                   AND d.subject_id = ? AND d.status = 'REVIEW_REQUIRED'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM gc_candidate p
+                      WHERE p.document_id = d.document_id AND p.status = 'PENDING'
+                  )
                 """.trimIndent(),
                 now.atOffset(ZoneOffset.UTC),
                 now.atOffset(ZoneOffset.UTC),
@@ -1094,9 +1126,13 @@ class FoundationRepository(
         )
         jdbc.update(
             """
-            UPDATE gc_document
+            UPDATE gc_document d
             SET status = 'COMPLETED', completed_at = ?, state_version = state_version + 1, updated_at = ?
-            WHERE document_id = ? AND subject_id = ? AND status = 'REVIEW_REQUIRED'
+            WHERE d.document_id = ? AND d.subject_id = ? AND d.status = 'REVIEW_REQUIRED'
+              AND NOT EXISTS (
+                  SELECT 1 FROM gc_candidate c
+                  WHERE c.document_id = d.document_id AND c.status = 'PENDING'
+              )
             """.trimIndent(),
             now.atOffset(ZoneOffset.UTC),
             now.atOffset(ZoneOffset.UTC),
