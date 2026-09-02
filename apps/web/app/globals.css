@@ -209,6 +209,14 @@ html {
 
 /* Multi-candidate review progress, grouped records, and the visit-preparation sheet. */
 .gc-review-progress {
+  display: inline-flex;
+  min-height: 1.5rem;
+  align-items: center;
+  padding: 0 0.5rem;
+  border: 1px solid var(--gc-color-line-subtle);
+  border-radius: var(--gc-radius-pill);
+  background: var(--gc-color-surface-raised);
+  color: var(--gc-color-text-primary);
   font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -218,6 +226,7 @@ html {
   margin: 20px 0 0;
   font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
   font-size: 18px;
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
 
@@ -249,9 +258,15 @@ html {
   margin-top: 26px;
 }
 
+.gc-records-group + .gc-records-group {
+  margin-top: 34px;
+}
+
 .gc-records-group h3 {
-  margin: 0 0 12px;
-  color: #4a4a45;
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--gc-color-line-subtle);
+  color: var(--gc-color-text-secondary);
   font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
   font-size: 13px;
   font-weight: 700;
@@ -359,7 +374,7 @@ html {
 }
 
 .gc-prepare__value span {
-  color: #707987;
+  color: var(--gc-color-text-secondary);
   font-size: 13px;
 }
 
@@ -376,7 +391,7 @@ html {
 }
 
 .gc-prepare dt {
-  color: #74746f;
+  color: var(--gc-color-text-secondary);
   font-size: 13px;
 }
 
@@ -428,10 +443,137 @@ html {
   }
 }
 
-@media print {
-  .gc-health-home__appbar,
-  .gc-prepare__actions {
+/* Shared integrated app bar: one brand, one menu, one optional server-state pill. */
+.gc-shell {
+  border-bottom: 1px solid var(--gc-color-line-subtle);
+  background: var(--gc-color-surface-canvas);
+}
+
+.gc-shell__bar {
+  display: grid;
+  box-sizing: border-box;
+  width: min(100% - 3rem, 70rem);
+  min-height: 4.75rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--gc-space-4);
+  margin-inline: auto;
+}
+
+.gc-shell__brand {
+  display: inline-flex;
+  min-height: var(--gc-target-minimum);
+  align-items: center;
+  justify-self: start;
+  gap: var(--gc-space-3);
+  font-size: 1.0625em;
+  font-weight: 750;
+}
+
+.gc-shell__brand > span {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: var(--gc-radius-sm);
+  color: var(--gc-color-text-inverse);
+  background: var(--gc-color-brand-primary);
+  font-size: 0.95rem;
+  font-weight: 760;
+  letter-spacing: -0.06em;
+}
+
+.gc-shell__nav {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: var(--gc-space-1);
+  padding: 0.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--gc-color-line-subtle);
+  border-radius: 14px;
+  background: var(--gc-color-surface-raised);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+  scrollbar-width: none;
+}
+
+.gc-shell__nav a {
+  display: inline-flex;
+  box-sizing: border-box;
+  min-width: 3.5rem;
+  min-height: var(--gc-target-minimum);
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  border-radius: var(--gc-radius-sm);
+  color: var(--gc-color-text-secondary);
+  font-size: 0.875em;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.gc-shell__nav a[aria-current="page"] {
+  color: var(--gc-color-text-primary);
+  background: var(--gc-color-surface-soft);
+}
+
+.gc-shell__status {
+  min-width: 0;
+  justify-self: end;
+  overflow-wrap: anywhere;
+  color: var(--gc-color-text-secondary);
+  font-family: var(--gc-type-mono);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-align: right;
+}
+
+.gc-shell a:focus-visible {
+  outline: 3px solid var(--gc-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The bar owns the top of the page, so the screen below it stops claiming a
+   full viewport of its own and no longer forces a phantom scrollbar. */
+.gc-shell + main {
+  min-height: calc(100dvh - 4.75rem);
+}
+
+@media (max-width: 42rem) {
+  .gc-shell__bar {
+    width: min(100% - 2rem, 70rem);
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    gap: var(--gc-space-3);
+  }
+
+  .gc-shell__brand strong,
+  .gc-shell__status {
     display: none;
+  }
+
+  .gc-shell__nav {
+    justify-self: end;
+  }
+
+  .gc-shell__nav a {
+    min-width: 0;
+    padding: 0 0.6rem;
+    font-size: 0.8125em;
+  }
+}
+
+@media print {
+  .gc-shell,
+  .gc-health-home__appbar,
+  .gc-prepare__actions,
+  .gc-prepare__empty a,
+  .gc-integrated-actions {
+    display: none;
+  }
+
+  .gc-shell + main {
+    min-height: 0;
   }
 
   .gc-prepare {
@@ -1555,6 +1697,20 @@ svg {
   height: 2.25rem;
   place-items: center;
   border-radius: 0.75rem;
+  color: var(--gc-color-text-inverse);
+  background: var(--gc-color-brand-primary);
+  font-size: 0.875em;
+  font-weight: 760;
+  letter-spacing: -0.06em;
+}
+
+.gc-import__appbar > span {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  justify-self: center;
+  border-radius: var(--gc-radius-sm);
   color: var(--gc-color-text-inverse);
   background: var(--gc-color-brand-primary);
   font-size: 0.875em;
@@ -3386,6 +3542,17 @@ svg {
   margin-top: 0.7rem;
   color: #626d7d;
   font-size: 0.78rem;
+}
+
+.gc-data-control__summary a {
+  display: inline-flex;
+  min-height: var(--gc-target-minimum);
+  align-items: center;
+  color: var(--gc-color-text-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
 }
 
 .gc-data-control__purposes,

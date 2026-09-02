@@ -9,6 +9,7 @@ const userFacingFiles = [
   "components/integrated/IntegratedDataControl.tsx",
   "components/integrated/IntegratedHealthExperience.tsx",
   "components/integrated/IntegratedRecords.tsx",
+  "components/integrated/IntegratedShell.tsx",
   "components/integrated/VisitPreparation.tsx",
   "components/concept/RecordImportConcept.tsx",
   "components/connections/ConnectionExperience.tsx",

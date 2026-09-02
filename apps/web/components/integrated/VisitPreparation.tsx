@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createFoundationClient, type FoundationRecord } from "@/lib/foundation/client";
+import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { describeFoundationError } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
 
@@ -100,11 +101,13 @@ export function IntegratedVisitPreparation() {
   }, [client]);
 
   return (
-    <VisitPreparation
-      records={records}
-      loading={loading}
-      errorMessage={errorMessage}
-      onPrint={() => window.print()}
-    />
+    <IntegratedShell current="prepare" status="확인한 기록으로 만든 질문">
+      <VisitPreparation
+        records={records}
+        loading={loading}
+        errorMessage={errorMessage}
+        onPrint={() => window.print()}
+      />
+    </IntegratedShell>
   );
 }

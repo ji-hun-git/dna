@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CandidateReview } from "@/components/integrated/CandidateReview";
+import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { EvidenceLens } from "@/components/records/EvidenceLens";
 import {
   createFoundationClient,
@@ -504,38 +505,38 @@ export function IntegratedHealthExperience() {
 
   const latest = records.at(-1);
   return (
-    <main className="gc-health-home">
-      <div className="gc-health-home__shell">
-        <header className="gc-health-home__appbar">
-          <a className="gc-health-home__brand" href="#home" aria-label="앎 건강 홈"><span aria-hidden="true">앎</span><strong>앎</strong></a>
-          <nav aria-label="주요 메뉴"><a href="#home" aria-current="page">홈</a><a href="/records">기록</a><a href="/data-control">데이터 관리</a></nav>
-          <span className="gc-integrated-session">합성 세션 · {session?.subjectId}</span>
-        </header>
-        <section className="gc-health-home__hero" id="home" aria-labelledby="integrated-home-title">
-          <div>
-            <p className="gc-health-home__greeting">서버와 연결된 합성 건강 기록</p>
-            <h1 id="integrated-home-title">값보다 먼저<br />출처를 확인하세요</h1>
-            <p className="gc-health-home__hero-copy">화면의 기록은 Spring과 PostgreSQL이 소유하며, 새로고침해도 같은 합성 상태를 불러옵니다.</p>
-            <div className="gc-health-home__hero-actions"><button className="gc-button gc-button--primary" type="button" onClick={beginImport}>결과지 추가</button><a className="gc-button gc-button--weak" href="/records">전체 기록 보기</a></div>
-          </div>
-          <aside className="gc-health-home__connection" aria-label="통합 합성 제품 상태">
-            <p><strong>합성 데이터 전용 연결</strong></p>
-            <span>실제 개인정보 0건 · 외부 기관 연결 0곳 · 저장된 합성 기록 {records.length}개</span>
-            <a href="/data-control">동의와 삭제 상태 보기</a>
-          </aside>
-        </section>
-        <section className="gc-health-home__overview" aria-labelledby="integrated-records-title">
-          <div className="gc-health-home__section-heading"><div><p>PostgreSQL에서 불러온 기록</p><h2 id="integrated-records-title">{latest ? "가장 최근에 확인한 값" : "아직 저장된 기록이 없어요"}</h2></div><span>{records.length}개</span></div>
-          {latest ? (
-            <article className="gc-health-home__metric-card">
-              <div className="gc-health-home__metric-copy"><div className="gc-health-home__metric-topline"><span>{latest.label}</span><strong>{latest.status}</strong></div><p className="gc-health-home__metric-value"><strong>{latest.value}</strong><span>{latest.unit}</span></p><p className="gc-health-home__metric-source">허용된 합성 PDF · {formatKoreanDate(latest.observedOn)}</p></div>
-              <button className="gc-button gc-button--weak" type="button" onClick={() => { setSelectedRecord(latest); setView("evidence"); }}>이 값의 근거 보기</button>
-            </article>
-          ) : <p className="gc-integrated-empty">허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다.</p>}
-        </section>
-        <section className="gc-health-home__privacy" aria-labelledby="integrated-boundary-title"><div><p>현재 허용 범위</p><h2 id="integrated-boundary-title">합성 데이터만 처리해요</h2><ul><li>실제 카카오·네이버·MyHealthWay 비활성화</li><li>OCR·의료 AI 비활성화</li><li>문서는 승인 전까지 적대적 입력으로 격리</li></ul></div><a className="gc-button gc-button--weak" href="/data-control">데이터 관리</a></section>
-        {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
-      </div>
-    </main>
+    <IntegratedShell
+      current="home"
+      status={session ? `합성 세션 · ${session.subjectId}` : undefined}
+    >
+      <main className="gc-health-home">
+        <div className="gc-health-home__shell">
+          <section className="gc-health-home__hero" id="home" aria-labelledby="integrated-home-title">
+            <div>
+              <p className="gc-health-home__greeting">서버와 연결된 합성 건강 기록</p>
+              <h1 id="integrated-home-title">값보다 먼저<br />출처를 확인하세요</h1>
+              <p className="gc-health-home__hero-copy">화면의 기록은 Spring과 PostgreSQL이 소유하며, 새로고침해도 같은 합성 상태를 불러옵니다.</p>
+              <div className="gc-health-home__hero-actions"><button className="gc-button gc-button--primary" type="button" onClick={beginImport}>결과지 추가</button><a className="gc-button gc-button--weak" href="/records">전체 기록 보기</a></div>
+            </div>
+            <aside className="gc-health-home__connection" aria-label="통합 합성 제품 상태">
+              <p><strong>합성 데이터 전용 연결</strong></p>
+              <span>실제 개인정보 0건 · 외부 기관 연결 0곳 · 저장된 합성 기록 {records.length}개</span>
+              <a href="/data-control">동의와 삭제 상태 보기</a>
+            </aside>
+          </section>
+          <section className="gc-health-home__overview" aria-labelledby="integrated-records-title">
+            <div className="gc-health-home__section-heading"><div><p>PostgreSQL에서 불러온 기록</p><h2 id="integrated-records-title">{latest ? "가장 최근에 확인한 값" : "아직 저장된 기록이 없어요"}</h2></div><span>{records.length}개</span></div>
+            {latest ? (
+              <article className="gc-health-home__metric-card">
+                <div className="gc-health-home__metric-copy"><div className="gc-health-home__metric-topline"><span>{latest.label}</span><strong>{latest.status}</strong></div><p className="gc-health-home__metric-value"><strong>{latest.value}</strong><span>{latest.unit}</span></p><p className="gc-health-home__metric-source">허용된 합성 PDF · {formatKoreanDate(latest.observedOn)}</p></div>
+                <button className="gc-button gc-button--weak" type="button" onClick={() => { setSelectedRecord(latest); setView("evidence"); }}>이 값의 근거 보기</button>
+              </article>
+            ) : <p className="gc-integrated-empty">허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다.</p>}
+          </section>
+          <section className="gc-health-home__privacy" aria-labelledby="integrated-boundary-title"><div><p>현재 허용 범위</p><h2 id="integrated-boundary-title">합성 데이터만 처리해요</h2><ul><li>실제 카카오·네이버·MyHealthWay 비활성화</li><li>OCR·의료 AI 비활성화</li><li>문서는 승인 전까지 적대적 입력으로 격리</li></ul></div><a className="gc-button gc-button--weak" href="/data-control">데이터 관리</a></section>
+          {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
+        </div>
+      </main>
+    </IntegratedShell>
   );
 }
