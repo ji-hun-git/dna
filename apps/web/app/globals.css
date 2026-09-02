@@ -159,11 +159,6 @@ html {
 }
 
 .gc-integrated-facts code,
-.gc-integrated-session {
-  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
-  font-size: 12px;
-}
-
 .gc-integrated-error {
   margin: 18px 0 0;
   padding: 13px 15px;
@@ -172,10 +167,6 @@ html {
   background: #fff3f3;
   color: #9b2424;
   line-height: 1.55;
-}
-
-.gc-integrated-session {
-  color: #666;
 }
 
 .gc-integrated-empty {
@@ -197,10 +188,6 @@ html {
 }
 
 @media (max-width: 720px) {
-  .gc-integrated-session {
-    display: none;
-  }
-
   .gc-integrated-facts div {
     grid-template-columns: 1fr;
     gap: 4px;

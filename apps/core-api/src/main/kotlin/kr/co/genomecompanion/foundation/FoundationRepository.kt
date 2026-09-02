@@ -1064,7 +1064,8 @@ class FoundationRepository(
                   AND d.subject_id = ? AND d.status = 'REVIEW_REQUIRED'
                   AND NOT EXISTS (
                       SELECT 1 FROM gc_candidate p
-                      WHERE p.document_id = d.document_id AND p.status = 'PENDING'
+                      WHERE p.document_id = d.document_id AND p.subject_id = d.subject_id
+                        AND p.status = 'PENDING'
                   )
                 """.trimIndent(),
                 now.atOffset(ZoneOffset.UTC),
@@ -1131,7 +1132,8 @@ class FoundationRepository(
             WHERE d.document_id = ? AND d.subject_id = ? AND d.status = 'REVIEW_REQUIRED'
               AND NOT EXISTS (
                   SELECT 1 FROM gc_candidate c
-                  WHERE c.document_id = d.document_id AND c.status = 'PENDING'
+                  WHERE c.document_id = d.document_id AND c.subject_id = d.subject_id
+                    AND c.status = 'PENDING'
               )
             """.trimIndent(),
             now.atOffset(ZoneOffset.UTC),

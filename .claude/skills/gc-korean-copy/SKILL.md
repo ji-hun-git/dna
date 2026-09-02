@@ -25,7 +25,7 @@ Internal or English jargon: `fixture`, `PHI`, `SYNTHETIC`, `LIVE API`, `Object L
 | Situation | Pattern |
 |---|---|
 | Example or demo data | "예시" in the label; state that it did not come from a real file or institution. |
-| Candidate review | "이 값이 원문과 같나요?" plus the source page and digest; actions "원문과 같아요 / 값 수정 / 이 항목 빼기". |
+| Candidate review | Server candidates use the accepted heading "이 합성 후보가 맞나요?" plus the source page and digest; actions "원문과 같아요 / 값 수정 / 이 항목 빼기". |
 | Server states | Show the server's status word and a plain Korean sentence; never invent progress the server has not reported. |
 | Errors | What happened, what the user can do next, and a way back. No stack traces, codes only in `<code>` if needed. |
 | Questions for a professional | Neutral, source-linked, fixed wording; no thresholds, no "…이면 위험". |

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FoundationCandidate } from "@/lib/foundation/client";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import { shortDigest } from "@/lib/format/short-digest";
 
 type CandidateReviewProps = {
   candidate: FoundationCandidate;
@@ -14,10 +15,6 @@ type CandidateReviewProps = {
   onBack: () => void;
   onClose: () => void;
 };
-
-function shortDigest(value: string) {
-  return `${value.slice(0, 12)}…${value.slice(-8)}`;
-}
 
 export function CandidateReview({
   candidate,

@@ -6,6 +6,7 @@ import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { EvidenceLens } from "@/components/records/EvidenceLens";
 import {
   createFoundationClient,
+  FoundationClientError,
   sha256Blob,
   type FoundationCandidate,
   type FoundationConsent,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/foundation/client";
 import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import { shortDigest } from "@/lib/format/short-digest";
 
 type ShellState =
   | "INITIALIZING_SESSION"
@@ -66,10 +68,6 @@ const pollableStates = new Set<FoundationDocument["status"]>([
 
 function newIdempotencyKey(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
-}
-
-function shortDigest(value: string) {
-  return `${value.slice(0, 12)}…${value.slice(-8)}`;
 }
 
 export function IntegratedHealthExperience() {
@@ -271,12 +269,26 @@ export function IntegratedHealthExperience() {
   // pending, so the review screen stays until this list runs out of decisions.
   const activeCandidate = candidates.find((item) => item.status === "PENDING");
 
+  // Both setters run from the same event handler: the next list is computed from the current
+  // `candidates` value so the view change never happens inside a state updater.
   const applyDecision = (decided: FoundationCandidate) => {
-    setCandidates((current) => {
-      const remaining = current.map((item) => item.candidateId === decided.candidateId ? decided : item);
-      if (!remaining.some((item) => item.status === "PENDING")) setView("complete");
-      return remaining;
-    });
+    const remaining = candidates.map((item) => item.candidateId === decided.candidateId ? decided : item);
+    setCandidates(remaining);
+    if (!remaining.some((item) => item.status === "PENDING")) setView("complete");
+  };
+
+  // The server rejects a decision on a candidate it no longer holds as PENDING. Re-read its list
+  // so the review loop resumes from the server's truth instead of this browser's stale copy.
+  const resyncAfterConflict = async (error: unknown) => {
+    const stale = error instanceof FoundationClientError && error.problemCode === "candidate_not_pending";
+    if (!stale || !documentReceipt) return;
+    try {
+      const refreshed = await client.getCandidatesForDocument(documentReceipt.documentId);
+      setCandidates(refreshed);
+      if (!refreshed.some((item) => item.status === "PENDING")) setView("complete");
+    } catch {
+      // Keep the original message; the person can retry from the same screen.
+    }
   };
 
   const confirmCandidate = async (value: string) => {
@@ -289,6 +301,7 @@ export function IntegratedHealthExperience() {
       setRecords((current) => [...current.filter((item) => item.recordId !== record.recordId), record]);
       applyDecision({ ...activeCandidate, status: "CONFIRMED" });
     } catch (error) {
+      await resyncAfterConflict(error);
       setErrorMessage(describeFoundationError(error));
     } finally {
       setBusy(false);
@@ -302,6 +315,7 @@ export function IntegratedHealthExperience() {
     try {
       applyDecision(await client.excludeCandidate(activeCandidate.candidateId, newIdempotencyKey("exclude")));
     } catch (error) {
+      await resyncAfterConflict(error);
       setErrorMessage(describeFoundationError(error));
     } finally {
       setBusy(false);

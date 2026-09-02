@@ -13,7 +13,7 @@ class SyntheticCandidateFixtureTest {
 
         assertThat(set.map { it.ordinal }).containsExactly(1, 2, 3)
         assertThat(set.map { it.label }).containsExactly("총콜레스테롤", "당화혈색소", "비타민 D")
-        assertThat(set.map { it.value }).containsExactly("188", "6.1", "31")
+        assertThat(set.map { it.value }).containsExactly("188", "5.2", "42")
         assertThat(set.map { it.unit }).containsExactly("mg/dL", "%", "ng/mL")
         assertThat(set[0].sourceTextSha256)
             .isEqualTo(FoundationHashing.sha256("총콜레스테롤|188|mg/dL|2026-07-28"))
@@ -21,7 +21,7 @@ class SyntheticCandidateFixtureTest {
     }
 
     @Test
-    fun rejectsAnythingThatIsNotAnApprovedSourceDigest() {
+    fun rejectsAMalformedSourceDigest() {
         assertThatThrownBy { SyntheticCandidateFixture.candidatesFor("not-a-digest") }
             .isInstanceOf(IllegalArgumentException::class.java)
     }

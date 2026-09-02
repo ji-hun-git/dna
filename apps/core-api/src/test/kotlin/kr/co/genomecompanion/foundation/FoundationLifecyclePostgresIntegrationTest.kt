@@ -574,10 +574,10 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 .andExpect(jsonPath("$[0].value").value("188"))
                 .andExpect(jsonPath("$[1].ordinal").value(2))
                 .andExpect(jsonPath("$[1].label").value("당화혈색소"))
-                .andExpect(jsonPath("$[1].value").value("6.1"))
+                .andExpect(jsonPath("$[1].value").value("5.2"))
                 .andExpect(jsonPath("$[2].ordinal").value(3))
                 .andExpect(jsonPath("$[2].label").value("비타민 D"))
-                .andExpect(jsonPath("$[2].value").value("31"))
+                .andExpect(jsonPath("$[2].value").value("42"))
                 .andReturn()
                 .response
                 .contentAsByteArray,
@@ -650,10 +650,10 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             post("/api/foundation/candidates/${candidateIds[2]}/confirmation")
                 .header("Idempotency-Key", "confirm-multi-ordinal-3")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json(mapOf("value" to "31"))),
+                .content(json(mapOf("value" to "42"))),
             alice,
         ).andExpect(status().isCreated)
-            .andExpect(jsonPath("$.value").value("31"))
+            .andExpect(jsonPath("$.value").value("42"))
         assertThat(documentStatus(documentId)).isEqualTo("COMPLETED")
 
         read(get("/api/foundation/records"), alice)

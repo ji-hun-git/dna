@@ -25,7 +25,7 @@ This file is the short version. The authority is `PROJECT_GUIDE.md`; when they d
 4. Run the gates for your area (below) with the pinned toolchain: Node `24.20.0`, pnpm `11.20.0`, Java `21`.
 5. Update evidence documents without upgrading gates.
 6. Inspect the diff for secrets, real data, generated files, unrelated changes.
-7. Push, open a PR, require green `genome-companion-ci`.
+7. Push a `codex/*` branch, open a PR, require green `genome-companion-ci`. Never push to `main`.
 
 ## Gates by area
 

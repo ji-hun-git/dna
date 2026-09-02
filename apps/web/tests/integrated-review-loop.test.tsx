@@ -98,7 +98,7 @@ it("walks every candidate of one document before reporting the result", async ()
   await userEvent.click(screen.getByRole("button", { name: "값 수정" }));
   const correction = screen.getByLabelText("원문과 같은 값으로 수정");
   await userEvent.clear(correction);
-  await userEvent.type(correction, "6.5");
+  await userEvent.type(correction, "5.4");
   await userEvent.click(screen.getByRole("button", { name: "수정한 값 확인" }));
 
   await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("3 / 3"));
@@ -121,4 +121,26 @@ it("resumes at the first candidate the person has not decided yet", async () => 
   expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3");
   expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toBeVisible();
+});
+
+it("re-reads the server list when the server says the candidate is no longer pending", async () => {
+  server.use(
+    http.post("/api/foundation/candidates/:candidateId/confirmation", () => {
+      candidates = candidates.map((item) => item.ordinal === 1
+        ? { ...item, status: "CONFIRMED" }
+        : item);
+      return HttpResponse.json({ code: "candidate_not_pending" }, { status: 409 });
+    }, { once: true }),
+  );
+
+  render(<IntegratedHealthExperience />);
+
+  expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
+
+  await userEvent.click(screen.getByRole("button", { name: "원문과 같아요" }));
+
+  await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3"));
+  expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toBeVisible();
+  expect(screen.getByRole("alert")).toHaveTextContent("현재 처리 단계에서는 이 작업을 진행할 수 없어요.");
 });

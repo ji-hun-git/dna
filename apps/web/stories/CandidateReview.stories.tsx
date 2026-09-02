@@ -58,7 +58,7 @@ export const 마지막후보: Story = {
       ...firstCandidate,
       candidateId: "3f5b0f0a-2d31-4a5f-9d54-2f4bd5f1b003",
       label: "비타민 D",
-      value: "31",
+      value: "42",
       unit: "ng/mL",
       sourceTextSha256: "d".repeat(64),
       createdAt: "2026-07-28T09:00:02Z",

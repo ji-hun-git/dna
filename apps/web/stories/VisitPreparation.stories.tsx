@@ -29,8 +29,8 @@ const secondRecord: FoundationRecord = {
   candidateId: "3f5b0f0a-2d31-4a5f-9d54-2f4bd5f1b002",
   reviewDecision: "CONFIRMED",
   label: "당화혈색소",
-  value: "6.1",
-  originalValue: "6.1",
+  value: "5.2",
+  originalValue: "5.2",
   unit: "%",
   sourceTextSha256: "c".repeat(64),
 };

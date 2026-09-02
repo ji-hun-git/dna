@@ -5,14 +5,11 @@ import { createFoundationClient, type FoundationRecord } from "@/lib/foundation/
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { describeFoundationError } from "@/lib/foundation/messages";
 import { formatKoreanDate, formatKoreanDateTime } from "@/lib/format/korean-date";
+import { shortDigest } from "@/lib/format/short-digest";
 import styles from "@/components/records/HealthTimeline.module.css";
 
 function idempotencyKey() {
   return `correction-${crypto.randomUUID()}`;
-}
-
-function shortDigest(value: string) {
-  return `${value.slice(0, 12)}…${value.slice(-8)}`;
 }
 
 type RecordGroup = {

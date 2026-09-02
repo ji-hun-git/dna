@@ -21,10 +21,10 @@ This is an unusually disciplined engineering foundation attached to a product th
 | GHCR anonymous pull (`dna-web` tags list) | 401 without token, **200 with an anonymous token** → still public |
 | GHCR login method in `publish-runtime-images.yml` | `docker/login-action` with `password: ${{ github.token }}` |
 | Local JS gates (Node 24.20.0 via pinned binary, pnpm 11.20.0) | runtime-policy PASS; readiness validate: valid `NO_GO`, 12 blocking gates not PASS |
-| `pnpm web:test` / `pnpm research:test` | 85 / 14 passing |
+| `pnpm web:test` / `pnpm research:test` | 85 passing at review time (113 after this wave) / 14 passing |
 | `gradlew test` | BUILD SUCCESSFUL; the four PostgreSQL-backed classes skip locally (no Docker, no `GC_TEST_POSTGRES_URL`) |
 | Extraction behaviour | `DocumentWorkerBoundary.completeExtraction` inserts one fixed candidate row; document completes on first decision |
-| Test inventory | 89 Vitest cases, 70 JUnit cases, 8 Playwright scenarios, Python layout tests |
+| Test inventory | 89 Vitest cases at review time (113 after this wave), 70 JUnit cases (72 after), 8 Playwright scenarios, Python layout tests |
 | Documentation volume | ~21,000 lines of plans under `docs/superpowers/plans`; 412 tracked files total |
 
 ## 3. Strengths (keep these)
@@ -76,7 +76,7 @@ Action: the plan index now points to the roadmap that supersedes it; the six 202
 
 Evidence: Testcontainers requires Docker; the workstation has none; the four integration classes skip silently. Node 22 is the global version. Judgement: the "passing locally" signal is weaker than it looks.
 
-Action: add a `docs/operations/local-development.md` note on running with a pinned Node binary and a local PostgreSQL URL; consider a `compose.yaml` for PostgreSQL only. Not done in this wave.
+Action: add a `docs/operations/local-development.md` note on running with a pinned Node binary and a local PostgreSQL URL; consider a `compose.yaml` for PostgreSQL only. Done in this wave: `docs/operations/local-development.md`.
 
 ### F-7 (Medium, business): zero validation evidence
 
@@ -100,4 +100,4 @@ Action: delete merged/abandoned remote branches after founder confirmation; keep
 
 ## 6. Skill check results
 
-One smoke run per skill, recorded in the appendix of `docs/roadmap/2026-09-02-roadmap.md`. The copy skill changed behaviour (the baseline produced two forbidden judgement phrases; the skill arm produced none). The readiness skill did not need to change behaviour because the control already refused to flip a gate without evidence; it remains a reference skill.
+One smoke run covered three of the five skills (`gc-korean-copy`, `gc-safe-change`, `gc-readiness-evidence`), recorded in the appendix of `docs/roadmap/2026-09-02-roadmap.md`. `gc-sanity-check` and `gc-synthetic-fixture` are not yet exercised. The copy skill changed behaviour (the baseline produced two forbidden judgement phrases; the skill arm produced none). The readiness skill did not need to change behaviour because the control already refused to flip a gate without evidence; it remains a reference skill.

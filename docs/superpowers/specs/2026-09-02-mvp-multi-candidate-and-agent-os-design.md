@@ -42,8 +42,8 @@ The repository also has no agent-facing operating system beyond prose: no root `
 | ordinal | label | value | unit | observedOn | evidencePage |
 |---:|---|---|---|---|---:|
 | 1 | 총콜레스테롤 | 188 | mg/dL | 2026-07-28 | 1 |
-| 2 | 당화혈색소 | 6.1 | % | 2026-07-28 | 1 |
-| 3 | 비타민 D | 31 | ng/mL | 2026-07-28 | 1 |
+| 2 | 당화혈색소 | 5.2 | % | 2026-07-28 | 1 |
+| 3 | 비타민 D | 42 | ng/mL | 2026-07-28 | 1 |
 
 Ordinal 1 is unchanged from today so the existing browser and PostgreSQL evidence keeps its meaning. `sourceTextSha256` is `sha256("label|value|unit|observedOn")` per candidate, as today.
 

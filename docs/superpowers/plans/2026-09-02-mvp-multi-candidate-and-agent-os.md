@@ -18,7 +18,7 @@ Spec: `docs/superpowers/specs/2026-09-02-mvp-multi-candidate-and-agent-os-design
 - New Spring routes only under `/api/foundation/**`. `ProhibitedRouteTest` must stay green.
 - Toolchain is exact: Node `24.20.0`, pnpm `11.20.0`, Java `21`. Do not weaken `scripts/security/check-runtime-policy.mjs`.
 - Korean user-facing copy: direct, plain, respectful. Dates via `formatKoreanDate`. The forbidden-term list in `apps/web/tests/korean-ux-copy.test.ts` applies to every user-facing component (`fixture`, `PHI`, `SYNTHETIC`, real institution names, and the rest).
-- Candidate set (ordinal, label, value, unit, observedOn, evidencePage): (1, 총콜레스테롤, 188, mg/dL, 2026-07-28, 1), (2, 당화혈색소, 6.1, %, 2026-07-28, 1), (3, 비타민 D, 31, ng/mL, 2026-07-28, 1). `sourceTextSha256 = sha256("label|value|unit|observedOn")`.
+- Candidate set (ordinal, label, value, unit, observedOn, evidencePage): (1, 총콜레스테롤, 188, mg/dL, 2026-07-28, 1), (2, 당화혈색소, 5.2, %, 2026-07-28, 1), (3, 비타민 D, 42, ng/mL, 2026-07-28, 1). `sourceTextSha256 = sha256("label|value|unit|observedOn")`. Ordinals 2 and 3: values moved off clinical cutoffs after safety review.
 - Visit-preparation questions, verbatim: "이 값은 어떤 검사에서 나온 건가요?", "지난 결과와 비교해 설명해 주실 수 있나요?", "다시 확인이 필요하다면 언제가 좋을까요?". Note, verbatim: "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요."
 - `release/readiness.json` gate statuses do not change in this plan.
 - Implementers do not commit; the controller commits per task after review. Implementers run the gates named in their task and report exact output.
@@ -104,8 +104,8 @@ object SyntheticCandidateFixture {
     private val observed = LocalDate.of(2026, 7, 28)
     private val set = listOf(
         SyntheticCandidate(1, "총콜레스테롤", "188", "mg/dL", observed, 1),
-        SyntheticCandidate(2, "당화혈색소", "6.1", "%", observed, 1),
-        SyntheticCandidate(3, "비타민 D", "31", "ng/mL", observed, 1),
+        SyntheticCandidate(2, "당화혈색소", "5.2", "%", observed, 1),
+        SyntheticCandidate(3, "비타민 D", "42", "ng/mL", observed, 1),
     )
 
     fun candidatesFor(sourceSha256: String): List<SyntheticCandidate> {
@@ -199,7 +199,7 @@ Expected locally: BUILD SUCCESSFUL (PostgreSQL-backed classes skip without Docke
 
 - [ ] **Step 6: Copy guard and print CSS** — add the new components to `userFacingFiles`; add `@media print { .gc-health-home__appbar, .gc-prepare__actions { display: none } }` and basic layout for `.gc-prepare`, `.gc-review-progress`, `.gc-records-group`.
 
-- [ ] **Step 7: Playwright** — in `foundation-lifecycle.spec.ts` first test: after the review heading appears, expect `1 / 3`; correct to `190`; expect `2 / 3` and `6.1`; click `원문과 같아요`; expect `3 / 3` and `31`; click `이 항목 빼기`; expect heading `건강 기록에 저장했어요` is replaced by the completion heading (use `저장 2개 · 제외 1개`); navigate to `/records`, expect two `durable-record` items; navigate to `/prepare`, expect two articles and the note. Keep the revoke/delete flow unchanged.
+- [ ] **Step 7: Playwright** — in `foundation-lifecycle.spec.ts` first test: after the review heading appears, expect `1 / 3`; correct to `190`; expect `2 / 3` and `5.2`; click `원문과 같아요`; expect `3 / 3` and `42`; click `이 항목 빼기`; expect heading `건강 기록에 저장했어요` is replaced by the completion heading (use `저장 2개 · 제외 1개`); navigate to `/records`, expect two `durable-record` items; navigate to `/prepare`, expect two articles and the note. Keep the revoke/delete flow unchanged.
 
 - [ ] **Step 8: Gates**
 

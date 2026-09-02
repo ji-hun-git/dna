@@ -148,6 +148,8 @@ export class FoundationClientError extends Error {
   constructor(
     public readonly code: FoundationErrorCode,
     public readonly status: number,
+    /** The untranslated `code` the server sent, when the failure came from a server response. */
+    public readonly problemCode?: string,
   ) {
     super(code);
     this.name = "FoundationClientError";
@@ -236,6 +238,7 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       throw new FoundationClientError(
         mapProblem(problem.success ? problem.data.code : "internal_error", response.status),
         response.status,
+        problem.success ? problem.data.code : undefined,
       );
     }
     const parsed = schema.safeParse(body);

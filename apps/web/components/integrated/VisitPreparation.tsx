@@ -5,6 +5,7 @@ import { createFoundationClient, type FoundationRecord } from "@/lib/foundation/
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { describeFoundationError } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import { shortDigest } from "@/lib/format/short-digest";
 
 /** The questions a person can take to the next visit. They ask, they never answer. */
 export const visitQuestions: readonly string[] = [
@@ -15,16 +16,15 @@ export const visitQuestions: readonly string[] = [
 
 const preparationNote = "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.";
 
+/** Printed alongside the boundary note so the paper sheet also names the source of the values. */
+const exampleValueNote = "이 값은 서버가 미리 정한 예시 값이에요. 실제 파일이나 기관에서 가져오지 않았어요.";
+
 type VisitPreparationProps = {
   records: FoundationRecord[];
   loading: boolean;
   errorMessage: string;
   onPrint: () => void;
 };
-
-function shortDigest(value: string) {
-  return `${value.slice(0, 12)}…${value.slice(-8)}`;
-}
 
 export function VisitPreparation({ records, loading, errorMessage, onPrint }: VisitPreparationProps) {
   return (
@@ -33,6 +33,7 @@ export function VisitPreparation({ records, loading, errorMessage, onPrint }: Vi
         <p>진료 전 준비</p>
         <h1>다음 진료에서 물어볼 것</h1>
         <p className="gc-prepare__note">{preparationNote}</p>
+        <p className="gc-prepare__note">{exampleValueNote}</p>
       </header>
 
       {loading && <p role="status" aria-live="polite">확인한 기록을 불러오고 있어요.</p>}

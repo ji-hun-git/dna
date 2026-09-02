@@ -21,8 +21,8 @@ const preparedRecords = [
     recordId: "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c41",
     recordVersionId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d51",
     label: "당화혈색소",
-    value: "6.1",
-    originalValue: "6.1",
+    value: "5.2",
+    originalValue: "5.2",
     unit: "%",
   }),
 ];
@@ -33,6 +33,9 @@ it("keeps three questions next to every confirmed value", () => {
   expect(screen.getByRole("heading", { level: 1, name: "다음 진료에서 물어볼 것" })).toBeVisible();
   expect(screen.getByText(
     "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.",
+  )).toBeVisible();
+  expect(screen.getByText(
+    "이 값은 서버가 미리 정한 예시 값이에요. 실제 파일이나 기관에서 가져오지 않았어요.",
   )).toBeVisible();
 
   const items = screen.getAllByRole("article");
