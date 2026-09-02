@@ -44,6 +44,9 @@ export function compareRecords(records: FoundationRecord[]): RecordComparison[] 
       : left.observedOn.localeCompare(right.observedOn));
     const earlier = ordered[0];
     const later = ordered[ordered.length - 1];
+    // A label whose records disagree on the unit cannot be shown as one line
+    // without converting, and conversion would be interpretation. Skip it.
+    if (earlier.unit !== later.unit) continue;
     comparisons.push({
       label,
       unit: later.unit,
