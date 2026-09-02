@@ -556,37 +556,18 @@ html {
     justify-self: end;
   }
 
+  .gc-shell__brand,
   .gc-shell__nav a {
-    min-width: 0;
+    min-width: var(--gc-target-minimum, 44px);
+    justify-content: center;
+  }
+
+  .gc-shell__nav a {
     padding: 0 0.6rem;
     font-size: 0.8125em;
   }
 }
 
-@media print {
-  .gc-shell,
-  .gc-health-home__appbar,
-  .gc-prepare__actions,
-  .gc-prepare__empty a,
-  .gc-integrated-actions {
-    display: none;
-  }
-
-  .gc-shell + main {
-    min-height: 0;
-  }
-
-  .gc-prepare {
-    max-width: none;
-    min-height: 0;
-    padding: 0;
-    background: #fff;
-  }
-
-  .gc-prepare__list article {
-    break-inside: avoid;
-  }
-}
 
 body {
   margin: 0;
@@ -4575,4 +4556,30 @@ body {
   border: 1px solid var(--gc-studio-border);
   color: #18181b;
   background: #fff;
+}
+
+/* Print rules stay last so they win same-specificity screen rules declared above. */
+@media print {
+  .gc-shell,
+  .gc-health-home__appbar,
+  .gc-prepare__actions,
+  .gc-prepare__empty a,
+  .gc-integrated-actions {
+    display: none;
+  }
+
+  .gc-shell + main {
+    min-height: 0;
+  }
+
+  .gc-prepare {
+    max-width: none;
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .gc-prepare__list article {
+    break-inside: avoid;
+  }
 }

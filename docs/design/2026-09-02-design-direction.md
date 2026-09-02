@@ -49,7 +49,7 @@ must keep holding.
 - `.gc-review-progress` is now a neutral zinc pill with tabular numerals; `.gc-review-summary`
   uses tabular numerals; record group headings get a divider and breathing room.
 - Contrast: `/prepare` unit and term text moved to `--gc-color-text-secondary` (7.7:1).
-- Styled the import brand mark; print now hides the shell, both nav bars and every action row.
+- Styled the import brand mark; the print block moved to the end of `globals.css` so it hides the shell, both nav bars and every action row (an earlier position lost to the later `.gc-health-home__appbar` rule).
 - Added `tests/integrated-shell.test.tsx` (route contract plus jest-axe) and Storybook stories
   for `CandidateReview` (pending, correcting, last of three) and `VisitPreparation` (two records,
   empty).
