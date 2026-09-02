@@ -14,6 +14,28 @@ function shortDigest(value: string) {
   return `${value.slice(0, 12)}…${value.slice(-8)}`;
 }
 
+type RecordGroup = {
+  key: string;
+  observedOn: string;
+  documentSha256: string;
+  items: FoundationRecord[];
+};
+
+// One result sheet produces several records on the same day, so the list is
+// grouped by that day and then by the document each value came from.
+function groupRecords(records: FoundationRecord[]): RecordGroup[] {
+  const groups = new Map<string, RecordGroup>();
+  for (const record of records) {
+    const key = `${record.observedOn}-${record.documentSha256}`;
+    const group = groups.get(key);
+    if (group) group.items.push(record);
+    else groups.set(key, { key, observedOn: record.observedOn, documentSha256: record.documentSha256, items: [record] });
+  }
+  return [...groups.values()].sort((left, right) => right.observedOn === left.observedOn
+    ? left.documentSha256.localeCompare(right.documentSha256)
+    : right.observedOn.localeCompare(left.observedOn));
+}
+
 export function IntegratedRecords() {
   const client = useMemo(() => createFoundationClient(), []);
   const [records, setRecords] = useState<FoundationRecord[]>([]);
@@ -97,39 +119,44 @@ export function IntegratedRecords() {
         {!loading && records.length > 0 && (
           <section className={styles.history} aria-labelledby="durable-history-title">
             <header className={styles.sectionHeading}><div><p>출처와 버전</p><h2 id="durable-history-title">현재 기록 {records.length}개</h2></div><span>서버 응답만 표시해요</span></header>
-            <ol>
-              {[...records].reverse().map((record, index) => (
-                <li key={record.recordId} data-testid="durable-record">
-                  <div className={styles.historyDate}><span>{index === 0 ? "최근" : String(records.length - index).padStart(2, "0")}</span><time dateTime={record.observedOn}>{formatKoreanDate(record.observedOn)}</time></div>
-                  <div className={styles.historyValue}><strong>{record.value}</strong><span>{record.unit}</span></div>
-                  <div className={styles.historySource}><strong>{record.label}</strong><span>{record.reviewDecision === "CORRECTED" ? "사용자가 값을 수정함" : "사용자가 원문과 같다고 확인함"}</span></div>
-                  <details>
-                    <summary>출처와 버전 보기</summary>
-                    <dl>
-                      <div><dt>현재 상태</dt><dd>{record.status}</dd></div>
-                      <div><dt>원래 후보</dt><dd>{record.originalValue} {record.unit}</dd></div>
-                      <div><dt>현재 버전</dt><dd><code>{record.recordVersionId}</code></dd></div>
-                      <div><dt>이전 버전</dt><dd>{record.supersedesVersionId ? <code>{record.supersedesVersionId}</code> : "없음"}</dd></div>
-                      <div><dt>문서 확인값</dt><dd><code>{shortDigest(record.documentSha256)}</code></dd></div>
-                      <div><dt>후보 근거값</dt><dd><code>{shortDigest(record.sourceTextSha256)}</code></dd></div>
-                      <div><dt>확인 시각</dt><dd>{formatKoreanDateTime(record.confirmedAt)}</dd></div>
-                      {record.correctionReason && <div><dt>수정 이유</dt><dd>{record.correctionReason}</dd></div>}
-                    </dl>
-                    {editingId === record.recordId ? (
-                      <form className="gc-integrated-correction" onSubmit={(event) => void correctRecord(event, record)}>
-                        <label htmlFor={`record-value-${record.recordId}`}>수정할 값</label>
-                        <input id={`record-value-${record.recordId}`} value={draftValue} onChange={(event) => setDraftValue(event.target.value)} inputMode="decimal" pattern="[0-9]{1,4}([.][0-9]{1,2})?" required />
-                        <label htmlFor={`record-reason-${record.recordId}`}>수정 이유</label>
-                        <input id={`record-reason-${record.recordId}`} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={200} required />
-                        <div className="gc-integrated-actions"><button type="button" onClick={() => setEditingId(undefined)}>취소</button><button type="submit" disabled={busy}>{busy ? "서버에 반영 중" : "새 버전으로 저장"}</button></div>
-                      </form>
-                    ) : (
-                      <button type="button" onClick={() => { setEditingId(record.recordId); setDraftValue(record.value); setReason(""); }}>이 기록 수정</button>
-                    )}
-                  </details>
-                </li>
-              ))}
-            </ol>
+            {groupRecords(records).map((group) => (
+              <section key={group.key} className="gc-records-group" aria-labelledby={`record-group-${group.key}`}>
+                <h3 id={`record-group-${group.key}`}>{formatKoreanDate(group.observedOn)} · 결과지 {shortDigest(group.documentSha256)}</h3>
+                <ol>
+                  {group.items.map((record, index) => (
+                    <li key={record.recordId} data-testid="durable-record">
+                      <div className={styles.historyDate}><span>{String(index + 1).padStart(2, "0")}</span><time dateTime={record.observedOn}>{formatKoreanDate(record.observedOn)}</time></div>
+                      <div className={styles.historyValue}><strong>{record.value}</strong><span>{record.unit}</span></div>
+                      <div className={styles.historySource}><strong>{record.label}</strong><span>{record.reviewDecision === "CORRECTED" ? "사용자가 값을 수정함" : "사용자가 원문과 같다고 확인함"}</span></div>
+                      <details>
+                        <summary>출처와 버전 보기</summary>
+                        <dl>
+                          <div><dt>현재 상태</dt><dd>{record.status}</dd></div>
+                          <div><dt>원래 후보</dt><dd>{record.originalValue} {record.unit}</dd></div>
+                          <div><dt>현재 버전</dt><dd><code>{record.recordVersionId}</code></dd></div>
+                          <div><dt>이전 버전</dt><dd>{record.supersedesVersionId ? <code>{record.supersedesVersionId}</code> : "없음"}</dd></div>
+                          <div><dt>문서 확인값</dt><dd><code>{shortDigest(record.documentSha256)}</code></dd></div>
+                          <div><dt>후보 근거값</dt><dd><code>{shortDigest(record.sourceTextSha256)}</code></dd></div>
+                          <div><dt>확인 시각</dt><dd>{formatKoreanDateTime(record.confirmedAt)}</dd></div>
+                          {record.correctionReason && <div><dt>수정 이유</dt><dd>{record.correctionReason}</dd></div>}
+                        </dl>
+                        {editingId === record.recordId ? (
+                          <form className="gc-integrated-correction" onSubmit={(event) => void correctRecord(event, record)}>
+                            <label htmlFor={`record-value-${record.recordId}`}>수정할 값</label>
+                            <input id={`record-value-${record.recordId}`} value={draftValue} onChange={(event) => setDraftValue(event.target.value)} inputMode="decimal" pattern="[0-9]{1,4}([.][0-9]{1,2})?" required />
+                            <label htmlFor={`record-reason-${record.recordId}`}>수정 이유</label>
+                            <input id={`record-reason-${record.recordId}`} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={200} required />
+                            <div className="gc-integrated-actions"><button type="button" onClick={() => setEditingId(undefined)}>취소</button><button type="submit" disabled={busy}>{busy ? "서버에 반영 중" : "새 버전으로 저장"}</button></div>
+                          </form>
+                        ) : (
+                          <button type="button" onClick={() => { setEditingId(record.recordId); setDraftValue(record.value); setReason(""); }}>이 기록 수정</button>
+                        )}
+                      </details>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ))}
           </section>
         )}
 

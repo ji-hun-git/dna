@@ -11,6 +11,27 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function syntheticCandidate(overrides: Record<string, unknown> = {}) {
+  return {
+    candidateId: "3f5b0f0a-2d31-4a5f-9d54-2f4bd5f1b001",
+    documentId: "e64ddaae-a326-4f23-88a9-05ac59a48625",
+    status: "PENDING",
+    label: "총콜레스테롤",
+    value: "188",
+    unit: "mg/dL",
+    observedOn: "2026-07-28",
+    evidencePage: 1,
+    sourceTextSha256: "b".repeat(64),
+    documentSha256: "a".repeat(64),
+    sourceType: "SYNTHETIC_FIXED_FIXTURE",
+    extractionMethod: "DETERMINISTIC_FOUNDATION_FIXTURE",
+    createdAt: "2026-08-30T08:00:00Z",
+    ordinal: 1,
+    totalCandidates: 3,
+    ...overrides,
+  };
+}
+
 describe("foundation same-origin client", () => {
   it("restores a validated server session without caching or exposing credentials", async () => {
     const fetcher = vi.fn(async () => jsonResponse({
@@ -136,4 +157,41 @@ describe("foundation same-origin client", () => {
     await expect(client.getRecord("../../another-user")).rejects.toMatchObject({ code: "validation_error" });
     expect(fetcher).not.toHaveBeenCalled();
   });
+
+  it("reads every ordered candidate of a document with its review position", async () => {
+    const documentId = "e64ddaae-a326-4f23-88a9-05ac59a48625";
+    const fetcher = vi.fn(async () => jsonResponse([
+      syntheticCandidate({ candidateId: "3f5b0f0a-2d31-4a5f-9d54-2f4bd5f1b001", ordinal: 1, label: "총콜레스테롤", value: "188", unit: "mg/dL" }),
+      syntheticCandidate({ candidateId: "3f5b0f0a-2d31-4a5f-9d54-2f4bd5f1b002", ordinal: 2, label: "당화혈색소", value: "6.1", unit: "%" }),
+      syntheticCandidate({ candidateId: "3f5b0f0a-2d31-4a5f-9d54-2f4bd5f1b003", ordinal: 3, label: "비타민 D", value: "31", unit: "ng/mL" }),
+    ]));
+    const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
+
+    const candidates = await client.getCandidatesForDocument(documentId);
+
+    expect(candidates.map((candidate) => candidate.ordinal)).toEqual([1, 2, 3]);
+    expect(candidates[1]).toMatchObject({ value: "6.1", totalCandidates: 3 });
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/foundation/documents/${documentId}/candidates`,
+      expect.objectContaining({ method: "GET", credentials: "include", cache: "no-store" }),
+    );
+  });
+
+  it("rejects a candidate list that omits the review position", async () => {
+    const { ordinal: _ordinal, ...withoutOrdinal } = syntheticCandidate({ ordinal: 1 });
+    const fetcher = vi.fn(async () => jsonResponse([withoutOrdinal]));
+    const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
+
+    await expect(client.getCandidatesForDocument("e64ddaae-a326-4f23-88a9-05ac59a48625"))
+      .rejects.toMatchObject({ code: "invalid_server_response" });
+  });
+
+  it("keeps the single-candidate endpoint bound to the same validated shape", async () => {
+    const fetcher = vi.fn(async () => jsonResponse(syntheticCandidate({ ordinal: 2 })));
+    const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
+
+    await expect(client.getCandidateForDocument("e64ddaae-a326-4f23-88a9-05ac59a48625"))
+      .resolves.toMatchObject({ ordinal: 2, totalCandidates: 3 });
+  });
 });
+

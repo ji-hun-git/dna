@@ -207,6 +207,245 @@ html {
   }
 }
 
+/* Multi-candidate review progress, grouped records, and the visit-preparation sheet. */
+.gc-review-progress {
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gc-review-summary {
+  margin: 20px 0 0;
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.gc-review-saved {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gc-review-saved li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 15px;
+  border: 1px solid #e3e3df;
+  border-radius: 12px;
+  background: #fafaf8;
+}
+
+.gc-review-saved span {
+  color: #666;
+  font-size: 13px;
+}
+
+.gc-records-group {
+  margin-top: 26px;
+}
+
+.gc-records-group h3 {
+  margin: 0 0 12px;
+  color: #4a4a45;
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gc-prepare {
+  box-sizing: border-box;
+  max-width: 780px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 56px) 20px;
+  background: var(--gc-color-surface-canvas, #f7f7f5);
+  color: var(--gc-color-text-primary, #151515);
+  font-family: var(--gc-type-sans, "Pretendard Variable", sans-serif);
+}
+
+.gc-prepare__heading p:first-child {
+  margin: 0;
+  color: #74746f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gc-prepare__heading h1 {
+  margin: 10px 0 0;
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.25;
+}
+
+.gc-prepare__note {
+  margin: 14px 0 0;
+  color: #5c5c57;
+  line-height: 1.6;
+}
+
+.gc-prepare__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.gc-prepare__actions button,
+.gc-prepare__actions a,
+.gc-prepare__empty a {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 1px solid #171717;
+  border-radius: 10px;
+  background: #171717;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.gc-prepare__actions a {
+  border-color: #d8d8d3;
+  background: #fff;
+  color: #171717;
+}
+
+.gc-prepare__actions button:focus-visible,
+.gc-prepare__actions a:focus-visible,
+.gc-prepare__empty a:focus-visible {
+  outline: 3px solid #3182f6;
+  outline-offset: 2px;
+}
+
+.gc-prepare__list {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gc-prepare__list article {
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid #e3e3df;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.gc-prepare__list h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.gc-prepare__value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.gc-prepare__value strong {
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-size: 30px;
+  font-weight: 560;
+}
+
+.gc-prepare__value span {
+  color: #707987;
+  font-size: 13px;
+}
+
+.gc-prepare dl {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+
+.gc-prepare dl div {
+  display: grid;
+  grid-template-columns: minmax(96px, .6fr) 1.4fr;
+  gap: 12px;
+}
+
+.gc-prepare dt {
+  color: #74746f;
+  font-size: 13px;
+}
+
+.gc-prepare dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.gc-prepare code {
+  font-family: var(--gc-type-mono, "IBM Plex Mono", monospace);
+  font-size: 12px;
+}
+
+.gc-prepare__questions {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding-left: 20px;
+  color: #3a3a35;
+  line-height: 1.6;
+}
+
+.gc-prepare__empty {
+  margin-top: 24px;
+  padding: clamp(28px, 5vw, 40px);
+  border: 1px dashed #cdcdc7;
+  border-radius: 18px;
+  background: #fff;
+  text-align: center;
+}
+
+.gc-prepare__empty h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.gc-prepare__empty p {
+  color: #666;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .gc-prepare dl div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+@media print {
+  .gc-health-home__appbar,
+  .gc-prepare__actions {
+    display: none;
+  }
+
+  .gc-prepare {
+    max-width: none;
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .gc-prepare__list article {
+    break-inside: avoid;
+  }
+}
+
 body {
   margin: 0;
   color: var(--gc-color-text-primary);

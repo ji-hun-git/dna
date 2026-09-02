@@ -83,6 +83,10 @@ const candidateSchema = z.object({
   sourceType: z.literal("SYNTHETIC_FIXED_FIXTURE"),
   extractionMethod: z.literal("DETERMINISTIC_FOUNDATION_FIXTURE"),
   createdAt: z.string().datetime({ offset: true }),
+  // One document yields several ordered candidates. `ordinal` is the review
+  // position within `totalCandidates`, both 1-based and server-owned.
+  ordinal: z.number().int().positive(),
+  totalCandidates: z.number().int().positive(),
 }).strict();
 
 const recordSchema = z.object({
@@ -324,6 +328,11 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     getCandidateForDocument: async (documentId: string) => request(
       `/api/foundation/documents/${requireUuid(documentId)}/candidate`,
       candidateSchema,
+      { method: "GET" },
+    ),
+    getCandidatesForDocument: async (documentId: string) => request(
+      `/api/foundation/documents/${requireUuid(documentId)}/candidates`,
+      z.array(candidateSchema),
       { method: "GET" },
     ),
     getCandidate: async (candidateId: string) => request(
