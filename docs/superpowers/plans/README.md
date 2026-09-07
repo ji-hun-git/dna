@@ -1,5 +1,14 @@
 # Genome Companion Korea — Implementation Roadmap
 
+## Next execution package — 2026-09-07
+
+- [Private synthetic staging and observed validation](2026-09-07-private-synthetic-next-stage.md):
+  task-level supplement, N0–N8 plus U1. Planning initiated; not hosted execution approval.
+- [Founder input checklist](../../operations/2026-09-07-next-stage-founder-inputs.md):
+  what is needed now, at AWS planning, and only at later provider activation.
+- [First-slice kickoff prompt](2026-09-07-next-stage-kickoff-prompt.md): N1 storage contract only,
+  after independent review and merge of product PR #5. No automatic merge or cloud operation.
+
 > **Status note (2026-09-02):** the execution-status column below is historical. The codebase
 > now implements consent, audit, PHI-safe telemetry, the hostile-document boundary, a separate
 > worker and research runtime, attested images, and an unapplied AWS foundation under different
