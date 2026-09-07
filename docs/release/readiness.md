@@ -28,4 +28,11 @@ upgrade any hosted gate.
 
 The AWS Seoul OpenTofu foundation remains unapplied. No hosted object/IAM/queue/network control, observability probe, external audit anchor, backup/restore, deletion replay, actual browser-zoom/screen-reader accessibility check, hosted research-denial evidence, application deployment, provider connection, or PHI processing passes yet. The scanner evidence remains an engine boundary rather than a hosted scanner with an operational official-signature feed.
 
+Rebuild run [34091022210](https://github.com/ji-hun-git/dna/actions/runs/34091022210)
+subsequently blocked on three scanner-rated Critical Tomcat 10.1.55 findings in
+both the lockfile and core image. The rebuild branch pins 10.1.59 with a loaded-version
+regression test; its exact-head rescan is required. Existing published images have
+not been republished or cleared by this source change. Historical scan results do
+not supersede this newer finding or satisfy the hosted vulnerability gate.
+
 This artifact must be updated from evidence. A dependency declaration, mock, UI state, or unit test alone cannot change a gate to PASS.

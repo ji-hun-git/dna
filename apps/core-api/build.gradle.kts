@@ -8,6 +8,8 @@ plugins {
 
 extra["jackson-bom.version"] = libs.versions.jackson.get()
 extra["postgresql.version"] = libs.versions.postgresql.get()
+// Published security fixes; 10.1.58 was not released (Apache security-10.html).
+extra["tomcat.version"] = libs.versions.tomcat.get()
 
 java {
     toolchain {

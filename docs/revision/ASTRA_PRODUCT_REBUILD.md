@@ -125,6 +125,16 @@ is a local abuse budget, not a hosted DDoS defense or user-recoverable account.
 Rate exhaustion returns 429/Retry-After; lifetime capacity exhaustion returns a
 distinct operator-action failure without promising that waiting will solve it. Audit is hash-chained/tamper-evident, not immutable.
 
+The first rebuild CI scan at `8fef5f1` blocked on three scanner-rated Critical Tomcat
+10.1.55 findings: CVE-2026-65182, CVE-2026-65905 and CVE-2026-68525
+([failed run](https://github.com/ji-hun-git/dna/actions/runs/34091022210)). This was
+not a secret leak or a proven exploit of this application. The fix pins all three
+embedded Tomcat modules to 10.1.59, with a runtime-version regression test.
+[Apache's advisory](https://tomcat.apache.org/security-10.html) states that 10.1.58
+contained fixes but failed its release vote, so the published fixed version is
+10.1.59. No scanner suppression, policy exception or release-gate downgrade was used.
+The exact updated-head CI must pass before merge.
+
 ## 16. Frontend Architecture
 
 Retain Pretendard, mono evidence typography, monochrome surfaces and existing tokens.
@@ -239,8 +249,8 @@ Local 2026-09-07 evidence: Node 24.20.0, pnpm 11.20.0, Java 21, PostgreSQL 16.14
 | Baseline web | 145 tests passed before changes |
 | Red/green | Bootstrap route, unfinished review resume, lifetime budget and local-runner specifications failed before their implementation and passed afterwards |
 | Updated web | 156 tests / 37 files passed |
-| JVM | XML reports: 94 cases, 91 passed / 3 skipped / 0 failures / 0 errors; unchanged worker/boundary tasks were UP-TO-DATE |
-| Browser | 3 passed against separate Spring/worker/Next: two dated documents, all review decisions, corrected lineage, first-document-only Prepare, source PNG, reload, revocation and deletion, 200%/400%-equivalent keyboard reflow |
+| JVM | After Tomcat 10.1.59 hardening: XML reports 95 cases, 92 passed / 3 skipped / 0 failures / 0 errors; unchanged worker/boundary tests reused Gradle results |
+| Browser | 3 passed again after Tomcat hardening against separate Spring/worker/Next: two dated documents, all review decisions, corrected lineage, first-document-only Prepare, source PNG, reload, revocation and deletion, 200%/400%-equivalent keyboard reflow |
 | Viewports | Final 43 screenshots: seven states × six sizes + mobile correction; no horizontal overflow, all three review buttons at least 44px and inside viewport |
 | Production build | Final Next 16.3.3 build compiled/typechecked and generated 9/9 static pages |
 | Policy | Runtime, Actions, auth-security and readiness validation pass; release remains NO_GO with 12 unresolved blocking gates |
@@ -257,9 +267,9 @@ shown below; the workstation's global runtime was not used:
 apps/web: node node_modules/vitest/vitest.mjs run --maxWorkers=2
   Test Files 37 passed; Tests 156 passed
 root: gradlew.bat test --no-daemon (GC_TEST_POSTGRES_URL set to disposable PostgreSQL)
-  BUILD SUCCESSFUL; XML reports: 94 tests, 3 skipped, 0 failures/errors
+  BUILD SUCCESSFUL; XML reports: 95 tests, 3 skipped, 0 failures/errors
 apps/web: node node_modules/@playwright/test/cli.js test --config playwright.foundation.config.ts
-  3 passed (1.5m)
+  3 passed (1.2m after Tomcat hardening)
 apps/web: node node_modules/next/dist/bin/next build
   Compiled successfully; Finished TypeScript; Generated 9/9 static pages
 root: node scripts/security/check-runtime-policy.mjs

@@ -110,7 +110,7 @@
       "id": "known_vulnerability_coverage",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub main run 33367429797 passed both CodeQL analyses and repository Trivy/Gitleaks gates. Publication run 33370021596 scanned all three exact published registry digests and reported zero unresolved Critical/High findings before signing and attestation; no hosted workload or deployed digest evidence exists yet"
+      "evidence": "Historical publication run 33370021596 reported zero Critical/High findings before signing. Newer rebuild run 34091022210 at 8fef5f1 blocked on scanner-rated Critical CVE-2026-65182, CVE-2026-65905 and CVE-2026-68525 in Tomcat 10.1.55 (lockfile and core image). The rebuild branch pins published 10.1.59 and its runtime-version test plus local lifecycle pass; exact-head CI rescan is required. No existing published image is cleared by this source change and no hosted workload or deployed digest evidence exists"
     },
     {
       "id": "backup_restore_and_deletion_replay",

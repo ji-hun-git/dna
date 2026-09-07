@@ -25,6 +25,11 @@
 > conversation resolution, no force-push or deletion. Private ECR is the intended path;
 > no existing package was deleted, no cloud resource was created, and no stop-ship gate
 > was upgraded. See the [rebuild ledger](docs/revision/ASTRA_PRODUCT_REBUILD.md).
+>
+> Fresh rebuild CI also blocked on three scanner-rated Critical Tomcat 10.1.55
+> findings on 2026-09-07. The rebuild branch pins published Tomcat 10.1.59 and tests
+> the actual loaded version. Previously published images were not rebuilt by that
+> source change; historical scan success is not current vulnerability clearance.
 
 ## 1. What this product is
 
