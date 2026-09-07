@@ -11,6 +11,16 @@ import java.nio.file.Path
 
 class FoundationPropertiesTest {
     @Test
+    fun demoBootstrapIsDisabledByDefaultAndCannotSilentlyReplaceIdentityConfiguration() {
+        assertThat(FoundationProperties().demoBootstrapEnabled).isFalse()
+        assertThatThrownBy { properties().copy(localIdentities = emptyList()).validateEnabledConfiguration() }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThatCode {
+            properties().copy(localIdentities = emptyList(), demoBootstrapEnabled = true).validateEnabledConfiguration()
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
     fun anUnboundDigestResolvesToTheDefaultCandidateSet() {
         val properties = properties()
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "release-readiness.v1",
-  "evaluatedAt": "2026-09-02",
+  "evaluatedAt": "2026-09-07",
   "target": "HOSTED_SYNTHETIC_STAGING",
   "verdict": "NO_GO",
   "gates": [
@@ -74,7 +74,7 @@
       "id": "production_runtime_images_and_supply_chain",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub run 33370021596 published three immutable GHCR digests for main revision 937361c5ee995174bcce7648957a02b430bdf450, passed registry Critical/High scanning, keyless Cosign verification and SLSA/CycloneDX attestation verification, and preserved evidence artifacts. An anonymous manifest probe on 2026-09-02 returned HTTP 200 for all three packages despite the intended private-package policy, so the artifacts are stop-ship and no deployment evidence exists"
+      "evidence": "GitHub run 33370021596 published three immutable GHCR digests for main revision 937361c5ee995174bcce7648957a02b430bdf450, passed registry Critical/High scanning, keyless Cosign verification and SLSA/CycloneDX attestation verification, and preserved evidence artifacts. An anonymous manifest probe on 2026-09-02 returned HTTP 200 for all three packages despite the intended private-package policy, so the artifacts are stop-ship and no deployment evidence exists. On 2026-09-07 the founder-authorized rebuild enabled strict main PR/check protection and disabled publish-runtime-images.yml (workflow state disabled_manually). Private ECR is intended but not provisioned; no visibility or hosted gate is upgraded"
     },
     {
       "id": "ci_security_pipeline_execution",
@@ -104,7 +104,7 @@
       "id": "accessibility_critical_workflow_smoke",
       "status": "PARTIAL",
       "blocking": true,
-      "evidence": "GitHub run 33315069682 passed axe coverage and a keyboard-operable 200-percent-equivalent browser lifecycle; 400-percent zoom and real screen-reader checks remain absent"
+      "evidence": "GitHub run 33315069682 passed axe coverage and a keyboard-operable 200-percent-equivalent browser lifecycle; 2026-09-07 local browser verification additionally passed 200/400-percent-equivalent viewport keyboard lifecycles and a six-viewport synthetic screenshot matrix. Actual browser zoom and real screen-reader checks remain absent"
     },
     {
       "id": "known_vulnerability_coverage",

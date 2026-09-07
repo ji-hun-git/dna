@@ -21,6 +21,10 @@ const koreanMessage: Record<FoundationErrorCode, string> = {
 };
 
 export function describeFoundationError(error: unknown) {
+  if (error instanceof FoundationClientError) {
+    if (error.problemCode === "demo_bootstrap_disabled") return "이 환경에서는 체험 시작이 열려 있지 않아요.";
+    if (error.problemCode === "demo_capacity_exhausted") return "체험 공간이 가득 찼어요. 운영자가 확인한 뒤 다시 시작할 수 있어요.";
+  }
   return error instanceof FoundationClientError
     ? koreanMessage[error.code]
     : "요청을 완료하지 못했어요. 네트워크 연결을 확인해 주세요.";

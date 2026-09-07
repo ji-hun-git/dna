@@ -9,6 +9,7 @@ import { formatKoreanDate, formatKoreanDateTime } from "@/lib/format/korean-date
 import { labelRecordStatus } from "@/lib/format/status-labels";
 import { compareRecords } from "@/lib/records/compare-records";
 import { shortDigest } from "@/lib/format/short-digest";
+import { SourcePreview } from "@/components/integrated/SourcePreview";
 import styles from "@/components/records/HealthTimeline.module.css";
 
 function idempotencyKey() {
@@ -89,18 +90,18 @@ export function IntegratedRecords() {
   };
 
   return (
-    <IntegratedShell current="records" status="서버 저장 합성 기록">
-      <main className={styles.page}>
+    <IntegratedShell current="records" status="예시 데이터">
+      <main className={`${styles.page} gc-records-unified`}>
         <div className={styles.shell}>
           <section className={styles.hero} aria-labelledby="integrated-records-title">
             <div className={styles.heroCopy}>
-              <p>PostgreSQL Health History</p>
-              <h1 id="integrated-records-title">새로고침해도 남는<br />확인된 기록</h1>
-              <p>각 값의 원래 후보, 현재 버전, 출처 확인값과 수정 이력을 함께 보존합니다.</p>
+              <p>직접 확인한 값과 출처</p>
+              <h1 id="integrated-records-title">내 기록</h1>
+              <p>날짜별로 모은 값과 출처를 살펴보세요. 직접 수정한 값은 원래 값과 함께 확인할 수 있어요.</p>
             </div>
             <aside className={styles.truthPanel} aria-label="서버 기록 상태">
-              <header><span>데이터 상태</span><strong>합성 서버 기록</strong></header>
-              <p><strong>{String(records.length).padStart(2, "0")}</strong><span>현재 기록</span></p>
+              <header><span>데이터 상태</span><strong>예시 데이터</strong></header>
+              <p><strong>{loading || errorMessage ? "—" : String(records.length).padStart(2, "0")}</strong><span>현재 기록</span></p>
               <footer>실제 개인정보·외부기관 데이터 없음</footer>
             </aside>
           </section>
@@ -123,12 +124,13 @@ export function IntegratedRecords() {
                   <h3 id={`record-group-${group.key}`}>{formatKoreanDate(group.observedOn)} · 결과지 {shortDigest(group.documentSha256)}</h3>
                   <ol>
                     {group.items.map((record, index) => (
-                      <li key={record.recordId} data-testid="durable-record">
+                      <li key={record.recordId} id={`record-${record.recordId}`} data-testid="durable-record">
                         <div className={styles.historyDate}><span>{String(index + 1).padStart(2, "0")}</span><time dateTime={record.observedOn}>{formatKoreanDate(record.observedOn)}</time></div>
                         <div className={styles.historyValue}><strong>{record.value}</strong><span>{record.unit}</span></div>
-                        <div className={styles.historySource}><strong>{record.label}</strong><span>{record.reviewDecision === "CORRECTED" ? "사용자가 값을 수정함" : "사용자가 원문과 같다고 확인함"}</span></div>
+                        <div className={styles.historySource}><strong>{record.label}</strong><span>예시 데이터</span><span>{record.reviewDecision === "CORRECTED" ? "사용자가 값을 수정함" : "사용자가 원문과 같다고 확인함"}</span></div>
                         <details>
                           <summary>출처와 버전 보기</summary>
+                          <SourcePreview key={record.documentId} documentId={record.documentId} page={record.evidencePage} />
                           <dl>
                             <div><dt>현재 상태</dt><dd>{labelRecordStatus(record.status)}</dd></div>
                             <div><dt>원래 후보</dt><dd>{record.originalValue} {record.unit}</dd></div>

@@ -86,11 +86,11 @@ afterEach(() => {
 it("walks every candidate of one document before reporting the result", async () => {
   render(<IntegratedHealthExperience />);
 
-  expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
   expect(screen.getByRole("heading", { level: 2, name: "총콜레스테롤" })).toBeVisible();
 
-  await userEvent.click(screen.getByRole("button", { name: "원문과 같아요" }));
+  await userEvent.click(screen.getByRole("button", { name: "확인: 원문과 같아요" }));
 
   await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3"));
   expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toBeVisible();
@@ -104,7 +104,7 @@ it("walks every candidate of one document before reporting the result", async ()
   await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("3 / 3"));
   expect(screen.getByRole("heading", { level: 2, name: "비타민 D" })).toBeVisible();
 
-  await userEvent.click(screen.getByRole("button", { name: "이 항목 빼기" }));
+  await userEvent.click(screen.getByRole("button", { name: "제외: 이 항목 빼기" }));
 
   expect(await screen.findByText("저장 2개 · 제외 1개")).toBeVisible();
   expect(screen.getByText("원문과 같음")).toBeVisible();
@@ -122,9 +122,19 @@ it("resumes at the first candidate the person has not decided yet", async () => 
 
   render(<IntegratedHealthExperience />);
 
-  expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3");
   expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toBeVisible();
+});
+
+it("resumes an unfinished review after closing it without starting another import", async () => {
+  render(<IntegratedHealthExperience />);
+  await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" });
+  await userEvent.click(screen.getByRole("button", { name: "닫기" }));
+  expect(screen.queryByRole("button", { name: "결과지 추가" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "이어서 확인" }));
+  expect(screen.getByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
+  expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
 });
 
 it("re-reads the server list when the server says the candidate is no longer pending", async () => {
@@ -139,10 +149,10 @@ it("re-reads the server list when the server says the candidate is no longer pen
 
   render(<IntegratedHealthExperience />);
 
-  expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
 
-  await userEvent.click(screen.getByRole("button", { name: "원문과 같아요" }));
+  await userEvent.click(screen.getByRole("button", { name: "확인: 원문과 같아요" }));
 
   await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3"));
   expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toBeVisible();
@@ -152,7 +162,7 @@ it("re-reads the server list when the server says the candidate is no longer pen
 it("shows the review position label of the candidate in Korean", async () => {
   render(<IntegratedHealthExperience />);
 
-  expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByText("확인 대기")).toBeVisible();
   expect(screen.queryByText("PENDING")).toBeNull();
 });

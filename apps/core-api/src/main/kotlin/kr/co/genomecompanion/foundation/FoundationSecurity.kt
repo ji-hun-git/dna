@@ -115,7 +115,7 @@ class FoundationSessionFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        if (request.requestURI == "/api/foundation/session" && request.method == "POST") {
+        if (request.requestURI in setOf("/api/foundation/session", "/api/foundation/demo-session") && request.method == "POST") {
             if (!originAllowed(request)) {
                 reject(response, HttpServletResponse.SC_FORBIDDEN, "origin_denied")
                 return

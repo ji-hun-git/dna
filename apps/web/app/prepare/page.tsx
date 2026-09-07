@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { IntegratedVisitPreparation } from "@/components/integrated/VisitPreparation";
-import { PrepareConceptNotice } from "@/components/integrated/PrepareConceptNotice";
 
 export const metadata: Metadata = {
   title: "진료 준비",
@@ -8,7 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function PreparePage() {
-  if (process.env.GC_INTEGRATED_SYNTHETIC_UI === "true") return <IntegratedVisitPreparation />;
-
-  return <PrepareConceptNotice />;
+  return <IntegratedVisitPreparation />;
 }

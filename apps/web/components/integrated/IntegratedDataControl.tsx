@@ -78,13 +78,14 @@ export function IntegratedDataControl() {
   };
 
   return (
-    <IntegratedShell current="data-control" status="서버 동의 · 삭제 상태">
+    <IntegratedShell current="data-control" status="예시 데이터로 체험 중">
       <main className="gc-data-control">
         <div className="gc-data-control__shell">
           <section className="gc-data-control__hero" aria-labelledby="integrated-data-title">
-            <div><p>내 데이터 제어</p><h1 id="integrated-data-title">서버에 기록된 상태만 보여드려요</h1></div>
-            <div className="gc-data-control__hero-copy"><p>동의 철회와 삭제는 Spring이 승인하고 PostgreSQL에 반영한 결과로만 표시합니다.</p><strong>합성 데이터 전용 · 실제 개인정보 없음</strong></div>
+            <div><p>동의와 보관 상태</p><h1 id="integrated-data-title">내 데이터</h1></div>
+            <div className="gc-data-control__hero-copy"><p>결과지 처리 동의를 확인하고, 체험 중 만든 기록을 삭제할 수 있어요.</p><strong>예시 데이터 전용 · 실제 개인정보 없음</strong></div>
           </section>
+          <div className="gc-integrated-actions"><a href="/connections">연결 상태 확인</a><a href="/providers">공공정보 실험실</a></div>
 
           {loading && <p role="status">서버에서 동의 상태를 확인하고 있어요.</p>}
           {actionMessage && <p role="status" aria-live="polite">{actionMessage}</p>}
@@ -93,20 +94,20 @@ export function IntegratedDataControl() {
           {!loading && session && (
             <>
               <section className="gc-data-control__summary" aria-label="현재 서버 데이터 상태">
-                <article><span>합성 세션</span><strong>활성</strong><p>{session.subjectId}</p></article>
-                <article><span>결과지 처리 동의</span><strong>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</strong><p>DOCUMENT_EXTRACTION</p></article>
+                <article><span>체험 상태</span><strong>활성</strong><p>이 브라우저에서 체험 중</p></article>
+                <article><span>결과지 처리 동의</span><strong>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</strong><p>예시 결과지 항목 확인</p></article>
                 <article><span>외부 연결</span><strong>0</strong><p>카카오·네이버·MyHealthWay 비활성화</p><a href="/connections">외부 연결 상태</a></article>
               </section>
 
               <section className="gc-data-control__purposes" aria-labelledby="server-consent-title">
-                <header><div><p>Spring 권한 상태</p><h2 id="server-consent-title">결과지 처리 동의</h2></div><p>화면이 과거 성공 결과로 권한을 추측하지 않아요.</p></header>
+                <header><div><p>현재 동의 상태</p><h2 id="server-consent-title">결과지 처리 동의</h2></div><p>동의를 철회하면 새 결과지를 처리하지 않아요.</p></header>
                 <div className="gc-data-control__purpose-list">
                   <article data-status={consent?.status === "ACTIVE" ? "active" : "revoked"}>
                     <span className="gc-data-control__purpose-index">01</span>
                     <div className="gc-data-control__purpose-copy">
                       <div><h3>합성 결과지 후보 확인</h3><strong>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</strong></div>
                       <p>허용된 합성 PDF에 대해 문서 요청, 논리 격리, 검사, 합성 후보 확인을 허용합니다.</p>
-                      <dl><div><dt>목적 코드</dt><dd>DOCUMENT_EXTRACTION</dd></div><div><dt>실제 외부 제공</dt><dd>없음</dd></div></dl>
+                      <dl><div><dt>사용 목적</dt><dd>결과지 항목 확인</dd></div><div><dt>실제 외부 제공</dt><dd>없음</dd></div></dl>
                     </div>
                     {consent?.status === "ACTIVE" ? <button type="button" onClick={() => void revokeConsent()} disabled={busy}>{busy ? "철회 반영 중" : "동의 철회"}</button> : <span className="gc-data-control__purpose-lock">현재 허용되지 않음</span>}
                   </article>
@@ -114,7 +115,7 @@ export function IntegratedDataControl() {
               </section>
 
               <section className="gc-data-control__danger" aria-labelledby="server-delete-title">
-                <div><p>합성 프로필 데이터</p><h2 id="server-delete-title">계정과 데이터 모두 삭제</h2><span>서버가 COMPLETED를 반환하기 전에는 삭제 완료라고 표시하지 않아요.</span></div>
+                <div><p>체험 데이터</p><h2 id="server-delete-title">계정과 데이터 모두 삭제</h2><span>결과지와 확인한 기록을 삭제하고 이 체험을 끝내요.</span></div>
                 <button type="button" onClick={() => setReviewingDeletion(true)} disabled={busy}>삭제 요청 검토</button>
               </section>
 
@@ -134,7 +135,7 @@ export function IntegratedDataControl() {
             <section className="gc-integrated-auth" aria-labelledby="delete-complete-title" role="status">
               <p>서버 완료 상태</p>
               <h2 id="delete-complete-title">삭제가 완료됐어요</h2>
-              <p>Spring이 COMPLETED를 반환했고 이전 세션 쿠키도 만료했습니다.</p>
+              <p>체험 데이터가 삭제됐고 이 브라우저의 체험도 끝났어요.</p>
               <dl className="gc-integrated-facts"><div><dt>삭제 ID</dt><dd><code>{deletion.deletionId}</code></dd></div><div><dt>감사에 건강 수치</dt><dd>{deletion.rawHealthValuesPresentInAudit ? "발견됨 · 중단 필요" : "없음"}</dd></div></dl>
               <div className="gc-integrated-actions"><a href="/">홈으로 돌아가기</a></div>
             </section>

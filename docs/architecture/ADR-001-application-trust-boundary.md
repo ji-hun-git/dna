@@ -71,4 +71,9 @@ The synthetic foundation now implements a partial form of this decision:
 - Next has a configuration-only same-origin rewrite and no API route handler or duplicate authorization rule.
 - PostgreSQL/Flyway and a local digest-allowlisted quarantine path are verified locally.
 
-The isolated worker, production object store, ingress, production session infrastructure, external connectors, and hosted research network/log/storage deployment remain not implemented. This ADR does not imply that those missing boundaries exist.
+Checkpoint correction (2026-09-07): the isolated document worker artifact and local
+Spring-to-worker lifecycle are implemented and browser-tested. The default four web
+routes now use that durable lifecycle, with opt-in bounded synthetic session bootstrap.
+Production object storage/queue adapters, ingress, recoverable production identity,
+external connectors and hosted research network/log/storage deployment remain absent.
+See `docs/revision/ASTRA_PRODUCT_REBUILD.md`; this does not establish hosted readiness.

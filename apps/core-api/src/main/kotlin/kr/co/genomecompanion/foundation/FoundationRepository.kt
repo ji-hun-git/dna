@@ -16,6 +16,8 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 
+enum class DemoBootstrapBudget { AVAILABLE, RATE_LIMITED, CAPACITY_EXHAUSTED }
+
 data class FoundationSessionRow(
     val sessionId: UUID,
     val subjectId: String,
@@ -217,6 +219,25 @@ class FoundationRepository(
         JOIN gc_candidate c ON c.candidate_id = r.candidate_id AND c.subject_id = r.subject_id
         JOIN gc_document d ON d.document_id = r.document_id AND d.subject_id = r.subject_id
         """.trimIndent()
+
+    /** Transaction-scoped lock makes the cap durable and serial across API replicas/restarts.
+     * Deleted subjects count too: deletion must not reset an anonymous provisioning budget.
+     */
+    fun reserveDemoBootstrap(now: Instant): DemoBootstrapBudget {
+        jdbc.execute("SELECT pg_advisory_xact_lock(714220910)")
+        val total = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM gc_subject WHERE subject_id LIKE 'synthetic-demo-%'", Long::class.java,
+        ) ?: 0L
+        val recent = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM gc_subject WHERE subject_id LIKE 'synthetic-demo-%' AND created_at > ?",
+            Long::class.java, now.minusSeconds(60).atOffset(ZoneOffset.UTC),
+        ) ?: 0L
+        return when {
+            total >= 1000 -> DemoBootstrapBudget.CAPACITY_EXHAUSTED
+            recent >= 20 -> DemoBootstrapBudget.RATE_LIMITED
+            else -> DemoBootstrapBudget.AVAILABLE
+        }
+    }
 
     fun ensureActiveSyntheticSubject(subjectId: String, now: Instant): Boolean {
         jdbc.update(

@@ -14,7 +14,7 @@ it("offers the same four routes and marks the current one", () => {
     ["홈", "/"],
     ["기록", "/records"],
     ["진료 준비", "/prepare"],
-    ["데이터 관리", "/data-control"],
+    ["데이터", "/data-control"],
   ]);
   expect(within(nav).getByRole("link", { name: "진료 준비" })).toHaveAttribute("aria-current", "page");
   expect(screen.getByRole("link", { name: "앎 건강 홈" })).toHaveAttribute("href", "/");

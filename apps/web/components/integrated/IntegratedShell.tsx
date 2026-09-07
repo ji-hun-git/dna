@@ -10,7 +10,7 @@ const routes: ReadonlyArray<{ key: IntegratedRoute; href: string; label: string 
   { key: "home", href: "/", label: "홈" },
   { key: "records", href: "/records", label: "기록" },
   { key: "prepare", href: "/prepare", label: "진료 준비" },
-  { key: "data-control", href: "/data-control", label: "데이터 관리" },
+  { key: "data-control", href: "/data-control", label: "데이터" },
 ];
 
 type IntegratedShellProps = {
@@ -26,7 +26,7 @@ type IntegratedShellProps = {
 export function IntegratedShell({ current, status, children }: IntegratedShellProps) {
   return (
     <>
-      <header className="gc-shell">
+      <header className="gc-shell gc-shell--unified">
         <div className="gc-shell__bar">
           <a className="gc-shell__brand" href="/" aria-label="앎 건강 홈">
             <span aria-hidden="true">앎</span>

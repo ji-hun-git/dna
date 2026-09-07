@@ -99,6 +99,16 @@ class FoundationLifecycleController(
     @PostMapping("/session")
     fun createSession(@Valid @RequestBody request: LocalSessionRequest): ResponseEntity<LocalSessionResponse> {
         val issued = service.createSession(request.subjectId, request.credential)
+        return sessionResponse(request.subjectId, issued)
+    }
+
+    @PostMapping("/demo-session")
+    fun bootstrapDemo(): ResponseEntity<LocalSessionResponse> {
+        val (subjectId, issued) = service.bootstrapDemo()
+        return sessionResponse(subjectId, issued)
+    }
+
+    private fun sessionResponse(subjectId: String, issued: IssuedFoundationSession): ResponseEntity<LocalSessionResponse> {
         val cookie = ResponseCookie.from(FOUNDATION_SESSION_COOKIE, issued.rawToken)
             .httpOnly(true)
             .secure(properties.secureCookies)
@@ -119,7 +129,7 @@ class FoundationLifecycleController(
             .body(
                 LocalSessionResponse(
                     sessionId = issued.sessionId,
-                    subjectId = request.subjectId,
+                    subjectId = subjectId,
                     expiresAt = issued.expiresAt.toString(),
                     csrfToken = issued.rawCsrf,
                 ),
@@ -376,6 +386,13 @@ class FoundationLifecycleController(
     @ExceptionHandler(FoundationConflictException::class)
     fun handleConflict(exception: FoundationConflictException): ResponseEntity<ApiProblem> =
         problem(HttpStatus.CONFLICT, exception.code)
+
+    @ExceptionHandler(FoundationRateLimitedException::class)
+    fun handleRateLimited(): ResponseEntity<ApiProblem> =
+        ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .header("Retry-After", "60")
+            .cacheControlNoStore()
+            .body(ApiProblem("rate_limited"))
 
     @ExceptionHandler(MethodArgumentNotValidException::class, BindException::class)
     fun handleValidation(): ResponseEntity<ApiProblem> =

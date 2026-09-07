@@ -2,7 +2,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { afterEach, expect, it, vi } from "vitest";
-import { VisitPreparation, visitQuestions } from "@/components/integrated/VisitPreparation";
+import { VisitPreparation } from "@/components/integrated/VisitPreparation";
 import { syntheticRecord } from "./fixtures/foundation";
 
 afterEach(cleanup);
@@ -27,7 +27,7 @@ const preparedRecords = [
   }),
 ];
 
-it("keeps three questions next to every confirmed value", () => {
+it("creates one grounded question per topic, capped at three total", () => {
   render(<VisitPreparation records={preparedRecords} loading={false} errorMessage="" onPrint={vi.fn()} />);
 
   expect(screen.getByRole("heading", { level: 1, name: "다음 진료에서 물어볼 것" })).toBeVisible();
@@ -40,14 +40,13 @@ it("keeps three questions next to every confirmed value", () => {
 
   const items = screen.getAllByRole("article");
   expect(items).toHaveLength(2);
-  for (const item of items) {
-    expect(within(item).getAllByRole("listitem").map((question) => question.textContent))
-      .toEqual([...visitQuestions]);
-  }
-  expect(within(items[0]).getByText("190")).toBeVisible();
-  expect(within(items[0]).getByText("2026. 7. 28.")).toBeVisible();
-  expect(within(items[0]).getByText("1쪽")).toBeVisible();
-  expect(within(items[0]).getByText("사용자가 값을 수정함")).toBeVisible();
+  expect(screen.getAllByRole("link", { name: "이 질문의 출처 보기" })).toHaveLength(2);
+  const corrected = items.find((item) => item.textContent?.includes("190"))!;
+  expect(within(corrected).getByText("190")).toBeVisible();
+  expect(within(corrected).getByText("예시 데이터 · 2026. 7. 28.")).toBeVisible();
+  within(corrected).getByText("확인 정보").parentElement!.setAttribute("open", "");
+  expect(within(corrected).getByText("1쪽")).toBeVisible();
+  expect(within(corrected).getByText("사용자가 값을 수정함")).toBeVisible();
 });
 
 it("offers a printable sheet without judging the values", async () => {
@@ -76,12 +75,4 @@ it("stays accessible with and without records", async () => {
 
   const empty = render(<VisitPreparation records={[]} loading={false} errorMessage="" onPrint={vi.fn()} />);
   expect(await axe(empty.container)).toHaveNoViolations();
-});
-
-it("uses the three agreed questions verbatim", () => {
-  expect(visitQuestions).toEqual([
-    "이 값은 어떤 검사에서 나온 건가요?",
-    "지난 결과와 비교해 설명해 주실 수 있나요?",
-    "다시 확인이 필요하다면 언제가 좋을까요?",
-  ]);
 });

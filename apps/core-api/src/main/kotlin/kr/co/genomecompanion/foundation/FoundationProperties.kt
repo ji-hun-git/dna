@@ -26,6 +26,7 @@ data class SyntheticDocumentBinding(
 @ConfigurationProperties("gc.foundation")
 data class FoundationProperties(
     val enabled: Boolean = false,
+    val demoBootstrapEnabled: Boolean = false,
     val allowedOrigin: String = "",
     val secureCookies: Boolean = true,
     val sessionTtl: Duration = Duration.ofMinutes(30),
@@ -86,7 +87,9 @@ data class FoundationProperties(
                 "foundation required ClamAV version must be exact"
             }
         }
-        require(localIdentities.isNotEmpty()) { "foundation requires explicit local synthetic identities" }
+        require(localIdentities.isNotEmpty() || demoBootstrapEnabled) {
+            "foundation requires explicit local synthetic identities or bounded demo bootstrap"
+        }
         require(localIdentities.map(LocalSyntheticIdentity::subjectId).distinct().size == localIdentities.size) {
             "foundation local synthetic subjects must be unique"
         }

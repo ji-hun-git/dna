@@ -7,6 +7,7 @@
     "pnpm": "11.20.0"
   },
   "scripts": {
+    "dev:synthetic": "node apps/web/scripts/synthetic-local.mts",
     "tokens": "pnpm --filter @gc/design-tokens generate",
     "web:test": "pnpm --filter @gc/web test",
     "foundation:e2e": "pnpm --filter @gc/web e2e:foundation",

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { afterEach, expect, it, vi } from "vitest";
@@ -10,6 +10,7 @@ afterEach(cleanup);
 function reviewProps() {
   return {
     candidate: syntheticCandidates[0],
+    previewUrl: "/api/foundation/documents/e64ddaae-a326-4f23-88a9-05ac59a48625/preview",
     busy: false,
     errorMessage: "",
     onConfirm: vi.fn(),
@@ -33,7 +34,7 @@ it("confirms the untouched candidate value", async () => {
   const props = reviewProps();
   render(<CandidateReview {...props} />);
 
-  await userEvent.click(screen.getByRole("button", { name: "원문과 같아요" }));
+  await userEvent.click(screen.getByRole("button", { name: "확인: 원문과 같아요" }));
 
   expect(props.onConfirm).toHaveBeenCalledWith("188");
   expect(props.onExclude).not.toHaveBeenCalled();
@@ -56,7 +57,7 @@ it("excludes the candidate without saving a record", async () => {
   const props = reviewProps();
   render(<CandidateReview {...props} />);
 
-  await userEvent.click(screen.getByRole("button", { name: "이 항목 빼기" }));
+  await userEvent.click(screen.getByRole("button", { name: "제외: 이 항목 빼기" }));
 
   expect(props.onExclude).toHaveBeenCalledTimes(1);
   expect(props.onConfirm).not.toHaveBeenCalled();
@@ -68,4 +69,15 @@ it("keeps the review screen accessible", async () => {
   );
 
   expect(await axe(container)).toHaveNoViolations();
+});
+
+it("does not confirm blindly when the source is missing or fails to load", async () => {
+  const props = reviewProps();
+  const {rerender} = render(<CandidateReview {...props} previewUrl={undefined} />);
+  expect(screen.getByRole("button", {name:"확인: 원문과 같아요"})).toBeDisabled();
+  rerender(<CandidateReview {...props} />);
+  fireEvent.error(screen.getByRole("img"));
+  expect(screen.getByRole("button", {name:"확인: 원문과 같아요"})).toBeDisabled();
+  expect(screen.getByRole("button", {name:"값 수정"})).toBeDisabled();
+  expect(props.onConfirm).not.toHaveBeenCalled();
 });

@@ -6,13 +6,7 @@ import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { describeFoundationError } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
 import { shortDigest } from "@/lib/format/short-digest";
-
-/** The questions a person can take to the next visit. They ask, they never answer. */
-export const visitQuestions: readonly string[] = [
-  "이 값은 어떤 검사에서 나온 건가요?",
-  "지난 결과와 비교해 설명해 주실 수 있나요?",
-  "다시 확인이 필요하다면 언제가 좋을까요?",
-];
+import { buildVisitQuestions } from "@/lib/records/visit-questions";
 
 const preparationNote = "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.";
 
@@ -27,6 +21,7 @@ type VisitPreparationProps = {
 };
 
 export function VisitPreparation({ records, loading, errorMessage, onPrint }: VisitPreparationProps) {
+  const questions = !loading && !errorMessage ? buildVisitQuestions(records) : [];
   return (
     <main className="gc-prepare">
       <header className="gc-prepare__heading">
@@ -47,27 +42,29 @@ export function VisitPreparation({ records, loading, errorMessage, onPrint }: Vi
         </section>
       )}
 
-      {records.length > 0 && (
+      {questions.length > 0 && (
         <>
           <div className="gc-prepare__actions">
             <button type="button" onClick={onPrint}>인쇄하기</button>
             <a href="/records">기록으로 돌아가기</a>
           </div>
           <ol className="gc-prepare__list">
-            {records.map((record) => (
-              <li key={record.recordVersionId}>
-                <article aria-labelledby={`prepare-${record.recordId}`}>
-                  <h2 id={`prepare-${record.recordId}`}>{record.label}</h2>
+            {questions.map((question, index) => (
+              <li key={question.id}>
+                <article aria-labelledby={`prepare-question-${index}`}>
+                  <p className="gc-import__eyebrow">질문 {index + 1} · 기록으로 만든 고정 질문</p>
+                  <h2 id={`prepare-question-${index}`}>{question.text}</h2>
+                  <p>{question.reason}</p>
+                  <div className="gc-prepare__sources">{question.records.map((record) => <div key={record.recordVersionId} className="gc-prepare__source">
+                  <p>예시 데이터 · {formatKoreanDate(record.observedOn)}</p>
                   <p className="gc-prepare__value"><strong>{record.value}</strong><span>{record.unit}</span></p>
-                  <dl>
-                    <div><dt>검사일</dt><dd>{formatKoreanDate(record.observedOn)}</dd></div>
+                  <details className="gc-prepare__detail"><summary>확인 정보</summary><dl>
                     <div><dt>근거 쪽수</dt><dd>{record.evidencePage}쪽</dd></div>
                     <div><dt>문서 확인값</dt><dd><code>{shortDigest(record.documentSha256)}</code></dd></div>
                     <div><dt>확인 방식</dt><dd>{record.reviewDecision === "CORRECTED" ? "사용자가 값을 수정함" : "사용자가 원문과 같다고 확인함"}</dd></div>
-                  </dl>
-                  <ul className="gc-prepare__questions">
-                    {visitQuestions.map((question) => <li key={question}>{question}</li>)}
-                  </ul>
+                  </dl></details>
+                  <a href={`/records#record-${record.recordId}`}>이 질문의 출처 보기</a>
+                  </div>)}</div>
                 </article>
               </li>
             ))}
