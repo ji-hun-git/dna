@@ -1,9 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CandidateReview } from "@/components/integrated/CandidateReview";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
-import { EvidenceLens } from "@/components/records/EvidenceLens";
 import {
   createFoundationClient,
   FoundationClientError,
@@ -22,15 +21,17 @@ import {
   labelReviewDecision,
 } from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
+import { buildSyntheticResultPdf } from "@/lib/foundation/synthetic-document";
 
 type ShellState =
   | "INITIALIZING_SESSION"
   | "AUTHENTICATED"
   | "UNAUTHENTICATED"
   | "SESSION_EXPIRED"
+  | "RESTORE_FAILED"
   | "AUTHORIZATION_DENIED";
 
-type View = "home" | "consent" | "source" | "processing" | "review" | "complete" | "evidence";
+type View = "home" | "consent" | "source" | "processing" | "review" | "complete";
 
 type LocalProcessingState =
   | "IDLE"
@@ -87,9 +88,6 @@ export function IntegratedHealthExperience() {
   const [documentReceipt, setDocumentReceipt] = useState<FoundationDocument>();
   const [candidates, setCandidates] = useState<FoundationCandidate[]>([]);
   const [savedRecords, setSavedRecords] = useState<FoundationRecord[]>([]);
-  const [selectedRecord, setSelectedRecord] = useState<FoundationRecord>();
-  const [subjectId, setSubjectId] = useState("");
-  const [credential, setCredential] = useState("");
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [pollingPaused, setPollingPaused] = useState(false);
@@ -125,9 +123,16 @@ export function IntegratedHealthExperience() {
       await loadProductTruth();
       setShellState("AUTHENTICATED");
     } catch (error) {
-      setSession(undefined);
-      setShellState(foundationShellState(error));
-      if (foundationShellState(error) !== "UNAUTHENTICATED") setErrorMessage(describeFoundationError(error));
+      const state = foundationShellState(error);
+      if (state === "UNAUTHENTICATED" || state === "SESSION_EXPIRED") {
+        setSession(undefined);
+        setShellState(state);
+      } else {
+        // A failed read is not proof that the session is gone. In particular,
+        // never replace restoration with a new demo-bootstrap POST.
+        setShellState("RESTORE_FAILED");
+      }
+      if (state !== "UNAUTHENTICATED") setErrorMessage(describeFoundationError(error));
     }
   }, [client, loadProductTruth]);
 
@@ -184,19 +189,19 @@ export function IntegratedHealthExperience() {
     };
   }, [client, documentReceipt?.documentId, documentReceipt?.status, pollingNonce, view]);
 
-  const signIn = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const signIn = async () => {
     setBusy(true);
     setErrorMessage("");
     try {
-      const issued = await client.createSession(subjectId.trim(), credential);
-      setCredential("");
+      const issued = await client.bootstrapDemo();
       setSession(issued);
       await loadProductTruth();
       setShellState("AUTHENTICATED");
       setView("home");
     } catch (error) {
-      setShellState("AUTHORIZATION_DENIED");
+      // A bootstrap response may have set cookies before a later read failed.
+      // Re-read the current session before offering another bootstrap attempt.
+      setShellState("RESTORE_FAILED");
       setErrorMessage(describeFoundationError(error));
     } finally {
       setBusy(false);
@@ -336,61 +341,38 @@ export function IntegratedHealthExperience() {
   }
 
   if (shellState !== "AUTHENTICATED") {
+    if (shellState === "RESTORE_FAILED") {
+      return (
+        <IntegratedShell current="home" status="체험 상태 확인 필요">
+          <main className="gc-integrated-shell gc-integrated-shell--center">
+            <section className="gc-integrated-auth" aria-labelledby="restore-failed-title">
+              <p>예시 데이터 체험</p>
+              <h1 id="restore-failed-title">체험 상태를 불러오지 못했어요</h1>
+              <p>새 체험을 만들지 않고, 현재 로그인과 기록을 다시 확인해요.</p>
+              {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
+              <div className="gc-integrated-actions">
+                <button type="button" disabled={busy} onClick={() => void initialize()}>체험 상태 다시 확인</button>
+              </div>
+            </section>
+          </main>
+        </IntegratedShell>
+      );
+    }
     return (
-      <main className="gc-integrated-shell gc-integrated-shell--center">
+      <IntegratedShell current="home" status="예시 데이터로 체험">
+      <main className="gc-integrated-shell gc-integrated-shell--center gc-demo-entry">
         <section className="gc-integrated-auth" aria-labelledby="synthetic-login-title">
-          <p>통합 합성 제품</p>
-          <h1 id="synthetic-login-title">합성 사용자로 로그인</h1>
-          <p>실제 카카오·네이버 로그인은 아직 연결하지 않았어요. 이 화면은 명시적으로 허용된 합성 계정만 사용합니다.</p>
+          <p className="gc-import__eyebrow">체험 데이터로 시작하기</p>
+          <h1 id="synthetic-login-title">흩어진 결과지를,<br />출처가 보이는<br />내 건강 기록으로.</h1>
+          <p>결과지에 적힌 값을 직접 확인하고, 기록을 모아 다음 진료에서 물어볼 내용을 준비해 보세요.</p>
+          <p><strong>실제 건강정보는 사용하지 않습니다.</strong></p>
           {shellState === "SESSION_EXPIRED" && <strong role="status">로그인 시간이 끝났어요.</strong>}
-          <form onSubmit={signIn}>
-            <label htmlFor="synthetic-subject">합성 사용자 ID</label>
-            <input
-              id="synthetic-subject"
-              value={subjectId}
-              onChange={(event) => setSubjectId(event.target.value)}
-              pattern="synthetic-[a-z0-9-]+"
-              autoComplete="username"
-              required
-            />
-            <label htmlFor="synthetic-credential">합성 테스트 자격 증명</label>
-            <input
-              id="synthetic-credential"
-              type="password"
-              value={credential}
-              onChange={(event) => setCredential(event.target.value)}
-              minLength={32}
-              maxLength={256}
-              autoComplete="current-password"
-              required
-            />
-            <button type="submit" disabled={busy}>{busy ? "확인하고 있어요" : "합성 환경 로그인"}</button>
-          </form>
+          <button className="gc-button gc-button--primary" type="button" onClick={() => void signIn()} disabled={busy}>{busy ? "체험을 준비하고 있어요" : "체험 시작"}</button>
+          <p className="gc-demo-entry__limit">이 브라우저의 체험 시간 동안 기록을 이어서 볼 수 있어요. 시간이 끝나거나 쿠키를 지우면 이전 체험에 다시 들어갈 수 없어요.</p>
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
         </section>
       </main>
-    );
-  }
-
-  if (view === "evidence" && selectedRecord) {
-    return (
-      <EvidenceLens
-        record={{
-          id: selectedRecord.recordId,
-          label: selectedRecord.label,
-          value: selectedRecord.value,
-          originalValue: selectedRecord.originalValue,
-          unit: selectedRecord.unit,
-          reference: "기관 참고치 미제공",
-          sourceName: "허용된 합성 PDF",
-          observedAt: selectedRecord.observedOn,
-          sourceLocation: `${selectedRecord.evidencePage}쪽 · 서버가 미리 정한 예시 값`,
-          sourceDigest: `sha256:${selectedRecord.documentSha256}`,
-          extractedAt: selectedRecord.confirmedAt,
-          confirmedAt: selectedRecord.confirmedAt,
-        }}
-        onBack={() => setView("home")}
-      />
+      </IntegratedShell>
     );
   }
 
@@ -402,7 +384,7 @@ export function IntegratedHealthExperience() {
           <h1 id="integrated-consent-title">결과지에서 항목을 확인해도 될까요?</h1>
           <p>허용된 합성 PDF의 파일 확인값을 검사하고, 합성 후보를 만들어 직접 확인하는 목적에만 사용해요.</p>
           <dl className="gc-integrated-facts">
-            <div><dt>목적</dt><dd>DOCUMENT_EXTRACTION</dd></div>
+            <div><dt>목적</dt><dd>결과지 항목 확인</dd></div>
             <div><dt>현재 상태</dt><dd>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</dd></div>
             <div><dt>외부 제공</dt><dd>없음</dd></div>
           </dl>
@@ -425,6 +407,10 @@ export function IntegratedHealthExperience() {
             <p className="gc-import__eyebrow">1. 합성 결과지 선택</p>
             <h1 id="integrated-source-title">허용된 합성 PDF를<br />선택해 주세요</h1>
             <p className="gc-import__lead">이 단계에서는 서버가 미리 허용한 합성 PDF만 처리합니다.</p>
+            <div className="gc-integrated-actions">
+              <button type="button" disabled={busy} onClick={() => void selectDocument(new File([buildSyntheticResultPdf("2026-07")], "gc-synthetic-2026-07.pdf", { type: "application/pdf" }))}>7월 예시 결과지로 시작</button>
+              <button type="button" disabled={busy} onClick={() => void selectDocument(new File([buildSyntheticResultPdf("2026-01")], "gc-synthetic-2026-01.pdf", { type: "application/pdf" }))}>1월 예시 결과지로 시작</button>
+            </div>
             <button className="gc-import__action gc-import__action--primary" type="button" onClick={() => fileInput.current?.click()}>합성 PDF 선택</button>
             <input
               ref={fileInput}
@@ -449,7 +435,7 @@ export function IntegratedHealthExperience() {
   if (view === "processing") {
     return (
       <main className="gc-import" data-stage="processing">
-        <header className="gc-import__appbar"><button type="button" onClick={() => setView("source")}>이전</button><span>앎</span><button type="button" onClick={() => setView("home")}>닫기</button></header>
+        <header className="gc-import__appbar"><button type="button" onClick={() => setView("home")}>이전</button><span>앎</span><button type="button" onClick={() => setView("home")}>닫기</button></header>
         <div className="gc-import__shell">
           <section className="gc-import__processing" aria-labelledby="server-processing-title">
             <p className="gc-import__eyebrow">2. 서버 처리 상태</p>
@@ -464,6 +450,7 @@ export function IntegratedHealthExperience() {
               </dl>
             )}
             <div className="gc-integrated-actions">
+              {activeCandidate && <button type="button" onClick={() => setView("review")} disabled={busy}>이어서 확인</button>}
               {pollingPaused && <button type="button" onClick={() => { setErrorMessage(""); setPollingPaused(false); setPollingNonce((value) => value + 1); }}>상태 다시 확인</button>}
               {(processingState === "SECURITY_REJECTED" || processingState === "FAILED_TERMINAL") && <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>}
             </div>
@@ -506,6 +493,7 @@ export function IntegratedHealthExperience() {
               {savedRecords.map((record) => (
                 <li key={record.recordVersionId}>
                   <strong>{record.label}</strong>
+                  <span>예시 데이터</span>
                   <span>{record.value} {record.unit}</span>
                   <span>{labelReviewDecision(record.reviewDecision)}</span>
                 </li>
@@ -523,32 +511,34 @@ export function IntegratedHealthExperience() {
   }
 
   const latest = records.at(-1);
+  const unfinished = !!activeCandidate || (!!documentReceipt && pollableStates.has(documentReceipt.status));
   return (
     <IntegratedShell
       current="home"
-      status={session ? `합성 세션 · ${session.subjectId}` : undefined}
+      status={session ? "예시 데이터로 체험 중" : undefined}
     >
       <main className="gc-health-home">
         <div className="gc-health-home__shell">
           <section className="gc-health-home__hero" id="home" aria-labelledby="integrated-home-title">
             <div>
-              <p className="gc-health-home__greeting">서버와 연결된 합성 건강 기록</p>
+              <p className="gc-health-home__greeting">내가 확인한 값과 출처</p>
               <h1 id="integrated-home-title">값보다 먼저<br />출처를 확인하세요</h1>
-              <p className="gc-health-home__hero-copy">화면의 기록은 Spring과 PostgreSQL이 소유하며, 새로고침해도 같은 합성 상태를 불러옵니다.</p>
-              <div className="gc-health-home__hero-actions"><button className="gc-button gc-button--primary" type="button" onClick={beginImport}>결과지 추가</button><a className="gc-button gc-button--weak" href="/records">전체 기록 보기</a></div>
+              <p className="gc-health-home__hero-copy">결과지에 적힌 값을 직접 확인해 주세요. 확인한 기록은 날짜별로 모아 진료 준비에 함께 사용해요.</p>
+              <div className="gc-health-home__hero-actions"><button className="gc-button gc-button--primary" type="button" onClick={unfinished ? () => setView(activeCandidate ? "review" : "processing") : beginImport}>{unfinished ? "이어서 확인" : "결과지 추가"}</button><a className="gc-button gc-button--weak" href="/records">전체 기록 보기</a></div>
             </div>
             <aside className="gc-health-home__connection" aria-label="통합 합성 제품 상태">
-              <p><strong>합성 데이터 전용 연결</strong></p>
-              <span>실제 개인정보 0건 · 외부 기관 연결 0곳 · 저장된 합성 기록 {records.length}개</span>
+              <p><strong>예시 데이터로 체험 중이에요</strong></p>
+              <span>외부 기관 연결 0곳 · 직접 확인한 예시 기록 {records.length}개</span>
               <a href="/data-control">동의와 삭제 상태 보기</a>
+              <a href="/prepare">진료 때 물어볼 내용 준비</a>
             </aside>
           </section>
           <section className="gc-health-home__overview" aria-labelledby="integrated-records-title">
-            <div className="gc-health-home__section-heading"><div><p>PostgreSQL에서 불러온 기록</p><h2 id="integrated-records-title">{latest ? "가장 최근에 확인한 값" : "아직 저장된 기록이 없어요"}</h2></div><span>{records.length}개</span></div>
+            <div className="gc-health-home__section-heading"><div><p>직접 확인한 기록</p><h2 id="integrated-records-title">{latest ? "가장 최근에 확인한 값" : "아직 저장된 기록이 없어요"}</h2></div><span>{records.length}개</span></div>
             {latest ? (
               <article className="gc-health-home__metric-card">
-                <div className="gc-health-home__metric-copy"><div className="gc-health-home__metric-topline"><span>{latest.label}</span><strong>{labelRecordStatus(latest.status)}</strong></div><p className="gc-health-home__metric-value"><strong>{latest.value}</strong><span>{latest.unit}</span></p><p className="gc-health-home__metric-source">허용된 합성 PDF · {formatKoreanDate(latest.observedOn)}</p></div>
-                <button className="gc-button gc-button--weak" type="button" onClick={() => { setSelectedRecord(latest); setView("evidence"); }}>이 값의 근거 보기</button>
+                <div className="gc-health-home__metric-copy"><div className="gc-health-home__metric-topline"><span>{latest.label} · 예시 데이터</span><strong>{labelRecordStatus(latest.status)}</strong></div><p className="gc-health-home__metric-value"><strong>{latest.value}</strong><span>{latest.unit}</span></p><p className="gc-health-home__metric-source">예시 결과지 · {formatKoreanDate(latest.observedOn)}</p></div>
+                <a className="gc-button gc-button--weak" href={`/records#record-${latest.recordId}`}>이 값의 근거 보기</a>
               </article>
             ) : <p className="gc-integrated-empty">허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다.</p>}
           </section>

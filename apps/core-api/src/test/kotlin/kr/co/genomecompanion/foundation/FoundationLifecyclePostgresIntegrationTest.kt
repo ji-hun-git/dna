@@ -71,6 +71,57 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun demoBootstrapIsOriginBoundOwnerIsolatedAndDoesNotGrantConsent() {
+        mockMvc.perform(post("/api/foundation/demo-session"))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, "https://attacker.invalid"))
+            .andExpect(status().isForbidden)
+        val first = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+            .andExpect(status().isCreated).andReturn().response
+        val second = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+            .andExpect(status().isCreated).andReturn().response
+        val firstBody = responseJson(first.contentAsByteArray)
+        assertThat(firstBody["subjectId"].asText()).startsWith("synthetic-demo-")
+        assertThat(firstBody["subjectId"].asText()).isNotEqualTo(responseJson(second.contentAsByteArray)["subjectId"].asText())
+        val cookie = checkNotNull(first.getCookie(FOUNDATION_SESSION_COOKIE))
+        assertThat(cookie.isHttpOnly).isTrue()
+        mockMvc.perform(get("/api/foundation/records").cookie(cookie))
+            .andExpect(status().isOk).andExpect(jsonPath("$.length()").value(0))
+        mockMvc.perform(get("/api/foundation/consents/document-extraction").cookie(cookie))
+            .andExpect(status().isOk).andExpect(jsonPath("$.status").value("NOT_GRANTED"))
+        mockMvc.perform(post("/api/foundation/consents/document-extraction").cookie(cookie)
+            .header(HttpHeaders.ORIGIN, allowedOrigin))
+            .andExpect(status().isForbidden)
+        assertThat(count("gc_subject")).isEqualTo(2)
+    }
+
+    @Test
+    fun demoBootstrapHasDurableGlobalProvisioningBudget() {
+        repeat(20) {
+            mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+                .andExpect(status().isCreated)
+        }
+        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+            .andExpect(status().isTooManyRequests)
+        assertThat(count("gc_subject")).isEqualTo(20)
+    }
+
+    @Test
+    fun exhaustedDemoCapacityDoesNotPromiseThatWaitingWillRecoverIt() {
+        jdbc.execute("""
+            INSERT INTO gc_subject(subject_id, created_at, deleted_at)
+            SELECT 'synthetic-demo-retired-' || n, CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP
+            FROM generate_series(1, 1000) AS n
+        """.trimIndent())
+        val response = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("demo_capacity_exhausted"))
+            .andReturn().response
+        assertThat(response.getHeader("Retry-After")).isNull()
+        assertThat(count("gc_subject")).isEqualTo(1000)
+    }
+
+    @Test
     fun securityAuditRowsAreDatabaseEnforcedAppendOnly() {
         val eventId = UUID.fromString("00000000-0000-0000-0000-000000000501")
         jdbc.update(
@@ -999,6 +1050,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             registry.add("security.oidc.audience") { "https://api.genome-companion.test" }
             registry.add("security.oidc.client-id") { "synthetic-web-client" }
             registry.add("gc.foundation.enabled") { "true" }
+            registry.add("gc.foundation.demo-bootstrap-enabled") { "true" }
             registry.add("gc.foundation.document-boundary-enabled") { "true" }
             registry.add("gc.foundation.worker-credential-sha256") { "c".repeat(64) }
             registry.add("gc.foundation.allow-synthetic-scanner-results") { "true" }

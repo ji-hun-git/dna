@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { HealthTimeline } from "@/components/records/HealthTimeline";
 import { IntegratedRecords } from "@/components/integrated/IntegratedRecords";
 
 export const metadata: Metadata = {
@@ -8,7 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function RecordsPage() {
-  return process.env.GC_INTEGRATED_SYNTHETIC_UI === "true"
-    ? <IntegratedRecords />
-    : <HealthTimeline />;
+  return <IntegratedRecords />;
 }

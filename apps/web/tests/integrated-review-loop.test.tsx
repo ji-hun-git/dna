@@ -1,8 +1,8 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { IntegratedHealthExperience } from "@/components/integrated/IntegratedHealthExperience";
 import type { FoundationCandidate, FoundationRecord } from "@/lib/foundation/client";
 import { syntheticCandidates, syntheticDocumentId } from "./fixtures/foundation";
@@ -83,14 +83,77 @@ afterEach(() => {
   server.resetHandlers();
 });
 
+it.each([
+  "/api/foundation/session",
+  "/api/foundation/records",
+  "/api/foundation/documents/:documentId/candidates",
+])("retries failed restoration at %s without offering a new demo identity", async (endpoint) => {
+  let unavailable = true;
+  const bootstrap = vi.fn(() => HttpResponse.json({}, { status: 500 }));
+  server.use(
+    http.post("/api/foundation/demo-session", bootstrap),
+    http.get(endpoint, () => unavailable
+      ? HttpResponse.json({ code: "retryable_dependency_failure" }, { status: 503 })
+      : undefined),
+  );
+  render(<IntegratedHealthExperience />);
+  expect(await screen.findByRole("alert")).toHaveTextContent("잠시 응답하지 않아요");
+  expect(screen.queryByRole("button", { name: "체험 시작" })).toBeNull();
+  unavailable = false;
+  await userEvent.click(screen.getByRole("button", { name: "체험 상태 다시 확인" }));
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
+  expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
+  expect(bootstrap).not.toHaveBeenCalled();
+});
+
+it("does not bootstrap twice when the first bootstrap succeeds but its following read fails", async () => {
+  let issued = false;
+  let unavailable = true;
+  const session = {
+    sessionId: "ca9d1f51-b0b6-4d12-a5c1-05938e2c1c9b",
+    subjectId: "synthetic-bootstrap-recovery",
+    status: "AUTHENTICATED",
+    expiresAt: "2026-09-08T09:00:00Z",
+  };
+  const bootstrap = vi.fn(() => {
+    issued = true;
+    return HttpResponse.json({ ...session, csrfToken: "synthetic-recovery-csrf-value-000001" });
+  });
+  server.use(
+    http.get("/api/foundation/session", () => issued ? HttpResponse.json(session)
+      : HttpResponse.json({ code: "authentication_required" }, { status: 401 })),
+    http.post("/api/foundation/demo-session", bootstrap),
+    http.get("/api/foundation/records", () => unavailable
+      ? HttpResponse.json({ code: "retryable_dependency_failure" }, { status: 503 }) : undefined),
+  );
+  render(<IntegratedHealthExperience />);
+  await userEvent.click(await screen.findByRole("button", { name: "체험 시작" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("잠시 응답하지 않아요");
+  expect(screen.queryByRole("button", { name: "체험 시작" })).toBeNull();
+  unavailable = false;
+  await userEvent.click(screen.getByRole("button", { name: "체험 상태 다시 확인" }));
+  expect(await screen.findByLabelText("검토 진행")).toHaveTextContent("1 / 3");
+  expect(bootstrap).toHaveBeenCalledTimes(1);
+});
+
+it("offers a new demo only after the server reports an expired session", async () => {
+  server.use(http.get("/api/foundation/session", () =>
+    HttpResponse.json({ code: "session_expired" }, { status: 401 })));
+  render(<IntegratedHealthExperience />);
+  expect(await screen.findByRole("button", { name: "체험 시작" })).toBeVisible();
+  expect(screen.queryByRole("button", { name: "체험 상태 다시 확인" })).toBeNull();
+  expect(screen.queryByLabelText("검토 진행")).toBeNull();
+});
+
 it("walks every candidate of one document before reporting the result", async () => {
   render(<IntegratedHealthExperience />);
 
-  expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
   expect(screen.getByRole("heading", { level: 2, name: "총콜레스테롤" })).toBeVisible();
+  fireEvent.load(screen.getByRole("img"));
 
-  await userEvent.click(screen.getByRole("button", { name: "원문과 같아요" }));
+  await userEvent.click(screen.getByRole("button", { name: "확인: 원문과 같아요" }));
 
   await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3"));
   expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toBeVisible();
@@ -104,7 +167,7 @@ it("walks every candidate of one document before reporting the result", async ()
   await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("3 / 3"));
   expect(screen.getByRole("heading", { level: 2, name: "비타민 D" })).toBeVisible();
 
-  await userEvent.click(screen.getByRole("button", { name: "이 항목 빼기" }));
+  await userEvent.click(screen.getByRole("button", { name: "제외: 이 항목 빼기" }));
 
   expect(await screen.findByText("저장 2개 · 제외 1개")).toBeVisible();
   expect(screen.getByText("원문과 같음")).toBeVisible();
@@ -122,9 +185,42 @@ it("resumes at the first candidate the person has not decided yet", async () => 
 
   render(<IntegratedHealthExperience />);
 
-  expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3");
   expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toBeVisible();
+});
+
+it("resumes an unfinished review after closing it without starting another import", async () => {
+  render(<IntegratedHealthExperience />);
+  await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" });
+  await userEvent.click(screen.getByRole("button", { name: "닫기" }));
+  expect(screen.queryByRole("button", { name: "결과지 추가" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "이어서 확인" }));
+  expect(screen.getByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
+  expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
+});
+
+it("resumes the pending candidate directly after going back to processing", async () => {
+  render(<IntegratedHealthExperience />);
+  await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" });
+  await userEvent.click(screen.getByRole("button", { name: "제외: 이 항목 빼기" }));
+  await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3"));
+  await userEvent.click(screen.getByRole("button", { name: "이전" }));
+  expect(screen.getByLabelText("서버 상태 코드")).toHaveTextContent("REVIEW_REQUIRED");
+  await userEvent.click(screen.getByRole("button", { name: "이어서 확인" }));
+  expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3");
+  expect(records).toHaveLength(0);
+  expect(candidates[0].status).toBe("EXCLUDED");
+});
+
+it("returns home from processing without offering a replacement import", async () => {
+  render(<IntegratedHealthExperience />);
+  await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" });
+  await userEvent.click(screen.getByRole("button", { name: "이전" }));
+  await userEvent.click(screen.getByRole("button", { name: "이전" }));
+  expect(screen.queryByRole("button", { name: "7월 예시 결과지로 시작" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "이어서 확인" }));
+  expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
 });
 
 it("re-reads the server list when the server says the candidate is no longer pending", async () => {
@@ -139,10 +235,11 @@ it("re-reads the server list when the server says the candidate is no longer pen
 
   render(<IntegratedHealthExperience />);
 
-  expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
 
-  await userEvent.click(screen.getByRole("button", { name: "원문과 같아요" }));
+  fireEvent.load(screen.getByRole("img"));
+  await userEvent.click(screen.getByRole("button", { name: "확인: 원문과 같아요" }));
 
   await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3"));
   expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toBeVisible();
@@ -152,7 +249,7 @@ it("re-reads the server list when the server says the candidate is no longer pen
 it("shows the review position label of the candidate in Korean", async () => {
   render(<IntegratedHealthExperience />);
 
-  expect(await screen.findByRole("heading", { name: "이 합성 후보가 맞나요?" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByText("확인 대기")).toBeVisible();
   expect(screen.queryByText("PENDING")).toBeNull();
 });

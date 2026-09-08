@@ -13,6 +13,8 @@ const userFacingFiles = [
   "components/integrated/RecordComparison.tsx",
   "components/integrated/PrepareConceptNotice.tsx",
   "components/integrated/VisitPreparation.tsx",
+  "components/integrated/SourcePreview.tsx",
+  "lib/records/visit-questions.ts",
   "components/concept/RecordImportConcept.tsx",
   "components/connections/ConnectionExperience.tsx",
   "components/experience/HealthExperience.tsx",

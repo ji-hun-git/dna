@@ -18,7 +18,7 @@ function ExternalIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" /><path d="M18 13v6H5V6h6" /></svg>;
 }
 
-export function PublicProviderExplorer() {
+export function PublicProviderExplorer({ embedded = false }: { embedded?: boolean }) {
   const [mode, setMode] = useState<ExplorerMode>("providers");
   const [region, setRegion] = useState<RegionFilter>("전체");
   const [providerType, setProviderType] = useState<ProviderTypeFilter>("전체");
@@ -38,7 +38,7 @@ export function PublicProviderExplorer() {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
-        <header className={styles.appbar}>
+        {!embedded && <header className={styles.appbar}>
           <a className={styles.brand} href="/" aria-label="앎 건강 홈으로 돌아가기"><span>앎</span><strong>앎</strong></a>
           <nav aria-label="공공 의료정보 메뉴">
             <a href="/providers" aria-current="page">공공정보</a>
@@ -46,7 +46,7 @@ export function PublicProviderExplorer() {
             <a href="/data-control">내 데이터</a>
           </nav>
           <span className={styles.appbarState}>예시 데이터 · 실제 API 연결 전</span>
-        </header>
+        </header>}
 
         <section className={styles.hero} aria-labelledby="provider-explorer-title">
           <div className={styles.heroCopy}>
