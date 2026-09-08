@@ -116,6 +116,15 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.getByRole("button", { name: "수정한 값 확인" }).click();
 
   await expect(page.getByLabel("검토 진행")).toHaveText("2 / 3");
+  await page.getByRole("button", { name: "이전", exact: true }).click();
+  await expect(page.getByLabel("서버 상태 코드")).toHaveText("REVIEW_REQUIRED");
+  await page.getByRole("button", { name: "이어서 확인", exact: true }).click();
+  await expect(page.getByLabel("검토 진행")).toHaveText("2 / 3");
+  await page.getByRole("button", { name: "이전", exact: true }).click();
+  await page.getByRole("button", { name: "이전", exact: true }).click();
+  await expect(page.getByRole("button", { name: "결과지 추가", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "이어서 확인", exact: true }).click();
+  await expect(page.getByLabel("검토 진행")).toHaveText("2 / 3");
   await expect(page.getByText("5.2", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "확인: 원문과 같아요" }).click();
 

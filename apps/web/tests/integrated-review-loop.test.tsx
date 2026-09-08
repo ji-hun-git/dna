@@ -138,6 +138,29 @@ it("resumes an unfinished review after closing it without starting another impor
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
 });
 
+it("resumes the pending candidate directly after going back to processing", async () => {
+  render(<IntegratedHealthExperience />);
+  await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" });
+  await userEvent.click(screen.getByRole("button", { name: "제외: 이 항목 빼기" }));
+  await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3"));
+  await userEvent.click(screen.getByRole("button", { name: "이전" }));
+  expect(screen.getByLabelText("서버 상태 코드")).toHaveTextContent("REVIEW_REQUIRED");
+  await userEvent.click(screen.getByRole("button", { name: "이어서 확인" }));
+  expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3");
+  expect(records).toHaveLength(0);
+  expect(candidates[0].status).toBe("EXCLUDED");
+});
+
+it("returns home from processing without offering a replacement import", async () => {
+  render(<IntegratedHealthExperience />);
+  await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" });
+  await userEvent.click(screen.getByRole("button", { name: "이전" }));
+  await userEvent.click(screen.getByRole("button", { name: "이전" }));
+  expect(screen.queryByRole("button", { name: "7월 예시 결과지로 시작" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "이어서 확인" }));
+  expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
+});
+
 it("re-reads the server list when the server says the candidate is no longer pending", async () => {
   server.use(
     http.post("/api/foundation/candidates/:candidateId/confirmation", () => {
