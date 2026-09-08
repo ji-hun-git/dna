@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -89,6 +89,7 @@ it("walks every candidate of one document before reporting the result", async ()
   expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
   expect(screen.getByRole("heading", { level: 2, name: "총콜레스테롤" })).toBeVisible();
+  fireEvent.load(screen.getByRole("img"));
 
   await userEvent.click(screen.getByRole("button", { name: "확인: 원문과 같아요" }));
 
@@ -152,6 +153,7 @@ it("re-reads the server list when the server says the candidate is no longer pen
   expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
   expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
 
+  fireEvent.load(screen.getByRole("img"));
   await userEvent.click(screen.getByRole("button", { name: "확인: 원문과 같아요" }));
 
   await waitFor(() => expect(screen.getByLabelText("검토 진행")).toHaveTextContent("2 / 3"));

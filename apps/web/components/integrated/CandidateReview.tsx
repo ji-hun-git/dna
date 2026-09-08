@@ -32,6 +32,14 @@ export function CandidateReview({
   const [reviewedCandidateId, setReviewedCandidateId] = useState(candidate.candidateId);
   const heading = useRef<HTMLHeadingElement>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
+  const [previewSource, setPreviewSource] = useState(previewUrl);
+  if (previewSource !== previewUrl) {
+    setPreviewSource(previewUrl);
+    setPreviewLoaded(false);
+    setPreviewFailed(false);
+  }
+  const previewReady = !!previewUrl && previewLoaded && !previewFailed && previewSource === previewUrl;
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [candidate.candidateId]);
 
   // Each candidate of the same document reuses this screen, so the draft value
@@ -82,7 +90,7 @@ export function CandidateReview({
             <details className="gc-review-source" open>
             <summary>결과지 원문 보기 · 예시 데이터</summary>
             <figure className="gc-import__safe-preview">
-              <img src={previewUrl} alt="승인된 합성 결과지의 첫 페이지 PNG 미리보기" onError={() => setPreviewFailed(true)} />
+              <img key={previewUrl} src={previewUrl} alt="승인된 합성 결과지의 첫 페이지 PNG 미리보기" onLoad={() => setPreviewLoaded(true)} onError={() => { setPreviewLoaded(false); setPreviewFailed(true); }} />
               <figcaption>결과지 첫 페이지예요. 값의 의미나 건강 상태를 판단하지 않아요.</figcaption>
               <a href={previewUrl} target="_blank" rel="noreferrer">원문 크게 보기</a>
             </figure>
@@ -91,7 +99,7 @@ export function CandidateReview({
           {correctionMode ? (
             <form
               className="gc-integrated-correction gc-review-decision-bar"
-              onSubmit={(event) => { event.preventDefault(); if (!busy && previewUrl && !previewFailed) onConfirm(draftValue.trim()); }}
+              onSubmit={(event) => { event.preventDefault(); if (!busy && previewReady) onConfirm(draftValue.trim()); }}
             >
               <label htmlFor="integrated-candidate-value">원문과 같은 값으로 수정</label>
               <input
@@ -106,14 +114,14 @@ export function CandidateReview({
               />
               <div className="gc-integrated-actions">
                 <button type="button" onClick={() => { setCorrectionMode(false); setDraftValue(candidate.value); }}>취소</button>
-                <button type="submit" disabled={busy || previewFailed || !previewUrl}>{busy ? "저장 중" : "수정한 값 확인"}</button>
+                <button type="submit" disabled={busy || !previewReady}>{busy ? "저장 중" : "수정한 값 확인"}</button>
               </div>
             </form>
           ) : (
             <div className="gc-import__review-actions gc-review-decision-bar" aria-label="항목 확인">
               <button className="gc-import__action gc-import__action--text" type="button" aria-label="제외: 이 항목 빼기" onClick={onExclude} disabled={busy}>제외</button>
-              <button className="gc-import__action gc-import__action--secondary" type="button" aria-label="값 수정" onClick={() => setCorrectionMode(true)} disabled={busy || previewFailed || !previewUrl}>수정</button>
-              <button className="gc-import__action gc-import__action--primary" type="button" aria-label="확인: 원문과 같아요" onClick={() => onConfirm(candidate.value)} disabled={busy || previewFailed || !previewUrl}>{busy ? "저장 중" : "확인"}</button>
+              <button className="gc-import__action gc-import__action--secondary" type="button" aria-label="값 수정" onClick={() => setCorrectionMode(true)} disabled={busy || !previewReady}>수정</button>
+              <button className="gc-import__action gc-import__action--primary" type="button" aria-label="확인: 원문과 같아요" onClick={() => onConfirm(candidate.value)} disabled={busy || !previewReady}>{busy ? "저장 중" : "확인"}</button>
             </div>
           )}
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}

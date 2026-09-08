@@ -7,6 +7,24 @@ import { syntheticCandidates } from "./fixtures/foundation";
 
 afterEach(cleanup);
 
+it("waits for the source image to load before allowing confirmation", () => {
+  const props = reviewProps();
+  render(<CandidateReview {...props} />);
+  expect(screen.getByRole("button", {name: "확인: 원문과 같아요"})).toBeDisabled();
+  expect(screen.getByRole("button", {name: "값 수정"})).toBeDisabled();
+  fireEvent.load(screen.getByRole("img"));
+  expect(screen.getByRole("button", {name: "확인: 원문과 같아요"})).toBeEnabled();
+});
+
+it("requires a successful reload after a failed source preview", async () => {
+  render(<CandidateReview {...reviewProps()} />);
+  fireEvent.error(screen.getByRole("img"));
+  await userEvent.click(screen.getByRole("button", {name: "다시 불러오기"}));
+  expect(screen.getByRole("button", {name: "확인: 원문과 같아요"})).toBeDisabled();
+  fireEvent.load(screen.getByRole("img"));
+  expect(screen.getByRole("button", {name: "확인: 원문과 같아요"})).toBeEnabled();
+});
+
 function reviewProps() {
   return {
     candidate: syntheticCandidates[0],
@@ -33,6 +51,7 @@ it("shows the review position of the candidate the server asked about", () => {
 it("confirms the untouched candidate value", async () => {
   const props = reviewProps();
   render(<CandidateReview {...props} />);
+  fireEvent.load(screen.getByRole("img"));
 
   await userEvent.click(screen.getByRole("button", { name: "확인: 원문과 같아요" }));
 
@@ -43,6 +62,7 @@ it("confirms the untouched candidate value", async () => {
 it("sends a corrected value only after the person edits it", async () => {
   const props = reviewProps();
   render(<CandidateReview {...props} />);
+  fireEvent.load(screen.getByRole("img"));
 
   await userEvent.click(screen.getByRole("button", { name: "값 수정" }));
   const input = screen.getByLabelText("원문과 같은 값으로 수정");
