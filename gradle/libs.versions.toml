@@ -13,6 +13,7 @@ assertj = "3.27.6"
 jackson = "2.21.5"
 bouncycastle = "1.84"
 postgresql = "42.7.12"
+tomcat = "10.1.59"
 
 [libraries]
 spring-web = { module = "org.springframework.boot:spring-boot-starter-web" }

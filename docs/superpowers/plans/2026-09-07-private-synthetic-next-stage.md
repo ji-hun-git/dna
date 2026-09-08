@@ -1,6 +1,9 @@
 # Next stage: private synthetic staging and observed product validation
 
-Date: 2026-09-07 (Asia/Seoul). Status: **planning initiated; implementation not started by this plan**.
+Date: 2026-09-07 (Asia/Seoul). Status: **planning initiated; N1 implementation not started**.
+2026-09-08 maintenance: this branch also carries the existing Tomcat 10.1.59 fix
+and loaded-runtime regression from PR #5 to address its own failing CI baseline.
+This does not incorporate the product rebuild or satisfy N0 review.
 Target: `HOSTED_SYNTHETIC_STAGING`. Release remains **NO_GO**.
 
 ## 1. Outcome and authority
@@ -15,7 +18,7 @@ or the [release gates](../../../release/readiness.json). Proposed architecture b
 review before implementation. Planning does not authorize AWS access, provisioning, publication,
 deployment, package deletion, external accounts, participant recruitment, or PHI processing.
 
-Scope of this change: planning Markdown and index links only. It describes future storage,
+Original planning scope: planning Markdown and index links only. It describes future storage,
 queue, privacy and release boundaries without changing any of them. No behavioral test is
 applicable to this documentation change; every implementation slice below names its first test.
 
@@ -252,5 +255,5 @@ New plan Markdown relative links: PASS
 ```
 
 This branch does not contain PR #5's runtime fixes or refreshed evidence documents yet.
-No application tests were rerun locally for this Markdown-only package. Its own CI result
+No application tests were rerun locally for the original Markdown-only package. Its own CI result
 must be checked on the planning PR; the product CI in section 2 is a different revision.
