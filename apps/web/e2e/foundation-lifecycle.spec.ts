@@ -186,8 +186,20 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
   await expect(page.getByTestId("durable-record")).toHaveCount(2);
   await expect(page.getByTestId("durable-record").filter({hasText: "비타민 D"})).toHaveCount(0);
+  await page.route("**/api/foundation/records", (route) => route.fulfill({
+    status: 503,
+    contentType: "application/json",
+    body: JSON.stringify({ code: "retryable_dependency_failure" }),
+  }));
   await page.goto("/prepare");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("잠시 응답하지 않아요");
+  await expect(page.getByRole("button", { name: "인쇄하기" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "홈에서 다시 로그인" })).toHaveCount(0);
+  await page.unroute("**/api/foundation/records");
+  await page.getByRole("button", { name: "질문 목록 다시 불러오기" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
   await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "인쇄하기" })).toBeEnabled();
   await expect(page.getByText("190", {exact:true})).toBeVisible();
   await page.goto("/");
 

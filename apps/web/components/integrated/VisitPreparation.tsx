@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFoundationClient, type FoundationRecord } from "@/lib/foundation/client";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
-import { describeFoundationError } from "@/lib/foundation/messages";
+import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
 import { shortDigest } from "@/lib/format/short-digest";
 import { buildVisitQuestions } from "@/lib/records/visit-questions";
@@ -18,9 +18,10 @@ type VisitPreparationProps = {
   loading: boolean;
   errorMessage: string;
   onPrint: () => void;
+  onRetry?: () => void;
 };
 
-export function VisitPreparation({ records, loading, errorMessage, onPrint }: VisitPreparationProps) {
+export function VisitPreparation({ records, loading, errorMessage, onPrint, onRetry }: VisitPreparationProps) {
   const questions = !loading && !errorMessage ? buildVisitQuestions(records) : [];
   return (
     <main className="gc-prepare">
@@ -32,7 +33,14 @@ export function VisitPreparation({ records, loading, errorMessage, onPrint }: Vi
       </header>
 
       {loading && <p role="status" aria-live="polite">확인한 기록을 불러오고 있어요.</p>}
-      {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage} <a href="/">홈에서 다시 로그인</a></p>}
+      {errorMessage && <div className="gc-integrated-error" role="alert">
+        <p>{errorMessage}</p>
+        <div className="gc-prepare__actions">
+          {onRetry
+            ? <button type="button" disabled={loading} onClick={onRetry}>질문 목록 다시 불러오기</button>
+            : <a href="/">홈에서 다시 로그인</a>}
+        </div>
+      </div>}
 
       {!loading && !errorMessage && records.length === 0 && (
         <section className="gc-prepare__empty" aria-labelledby="prepare-empty-title">
@@ -81,22 +89,31 @@ export function IntegratedVisitPreparation() {
   const [records, setRecords] = useState<FoundationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [requiresSignIn, setRequiresSignIn] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setErrorMessage("");
+    setRequiresSignIn(false);
     void (async () => {
       try {
         await client.getSession();
         const loaded = await client.getRecords();
         if (active) setRecords(loaded);
       } catch (error) {
-        if (active) setErrorMessage(describeFoundationError(error));
+        if (active) {
+          setErrorMessage(describeFoundationError(error));
+          const state = foundationShellState(error);
+          setRequiresSignIn(state === "UNAUTHENTICATED" || state === "SESSION_EXPIRED");
+        }
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
-  }, [client]);
+  }, [client, loadAttempt]);
 
   return (
     <IntegratedShell current="prepare" status="확인한 기록으로 만든 질문">
@@ -105,6 +122,7 @@ export function IntegratedVisitPreparation() {
         loading={loading}
         errorMessage={errorMessage}
         onPrint={() => window.print()}
+        onRetry={requiresSignIn ? undefined : () => setLoadAttempt((attempt) => attempt + 1)}
       />
     </IntegratedShell>
   );
