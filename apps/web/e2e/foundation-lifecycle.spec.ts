@@ -8,12 +8,34 @@ type BrowserApiResult = {
 
 const boundedDocumentProcessingTimeoutMs = 45_000;
 
-const viewports = [[390, 844], [430, 932], [768, 1024], [1280, 720], [1440, 900], [1920, 1080]] as const;
+const viewports = [[320, 720], [390, 844], [430, 932], [768, 1024], [1280, 720], [1440, 900], [1920, 1080]] as const;
 async function captureMatrix(page: Page, info: TestInfo, state: string) {
   for (const [width, height] of viewports) {
     await page.setViewportSize({ width, height });
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
     await page.evaluate(() => window.scrollTo(0, 0));
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    const nav = page.getByRole("navigation", { name: "주요 메뉴" });
+    if (await nav.count()) {
+      await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
+      for (const label of ["홈", "기록", "진료 준비", "데이터"]) {
+        const link = nav.getByRole("link", { name: label, exact: true });
+        const target = await link.boundingBox();
+        const icon = await link.locator("svg").boundingBox();
+        const text = await link.locator("span").boundingBox();
+        expect(target).not.toBeNull();
+        expect(icon).not.toBeNull();
+        expect(text).not.toBeNull();
+        expect(target!.height).toBeGreaterThanOrEqual(width <= 672 ? 56 : 48);
+        expect(target!.width).toBeGreaterThanOrEqual(48);
+        expect(target!.y).toBeGreaterThanOrEqual(0);
+        expect(target!.y + target!.height).toBeLessThanOrEqual(height);
+        expect(icon!.width).toBeGreaterThanOrEqual(20);
+        expect(text!.x).toBeGreaterThanOrEqual(target!.x);
+        expect(text!.x + text!.width).toBeLessThanOrEqual(target!.x + target!.width + 1);
+        if (width <= 672) expect(text!.y).toBeGreaterThanOrEqual(icon!.y + icon!.height);
+      }
+    }
     if (state === "entry") {
       const button = await page.getByRole("button", {name: "체험 시작"}).boundingBox();
       expect(button!.height).toBeGreaterThanOrEqual(44);
@@ -91,6 +113,18 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
 
   await page.getByRole("button", { name: "체험 시작" }).click();
   await expect(page.getByRole("heading", { name: /값보다 먼저\s*출처를 확인하세요/ })).toBeVisible();
+  await captureMatrix(page, info, "home");
+
+  // Written labels stay keyboard-operable links, not icon-only controls.
+  for (const [label, path] of [["기록", "/records"], ["진료 준비", "/prepare"], ["데이터", "/data-control"], ["홈", "/"]]) {
+    const link = page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("link", { name: label, exact: true });
+    await link.focus();
+    await expect(link).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new URL(path, page.url()).href);
+    await expect(page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("link", { name: label, exact: true }))
+      .toHaveAttribute("aria-current", "page");
+  }
 
   await page.getByRole("button", { name: "결과지 추가" }).click();
   await expect(page.getByRole("heading", { name: "결과지에서 항목을 확인해도 될까요?" })).toBeVisible();
