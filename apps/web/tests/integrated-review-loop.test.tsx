@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { IntegratedHealthExperience } from "@/components/integrated/IntegratedHealthExperience";
 import type { FoundationCandidate, FoundationRecord } from "@/lib/foundation/client";
 import { syntheticCandidates, syntheticDocumentId } from "./fixtures/foundation";
@@ -81,6 +81,68 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+});
+
+it.each([
+  "/api/foundation/session",
+  "/api/foundation/records",
+  "/api/foundation/documents/:documentId/candidates",
+])("retries failed restoration at %s without offering a new demo identity", async (endpoint) => {
+  let unavailable = true;
+  const bootstrap = vi.fn(() => HttpResponse.json({}, { status: 500 }));
+  server.use(
+    http.post("/api/foundation/demo-session", bootstrap),
+    http.get(endpoint, () => unavailable
+      ? HttpResponse.json({ code: "retryable_dependency_failure" }, { status: 503 })
+      : undefined),
+  );
+  render(<IntegratedHealthExperience />);
+  expect(await screen.findByRole("alert")).toHaveTextContent("잠시 응답하지 않아요");
+  expect(screen.queryByRole("button", { name: "체험 시작" })).toBeNull();
+  unavailable = false;
+  await userEvent.click(screen.getByRole("button", { name: "체험 상태 다시 확인" }));
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
+  expect(screen.getByLabelText("검토 진행")).toHaveTextContent("1 / 3");
+  expect(bootstrap).not.toHaveBeenCalled();
+});
+
+it("does not bootstrap twice when the first bootstrap succeeds but its following read fails", async () => {
+  let issued = false;
+  let unavailable = true;
+  const session = {
+    sessionId: "ca9d1f51-b0b6-4d12-a5c1-05938e2c1c9b",
+    subjectId: "synthetic-bootstrap-recovery",
+    status: "AUTHENTICATED",
+    expiresAt: "2026-09-08T09:00:00Z",
+  };
+  const bootstrap = vi.fn(() => {
+    issued = true;
+    return HttpResponse.json({ ...session, csrfToken: "synthetic-recovery-csrf-value-000001" });
+  });
+  server.use(
+    http.get("/api/foundation/session", () => issued ? HttpResponse.json(session)
+      : HttpResponse.json({ code: "authentication_required" }, { status: 401 })),
+    http.post("/api/foundation/demo-session", bootstrap),
+    http.get("/api/foundation/records", () => unavailable
+      ? HttpResponse.json({ code: "retryable_dependency_failure" }, { status: 503 }) : undefined),
+  );
+  render(<IntegratedHealthExperience />);
+  await userEvent.click(await screen.findByRole("button", { name: "체험 시작" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("잠시 응답하지 않아요");
+  expect(screen.queryByRole("button", { name: "체험 시작" })).toBeNull();
+  unavailable = false;
+  await userEvent.click(screen.getByRole("button", { name: "체험 상태 다시 확인" }));
+  expect(await screen.findByLabelText("검토 진행")).toHaveTextContent("1 / 3");
+  expect(bootstrap).toHaveBeenCalledTimes(1);
+});
+
+it("offers a new demo only after the server reports an expired session", async () => {
+  server.use(http.get("/api/foundation/session", () =>
+    HttpResponse.json({ code: "session_expired" }, { status: 401 })));
+  render(<IntegratedHealthExperience />);
+  expect(await screen.findByRole("button", { name: "체험 시작" })).toBeVisible();
+  expect(screen.queryByRole("button", { name: "체험 상태 다시 확인" })).toBeNull();
+  expect(screen.queryByLabelText("검토 진행")).toBeNull();
 });
 
 it("walks every candidate of one document before reporting the result", async () => {

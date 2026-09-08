@@ -28,6 +28,7 @@ type ShellState =
   | "AUTHENTICATED"
   | "UNAUTHENTICATED"
   | "SESSION_EXPIRED"
+  | "RESTORE_FAILED"
   | "AUTHORIZATION_DENIED";
 
 type View = "home" | "consent" | "source" | "processing" | "review" | "complete";
@@ -122,9 +123,16 @@ export function IntegratedHealthExperience() {
       await loadProductTruth();
       setShellState("AUTHENTICATED");
     } catch (error) {
-      setSession(undefined);
-      setShellState(foundationShellState(error));
-      if (foundationShellState(error) !== "UNAUTHENTICATED") setErrorMessage(describeFoundationError(error));
+      const state = foundationShellState(error);
+      if (state === "UNAUTHENTICATED" || state === "SESSION_EXPIRED") {
+        setSession(undefined);
+        setShellState(state);
+      } else {
+        // A failed read is not proof that the session is gone. In particular,
+        // never replace restoration with a new demo-bootstrap POST.
+        setShellState("RESTORE_FAILED");
+      }
+      if (state !== "UNAUTHENTICATED") setErrorMessage(describeFoundationError(error));
     }
   }, [client, loadProductTruth]);
 
@@ -191,7 +199,9 @@ export function IntegratedHealthExperience() {
       setShellState("AUTHENTICATED");
       setView("home");
     } catch (error) {
-      setShellState("AUTHORIZATION_DENIED");
+      // A bootstrap response may have set cookies before a later read failed.
+      // Re-read the current session before offering another bootstrap attempt.
+      setShellState("RESTORE_FAILED");
       setErrorMessage(describeFoundationError(error));
     } finally {
       setBusy(false);
@@ -331,6 +341,23 @@ export function IntegratedHealthExperience() {
   }
 
   if (shellState !== "AUTHENTICATED") {
+    if (shellState === "RESTORE_FAILED") {
+      return (
+        <IntegratedShell current="home" status="체험 상태 확인 필요">
+          <main className="gc-integrated-shell gc-integrated-shell--center">
+            <section className="gc-integrated-auth" aria-labelledby="restore-failed-title">
+              <p>예시 데이터 체험</p>
+              <h1 id="restore-failed-title">체험 상태를 불러오지 못했어요</h1>
+              <p>새 체험을 만들지 않고, 현재 로그인과 기록을 다시 확인해요.</p>
+              {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
+              <div className="gc-integrated-actions">
+                <button type="button" disabled={busy} onClick={() => void initialize()}>체험 상태 다시 확인</button>
+              </div>
+            </section>
+          </main>
+        </IntegratedShell>
+      );
+    }
     return (
       <IntegratedShell current="home" status="예시 데이터로 체험">
       <main className="gc-integrated-shell gc-integrated-shell--center gc-demo-entry">

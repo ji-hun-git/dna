@@ -201,7 +201,21 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("article")).toHaveCount(2);
   await expect(page.getByRole("button", { name: "인쇄하기" })).toBeEnabled();
   await expect(page.getByText("190", {exact:true})).toBeVisible();
+  const sessionBeforeRecovery = await browserApi(page, "/api/foundation/session");
+  expect(sessionBeforeRecovery.status).toBe(200);
+  await page.route("**/api/foundation/records", (route) => route.fulfill({
+    status: 503,
+    contentType: "application/json",
+    body: JSON.stringify({ code: "retryable_dependency_failure" }),
+  }));
   await page.goto("/");
+  await expect(page.getByRole("heading", { name: "체험 상태를 불러오지 못했어요" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "체험 시작" })).toHaveCount(0);
+  await page.screenshot({ path: info.outputPath("home-restore-error-390x844.png") });
+  await page.unroute("**/api/foundation/records");
+  await page.getByRole("button", { name: "체험 상태 다시 확인" }).click();
+  await expect(page.getByRole("heading", { name: /값보다 먼저\s*출처를 확인하세요/ })).toBeVisible();
+  expect(await browserApi(page, "/api/foundation/session")).toEqual(sessionBeforeRecovery);
 
   // The second allow-listed document is bound to the 2026-01 candidate set, so
   // the same three items come back with their own values and observation date.
