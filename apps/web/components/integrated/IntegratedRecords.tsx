@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createFoundationClient, type FoundationRecord } from "@/lib/foundation/client";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { RecordComparison } from "@/components/integrated/RecordComparison";
-import { describeFoundationError } from "@/lib/foundation/messages";
+import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate, formatKoreanDateTime } from "@/lib/format/korean-date";
 import { labelRecordStatus } from "@/lib/format/status-labels";
 import { compareRecords } from "@/lib/records/compare-records";
@@ -14,6 +14,11 @@ import styles from "@/components/records/HealthTimeline.module.css";
 
 function idempotencyKey() {
   return `correction-${crypto.randomUUID()}`;
+}
+
+function needsSignIn(error: unknown) {
+  const state = foundationShellState(error);
+  return state === "UNAUTHENTICATED" || state === "SESSION_EXPIRED";
 }
 
 type RecordGroup = {
@@ -43,6 +48,8 @@ export function IntegratedRecords() {
   const [records, setRecords] = useState<FoundationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [errorAction, setErrorAction] = useState<"retry-read" | "sign-in">();
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [successMessage, setSuccessMessage] = useState("");
   const [editingId, setEditingId] = useState<string>();
   const [draftValue, setDraftValue] = useState("");
@@ -52,24 +59,31 @@ export function IntegratedRecords() {
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setErrorMessage("");
+    setErrorAction(undefined);
     void (async () => {
       try {
         await client.getSession();
         const loaded = await client.getRecords();
         if (active) setRecords(loaded);
       } catch (error) {
-        if (active) setErrorMessage(describeFoundationError(error));
+        if (active) {
+          setErrorMessage(describeFoundationError(error));
+          setErrorAction(needsSignIn(error) ? "sign-in" : "retry-read");
+        }
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
-  }, [client]);
+  }, [client, loadAttempt]);
 
   const correctRecord = async (event: FormEvent<HTMLFormElement>, record: FoundationRecord) => {
     event.preventDefault();
     setBusy(true);
     setErrorMessage("");
+    setErrorAction(undefined);
     setSuccessMessage("");
     try {
       const corrected = await client.correctRecord(
@@ -84,6 +98,8 @@ export function IntegratedRecords() {
       setSuccessMessage(`${corrected.label} 기록을 새 버전으로 저장했어요.`);
     } catch (error) {
       setErrorMessage(describeFoundationError(error));
+      // A failed write is not automatically replayed by the read-retry control.
+      setErrorAction(needsSignIn(error) ? "sign-in" : undefined);
     } finally {
       setBusy(false);
     }
@@ -108,7 +124,10 @@ export function IntegratedRecords() {
 
           {loading && <p role="status" aria-live="polite">서버에서 건강 기록을 불러오고 있어요.</p>}
           {successMessage && <p role="status" aria-live="polite">{successMessage}</p>}
-          {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage} <a href="/">홈에서 다시 로그인</a></p>}
+          {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}{" "}
+            {errorAction === "sign-in" && <a href="/">홈에서 다시 로그인</a>}
+            {errorAction === "retry-read" && <button type="button" disabled={loading} onClick={() => setLoadAttempt((attempt) => attempt + 1)}>기록 다시 불러오기</button>}
+          </p>}
 
           {!loading && !errorMessage && records.length === 0 && (
             <p className="gc-integrated-empty">아직 저장된 합성 기록이 없어요. 홈에서 허용된 합성 PDF를 확인해 주세요.</p>

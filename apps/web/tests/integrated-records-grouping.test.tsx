@@ -58,6 +58,26 @@ afterEach(() => {
   server.resetHandlers();
 });
 
+it("recovers a failed records read in place without requiring another login", async () => {
+  server.use(http.get("/api/foundation/records", () =>
+    HttpResponse.json({ code: "retryable_dependency_failure" }, { status: 503 }), { once: true }));
+  render(<IntegratedRecords />);
+  expect(await screen.findByRole("alert")).toHaveTextContent("잠시 응답하지 않아요");
+  expect(screen.queryByRole("link", { name: "홈에서 다시 로그인" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "기록 다시 불러오기" }));
+  expect(await screen.findByRole("heading", { name: "현재 기록 3개" })).toBeVisible();
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it("asks for sign-in instead of retrying when the session has expired", async () => {
+  server.use(http.get("/api/foundation/session", () =>
+    HttpResponse.json({ code: "session_expired" }, { status: 401 })));
+  render(<IntegratedRecords />);
+  expect(await screen.findByRole("link", { name: "홈에서 다시 로그인" })).toHaveAttribute("href", "/");
+  expect(screen.queryByRole("button", { name: "기록 다시 불러오기" })).toBeNull();
+  expect(screen.queryAllByTestId("durable-record")).toHaveLength(0);
+});
+
 it("groups records by the day and the document they came from, newest first", async () => {
   render(<IntegratedRecords />);
 
