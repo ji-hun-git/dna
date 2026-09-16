@@ -17,7 +17,7 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const nav = page.getByRole("navigation", { name: "주요 메뉴" });
     if (await nav.count()) {
-      await expect(nav.locator('[aria-current="page"]')).toHaveCount(state === "home" ? 0 : 1);
+      await expect(nav.locator('[aria-current="page"]')).toHaveCount(state === "home" || state === "entry" ? 0 : 1);
       for (const label of ["나의 데이터", "데이터 관리"]) {
         const link = nav.getByRole("link", { name: label, exact: true });
         const target = await link.boundingBox();
@@ -40,6 +40,11 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
       const button = await page.getByRole("button", {name: "체험 시작"}).boundingBox();
       expect(button!.height).toBeGreaterThanOrEqual(44);
       expect(button!.y + button!.height).toBeLessThanOrEqual(height);
+    }
+    if (state === "my-data") {
+      const search = await page.getByRole("searchbox", { name: "내 데이터에서 항목 찾기" }).boundingBox();
+      expect(search).not.toBeNull();
+      expect(search!.height).toBeGreaterThanOrEqual(44);
     }
     if (state === "review") {
       for (const name of ["확인: 원문과 같아요", "값 수정", "제외: 이 항목 빼기"]) {
@@ -251,6 +256,22 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.getByRole("link", { name: "저장된 기록 보기" }).click();
   await expect(page).toHaveURL(/\/records$/);
   await expect(page.getByTestId("durable-record")).toHaveCount(5);
+
+  await page.goto("/my-data");
+  const figure = page.getByRole("figure", { name: "나의 데이터: 한 칸이 하나의 기록" });
+  await expect(figure).toBeVisible();
+  const cells = figure.getByRole("button");
+  await expect(cells).toHaveCount(5);
+  await expect(page.getByRole("table", { name: "기록 목록" }).getByRole("row")).toHaveCount(5 + 1);
+  await cells.first().click();
+  const drawer = page.getByRole("region", { name: /근거$/ });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByRole("img")).toBeVisible();
+  await page.getByRole("searchbox", { name: "내 데이터에서 항목 찾기" }).fill("총콜레스테롤");
+  await expect(page.getByRole("status", { name: "검색 결과" })).toContainText("총콜레스테롤 기록");
+  await captureMatrix(page, info, "my-data");
+
+  await page.goto("/records");
   const groupHeadings = page.locator(".gc-records-group h3");
   await expect(groupHeadings).toHaveCount(2);
   await expect(groupHeadings.nth(0)).toContainText("2026. 7. 28.");
