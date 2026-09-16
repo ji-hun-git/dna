@@ -34,8 +34,6 @@ export function buildLocalPlan(input: Record<string, string | undefined>) {
     GC_ALLOWED_ORIGIN: origin, GC_FOUNDATION_SECURE_COOKIES: "false", GC_QUARANTINE_ROOT: quarantineRoot,
     GC_AUDIT_PEPPER: "local-synthetic-only-audit-pepper-not-for-hosting",
     GC_ALLOWED_DOCUMENT_SHA256: [digest("2026-07"), digest("2026-01")].join(","),
-    GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SHA256: digest("2026-01"),
-    GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SET_ID: "checkup-2026-01",
   };
   const worker: Record<string, string> = {
     ...system, GC_WORKER_API_BASE_URL: apiOrigin, GC_WORKER_CREDENTIAL: workerCredential,
