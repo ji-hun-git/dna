@@ -1,6 +1,6 @@
 package kr.co.genomecompanion.foundation
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kr.co.genomecompanion.documentboundary.InspectionDecision
 import kr.co.genomecompanion.documentboundary.InspectionReport
@@ -131,6 +131,7 @@ data class FoundationRecordRow(
 @ConditionalOnProperty(prefix = "gc.foundation", name = ["enabled"], havingValue = "true")
 class FoundationRepository(
     private val jdbc: JdbcTemplate,
+    private val objectMapper: ObjectMapper,
 ) {
     private val sessionMapper = RowMapper { result, _ ->
         FoundationSessionRow(
@@ -211,7 +212,7 @@ class FoundationRepository(
         )
     }
 
-    private val abstentionJson = jacksonObjectMapper()
+    private val abstentionJson = objectMapper
 
     private val candidateProjection =
         """

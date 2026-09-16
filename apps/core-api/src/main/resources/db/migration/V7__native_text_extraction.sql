@@ -1,3 +1,5 @@
+-- Pre-existing rows (fixture-era candidates in synthetic databases) are backfilled with 'native-text';
+-- no hosted database exists, so no real provenance row is relabelled.
 ALTER TABLE gc_candidate
     ADD COLUMN extraction_method VARCHAR(32) NOT NULL DEFAULT 'native-text',
     ADD COLUMN evidence_box_x NUMERIC(6,5),

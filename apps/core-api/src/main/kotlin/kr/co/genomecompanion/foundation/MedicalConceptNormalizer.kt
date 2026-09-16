@@ -1,6 +1,6 @@
 package kr.co.genomecompanion.foundation
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kr.co.genomecompanion.documentboundary.MedicalConcept
 import kr.co.genomecompanion.documentboundary.MedicalConceptCatalogue
@@ -33,8 +33,10 @@ fun interface MedicalConceptSource {
 /** Reads the V7 seed. `gc_medical_concept` is the persisted authority; the Kotlin catalogue only guards drift. */
 @Component
 @ConditionalOnProperty(prefix = "gc.foundation", name = ["enabled"], havingValue = "true")
-class JdbcMedicalConceptSource(private val jdbc: JdbcTemplate) : MedicalConceptSource {
-    private val json = jacksonObjectMapper()
+class JdbcMedicalConceptSource(
+    private val jdbc: JdbcTemplate,
+    private val json: ObjectMapper,
+) : MedicalConceptSource {
 
     override fun concepts(): List<MedicalConcept> = jdbc.query(
         "SELECT concept_code, display_ko, loinc_code, canonical_unit, aliases::text AS aliases FROM gc_medical_concept ORDER BY concept_code",
