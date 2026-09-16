@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const uuidSchema = z.string().uuid();
 const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{8,80}$/);
+const confirmationBodySchema = z.object({ value: z.string().min(1).max(64), observedOn: z.string().date().optional() }).strict();
 const conceptCodeSchema = z.string().regex(/^[a-z0-9-]{1,64}$/);
 
 // Where on the page the worker read a line: normalized 0..1, top-left origin. Display only.
@@ -121,6 +122,8 @@ const recordSchema = z.object({
   originalValue: z.string().min(1).max(64),
   unit: z.string().min(1).max(32),
   observedOn: z.string().date(),
+  // The parser's date; equals observedOn unless the person corrected the exam date on review.
+  originalObservedOn: z.string().date(),
   confirmedAt: z.string().datetime({ offset: true }),
   correctionReason: z.string().min(1).max(200).nullable().optional(),
   evidencePage: z.number().int().positive(),
@@ -393,7 +396,7 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       candidateSchema,
       { method: "GET" },
     ),
-    confirmCandidate: async (candidateId: string, value: string, idempotencyKey: string) => request(
+    confirmCandidate: async (candidateId: string, value: string, idempotencyKey: string, observedOn?: string) => request(
       `/api/foundation/candidates/${requireUuid(candidateId)}/confirmation`,
       recordSchema,
       {
@@ -402,7 +405,7 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
           "Content-Type": "application/json",
           "Idempotency-Key": requireIdempotencyKey(idempotencyKey),
         },
-        body: JSON.stringify({ value }),
+        body: JSON.stringify(confirmationBodySchema.parse({ value, observedOn })),
       },
       true,
     ),

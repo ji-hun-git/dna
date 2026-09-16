@@ -118,6 +118,7 @@ data class FoundationRecordRow(
     val originalValue: String,
     val unit: String,
     val observedOn: LocalDate,
+    val originalObservedOn: LocalDate? = null,
     val confirmedAt: Instant,
     val correctionReason: String?,
     val evidencePage: Int,
@@ -203,6 +204,7 @@ class FoundationRepository(
             originalValue = result.getString("original_value"),
             unit = result.getString("unit"),
             observedOn = result.getObject("observed_on", LocalDate::class.java),
+            originalObservedOn = result.getObject("original_observed_on", LocalDate::class.java),
             confirmedAt = result.getObject("confirmed_at", OffsetDateTime::class.java).toInstant(),
             correctionReason = result.getString("correction_reason"),
             evidencePage = result.getInt("evidence_page"),
@@ -241,7 +243,7 @@ class FoundationRepository(
         SELECT r.record_id, v.version_id AS record_version_id, v.supersedes_version_id,
                r.candidate_id, r.document_id, r.subject_id, v.status AS version_status,
                r.label, v.value AS current_value, c.candidate_value AS original_value,
-               r.unit, r.observed_on, v.changed_at AS confirmed_at, v.correction_reason,
+               r.unit, r.observed_on, r.original_observed_on, v.changed_at AS confirmed_at, v.correction_reason,
                c.evidence_page, c.source_text_sha256, d.sha256 AS document_sha256, v.concept_code
         FROM gc_health_record r
         JOIN gc_health_record_version v ON v.record_id = r.record_id
@@ -1171,6 +1173,7 @@ class FoundationRepository(
         candidate: FoundationCandidateRow,
         confirmedValue: String,
         now: Instant,
+        observedOn: LocalDate = candidate.observedOn,
     ) {
         val updated = jdbc.update(
             """
@@ -1187,8 +1190,8 @@ class FoundationRepository(
             """
             INSERT INTO gc_health_record(
                 record_id, candidate_id, document_id, subject_id, label, confirmed_value,
-                unit, observed_on, confirmed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                unit, observed_on, original_observed_on, confirmed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
             recordId,
             candidate.candidateId,
@@ -1197,7 +1200,8 @@ class FoundationRepository(
             candidate.label,
             confirmedValue,
             candidate.unit,
-            candidate.observedOn,
+            observedOn,
+            if (observedOn == candidate.observedOn) null else candidate.observedOn,
             now.atOffset(ZoneOffset.UTC),
         )
         jdbc.update(

@@ -1017,6 +1017,79 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isUnauthorized)
     }
 
+    @Test
+    fun storesAConfirmedExamDateKeepsTheParserDateAndAuditsNoDateValue() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "date-correction")
+
+        fun confirmation(key: String, body: Map<String, String>) =
+            post("/api/foundation/candidates/$candidateId/confirmation")
+                .header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(body))
+
+        mutate(confirmation("confirm-date-bad-shape", mapOf("value" to "188", "observedOn" to "28-07-2026")), alice)
+            .andExpect(status().isBadRequest)
+        mutate(confirmation("confirm-date-impossible", mapOf("value" to "188", "observedOn" to "2026-02-30")), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("observed_on_invalid"))
+        mutate(confirmation("confirm-date-future", mapOf("value" to "188", "observedOn" to "2999-01-01")), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("observed_on_out_of_range"))
+        mutate(confirmation("confirm-date-too-early", mapOf("value" to "188", "observedOn" to "1899-12-31")), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("observed_on_out_of_range"))
+        assertThat(count("gc_health_record")).isEqualTo(0)
+
+        val record = responseJson(
+            mutate(confirmation("confirm-date-corrected", mapOf("value" to "188", "observedOn" to "2026-07-27")), alice)
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.reviewDecision").value("CORRECTED"))
+                .andExpect(jsonPath("$.value").value("188"))
+                .andExpect(jsonPath("$.originalValue").value("188"))
+                .andExpect(jsonPath("$.observedOn").value("2026-07-27"))
+                .andExpect(jsonPath("$.originalObservedOn").value("2026-07-28"))
+                .andReturn().response.contentAsByteArray,
+        )
+        val recordId = record["recordId"].asText()
+        assertThat(jdbc.queryForObject("SELECT observed_on::text FROM gc_health_record", String::class.java)).isEqualTo("2026-07-27")
+        assertThat(jdbc.queryForObject("SELECT original_observed_on::text FROM gc_health_record", String::class.java)).isEqualTo("2026-07-28")
+        assertThat(
+            jdbc.queryForObject("SELECT observed_on::text FROM gc_candidate WHERE candidate_id = ?", String::class.java, candidateId),
+        ).isEqualTo("2026-07-28")
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'CANDIDATE_CORRECTED'", Long::class.java),
+        ).isEqualTo(1L)
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event a WHERE a::text LIKE '%2026-07-27%' OR a::text LIKE '%2026-07-28%'", Long::class.java),
+        ).isEqualTo(0L)
+
+        read(get("/api/foundation/records/$recordId"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.reviewDecision").value("CORRECTED"))
+            .andExpect(jsonPath("$.originalObservedOn").value("2026-07-28"))
+        read(get("/api/foundation/health-events"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].observedOn").value("2026-07-27"))
+            .andExpect(jsonPath("$[0].corrected").value(true))
+
+        val sameDateCandidate = createCandidate(alice, consentId, "date-unchanged")
+        mutate(
+            post("/api/foundation/candidates/$sameDateCandidate/confirmation")
+                .header("Idempotency-Key", "confirm-date-unchanged")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188", "observedOn" to "2026-07-28"))),
+            alice,
+        ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.reviewDecision").value("CONFIRMED"))
+            .andExpect(jsonPath("$.observedOn").value("2026-07-28"))
+            .andExpect(jsonPath("$.originalObservedOn").value("2026-07-28"))
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM gc_health_record WHERE original_observed_on IS NULL", Long::class.java),
+        ).isEqualTo(1L)
+    }
+
     private fun importSyntheticDocument(
         client: TestClient,
         consentId: UUID,

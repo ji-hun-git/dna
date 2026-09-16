@@ -192,3 +192,30 @@ it("keeps the comparison and the groups accessible together", async () => {
   await screen.findByRole("heading", { name: "날짜별로 본 내 기록" });
   expect(await axe(container)).toHaveNoViolations();
 });
+
+it("says the person corrected the exam date and shows the original date", async () => {
+  server.use(http.get("/api/foundation/records", () => HttpResponse.json([
+    syntheticRecord({ observedOn: "2026-07-27", originalObservedOn: "2026-07-28", reviewDecision: "CORRECTED" }),
+  ])));
+  render(<IntegratedRecords />);
+
+  expect(await screen.findByText("사용자가 검사일을 수정함 · 원래 2026. 7. 28.")).toBeVisible();
+  expect(screen.queryByText("사용자가 값을 수정함")).toBeNull();
+  expect(screen.queryByText("CORRECTED")).toBeNull();
+});
+
+it("says the person corrected both the value and the exam date when a later correction touches both", async () => {
+  server.use(http.get("/api/foundation/records", () => HttpResponse.json([
+    syntheticRecord({
+      value: "190",
+      originalValue: "188",
+      observedOn: "2026-07-27",
+      originalObservedOn: "2026-07-28",
+      reviewDecision: "CORRECTED",
+    }),
+  ])));
+  render(<IntegratedRecords />);
+
+  expect(await screen.findByText("사용자가 값과 검사일을 수정함 · 원래 2026. 7. 28.")).toBeVisible();
+  expect(screen.queryByText("CORRECTED")).toBeNull();
+});

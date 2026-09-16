@@ -4,6 +4,7 @@ import type {
   FoundationConsent,
   FoundationRecord,
 } from "@/lib/foundation/client";
+import { formatKoreanDate } from "@/lib/format/korean-date";
 
 /**
  * The shared map for the integrated screens (a few components keep their own longer sentences) for turning a Spring enum into visible Korean.
@@ -67,4 +68,40 @@ export const abstentionReasonLabels: Record<FoundationAbstention["reason"], stri
 
 export function labelAbstentionReason(reason: Known<FoundationAbstention["reason"]>) {
   return labelled(abstentionReasonLabels, reason);
+}
+
+/** The worker reports two different labelled dates as one document-level ambiguous_value abstention. */
+export const documentDateConflictLabel = "검사일이 둘 이상이라 확실하지 않음";
+
+export function describeAbstention(abstention: Pick<FoundationAbstention, "label" | "reason">) {
+  if (abstention.label === "문서 전체" && abstention.reason === "ambiguous_value") return documentDateConflictLabel;
+  return labelAbstentionReason(abstention.reason);
+}
+
+type ReviewedRecord = Pick<FoundationRecord, "reviewDecision" | "value" | "originalValue" | "observedOn" | "originalObservedOn">;
+
+function correctedParts(record: ReviewedRecord) {
+  return {
+    value: record.reviewDecision === "CORRECTED" && record.value !== record.originalValue,
+    date: record.reviewDecision === "CORRECTED" && record.observedOn !== record.originalObservedOn,
+  };
+}
+
+/** Short outcome for the review summary list. */
+export function labelReviewOutcome(record: ReviewedRecord) {
+  const { value, date } = correctedParts(record);
+  if (value && date) return "값과 검사일을 수정함";
+  if (date) return "검사일을 수정함";
+  if (value || record.reviewDecision === "CORRECTED") return "값을 수정함";
+  return "원문과 같음";
+}
+
+/** Full sentence for the records screen; the original date is shown so the correction stays inspectable. */
+export function describeReviewDecision(record: ReviewedRecord) {
+  const { value, date } = correctedParts(record);
+  const originalDate = formatKoreanDate(record.originalObservedOn);
+  if (value && date) return `사용자가 값과 검사일을 수정함 · 원래 ${originalDate}`;
+  if (date) return `사용자가 검사일을 수정함 · 원래 ${originalDate}`;
+  if (value || record.reviewDecision === "CORRECTED") return "사용자가 값을 수정함";
+  return "사용자가 원문과 같다고 확인함";
 }

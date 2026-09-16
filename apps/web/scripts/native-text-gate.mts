@@ -21,7 +21,7 @@ function gradle(args: string[]) {
   const result = process.platform === "win32"
     ? spawnSync("cmd.exe", ["/d", "/s", "/c", ".\\gradlew.bat", ...args], { cwd: repository, stdio: "inherit", windowsHide: true })
     : spawnSync("./gradlew", args, { cwd: repository, stdio: "inherit" });
-  if (result.status !== 0) throw new Error(`gradle ${args.join(" ")} failed with status ${result.status}`);
+  if (result.status !== 0) throw new Error(`gradle ${args.join(" ")} failed with status ${result.status}${result.error ? `: ${result.error.message}` : ""}`);
 }
 
 if (!existsSync(font)) throw new Error(`Pretendard font not found at ${font}; run pnpm install first.`);

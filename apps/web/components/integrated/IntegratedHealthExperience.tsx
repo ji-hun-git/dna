@@ -16,10 +16,10 @@ import {
 import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
 import {
-  labelAbstentionReason,
+  describeAbstention,
   labelConsentStatus,
   labelRecordStatus,
-  labelReviewDecision,
+  labelReviewOutcome,
 } from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
 import { buildSyntheticResultPdf } from "@/lib/foundation/synthetic-document";
@@ -321,12 +321,12 @@ export function IntegratedHealthExperience() {
     }
   };
 
-  const confirmCandidate = async (value: string) => {
+  const confirmCandidate = async (value: string, observedOn?: string) => {
     if (!activeCandidate) return;
     setBusy(true);
     setErrorMessage("");
     try {
-      const record = await client.confirmCandidate(activeCandidate.candidateId, value, newIdempotencyKey("confirm"));
+      const record = await client.confirmCandidate(activeCandidate.candidateId, value, newIdempotencyKey("confirm"), observedOn);
       setSavedRecords((current) => [...current, record]);
       setRecords((current) => [...current.filter((item) => item.recordId !== record.recordId), record]);
       applyDecision({ ...activeCandidate, status: "CONFIRMED" });
@@ -490,7 +490,7 @@ export function IntegratedHealthExperience() {
           : undefined}
         busy={busy}
         errorMessage={errorMessage}
-        onConfirm={(value) => void confirmCandidate(value)}
+        onConfirm={(value, observedOn) => void confirmCandidate(value, observedOn)}
         onExclude={() => void excludeCandidate()}
         onBack={() => setView("processing")}
         onClose={() => setView("home")}
@@ -522,7 +522,7 @@ export function IntegratedHealthExperience() {
               {abstentions.map((item, index) => (
                 <li key={`${item.label}-${index}`}>
                   <strong>{item.label}</strong>
-                  <span>{labelAbstentionReason(item.reason)}</span>
+                  <span>{describeAbstention(item)}</span>
                   {item.evidencePage ? <span>{item.evidencePage}쪽</span> : null}
                 </li>
               ))}
@@ -554,7 +554,7 @@ export function IntegratedHealthExperience() {
                   <strong>{record.label}</strong>
                   <span>예시 데이터</span>
                   <span>{record.value} {record.unit}</span>
-                  <span>{labelReviewDecision(record.reviewDecision)}</span>
+                  <span>{labelReviewOutcome(record)}</span>
                 </li>
               ))}
             </ul>

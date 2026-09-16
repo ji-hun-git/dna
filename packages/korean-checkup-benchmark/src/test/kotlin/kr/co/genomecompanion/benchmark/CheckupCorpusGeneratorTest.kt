@@ -22,12 +22,12 @@ class CheckupCorpusGeneratorTest {
         val documents = CheckupCorpusGenerator(font).generateAll()
         val corpus = CorpusWriter.write(documents, out)
 
-        assertThat(documents).hasSize(24)
+        assertThat(documents).hasSize(25)
         assertThat(documents.map { it.documentId }).doesNotHaveDuplicates()
-        assertThat(Files.list(out).use { paths -> paths.filter { it.toString().endsWith(".pdf") }.count() }).isEqualTo(24L)
+        assertThat(Files.list(out).use { paths -> paths.filter { it.toString().endsWith(".pdf") }.count() }).isEqualTo(25L)
         assertThat(Files.exists(out.resolve("corpus.json"))).isTrue()
         assertThat(documents.count { it.imageOnly }).isEqualTo(1)
-        assertThat(corpus.corpusId).isEqualTo("synthetic-ko-checkup-r1")
+        assertThat(corpus.corpusId).matches("synthetic-ko-checkup-r2-[0-9a-f]{16}")
         assertThat(corpus.documents.sumOf { it.expectedMeasurements.size })
             .isEqualTo(documents.filter { !it.imageOnly && it.observedOn != null }.sumOf { it.rows.size })
 
@@ -91,6 +91,37 @@ class CheckupCorpusGeneratorTest {
         assertThat(NativeTextExtractionProvider.extract(scan.bytes).abstentions.single().reason).isEqualTo(AbstentionReason.UNREADABLE)
         assertThat(CorpusWriter.gold(scan).requiredAbstentions)
             .containsExactly(GoldAbstention("document", "문서 전체", listOf("unreadable")))
+
+        val birthDateFirst = generator.generate(Layout.HOSPITAL_TWO_COLUMN, CheckupCorpusGenerator.BIRTH_DATE_VARIANT)
+        assertThat(birthDateFirst.documentId).isEqualTo("synthetic-hospital-two-column-v6")
+        assertThat(birthDateFirst.observedOn).isEqualTo("2026-01-20")
+        val printed = NativeTextExtractionProvider.extractLines(birthDateFirst.bytes).map { it.text }
+        assertThat(printed).contains("생년월일: 1987-03-14")
+        assertThat(printed.indexOfFirst { it.startsWith("생년월일") })
+            .isLessThan(printed.indexOfFirst { it.startsWith("수검자 합성-6") && it.endsWith("검사일: 2026-01-20") })
+        val parsedBirthDateFirst = NativeTextExtractionProvider.extract(birthDateFirst.bytes)
+        assertThat(parsedBirthDateFirst.observedOn).isEqualTo(java.time.LocalDate.of(2026, 1, 20))
+        assertThat(parsedBirthDateFirst.candidates).hasSize(8)
+        assertThat(CorpusWriter.gold(birthDateFirst).expectedMeasurements.map { it.observedAt }).containsOnly("2026-01-20")
+        assertThat(generator.generateAll().last().documentId).isEqualTo("synthetic-hospital-two-column-v6")
+    }
+
+    @Test
+    fun `writes byte-identical PDFs and the same corpus id across two generations`(@TempDir first: Path, @TempDir second: Path) {
+        assumeTrue(Files.exists(font), "Pretendard font missing; run pnpm install first")
+        val a = CorpusWriter.write(CheckupCorpusGenerator(font).generateAll(), first)
+        val b = CorpusWriter.write(CheckupCorpusGenerator(font).generateAll(), second)
+
+        val pdfs = Files.list(first).use { paths -> paths.filter { it.toString().endsWith(".pdf") }.toList() }
+        assertThat(pdfs).hasSize(25)
+        pdfs.forEach { pdf ->
+            val bytes = Files.readAllBytes(pdf)
+            assertThat(bytes).describedAs(pdf.fileName.toString()).isEqualTo(Files.readAllBytes(second.resolve(pdf.fileName)))
+            assertThat(String(bytes, Charsets.ISO_8859_1)).describedAs(pdf.fileName.toString()).doesNotContain("/Metadata")
+        }
+        assertThat(Files.readAllBytes(first.resolve("corpus.json"))).isEqualTo(Files.readAllBytes(second.resolve("corpus.json")))
+        assertThat(a.corpusId).isEqualTo(b.corpusId).matches("synthetic-ko-checkup-r2-[0-9a-f]{16}")
+        assertThat(a.corpusId).endsWith(CorpusWriter.pdfDigest(CheckupCorpusGenerator(font).generateAll()).take(16))
     }
 
     private fun iou(expected: Box, actual: TextBox): Double {

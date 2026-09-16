@@ -26,4 +26,4 @@ Branch `codex/wave4-native-text-extraction`. Synthetic only. Release remains NO_
 ## Limits
 No hosted run. The demo documents are two generated PDFs; the benchmark documents are generated too — no real checkup layout was measured. The parser reads only text layers it can position; rotated pages, multi-line labels and image scans are abstentions, not results. Concept aliases and LOINC codes are a dictionary, not a clinical mapping decision; the founder verifies them before any non-synthetic use. Nothing here is a diagnosis, normality, reference-range, trend or risk claim.
 
-검사일은 라벨(검사일/검진일/채취일/Date)이 있는 줄을 우선하고, 없으면 파일에서 처음 나오는 날짜를 쓴다. 생년월일·접수일이 먼저 나오는 실제 서식에서는 잘못된 날짜가 붙을 수 있으며, 검토 화면은 값만 정정할 수 있다(Wave 2B: 라벨 없는 날짜는 missing_evidence 처리 또는 날짜 정정).
+검사일 규칙은 Wave 2B에서 바뀌었다: 라벨 없는 날짜는 쓰지 않고, 라벨은 줄 안 어디든 인정하며, 라벨 날짜가 서로 다르면 문서 단위 abstention이다. 검토 화면에서 검사일을 정정할 수 있다. 벤치마크는 25개 문서(R2)가 됐다. `docs/status/2026-09-17/wave2b.md` 참조.

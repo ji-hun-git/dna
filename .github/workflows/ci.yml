@@ -129,6 +129,9 @@ jobs:
           path: "**/build/test-results/test/**"
           if-no-files-found: warn
           retention-days: 7
+      # No `if:` on purpose: the parser gate runs on every push and PR after the JVM tests. The
+      # MedGemma experiment (pnpm medical-ai:medgemma-experiment) is deliberately absent from CI —
+      # it needs a local GPU and the pulled model and is evidence, not a gate.
       - name: Score the native-text parser on the generated synthetic Korean checkup corpus
         run: pnpm medical-ai:native-text-gate
       - name: Install browser used by the bounded lifecycle test

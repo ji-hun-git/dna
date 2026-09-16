@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FoundationCandidate } from "@/lib/foundation/client";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import { earliestCorrectableObservedOn, isCorrectableObservedOn, localIsoDate } from "@/lib/format/observed-on";
 import { labelCandidateStatus } from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
 
@@ -15,12 +16,31 @@ function describeEvidenceBox(box: NonNullable<FoundationCandidate["evidenceBox"]
   return `왼쪽 ${percent(box.x)} · 위 ${percent(box.y)} · 너비 ${percent(box.width)} · 높이 ${percent(box.height)}`;
 }
 
+const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** True when the string is a real calendar date (rejects e.g. 2026-02-30). */
+function isRealCalendarDate(value: string) {
+  const match = isoDatePattern.exec(value);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return date.toISOString().slice(0, 10) === value;
+}
+
+/** The reason a drafted exam date cannot be confirmed, in Korean, or "" when it is valid. */
+function describeInvalidObservedOn(value: string, today: string) {
+  if (!isRealCalendarDate(value)) return "날짜를 YYYY-MM-DD 형식으로 입력해 주세요.";
+  if (value < earliestCorrectableObservedOn) return "1900년 이전 날짜는 쓸 수 없어요.";
+  if (value > today) return "오늘 이후 날짜는 쓸 수 없어요.";
+  return "";
+}
+
 type CandidateReviewProps = {
   candidate: FoundationCandidate;
   previewUrl?: string;
   busy: boolean;
   errorMessage: string;
-  onConfirm: (value: string) => void;
+  onConfirm: (value: string, observedOn?: string) => void;
   onExclude: () => void;
   onBack: () => void;
   onClose: () => void;
@@ -38,6 +58,10 @@ export function CandidateReview({
 }: CandidateReviewProps) {
   const [correctionMode, setCorrectionMode] = useState(false);
   const [draftValue, setDraftValue] = useState(candidate.value);
+  const [dateCorrectionMode, setDateCorrectionMode] = useState(false);
+  const [draftObservedOn, setDraftObservedOn] = useState(candidate.observedOn);
+  const today = localIsoDate();
+  const draftDateValid = isCorrectableObservedOn(draftObservedOn, today);
   const [reviewedCandidateId, setReviewedCandidateId] = useState(candidate.candidateId);
   const heading = useRef<HTMLHeadingElement>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
@@ -56,7 +80,9 @@ export function CandidateReview({
   if (reviewedCandidateId !== candidate.candidateId) {
     setReviewedCandidateId(candidate.candidateId);
     setDraftValue(candidate.value);
+    setDraftObservedOn(candidate.observedOn);
     setCorrectionMode(false);
+    setDateCorrectionMode(false);
   }
 
   return (
@@ -87,7 +113,15 @@ export function CandidateReview({
             <p className="gc-import__candidate-value"><strong>{candidate.value}</strong><span>{candidate.unit}</span></p>
             <p className="gc-import__candidate-source">결과지 텍스트에서 읽은 값 · 문자 인식 아님</p>
             <dl>
-              <div><dt>검사일</dt><dd>{formatKoreanDate(candidate.observedOn)}</dd></div>
+              <div>
+                <dt>검사일</dt>
+                <dd>
+                  {formatKoreanDate(candidate.observedOn)}
+                  {!correctionMode && !dateCorrectionMode && (
+                    <button type="button" className="gc-import__action gc-import__action--text" onClick={() => setDateCorrectionMode(true)} disabled={busy || !previewReady}>검사일 수정</button>
+                  )}
+                </dd>
+              </div>
               <div><dt>근거 쪽수</dt><dd>{candidate.evidencePage}쪽</dd></div>
               {candidate.evidenceBox && <div><dt>근거 위치</dt><dd>{describeEvidenceBox(candidate.evidenceBox)}</dd></div>}
             </dl>
@@ -126,6 +160,45 @@ export function CandidateReview({
               <div className="gc-integrated-actions">
                 <button type="button" onClick={() => { setCorrectionMode(false); setDraftValue(candidate.value); }}>취소</button>
                 <button type="submit" disabled={busy || !previewReady}>{busy ? "저장 중" : "수정한 값 확인"}</button>
+              </div>
+            </form>
+          ) : dateCorrectionMode ? (
+            <form
+              className="gc-integrated-correction gc-review-decision-bar"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (busy || !previewReady || !draftDateValid) return;
+                if (draftObservedOn !== candidate.observedOn) onConfirm(candidate.value, draftObservedOn);
+                else onConfirm(candidate.value);
+              }}
+            >
+              <label htmlFor="integrated-candidate-observed-on">검사일 수정</label>
+              <p id="integrated-candidate-observed-on-help">결과지에 적힌 검사일과 다르면 고쳐 주세요. 값의 의미는 판단하지 않아요.</p>
+              <input
+                id="integrated-candidate-observed-on"
+                type="date"
+                value={draftObservedOn}
+                min="1900-01-01"
+                max={today}
+                onChange={(event) => setDraftObservedOn(event.target.value)}
+                aria-describedby={
+                  draftDateValid
+                    ? "integrated-candidate-observed-on-help"
+                    : "integrated-candidate-observed-on-help integrated-candidate-observed-on-error"
+                }
+                aria-invalid={draftDateValid ? undefined : "true"}
+                autoFocus
+                disabled={busy}
+                required
+              />
+              {!draftDateValid && (
+                <p id="integrated-candidate-observed-on-error" role="alert">
+                  {describeInvalidObservedOn(draftObservedOn, today)}
+                </p>
+              )}
+              <div className="gc-integrated-actions">
+                <button type="button" onClick={() => { setDateCorrectionMode(false); setDraftObservedOn(candidate.observedOn); }}>취소</button>
+                <button type="submit" disabled={busy || !previewReady || !draftDateValid}>{busy ? "저장 중" : "수정한 검사일 확인"}</button>
               </div>
             </form>
           ) : (

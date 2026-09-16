@@ -48,7 +48,9 @@ data class ExtractionOutcome(
 
 /**
  * Deterministic text-layer parser. No OCR, no model, no network: PDFBox yields positioned lines,
- * a row grammar yields `label value unit`, and the document date comes from a labelled or first date.
+ * a row grammar yields `label value unit`, and the document date comes only from a labelled date
+ * (검사일/검진일/채취일/Date…, label anywhere in the line, first date after the label). A bare date is
+ * never used; two different labelled dates make the whole document ambiguous.
  * Labels stay raw (core normalizes); reference-range text on a row is only excluded from the value.
  */
 object NativeTextExtractionProvider {
@@ -68,7 +70,12 @@ object NativeTextExtractionProvider {
     )
     private val separators = Regex("[:：\\t]")
     private val leadingBullets = Regex("^[·•\\-*]+\\s*")
-    private val dateLabel = Regex("^(검사일|검진일|채취일|검사\\s*일자|Date)\\s*[:：]?", RegexOption.IGNORE_CASE)
+    private val dateLabel = Regex(
+        "(?:(?:검사\\s*일자|검진\\s*일자|채취\\s*일자|검사일|검진일|채취일)(?![가-힣])|" +
+            "(?<![A-Za-z])(?<!birth\\s{1,10})(?:exam\\s+|test\\s+|collection\\s+)?date(?![A-Za-z])" +
+            "(?!\\s{1,10}of\\s{1,10}birth))\\s*[:：]?",
+        RegexOption.IGNORE_CASE,
+    )
     private val datePatterns = listOf(
         Regex("(\\d{4})-(\\d{2})-(\\d{2})"),
         Regex("(\\d{4})\\.(\\d{1,2})\\.(\\d{1,2})"),
@@ -87,7 +94,11 @@ object NativeTextExtractionProvider {
 
     internal fun parse(lines: List<TextLine>): ExtractionOutcome {
         if (lines.isEmpty()) return unreadable()
-        val observedOn = findObservedOn(lines)
+        val observedOn = when (val resolution = resolveObservedOn(lines)) {
+            is DateResolution.Conflicting -> return ambiguousDate(resolution.evidencePage)
+            is DateResolution.Found -> resolution.date
+            DateResolution.Missing -> null
+        }
         val candidates = mutableListOf<ParsedCandidate>()
         val abstentions = mutableListOf<ParsedAbstention>()
         for (line in lines) {
@@ -158,18 +169,40 @@ object NativeTextExtractionProvider {
         return RowParse.Measurement(label, value, unit)
     }
 
-    private fun findObservedOn(lines: List<TextLine>): LocalDate? {
-        val labelled = lines.filter { dateLabel.containsMatchIn(it.text.trim()) }
-        return (labelled + lines).firstNotNullOfOrNull { dateIn(it.text) }
+    internal sealed interface DateResolution {
+        data object Missing : DateResolution
+        data class Found(val date: LocalDate) : DateResolution
+        data class Conflicting(val dates: List<LocalDate>, val evidencePage: Int) : DateResolution
     }
 
-    private fun dateIn(text: String): LocalDate? = datePatterns.firstNotNullOfOrNull { pattern ->
-        pattern.find(text)?.let { match ->
+    /** Every `(label, date-after-label)` pair in the document; only their distinct dates decide. */
+    internal fun resolveObservedOn(lines: List<TextLine>): DateResolution {
+        val labelled = lines.flatMap { line ->
+            dateLabel.findAll(line.text).mapNotNull { match ->
+                dateIn(line.text.substring(match.range.last + 1))?.let { date -> date to line.page }
+            }.toList()
+        }
+        val distinct = labelled.map { it.first }.distinct()
+        return when (distinct.size) {
+            0 -> DateResolution.Missing
+            1 -> DateResolution.Found(distinct.single())
+            else -> DateResolution.Conflicting(distinct, labelled.first().second)
+        }
+    }
+
+    /** The earliest date in [text] across the three spellings, or null. */
+    private fun dateIn(text: String): LocalDate? =
+        datePatterns.mapNotNull { it.find(text) }.minByOrNull { it.range.first }?.let { match ->
             runCatching {
                 LocalDate.of(match.groupValues[1].toInt(), match.groupValues[2].toInt(), match.groupValues[3].toInt())
             }.getOrNull()
         }
-    }
+
+    private fun ambiguousDate(evidencePage: Int) = ExtractionOutcome(
+        candidates = emptyList(),
+        abstentions = listOf(ParsedAbstention(DOCUMENT_LABEL, AbstentionReason.AMBIGUOUS_VALUE, evidencePage)),
+        observedOn = null,
+    )
 
     private fun unreadable() = ExtractionOutcome(
         candidates = emptyList(),

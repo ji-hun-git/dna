@@ -16,6 +16,7 @@ const baseRecord: FoundationRecord = {
   originalValue: "188",
   unit: "mg/dL",
   observedOn: "2026-07-28",
+  originalObservedOn: "2026-07-28",
   confirmedAt: "2026-07-28T09:10:00Z",
   evidencePage: 1,
   sourceTextSha256: "b".repeat(64),

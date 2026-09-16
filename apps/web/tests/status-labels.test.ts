@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   candidateStatusLabels,
   consentStatusLabels,
+  describeReviewDecision,
   labelCandidateStatus,
   labelConsentStatus,
   labelRecordStatus,
   labelReviewDecision,
+  labelReviewOutcome,
   recordStatusLabels,
   reviewDecisionLabels,
 } from "@/lib/format/status-labels";
+import { syntheticRecord } from "./fixtures/foundation";
 
 describe("server enum to Korean label map", () => {
   it("labels every candidate status the server can send", () => {
@@ -66,5 +69,22 @@ describe("server enum to Korean label map", () => {
       }
       expect(label).not.toMatch(/[A-Za-z_]/);
     }
+  });
+});
+
+describe("review decision sentences", () => {
+  it("says which part the person corrected and shows the original date in Korean", () => {
+    const untouched = syntheticRecord();
+    const value = syntheticRecord({ value: "190", reviewDecision: "CORRECTED" });
+    const date = syntheticRecord({ observedOn: "2026-07-27", originalObservedOn: "2026-07-28", reviewDecision: "CORRECTED" });
+    const both = syntheticRecord({ value: "190", observedOn: "2026-07-27", originalObservedOn: "2026-07-28", reviewDecision: "CORRECTED" });
+    expect(describeReviewDecision(untouched)).toBe("사용자가 원문과 같다고 확인함");
+    expect(describeReviewDecision(value)).toBe("사용자가 값을 수정함");
+    expect(describeReviewDecision(date)).toBe("사용자가 검사일을 수정함 · 원래 2026. 7. 28.");
+    expect(describeReviewDecision(both)).toBe("사용자가 값과 검사일을 수정함 · 원래 2026. 7. 28.");
+    expect(labelReviewOutcome(untouched)).toBe("원문과 같음");
+    expect(labelReviewOutcome(value)).toBe("값을 수정함");
+    expect(labelReviewOutcome(date)).toBe("검사일을 수정함");
+    expect(labelReviewOutcome(both)).toBe("값과 검사일을 수정함");
   });
 });

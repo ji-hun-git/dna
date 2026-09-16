@@ -52,7 +52,7 @@ object HealthEventProjection {
                     unit = record.unit,
                     observedOn = record.observedOn.toString(),
                     verification = if (previewAvailable) VERIFIED else UNCERTAIN,
-                    corrected = record.currentValue != record.originalValue,
+                    corrected = record.currentValue != record.originalValue || record.originalObservedOn != null,
                     confirmedAt = record.confirmedAt,
                     source = HealthEventSource(
                         documentId = record.documentId,

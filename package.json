@@ -21,6 +21,7 @@
     "auth-security:gate": "pnpm --filter @gc/web auth-security:gate",
     "medical-ai:synthetic-contract-gate": "pnpm --filter @gc/web medical-ai:synthetic-contract-gate",
     "medical-ai:native-text-gate": "pnpm --filter @gc/web medical-ai:native-text-gate",
+    "medical-ai:medgemma-experiment": "pnpm --filter @gc/web medical-ai:medgemma-experiment",
     "research:test": "pnpm --filter @gc/research-web test",
     "research:build": "pnpm --filter @gc/research-web build",
     "research-evidence:gate": "pnpm --filter @gc/research-web research-evidence:gate",

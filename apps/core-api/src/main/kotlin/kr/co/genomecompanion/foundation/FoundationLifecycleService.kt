@@ -9,6 +9,8 @@ import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 
@@ -86,6 +88,7 @@ data class RecordReceipt(
     val originalValue: String,
     val unit: String,
     val observedOn: String,
+    val originalObservedOn: String,
     val confirmedAt: Instant,
     val correctionReason: String?,
     val evidencePage: Int,
@@ -114,6 +117,8 @@ class FoundationLifecycleService(
     private val subjectPattern = Regex("^synthetic-[a-z0-9-]+$")
     private val idempotencyPattern = Regex("^[A-Za-z0-9._:-]{8,80}$")
     private val confirmedValuePattern = Regex("^[0-9]{1,4}(?:\\.[0-9]{1,2})?$")
+    private val seoul: ZoneId = ZoneId.of("Asia/Seoul")
+    private val earliestObservedOn: LocalDate = LocalDate.of(1900, 1, 1)
 
     @Transactional
     fun createSession(subjectId: String, credential: String): IssuedFoundationSession {
@@ -422,14 +427,17 @@ class FoundationLifecycleService(
         candidateId: UUID,
         confirmedValue: String,
         idempotencyKey: String,
+        confirmedObservedOn: String? = null,
     ): RecordReceipt {
         requireIdempotencyKey(idempotencyKey)
         if (!confirmedValuePattern.matches(confirmedValue)) throw FoundationBadRequestException("confirmed_value_invalid")
+        val requestedObservedOn = confirmedObservedOn?.let(::parseConfirmedObservedOn)
         val candidate = requireCandidate(principal, candidateId)
         val document = requireDocument(principal, candidate.documentId)
         requireActiveConsent(principal, document.consentId)
         repository.findRecordForCandidate(principal.subjectId, candidateId)?.let { return recordReceipt(it) }
         if (candidate.status != "PENDING") throw FoundationConflictException("candidate_not_pending")
+        val observedOn = requestedObservedOn ?: candidate.observedOn
 
         val subjectHash = subjectHash(principal.subjectId)
         repository.findIdempotentResource(subjectHash, "CANDIDATE_CONFIRM", idempotencyKey)?.let { recordId ->
@@ -442,15 +450,18 @@ class FoundationLifecycleService(
                 ?: throw FoundationConflictException("idempotency_conflict")
             return recordReceipt(requireRecord(principal, concurrentId))
         }
-        repository.createRecordFromCandidate(recordId, UUID.randomUUID(), candidate, confirmedValue, now)
-        audit(
-            principal,
-            if (confirmedValue == candidate.candidateValue) "CANDIDATE_CONFIRMED" else "CANDIDATE_CORRECTED",
-            "RECORD",
-            recordId,
-            "SUCCESS",
-        )
+        repository.createRecordFromCandidate(recordId, UUID.randomUUID(), candidate, confirmedValue, now, observedOn)
+        val unchanged = confirmedValue == candidate.candidateValue && observedOn == candidate.observedOn
+        audit(principal, if (unchanged) "CANDIDATE_CONFIRMED" else "CANDIDATE_CORRECTED", "RECORD", recordId, "SUCCESS")
         return recordReceipt(requireRecord(principal, recordId))
+    }
+
+    /** A date the person says the document states. Shape is bean-validated; calendar validity and range are checked here. */
+    private fun parseConfirmedObservedOn(raw: String): LocalDate {
+        val parsed = runCatching { LocalDate.parse(raw) }.getOrElse { throw FoundationBadRequestException("observed_on_invalid") }
+        val today = LocalDate.ofInstant(Instant.now(clock), seoul)
+        if (parsed.isBefore(earliestObservedOn) || parsed.isAfter(today)) throw FoundationBadRequestException("observed_on_out_of_range")
+        return parsed
     }
 
     @Transactional
@@ -668,12 +679,13 @@ class FoundationLifecycleService(
             candidateId = record.candidateId,
             documentId = record.documentId,
             status = record.status,
-            reviewDecision = if (record.currentValue == record.originalValue) "CONFIRMED" else "CORRECTED",
+            reviewDecision = if (record.currentValue == record.originalValue && record.originalObservedOn == null) "CONFIRMED" else "CORRECTED",
             label = record.label,
             value = record.currentValue,
             originalValue = record.originalValue,
             unit = record.unit,
             observedOn = record.observedOn.toString(),
+            originalObservedOn = (record.originalObservedOn ?: record.observedOn).toString(),
             confirmedAt = record.confirmedAt,
             correctionReason = record.correctionReason,
             evidencePage = record.evidencePage,

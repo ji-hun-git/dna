@@ -36,7 +36,7 @@ const server = setupServer(
   })),
   http.get("/api/foundation/documents/:documentId/candidates", () => HttpResponse.json(candidates)),
   http.post("/api/foundation/candidates/:candidateId/confirmation", async ({ params, request }) => {
-    const { value } = await request.json() as { value: string };
+    const { value, observedOn } = await request.json() as { value: string; observedOn?: string };
     const target = candidates.find((item) => item.candidateId === params.candidateId)!;
     candidates = candidates.map((item) => item.candidateId === target.candidateId
       ? { ...item, status: "CONFIRMED" }
@@ -47,12 +47,13 @@ const server = setupServer(
       candidateId: target.candidateId,
       documentId: target.documentId,
       status: "CURRENT",
-      reviewDecision: value === target.value ? "CONFIRMED" : "CORRECTED",
+      reviewDecision: value === target.value && (!observedOn || observedOn === target.observedOn) ? "CONFIRMED" : "CORRECTED",
       label: target.label,
       value,
       originalValue: target.value,
       unit: target.unit,
-      observedOn: target.observedOn,
+      observedOn: observedOn ?? target.observedOn,
+      originalObservedOn: target.observedOn,
       confirmedAt: "2026-07-28T09:20:00Z",
       evidencePage: target.evidencePage,
       sourceTextSha256: target.sourceTextSha256,
@@ -318,6 +319,7 @@ it("names the state of the latest saved value in Korean on the home screen", asy
     originalValue: "188",
     unit: "mg/dL",
     observedOn: "2026-07-28",
+    originalObservedOn: "2026-07-28",
     confirmedAt: "2026-07-28T09:10:00Z",
     evidencePage: 1,
     sourceTextSha256: "b".repeat(64),
