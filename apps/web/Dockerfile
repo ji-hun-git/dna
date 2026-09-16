@@ -19,7 +19,10 @@ WORKDIR /app
 
 # Pull Debian security updates into the runtime layer (libpcre2 CVE-2026-86145 fix
 # is in bookworm 10.42-1+deb12u1 while the pinned base image predates it).
-RUN apt-get update \n    && apt-get upgrade -y --no-install-recommends \n    && apt-get clean \n    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
     && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
