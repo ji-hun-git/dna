@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 
 
-private const val WORKER_VERSION = "document-worker-v1"
+private const val WORKER_VERSION = "document-worker-v2"
 private const val MAX_SOURCE_BYTES = 10_485_760
 private const val MAX_RESPONSE_BYTES = 3_000_000
 
@@ -179,7 +179,7 @@ class BoundaryApiClient(
         )
     }
 
-    fun extractionResult(lease: WorkerLease, preview: ByteArray) {
+    fun extractionResult(lease: WorkerLease, preview: ByteArray, outcome: ExtractionOutcome) {
         postJson(
             lease,
             "extraction-result",
@@ -187,7 +187,32 @@ class BoundaryApiClient(
                 "sourceSha256" to lease.sourceSha256,
                 "workerImageDigest" to configuration.workerImageDigest,
                 "generatorVersion" to WORKER_VERSION,
+                "extractionMethod" to NativeTextExtractionProvider.METHOD,
                 "previewPngBase64" to Base64.getEncoder().encodeToString(preview),
+                "candidates" to outcome.candidates.map { candidate ->
+                    mapOf(
+                        "ordinal" to candidate.ordinal,
+                        "label" to candidate.label,
+                        "value" to candidate.value,
+                        "unit" to candidate.unit,
+                        "observedOn" to candidate.observedOn.toString(),
+                        "evidencePage" to candidate.evidencePage,
+                        "evidenceBox" to mapOf(
+                            "x" to candidate.evidenceBox.x,
+                            "y" to candidate.evidenceBox.y,
+                            "width" to candidate.evidenceBox.width,
+                            "height" to candidate.evidenceBox.height,
+                        ),
+                        "sourceTextSha256" to candidate.sourceTextSha256,
+                    )
+                },
+                "abstentions" to outcome.abstentions.map { abstention ->
+                    mapOf(
+                        "label" to abstention.label,
+                        "reason" to abstention.reason.code,
+                        "evidencePage" to abstention.evidencePage,
+                    )
+                },
             ),
         )
     }
@@ -361,7 +386,7 @@ class DocumentWorker(
                     client.failure(lease, "simulated_transient_preview_failure", retryable = true)
                 } else {
                     runCatching { renderFirstPage(source) }
-                        .onSuccess { client.extractionResult(lease, it) }
+                        .onSuccess { preview -> client.extractionResult(lease, preview, NativeTextExtractionProvider.extract(source)) }
                         .onFailure { client.failure(lease, "preview_generation_failed", retryable = true) }
                 }
             }
