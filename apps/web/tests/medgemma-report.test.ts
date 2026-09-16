@@ -38,3 +38,22 @@ it("renders the side-by-side report with the model localization column marked no
   expect(markdown).toContain("Not a clinical, regulatory or production-accuracy claim");
   expect(markdown).not.toMatch(/diagnos|정상\b|비정상/);
 });
+
+it("prefixes the title when a titlePrefix is supplied, and omits it otherwise", () => {
+  const base = {
+    generatedAt: "2026-09-17",
+    corpus,
+    pipelines: [
+      { label: "pdfbox-native-text", runs: referenceRuns, evidenceMeasurable: true, gated: true },
+      { label: "ollama-medgemma-1.5-4b-page-image", runs: unsafeRuns, evidenceMeasurable: false, gated: false },
+    ],
+    environment: [["Ollama", "0.34.1"]] as [string, string][],
+    documentOutcomes: [{ documentId: corpus.documents[0].documentId, status: "ok", durationMs: 1234 }, { documentId: corpus.documents[1].documentId, status: "unreadable", failure: "AbortError: timeout", durationMs: 180000 }],
+  };
+  const limited = renderMedgemmaExperimentReport({ ...base, titlePrefix: "[제한 실행] " });
+  expect(limited).toContain("# [제한 실행] MedGemma 1.5 local synthetic experiment — synthetic-ko-lab-v1 (2026-09-17)");
+
+  const full = renderMedgemmaExperimentReport(base);
+  expect(full).toContain("# MedGemma 1.5 local synthetic experiment — synthetic-ko-lab-v1 (2026-09-17)");
+  expect(full).not.toContain("제한 실행");
+});

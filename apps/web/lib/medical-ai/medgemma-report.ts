@@ -54,6 +54,8 @@ export type ReportInput = {
   pipelines: readonly ReportPipeline[];
   environment: readonly (readonly [string, string])[];
   documentOutcomes: readonly { documentId: string; status: string; failure?: string; durationMs: number }[];
+  /** Prepended to the report title, e.g. "[제한 실행] " for a --limit run. Empty/omitted for a full run. */
+  titlePrefix?: string;
 };
 
 function percent(value: number) {
@@ -72,7 +74,7 @@ export function renderMedgemmaExperimentReport(input: ReportInput) {
   const header = `| Metric | ${reports.map((entry) => entry.pipeline.label).join(" | ")} |`;
   const divider = `|---|${reports.map(() => "---").join("|")}|`;
   const lines = [
-    `# MedGemma 1.5 local synthetic experiment — ${corpus.corpusId} (${input.generatedAt})`,
+    `# ${input.titlePrefix ?? ""}MedGemma 1.5 local synthetic experiment — ${corpus.corpusId} (${input.generatedAt})`,
     "",
     "Bounded local evaluation approved in `governance/founder-medgemma-local-evaluation-approval-2026-09-16.md`. The model saw only synthetic page images rendered from the generated corpus and was asked to transcribe label, value, unit and the labelled exam date; it was told not to judge anything. Its output never entered product code and is not stored as a record. Not a clinical, regulatory or production-accuracy claim (`synthetic-contract-regression-only`). Thresholds are shown for the parser gate only; for the model they are evidence, not a verdict.",
     "",
