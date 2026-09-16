@@ -79,6 +79,21 @@ export function IntegratedRecords() {
     return () => { active = false; };
   }, [client, loadAttempt]);
 
+  // A source link arrives as /records#record-<id>. The list renders after the
+  // fetch, so the browser's own hash jump fires before the target exists; once
+  // the records are on screen, bring that record into view, open its source
+  // details and move focus to it so keyboard and screen-reader users land there.
+  useEffect(() => {
+    if (loading || records.length === 0) return;
+    const hash = window.location.hash;
+    if (!hash.startsWith("#record-")) return;
+    const target = document.getElementById(hash.slice(1));
+    if (!target) return;
+    target.querySelector("details")?.setAttribute("open", "");
+    target.scrollIntoView({ block: "start" });
+    target.focus({ preventScroll: true });
+  }, [loading, records]);
+
   const correctRecord = async (event: FormEvent<HTMLFormElement>, record: FoundationRecord) => {
     event.preventDefault();
     setBusy(true);
@@ -143,7 +158,7 @@ export function IntegratedRecords() {
                   <h3 id={`record-group-${group.key}`}>{formatKoreanDate(group.observedOn)} · 결과지 {shortDigest(group.documentSha256)}</h3>
                   <ol>
                     {group.items.map((record, index) => (
-                      <li key={record.recordId} id={`record-${record.recordId}`} data-testid="durable-record">
+                      <li key={record.recordId} id={`record-${record.recordId}`} data-testid="durable-record" tabIndex={-1}>
                         <div className={styles.historyDate}><span>{String(index + 1).padStart(2, "0")}</span><time dateTime={record.observedOn}>{formatKoreanDate(record.observedOn)}</time></div>
                         <div className={styles.historyValue}><strong>{record.value}</strong><span>{record.unit}</span></div>
                         <div className={styles.historySource}><strong>{record.label}</strong><span>예시 데이터</span><span>{record.reviewDecision === "CORRECTED" ? "사용자가 값을 수정함" : "사용자가 원문과 같다고 확인함"}</span></div>

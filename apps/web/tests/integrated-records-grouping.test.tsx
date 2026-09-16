@@ -1,9 +1,9 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { IntegratedRecords } from "@/components/integrated/IntegratedRecords";
 import { syntheticRecord } from "./fixtures/foundation";
 
@@ -88,6 +88,23 @@ it("groups records by the day and the document they came from, newest first", as
     "2026. 7. 28. · 결과지 eeeeeeeeeeee…eeeeeeee",
   ]);
   expect(screen.getAllByTestId("durable-record")).toHaveLength(3);
+});
+
+it("scrolls to, opens and focuses the record a source link points at", async () => {
+  const scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+  window.location.hash = "#record-7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c42";
+  try {
+    render(<IntegratedRecords />);
+    await screen.findByRole("heading", { name: "현재 기록 3개" });
+    const target = document.getElementById("record-7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c42")!;
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.instances[0]).toBe(target);
+    expect(target.querySelector("details")).toHaveAttribute("open");
+    expect(target).toHaveFocus();
+  } finally {
+    window.location.hash = "";
+  }
 });
 
 it("keeps every group reachable and accessible", async () => {
