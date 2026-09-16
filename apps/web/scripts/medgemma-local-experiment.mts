@@ -128,7 +128,7 @@ async function main() {
   };
 
   const modelRuns: unknown[] = [];
-  const documentOutcomes: { documentId: string; status: string; failure?: string; durationMs: number }[] = [];
+  const documentOutcomes: { documentId: string; status: string; failure?: string; doneReason?: string; evalCount?: number; durationMs: number }[] = [];
   const documents = documentLimit ? corpus.documents.slice(0, documentLimit) : corpus.documents;
   for (const document of documents) {
     const pageFiles = readdirSync(pagesDir).filter((name) => name.startsWith(`${document.documentId}-p`) && name.endsWith(".png")).sort();
@@ -140,8 +140,19 @@ async function main() {
     process.stderr.write(`${document.documentId}: ${pages.length} page(s)\n`);
     const outcome = await runDocument({ documentId: document.documentId, pages }, { fetchImpl: localFetch });
     for (const page of outcome.pages) writeFileSync(resolve(rawDir, `${document.documentId}-p${page.page}.json`), page.rawContent);
-    documentOutcomes.push({ documentId: document.documentId, status: outcome.status, failure: outcome.failure, durationMs: outcome.durationMs });
-    process.stderr.write(`  ${outcome.status} in ${Math.round(outcome.durationMs / 1000)} s${outcome.failure ? ` — ${outcome.failure}` : ""}\n`);
+    if (outcome.status !== "ok" && outcome.rawContent !== undefined) {
+      writeFileSync(resolve(rawDir, `${document.documentId}-failed.json`), outcome.rawContent);
+    }
+    documentOutcomes.push({
+      documentId: document.documentId,
+      status: outcome.status,
+      failure: outcome.failure,
+      doneReason: outcome.doneReason,
+      evalCount: outcome.evalCount,
+      durationMs: outcome.durationMs,
+    });
+    const truncationNote = outcome.doneReason ? ` (done_reason=${outcome.doneReason}${outcome.evalCount !== undefined ? `, eval_count=${outcome.evalCount}` : ""})` : "";
+    process.stderr.write(`  ${outcome.status} in ${Math.round(outcome.durationMs / 1000)} s${outcome.failure ? ` — ${outcome.failure}${truncationNote}` : ""}\n`);
     modelRuns.push(toModelRun({
       gold: document, outcome, catalogue, createdAt: new Date().toISOString(),
       models: { ...models, layout: { ...models.layout, artifactSha256: `sha256:${layoutDigest}` } },
@@ -152,6 +163,13 @@ async function main() {
   const reportCorpus = documentLimit ? { ...corpus, documents } : corpus;
   const reportDocumentIds = new Set(documents.map((document) => document.documentId));
   const reportNativeRuns = documentLimit ? nativeRuns.filter((run) => reportDocumentIds.has((run as { documentId: string }).documentId)) : nativeRuns;
+
+  const doneReasonCounts = new Map<string, number>();
+  for (const entry of documentOutcomes) {
+    if (!entry.doneReason) continue;
+    doneReasonCounts.set(entry.doneReason, (doneReasonCounts.get(entry.doneReason) ?? 0) + 1);
+  }
+  const doneReasonSummary = [...doneReasonCounts.entries()].map(([reason, count]) => `${reason}=${count}`).join(", ") || "none recorded";
 
   const scope = describeRunScope({ limit: documentLimit, evaluated: documents.length, total: corpus.documents.length });
   const finishedAt = new Date().toISOString();
@@ -169,10 +187,11 @@ async function main() {
     ["Corpus digest (sha256 of PDF digest + corpus.json sha256)", corpusDigest],
     ["corpus.json sha256", corpusJsonSha256],
     ["Script commit", output("git", ["rev-parse", "HEAD"])],
+    ["done_reason on failed documents", doneReasonSummary],
     ["Run JSON", "apps/web/build/medgemma/medgemma-runs.json (not committed)"],
   ];
   const report = renderMedgemmaExperimentReport({
-    generatedAt: finishedAt.slice(0, 10),
+    generatedAt: todayInSeoul(),
     corpus: reportCorpus,
     titlePrefix: scope.titlePrefix,
     pipelines: [

@@ -6,6 +6,9 @@ import {
   OLLAMA_ORIGIN,
   PAGE_BOX,
   PIPELINE_ID,
+  RUNNER_FAILURE_FIELD_ID,
+  RUNNER_FAILURE_LABEL,
+  UNKNOWN_LABEL,
   aliasKey,
   askModelForPage,
   assertLocalOllamaUrl,
@@ -14,6 +17,7 @@ import {
   pdfDigest,
   protocolDigest,
   runDocument,
+  stripUnitRange,
   toModelRun,
   type ChatFetch,
   type ConceptCatalogue,
@@ -92,6 +96,19 @@ describe("Ollama client", () => {
     await expect(describeOllamaModel(fetchImpl)).rejects.toThrow(/medgemma1\.5:latest/);
   });
 
+  it("refuses a /api/tags reply that reports it was served from off-host", async () => {
+    const calls: (RequestInit | undefined)[] = [];
+    const fetchImpl: ChatFetch = async (url, init) => {
+      if (url.endsWith("/api/version")) return Response.json({ version: "0.34.1" });
+      calls.push(init);
+      const response = Response.json({ models: [] });
+      Object.defineProperty(response, "url", { value: "http://example.com/api/tags" });
+      return response;
+    };
+    await expect(describeOllamaModel(fetchImpl)).rejects.toThrow(/example\.com/);
+    expect(calls[0]?.redirect).toBe("error");
+  });
+
   it("requests no redirects and refuses a response that reports it was redirected off-host", async () => {
     const calls: (RequestInit | undefined)[] = [];
     const fetchImpl: ChatFetch = async (_url, init) => {
@@ -149,7 +166,25 @@ describe("runDocument", () => {
     expect(outcome.status).toBe("unreadable");
     const run = toModelRun({ gold, outcome, catalogue, createdAt: "2026-09-17T09:00:00Z", models });
     expect(run.candidates).toEqual([]);
-    expect(run.abstentions).toEqual([{ fieldId: "document", label: "문서 전체", reason: "unreadable" }]);
+    expect(run.abstentions).toEqual([{ fieldId: RUNNER_FAILURE_FIELD_ID, label: RUNNER_FAILURE_LABEL, reason: "unreadable" }]);
+  });
+
+  it("does not fold a runner failure into a gold document-level required abstention's fieldId", async () => {
+    const failing: ChatFetch = async () => new Response("busy", { status: 503 });
+    const outcome = await runDocument({ documentId: gold.documentId, pages: [{ page: 1, pngBase64: "p1" }] }, { fetchImpl: failing });
+    const run = toModelRun({ gold, outcome, catalogue, createdAt: "2026-09-17T09:00:00Z", models });
+    expect(run.abstentions).toEqual([{ fieldId: RUNNER_FAILURE_FIELD_ID, label: RUNNER_FAILURE_LABEL, reason: "unreadable" }]);
+    expect(run.abstentions.some((abstention) => abstention.fieldId === "document")).toBe(false);
+  });
+
+  it("captures Ollama's done_reason and eval_count when the chat content fails to parse as JSON", async () => {
+    const truncated: ChatFetch = async () =>
+      new Response(JSON.stringify({ message: { content: "{\"observedOn\": \"2026-07-28\", \"rows\": [" }, done_reason: "length", eval_count: 4096 }), { status: 200 });
+    const outcome = await runDocument({ documentId: gold.documentId, pages: [{ page: 1, pngBase64: "p1" }] }, { fetchImpl: truncated });
+    expect(outcome.status).toBe("unreadable");
+    expect(outcome.doneReason).toBe("length");
+    expect(outcome.evalCount).toBe(4096);
+    expect(outcome.rawContent).toBe("{\"observedOn\": \"2026-07-28\", \"rows\": [");
   });
 });
 
@@ -193,6 +228,31 @@ describe("toModelRun", () => {
       { fieldId: "blurry", label: "Blurry", reason: "unreadable" },
     ]);
     expect(JSON.stringify(run)).not.toContain("referenceRange");
+  });
+
+  it("gives a blank model label its own per-row identity instead of folding it into the document label", () => {
+    const run = toModelRun({
+      gold,
+      outcome: outcomeWith([{ label: "  ", value: "1", unit: "u" }, { label: "", value: "2", unit: "u" }]),
+      catalogue, createdAt: "2026-09-17T09:00:00Z", models,
+    });
+    expect(run.abstentions).toEqual([
+      { fieldId: "unknown-1", label: UNKNOWN_LABEL, reason: "unreadable" },
+      { fieldId: "unknown-2", label: UNKNOWN_LABEL, reason: "unreadable" },
+    ]);
+    expect(run.abstentions.some((abstention) => abstention.fieldId === "document")).toBe(false);
+  });
+
+  it("strips model-emitted reference-range text out of the transcribed unit before scoring", () => {
+    expect(stripUnitRange("U/L (15-35)")).toBe("U/L");
+    expect(stripUnitRange("mg/dL 120-199")).toBe("mg/dL");
+    expect(stripUnitRange("%")).toBe("%");
+    const run = toModelRun({
+      gold,
+      outcome: outcomeWith([{ label: "AST", value: "24", unit: "U/L (15-35)" }]),
+      catalogue, createdAt: "2026-09-17T09:00:00Z", models,
+    });
+    expect(run.candidates[0]?.unit).toBe("U/L");
   });
 
   it("computes the PDF digest the way the Kotlin corpus writer does", () => {
