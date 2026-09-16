@@ -458,6 +458,13 @@ class FoundationLifecycleService(
         repository.listRecords(principal.subjectId).map(::recordReceipt)
 
     @Transactional
+    fun listHealthEvents(principal: FoundationPrincipal): List<HealthEvent> =
+        HealthEventProjection.project(
+            repository.listRecords(principal.subjectId),
+            repository.listDocumentIdsWithPreview(principal.subjectId),
+        )
+
+    @Transactional
     fun correctRecord(
         principal: FoundationPrincipal,
         recordId: UUID,

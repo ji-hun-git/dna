@@ -1064,6 +1064,21 @@ class FoundationRepository(
             documentId,
         ).firstOrNull()
 
+    /** Documents of this owner whose approved preview is still bound to the stored digest. */
+    fun listDocumentIdsWithPreview(subjectId: String): Set<UUID> =
+        jdbc.query(
+            """
+            SELECT d.document_id
+            FROM gc_document d
+            JOIN gc_preview_artifact p ON p.document_id = d.document_id
+            WHERE d.subject_id = ?
+              AND d.status IN ('REVIEW_REQUIRED', 'COMPLETED')
+              AND d.preview_object_key = p.object_key AND d.sha256 = p.source_sha256
+            """.trimIndent(),
+            RowMapper { result, _ -> result.getObject("document_id", UUID::class.java) },
+            subjectId,
+        ).toSet()
+
     fun excludeCandidate(subjectId: String, candidateId: UUID, now: Instant): Boolean {
         val updated = jdbc.update(
             """

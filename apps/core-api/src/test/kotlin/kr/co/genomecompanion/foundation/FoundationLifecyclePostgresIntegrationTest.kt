@@ -22,6 +22,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delet
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.nio.file.Files
@@ -785,6 +787,95 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(records.map { it["status"].asText() }.distinct()).containsExactly("CURRENT")
         assertThat(records.map { it["documentSha256"].asText() }.distinct())
             .containsExactlyInAnyOrder(fixtureDigest, januaryFixtureDigest)
+    }
+
+    @Test
+    fun healthEventsProjectCurrentRecordsWithSourceAndPreviewFlag() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "health-events-document")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice)
+            .andExpect(status().isAccepted)
+        runWorkerPipeline(documentId)
+
+        val candidates = responseJson(
+            read(get("/api/foundation/documents/$documentId/candidates"), alice)
+                .andExpect(status().isOk)
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        ).toList()
+
+        mutate(
+            post("/api/foundation/candidates/${candidates[0]["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "health-events-confirm")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to candidates[0]["value"].asText()))),
+            alice,
+        ).andExpect(status().isCreated)
+
+        mutate(
+            post("/api/foundation/candidates/${candidates[2]["candidateId"].asText()}/exclusion")
+                .header("Idempotency-Key", "health-events-exclude"),
+            alice,
+        ).andExpect(status().isOk)
+
+        val response = read(get("/api/foundation/health-events"), alice)
+            .andExpect(status().isOk)
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andReturn()
+            .response
+
+        val events = responseJson(response.contentAsByteArray)
+        assertThat(events).hasSize(1)
+        val event = events[0]
+        assertThat(event["concept"].asText()).isEqualTo("총콜레스테롤")
+        assertThat(event["value"].asText()).isEqualTo("188")
+        assertThat(event["unit"].asText()).isEqualTo("mg/dL")
+        assertThat(event["observedOn"].asText()).isEqualTo("2026-07-28")
+        assertThat(event["domain"].asText()).isEqualTo("lab")
+        assertThat(event["verification"].asText()).isEqualTo("verified")
+        assertThat(event["corrected"].asBoolean()).isFalse()
+        assertThat(event["source"]["previewAvailable"].asBoolean()).isTrue()
+        assertThat(event["source"]["page"].asInt()).isEqualTo(1)
+        assertThat(event.fieldNames().asSequence().toList()).doesNotContain("referenceRange", "trend")
+    }
+
+    @Test
+    fun healthEventsAreOwnerIsolated() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "health-events-owner-isolation")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice)
+            .andExpect(status().isAccepted)
+        runWorkerPipeline(documentId)
+        val candidateId = responseJson(
+            read(get("/api/foundation/documents/$documentId/candidate"), alice)
+                .andExpect(status().isOk)
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        )["candidateId"].asText()
+        mutate(
+            post("/api/foundation/candidates/$candidateId/confirmation")
+                .header("Idempotency-Key", "health-events-owner-isolation-confirm")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isCreated)
+
+        val bob = login("synthetic-bob")
+        read(get("/api/foundation/health-events"), bob)
+            .andExpect(status().isOk)
+            .andExpect(content().json("[]"))
+    }
+
+    @Test
+    fun healthEventsRequireASession() {
+        mockMvc.perform(get("/api/foundation/health-events"))
+            .andExpect(status().isUnauthorized)
     }
 
     private fun importSyntheticDocument(

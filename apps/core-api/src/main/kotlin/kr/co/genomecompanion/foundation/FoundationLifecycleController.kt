@@ -309,6 +309,12 @@ class FoundationLifecycleController(
             .cacheControlNoStore()
             .body(service.listRecords(request.foundationPrincipal()))
 
+    @GetMapping("/health-events")
+    fun listHealthEvents(request: HttpServletRequest): ResponseEntity<List<HealthEvent>> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(service.listHealthEvents(request.foundationPrincipal()))
+
     @GetMapping("/records/{recordId}")
     fun getRecord(
         request: HttpServletRequest,
