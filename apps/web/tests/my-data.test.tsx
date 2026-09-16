@@ -36,6 +36,7 @@ it("loads events into cells and a table, and opens the drawer from either", asyn
   expect(screen.queryByRole("region", { name: "총콜레스테롤 근거" })).toBeNull();
   await userEvent.click(within(table).getByRole("button", { name: "당화혈색소 5.2 %, 2026. 7. 28. 근거 보기" }));
   expect(screen.getByRole("region", { name: "당화혈색소 근거" })).toBeVisible();
+  expect(within(table).getByRole("row", { name: /당화혈색소/ })).toHaveAttribute("aria-current", "true");
   expect(await axe(container)).toHaveNoViolations();
 });
 
@@ -60,4 +61,12 @@ it("shows the empty state and the server error state honestly", async () => {
   render(<MyData />);
   expect(await screen.findByRole("alert")).toBeVisible();
   expect(screen.getByRole("button", { name: "다시 불러오기" })).toBeVisible();
+});
+
+it("asks for sign-in instead of retrying when the session has expired", async () => {
+  server.use(http.get("/api/foundation/session", () =>
+    HttpResponse.json({ code: "session_expired" }, { status: 401 })));
+  render(<MyData />);
+  expect(await screen.findByRole("link", { name: "홈에서 다시 로그인" })).toHaveAttribute("href", "/");
+  expect(screen.queryByRole("button", { name: "다시 불러오기" })).toBeNull();
 });

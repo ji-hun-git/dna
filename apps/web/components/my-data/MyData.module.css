@@ -30,7 +30,7 @@
 .table { width: 100%; border-collapse: collapse; font-size: 15px; }
 .table th, .table td { text-align: left; padding: var(--gc-space-2) var(--gc-space-3); border-bottom: 1px solid var(--gc-color-line-subtle); }
 .table td.num { font-family: var(--gc-type-mono); text-align: right; }
-.table tr[aria-selected="true"] td { background: var(--gc-color-surface-soft); }
+.table tr[aria-current="true"] td { background: var(--gc-color-surface-soft); }
 
 .drawer { border: 1px solid var(--gc-color-line-subtle); border-radius: 8px; background: var(--gc-color-surface-raised); padding: var(--gc-space-4); margin-top: var(--gc-space-4); display: grid; gap: var(--gc-space-3); }
 .drawer dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--gc-space-1) var(--gc-space-4); margin: 0; }

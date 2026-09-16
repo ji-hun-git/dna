@@ -19,7 +19,7 @@ export function HealthEventTable({ events, selectedId, matchedIds, onSelect }: H
       </thead>
       <tbody>
         {visible.map((event) => (
-          <tr key={event.eventId} aria-selected={event.eventId === selectedId}>
+          <tr key={event.eventId} aria-current={event.eventId === selectedId ? "true" : undefined}>
             <th scope="row">{event.concept}</th>
             <td className="num">{event.value} {event.unit}</td>
             <td>{formatKoreanDate(event.observedOn)}</td>

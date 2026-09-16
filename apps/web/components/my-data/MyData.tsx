@@ -15,6 +15,8 @@ function needsSignIn(error: unknown) {
   return state === "UNAUTHENTICATED" || state === "SESSION_EXPIRED";
 }
 
+const NO_NEW_IDS = new Set<string>();
+
 export function MyData() {
   const client = useMemo(() => createFoundationClient(), []);
   const [events, setEvents] = useState<HealthEvent[]>([]);
@@ -24,6 +26,7 @@ export function MyData() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string>();
+  const toggleSelected = (eventId: string) => setSelectedId((current) => (current === eventId ? undefined : eventId));
 
   useEffect(() => {
     let active = true;
@@ -64,7 +67,7 @@ export function MyData() {
 
           {loading && <p role="status" aria-live="polite">서버에서 기록을 불러오고 있어요.</p>}
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}{" "}
-            {errorAction === "sign-in" && <a href="/">홈에서 다시 시작</a>}
+            {errorAction === "sign-in" && <a href="/">홈에서 다시 로그인</a>}
             {errorAction === "retry-read" && <button type="button" disabled={loading} onClick={() => setLoadAttempt((attempt) => attempt + 1)}>다시 불러오기</button>}
           </p>}
 
@@ -78,8 +81,8 @@ export function MyData() {
                 events={events}
                 selectedId={selectedId}
                 matchedIds={search.matchedIds}
-                newIds={new Set()}
-                onSelect={(eventId) => setSelectedId((current) => current === eventId ? undefined : eventId)}
+                newIds={NO_NEW_IDS}
+                onSelect={toggleSelected}
               />
 
               <form className={styles.search} role="search" onSubmit={(submit) => submit.preventDefault()}>
@@ -91,7 +94,7 @@ export function MyData() {
 
               {selected && <EvidenceDrawer event={selected} onClose={() => setSelectedId(undefined)} />}
 
-              <HealthEventTable events={events} selectedId={selectedId} matchedIds={search.matchedIds} onSelect={setSelectedId} />
+              <HealthEventTable events={events} selectedId={selectedId} matchedIds={search.matchedIds} onSelect={toggleSelected} />
             </>
           )}
 
