@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FoundationCandidate } from "@/lib/foundation/client";
 import { formatKoreanDate } from "@/lib/format/korean-date";
-import { isCorrectableObservedOn, localIsoDate } from "@/lib/format/observed-on";
+import { earliestCorrectableObservedOn, isCorrectableObservedOn, localIsoDate } from "@/lib/format/observed-on";
 import { labelCandidateStatus } from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
 
@@ -14,6 +14,25 @@ function percent(fraction: number) {
 /** The line's place on the page in plain words; a position, never a meaning. */
 function describeEvidenceBox(box: NonNullable<FoundationCandidate["evidenceBox"]>) {
   return `왼쪽 ${percent(box.x)} · 위 ${percent(box.y)} · 너비 ${percent(box.width)} · 높이 ${percent(box.height)}`;
+}
+
+const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** True when the string is a real calendar date (rejects e.g. 2026-02-30). */
+function isRealCalendarDate(value: string) {
+  const match = isoDatePattern.exec(value);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return date.toISOString().slice(0, 10) === value;
+}
+
+/** The reason a drafted exam date cannot be confirmed, in Korean, or "" when it is valid. */
+function describeInvalidObservedOn(value: string, today: string) {
+  if (!isRealCalendarDate(value)) return "날짜를 YYYY-MM-DD 형식으로 입력해 주세요.";
+  if (value < earliestCorrectableObservedOn) return "1900년 이전 날짜는 쓸 수 없어요.";
+  if (value > today) return "오늘 이후 날짜는 쓸 수 없어요.";
+  return "";
 }
 
 type CandidateReviewProps = {
@@ -146,7 +165,12 @@ export function CandidateReview({
           ) : dateCorrectionMode ? (
             <form
               className="gc-integrated-correction gc-review-decision-bar"
-              onSubmit={(event) => { event.preventDefault(); if (!busy && previewReady && draftDateValid) onConfirm(candidate.value, draftObservedOn); }}
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (busy || !previewReady || !draftDateValid) return;
+                if (draftObservedOn !== candidate.observedOn) onConfirm(candidate.value, draftObservedOn);
+                else onConfirm(candidate.value);
+              }}
             >
               <label htmlFor="integrated-candidate-observed-on">검사일 수정</label>
               <p id="integrated-candidate-observed-on-help">결과지에 적힌 검사일과 다르면 고쳐 주세요. 값의 의미는 판단하지 않아요.</p>
@@ -157,11 +181,21 @@ export function CandidateReview({
                 min="1900-01-01"
                 max={today}
                 onChange={(event) => setDraftObservedOn(event.target.value)}
-                aria-describedby="integrated-candidate-observed-on-help"
+                aria-describedby={
+                  draftDateValid
+                    ? "integrated-candidate-observed-on-help"
+                    : "integrated-candidate-observed-on-help integrated-candidate-observed-on-error"
+                }
+                aria-invalid={draftDateValid ? undefined : "true"}
                 autoFocus
                 disabled={busy}
                 required
               />
+              {!draftDateValid && (
+                <p id="integrated-candidate-observed-on-error" role="alert">
+                  {describeInvalidObservedOn(draftObservedOn, today)}
+                </p>
+              )}
               <div className="gc-integrated-actions">
                 <button type="button" onClick={() => { setDateCorrectionMode(false); setDraftObservedOn(candidate.observedOn); }}>취소</button>
                 <button type="submit" disabled={busy || !previewReady || !draftDateValid}>{busy ? "저장 중" : "수정한 검사일 확인"}</button>
