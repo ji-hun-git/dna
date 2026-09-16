@@ -1,5 +1,6 @@
 /** Deterministic, generated fixtures only. These bytes must be explicitly allowlisted by Spring.
- * Catalogue values mirror SyntheticCandidateFixture; this is not document extraction.
+ * The document worker reads these lines from the PDF text layer; the English labels are
+ * normalized to Korean display labels by the core alias dictionary.
  */
 export function buildSyntheticResultPdf(period: "2026-07" | "2026-01"): Uint8Array<ArrayBuffer> {
   const lines = period === "2026-07"

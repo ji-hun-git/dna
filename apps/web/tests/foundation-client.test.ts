@@ -24,8 +24,10 @@ function syntheticCandidate(overrides: Record<string, unknown> = {}) {
     evidencePage: 1,
     sourceTextSha256: "b".repeat(64),
     documentSha256: "a".repeat(64),
-    sourceType: "SYNTHETIC_FIXED_FIXTURE",
-    extractionMethod: "DETERMINISTIC_FOUNDATION_FIXTURE",
+    sourceType: "DOCUMENT_TEXT_LAYER",
+    extractionMethod: "native-text",
+    conceptCode: "total-cholesterol",
+    evidenceBox: { x: 0.08, y: 0.1, width: 0.3, height: 0.02 },
     createdAt: "2026-08-30T08:00:00Z",
     ordinal: 1,
     totalCandidates: 3,
@@ -224,6 +226,35 @@ describe("foundation same-origin client", () => {
     const nestedRejectingClient = createFoundationClient({ fetcher: nestedRejectingFetcher, readCsrfToken: () => "csrf-value" });
 
     await expect(nestedRejectingClient.getHealthEvents()).rejects.toThrow();
+  });
+
+  it("rejects a candidate that still claims the retired fixture method and accepts an uncoded one", async () => {
+    const stale = vi.fn(async () => jsonResponse([syntheticCandidate({ sourceType: "SYNTHETIC_FIXED_FIXTURE", extractionMethod: "DETERMINISTIC_FOUNDATION_FIXTURE" })]));
+    await expect(createFoundationClient({ fetcher: stale, readCsrfToken: () => "csrf-value" }).getCandidatesForDocument("e64ddaae-a326-4f23-88a9-05ac59a48625"))
+      .rejects.toMatchObject({ code: "invalid_server_response" });
+
+    const { conceptCode: _code, evidenceBox: _box, ...uncoded } = syntheticCandidate({ label: "알 수 없는 항목" });
+    const fetcher = vi.fn(async () => jsonResponse([uncoded]));
+    const [candidate] = await createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" }).getCandidatesForDocument("e64ddaae-a326-4f23-88a9-05ac59a48625");
+    expect(candidate.conceptCode).toBeUndefined();
+    expect(candidate.evidenceBox).toBeUndefined();
+  });
+
+  it("reads a completed document with its abstentions", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({
+      documentId: "e64ddaae-a326-4f23-88a9-05ac59a48625",
+      status: "COMPLETED",
+      sha256: "a".repeat(64),
+      contentLength: 2048,
+      stateVersion: 6,
+      previewAvailable: true,
+      quarantineBoundary: "HOSTILE_DOCUMENT_TRUST_ZONE",
+      abstentions: [{ label: "문서 전체", reason: "unreadable" }, { label: "LDL", reason: "ambiguous_value", evidencePage: 1 }],
+    }));
+    const document = await createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" }).getDocument("e64ddaae-a326-4f23-88a9-05ac59a48625");
+    expect(document.abstentions?.map((item) => item.reason)).toEqual(["unreadable", "ambiguous_value"]);
+    const bad = vi.fn(async () => jsonResponse({ ...(await (await fetcher()).json()), abstentions: [{ label: "x", reason: "low_confidence" }] }));
+    await expect(createFoundationClient({ fetcher: bad, readCsrfToken: () => "csrf-value" }).getDocument("e64ddaae-a326-4f23-88a9-05ac59a48625")).rejects.toThrow();
   });
 });
 

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -330,4 +330,35 @@ it("names the state of the latest saved value in Korean on the home screen", asy
   expect(await screen.findByRole("heading", { name: "가장 최근에 확인한 값" })).toBeVisible();
   expect(screen.getByText("현재 값")).toBeVisible();
   expect(screen.queryByText("CURRENT")).toBeNull();
+});
+
+it("shows the abstention list instead of a review when the worker read no items", async () => {
+  const completed = {
+    documentId: syntheticDocumentId,
+    sha256: "a".repeat(64),
+    contentLength: 2048,
+    stateVersion: 5,
+    previewAvailable: true,
+    quarantineBoundary: "HOSTILE_DOCUMENT_TRUST_ZONE",
+  };
+  server.use(
+    http.get("/api/foundation/documents/active", () => HttpResponse.json({ document: { ...completed, status: "EXTRACTION_RUNNING" } })),
+    http.get("/api/foundation/documents/:documentId", () => HttpResponse.json({
+      ...completed,
+      status: "COMPLETED",
+      abstentions: [{ label: "문서 전체", reason: "unreadable" }, { label: "LDL", reason: "ambiguous_value", evidencePage: 1 }],
+    })),
+  );
+  render(<IntegratedHealthExperience />);
+
+  expect(await screen.findByRole("heading", { name: "이 결과지에서 읽을 수 있는 항목이 없었어요" }, { timeout: 5_000 })).toBeVisible();
+  expect(screen.getByText("글자 정보가 없는 파일(사진·스캔)은 아직 읽지 못해요.")).toBeVisible();
+  const reasons = within(screen.getByRole("list", { name: "읽지 못한 항목" })).getAllByRole("listitem");
+  expect(reasons[0]).toHaveTextContent("문서 전체");
+  expect(reasons[0]).toHaveTextContent("글자 정보를 읽을 수 없음");
+  expect(reasons[1]).toHaveTextContent("LDL");
+  expect(reasons[1]).toHaveTextContent("값이 여러 개로 읽힘");
+  expect(reasons[1]).toHaveTextContent("1쪽");
+  expect(screen.queryByText("unreadable")).toBeNull();
+  expect(screen.queryByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeNull();
 });

@@ -101,3 +101,22 @@ it("does not confirm blindly when the source is missing or fails to load", async
   expect(screen.getByRole("button", {name:"값 수정"})).toBeDisabled();
   expect(props.onConfirm).not.toHaveBeenCalled();
 });
+
+it("says the value was read from the document text layer, never from image recognition", () => {
+  render(<CandidateReview {...reviewProps()} />);
+  expect(screen.getByText("결과지의 글자 정보에서 읽은 값이에요. 이미지를 판독한 결과가 아니며, 확인하기 전까지 기록이 아니에요.")).toBeVisible();
+  expect(screen.getAllByText("결과지 텍스트에서 읽은 값 · 문자 인식 아님").length).toBeGreaterThan(0);
+  expect(screen.queryByText(/서버가 미리 정한 예시 값/)).toBeNull();
+});
+
+it("shows the evidence page and the normalized evidence box of the candidate", () => {
+  render(<CandidateReview {...reviewProps()} candidate={{ ...syntheticCandidates[0], evidenceBox: { x: 0.08, y: 0.12, width: 0.3, height: 0.02 } }} />);
+  expect(screen.getByText("근거 쪽수").nextElementSibling).toHaveTextContent("1쪽");
+  expect(screen.getByText("근거 위치").nextElementSibling).toHaveTextContent("왼쪽 8% · 위 12% · 너비 30% · 높이 2%");
+});
+
+it("omits the evidence box row when the server sent none", () => {
+  const { evidenceBox: _box, ...withoutBox } = syntheticCandidates[0];
+  render(<CandidateReview {...reviewProps()} candidate={withoutBox} />);
+  expect(screen.queryByText("근거 위치")).toBeNull();
+});

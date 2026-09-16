@@ -4,6 +4,21 @@ const uuidSchema = z.string().uuid();
 const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{8,80}$/);
 const conceptCodeSchema = z.string().regex(/^[a-z0-9-]{1,64}$/);
 
+// Where on the page the worker read a line: normalized 0..1, top-left origin. Display only.
+const evidenceBoxSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  width: z.number().min(0).max(1),
+  height: z.number().min(0).max(1),
+}).strict();
+
+// Why a row (or the whole file) produced no candidate. The reason list is closed.
+const extractionAbstentionSchema = z.object({
+  label: z.string().min(1).max(80),
+  reason: z.enum(["unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence"]),
+  evidencePage: z.number().int().positive().nullable().optional(),
+}).strict();
+
 const sessionSchema = z.object({
   sessionId: uuidSchema,
   subjectId: z.string().regex(/^synthetic-[a-z0-9-]+$/),
@@ -43,6 +58,7 @@ const documentSchema = z.object({
   stateVersion: z.number().int().nonnegative(),
   failureCode: z.string().regex(/^[a-z0-9_]{3,80}$/).nullable().optional(),
   previewAvailable: z.boolean(),
+  abstentions: z.array(extractionAbstentionSchema).max(100).optional(),
   quarantineBoundary: z.literal("HOSTILE_DOCUMENT_TRUST_ZONE"),
 }).strict();
 
@@ -81,8 +97,10 @@ const candidateSchema = z.object({
   evidencePage: z.number().int().positive(),
   sourceTextSha256: z.string().regex(/^[0-9a-f]{64}$/),
   documentSha256: z.string().regex(/^[0-9a-f]{64}$/),
-  sourceType: z.literal("SYNTHETIC_FIXED_FIXTURE"),
-  extractionMethod: z.literal("DETERMINISTIC_FOUNDATION_FIXTURE"),
+  conceptCode: conceptCodeSchema.nullable().optional(),
+  evidenceBox: evidenceBoxSchema.nullable().optional(),
+  sourceType: z.literal("DOCUMENT_TEXT_LAYER"),
+  extractionMethod: z.literal("native-text"),
   createdAt: z.string().datetime({ offset: true }),
   // One document yields several ordered candidates. `ordinal` is the review
   // position within `totalCandidates`, both 1-based and server-owned.
@@ -108,6 +126,7 @@ const recordSchema = z.object({
   evidencePage: z.number().int().positive(),
   sourceTextSha256: z.string().regex(/^[0-9a-f]{64}$/),
   documentSha256: z.string().regex(/^[0-9a-f]{64}$/),
+  conceptCode: conceptCodeSchema.nullable().optional(),
 }).strict();
 
 const healthEventSourceSchema = z.object({
@@ -150,6 +169,8 @@ export type FoundationConsent = z.infer<typeof consentSchema>;
 export type FoundationDocument = z.infer<typeof documentSchema>;
 export type FoundationCandidate = z.infer<typeof candidateSchema>;
 export type FoundationRecord = z.infer<typeof recordSchema>;
+export type FoundationAbstention = z.infer<typeof extractionAbstentionSchema>;
+export type FoundationEvidenceBox = z.infer<typeof evidenceBoxSchema>;
 export type HealthEvent = z.infer<typeof healthEventSchema>;
 export type FoundationDeletion = z.infer<typeof deletionSchema>;
 

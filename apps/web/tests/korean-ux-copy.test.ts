@@ -100,9 +100,21 @@ describe("Korean UX language boundary", () => {
       "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.",
     );
     expect(source("components/integrated/VisitPreparation.tsx")).toContain(
-      "이 값은 서버가 미리 정한 예시 값이에요. 실제 파일이나 기관에서 가져오지 않았어요.",
+      "이 값은 예시 결과지의 글자 정보에서 읽어 직접 확인한 값이에요. 실제 기관에서 가져오지 않았어요.",
     );
     expect(source("components/my-data/MyData.tsx")).toContain("값의 의미나 변화의 방향은 판단하지 않아요.");
+  });
+
+  it("tells the reviewer the candidate came from the text layer, not from image recognition, and never from a fixture", () => {
+    const review = source("components/integrated/CandidateReview.tsx");
+    expect(review).toContain("결과지의 글자 정보에서 읽은 값이에요. 이미지를 판독한 결과가 아니며, 확인하기 전까지 기록이 아니에요.");
+    expect(review).toContain("결과지 텍스트에서 읽은 값 · 문자 인식 아님");
+    expect(review).not.toContain("서버가 미리 정한 예시 값");
+    const experience = source("components/integrated/IntegratedHealthExperience.tsx");
+    expect(experience).toContain("이 결과지에서 읽을 수 있는 항목이 없었어요");
+    expect(experience).toContain("글자 정보가 없는 파일(사진·스캔)은 아직 읽지 못해요.");
+    expect(experience).not.toContain("{item.reason}");
+    for (const path of userFacingFiles) expect(source(path), `${path} still calls the value a fixture`).not.toContain("서버가 미리 정한 예시 값");
   });
 
   it("labels every server enum in Korean instead of rendering it raw", () => {

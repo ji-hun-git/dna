@@ -53,7 +53,7 @@ it("creates one grounded question per topic, capped at three total", () => {
     "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.",
   )).toBeVisible();
   expect(screen.getByText(
-    "이 값은 서버가 미리 정한 예시 값이에요. 실제 파일이나 기관에서 가져오지 않았어요.",
+    "이 값은 예시 결과지의 글자 정보에서 읽어 직접 확인한 값이에요. 실제 기관에서 가져오지 않았어요.",
   )).toBeVisible();
 
   const items = screen.getAllByRole("article");
