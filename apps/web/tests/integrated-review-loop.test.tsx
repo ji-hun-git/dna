@@ -354,7 +354,8 @@ it("shows the abstention list instead of a review when the worker read no items"
   render(<IntegratedHealthExperience />);
 
   expect(await screen.findByRole("heading", { name: "이 결과지에서 읽을 수 있는 항목이 없었어요" }, { timeout: 5_000 })).toBeVisible();
-  expect(screen.getByText("글자 정보가 없는 파일(사진·스캔)은 아직 읽지 못해요.")).toBeVisible();
+  // An ambiguous row proves text was present, so the copy must not blame a scan.
+  expect(screen.getByText("읽은 글자는 있지만 항목·값·단위를 확실히 맞출 수 없었어요. 아래 사유를 확인해 주세요.")).toBeVisible();
   const reasons = within(screen.getByRole("list", { name: "읽지 못한 항목" })).getAllByRole("listitem");
   expect(reasons[0]).toHaveTextContent("문서 전체");
   expect(reasons[0]).toHaveTextContent("글자 정보를 읽을 수 없음");
