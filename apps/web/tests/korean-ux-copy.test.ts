@@ -119,6 +119,12 @@ describe("Korean UX language boundary", () => {
     for (const path of userFacingFiles) expect(source(path), `${path} still contains retired preset-example copy`).not.toContain("미리 정한");
   });
 
+  it("describes a document whose labelled dates disagree without a raw reason code", () => {
+    expect(source("lib/format/status-labels.ts")).toContain("검사일이 둘 이상이라 확실하지 않음");
+    expect(source("components/integrated/IntegratedHealthExperience.tsx")).toContain("describeAbstention(item)");
+    expect(source("components/integrated/IntegratedHealthExperience.tsx")).not.toContain("labelAbstentionReason(item.reason)");
+  });
+
   it("labels every server enum in Korean instead of rendering it raw", () => {
     const integratedFiles = userFacingFiles.filter(
       (path) => path.startsWith("components/integrated/") || path.startsWith("components/my-data/"),

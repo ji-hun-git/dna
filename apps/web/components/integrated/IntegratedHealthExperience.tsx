@@ -16,7 +16,7 @@ import {
 import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
 import {
-  labelAbstentionReason,
+  describeAbstention,
   labelConsentStatus,
   labelRecordStatus,
   labelReviewDecision,
@@ -522,7 +522,7 @@ export function IntegratedHealthExperience() {
               {abstentions.map((item, index) => (
                 <li key={`${item.label}-${index}`}>
                   <strong>{item.label}</strong>
-                  <span>{labelAbstentionReason(item.reason)}</span>
+                  <span>{describeAbstention(item)}</span>
                   {item.evidencePage ? <span>{item.evidencePage}쪽</span> : null}
                 </li>
               ))}

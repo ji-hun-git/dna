@@ -68,3 +68,11 @@ export const abstentionReasonLabels: Record<FoundationAbstention["reason"], stri
 export function labelAbstentionReason(reason: Known<FoundationAbstention["reason"]>) {
   return labelled(abstentionReasonLabels, reason);
 }
+
+/** The worker reports two different labelled dates as one document-level ambiguous_value abstention. */
+export const documentDateConflictLabel = "검사일이 둘 이상이라 확실하지 않음";
+
+export function describeAbstention(abstention: Pick<FoundationAbstention, "label" | "reason">) {
+  if (abstention.label === "문서 전체" && abstention.reason === "ambiguous_value") return documentDateConflictLabel;
+  return labelAbstentionReason(abstention.reason);
+}
