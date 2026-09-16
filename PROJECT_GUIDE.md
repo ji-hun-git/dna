@@ -54,7 +54,7 @@ remain outside the approved foundation.
 | Area | Evidence-backed status |
 |---|---|
 | Product and program design | Founder-approved direction; public brand clearance remains separate |
-| Korean consumer web | The rebuild branch makes the four primary routes use Spring-backed state by default, adds opt-in bounded synthetic bootstrap and generated allowlisted examples, and derives at most three source-linked visit questions. Local tests and browser evidence are tracked in `docs/revision/ASTRA_PRODUCT_REBUILD.md`; not yet a hosted service |
+| Korean consumer web | The rebuild branch makes the four primary routes use Spring-backed state by default, adds opt-in bounded synthetic bootstrap and generated allowlisted examples, and derives at most three source-linked visit questions. `/my-data` renders one cell per CURRENT record with exact search and an evidence drawer. Local tests and browser evidence are tracked in `docs/revision/ASTRA_PRODUCT_REBUILD.md`; not yet a hosted service |
 | Core API | Spring/Kotlin authority for sessions, CSRF/origin checks, consent, lifecycle, provenance, audit, and deletion in the synthetic foundation |
 | Durable store | PostgreSQL/Flyway lifecycle verified in CI with synthetic data |
 | Hostile-document boundary | Digest-bound upload, quarantine/approval states, ClamAV contract, separate worker artifact, retry/DLQ behavior, and safe-preview boundary verified in CI |
