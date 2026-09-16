@@ -17,8 +17,8 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const nav = page.getByRole("navigation", { name: "주요 메뉴" });
     if (await nav.count()) {
-      await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
-      for (const label of ["홈", "기록", "진료 준비", "데이터"]) {
+      await expect(nav.locator('[aria-current="page"]')).toHaveCount(state === "home" ? 0 : 1);
+      for (const label of ["나의 데이터", "데이터 관리"]) {
         const link = nav.getByRole("link", { name: label, exact: true });
         const target = await link.boundingBox();
         const icon = await link.locator("svg").boundingBox();
@@ -116,7 +116,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await captureMatrix(page, info, "home");
 
   // Written labels stay keyboard-operable links, not icon-only controls.
-  for (const [label, path] of [["기록", "/records"], ["진료 준비", "/prepare"], ["데이터", "/data-control"], ["홈", "/"]]) {
+  for (const [label, path] of [["나의 데이터", "/my-data"], ["데이터 관리", "/data-control"]]) {
     const link = page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("link", { name: label, exact: true });
     await link.focus();
     await expect(link).toBeFocused();
@@ -124,6 +124,12 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     await expect(page).toHaveURL(new URL(path, page.url()).href);
     await expect(page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("link", { name: label, exact: true }))
       .toHaveAttribute("aria-current", "page");
+  }
+
+  // These routes are still reachable, but no longer have their own top-level
+  // nav entry: 기록/진료 준비 live under 나의 데이터, and 홈 is the brand link.
+  for (const path of ["/records", "/prepare", "/"]) {
+    await page.goto(path);
   }
 
   await page.getByRole("button", { name: "결과지 추가" }).click();
@@ -280,7 +286,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await captureMatrix(page, info, "prepare");
   for (const route of ["/connections", "/providers", "/data-control"]) {
     await page.goto(route);
-    await expect(page.getByRole("navigation", {name:"주요 메뉴"}).getByRole("link")).toHaveCount(4);
+    await expect(page.getByRole("navigation", {name:"주요 메뉴"}).getByRole("link")).toHaveCount(2);
     await captureMatrix(page, info, route.slice(1));
   }
 

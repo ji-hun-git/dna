@@ -503,6 +503,7 @@ export function IntegratedHealthExperience() {
           <div className="gc-integrated-actions">
             <button type="button" onClick={() => { setView("home"); void loadProductTruth(); }}>홈으로</button>
             <a href="/records">저장된 기록 보기</a>
+            <a href="/my-data">나의 데이터에서 한 칸씩 보기</a>
             <a href="/prepare">진료 준비 목록 보기</a>
           </div>
         </section>
