@@ -215,7 +215,10 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.getByRole("button", { name: "이어서 확인", exact: true }).click();
   await expect(page.getByLabel("검토 진행")).toHaveText("2 / 3");
   await expect(page.getByText("5.2", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "확인: 원문과 같아요" }).click();
+  await page.getByRole("button", { name: "검사일 수정" }).click();
+  await expect(page.getByText("결과지에 적힌 검사일과 다르면 고쳐 주세요. 값의 의미는 판단하지 않아요.")).toBeVisible();
+  await page.getByLabel("검사일 수정").fill("2026-07-27");
+  await page.getByRole("button", { name: "수정한 검사일 확인" }).click();
 
   await expect(page.getByLabel("검토 진행")).toHaveText("3 / 3");
   await expect(page.getByText("42", { exact: true })).toBeVisible();
@@ -224,6 +227,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("heading", { name: "이 결과지 확인을 마쳤어요" })).toBeVisible();
   await expect(page.getByText("저장 2개 · 제외 1개")).toBeVisible();
   await expect(page.getByText("값을 수정함", { exact: true })).toBeVisible();
+  await expect(page.getByText("검사일을 수정함", { exact: true })).toBeVisible();
 
   // The first document alone must feed both destinations; no second/static set can mask a gap.
   // Keep the outage active until recovery: development StrictMode may issue
@@ -241,6 +245,9 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
   await expect(page.getByTestId("durable-record")).toHaveCount(2);
   await expect(page.getByTestId("durable-record").filter({hasText: "비타민 D"})).toHaveCount(0);
+  await expect(page.getByTestId("durable-record").filter({ hasText: "당화혈색소" }))
+    .toContainText("사용자가 검사일을 수정함 · 원래 2026. 7. 28.");
+  await expect(page.locator(".gc-records-group").filter({ hasText: "2026. 7. 27." })).toHaveCount(1);
   await page.route("**/api/foundation/records", (route) => route.fulfill({
     status: 503,
     contentType: "application/json",
@@ -317,9 +324,10 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
 
   await page.goto("/records");
   const groupHeadings = page.locator(".gc-records-group h3");
-  await expect(groupHeadings).toHaveCount(2);
+  await expect(groupHeadings).toHaveCount(3);
   await expect(groupHeadings.nth(0)).toContainText("2026. 7. 28.");
-  await expect(groupHeadings.nth(1)).toContainText("2026. 1. 15.");
+  await expect(groupHeadings.nth(1)).toContainText("2026. 7. 27.");
+  await expect(groupHeadings.nth(2)).toContainText("2026. 1. 15.");
 
   await expect(page.getByRole("heading", { name: "날짜별로 본 내 기록" })).toBeVisible();
   await expect(page.getByText(
