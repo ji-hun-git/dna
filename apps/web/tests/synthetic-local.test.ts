@@ -12,6 +12,8 @@ it("isolates runtime environment and enables only the bounded local synthetic pa
   const plan = buildLocalPlan({GC_LOCAL_SYNTHETIC_ONLY: "yes", GC_LOCAL_POSTGRES_URL: "jdbc:postgresql://127.0.0.1:5432/demo", GC_LOCAL_QUARANTINE_ROOT: process.cwd(), GC_AIDA_API_KEY: "must-not-propagate", GC_DATABASE_PASSWORD: "must-not-propagate"});
   expect(plan.core.GC_FOUNDATION_DEMO_BOOTSTRAP_ENABLED).toBe("true");
   expect(plan.core.GC_ALLOWED_DOCUMENT_SHA256.split(",")).toHaveLength(2);
+  expect(plan.core).not.toHaveProperty("GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SHA256");
+  expect(plan.core).not.toHaveProperty("GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SET_ID");
   expect(plan.core.GC_DATABASE_PASSWORD).toBe("");
   expect(plan.worker).not.toHaveProperty("GC_DATABASE_URL");
   expect(plan.web).not.toHaveProperty("GC_DATABASE_URL");

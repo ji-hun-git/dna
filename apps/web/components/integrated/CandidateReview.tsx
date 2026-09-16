@@ -6,6 +6,15 @@ import { formatKoreanDate } from "@/lib/format/korean-date";
 import { labelCandidateStatus } from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
 
+function percent(fraction: number) {
+  return `${Math.round(fraction * 100)}%`;
+}
+
+/** The line's place on the page in plain words; a position, never a meaning. */
+function describeEvidenceBox(box: NonNullable<FoundationCandidate["evidenceBox"]>) {
+  return `왼쪽 ${percent(box.x)} · 위 ${percent(box.y)} · 너비 ${percent(box.width)} · 높이 ${percent(box.height)}`;
+}
+
 type CandidateReviewProps = {
   candidate: FoundationCandidate;
   previewUrl?: string;
@@ -68,7 +77,7 @@ export function CandidateReview({
                 </span>
               </p>
               <h1 id="server-candidate-title" ref={heading} tabIndex={-1}>결과지에 이렇게 적혀 있나요?</h1>
-              <p className="gc-import__lead">후보는 서버가 미리 정한 예시 값이에요. 실제 문자 인식 결과가 아닙니다.</p>
+              <p className="gc-import__lead">결과지의 글자 정보에서 읽은 값이에요. 이미지를 판독한 결과가 아니며, 확인하기 전까지 기록이 아니에요.</p>
             </div>
             <span className="gc-import__review-state">{labelCandidateStatus(candidate.status)}</span>
           </div>
@@ -76,14 +85,16 @@ export function CandidateReview({
             <p className="gc-import__candidate-label">확인할 항목 · 예시 데이터</p>
             <h2>{candidate.label}</h2>
             <p className="gc-import__candidate-value"><strong>{candidate.value}</strong><span>{candidate.unit}</span></p>
+            <p className="gc-import__candidate-source">결과지 텍스트에서 읽은 값 · 문자 인식 아님</p>
             <dl>
               <div><dt>검사일</dt><dd>{formatKoreanDate(candidate.observedOn)}</dd></div>
               <div><dt>근거 쪽수</dt><dd>{candidate.evidencePage}쪽</dd></div>
+              {candidate.evidenceBox && <div><dt>근거 위치</dt><dd>{describeEvidenceBox(candidate.evidenceBox)}</dd></div>}
             </dl>
             <details className="gc-review-evidence"><summary>출처 정보 자세히</summary><dl>
               <div><dt>문서 확인값</dt><dd><code>{shortDigest(candidate.documentSha256)}</code></dd></div>
               <div><dt>후보 근거값</dt><dd><code>{shortDigest(candidate.sourceTextSha256)}</code></dd></div>
-              <div><dt>생성 방식</dt><dd>서버가 미리 정한 예시 값</dd></div>
+              <div><dt>생성 방식</dt><dd>결과지 텍스트에서 읽은 값 · 문자 인식 아님</dd></div>
             </dl></details>
           </article>
           {previewUrl && !previewFailed ? (

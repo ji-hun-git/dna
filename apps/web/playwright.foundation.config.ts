@@ -10,8 +10,8 @@ if (!databaseUrl || !quarantineRoot) {
 
 const fixtureBytes = Buffer.from(buildSyntheticResultPdf("2026-07"));
 const fixtureDigest = createHash("sha256").update(fixtureBytes).digest("hex");
-// A second allow-listed document, bound below to the `checkup-2026-01` candidate
-// set so the browser sees confirmed values from two different dates.
+// A second allow-listed document whose text layer carries the 2026-01 date, so the browser
+// sees confirmed values from two different dates.
 const secondFixtureBytes = Buffer.from(buildSyntheticResultPdf("2026-01"));
 const secondFixtureDigest = createHash("sha256").update(secondFixtureBytes).digest("hex");
 const webPort = 3138;
@@ -56,8 +56,6 @@ export default defineConfig({
         GC_QUARANTINE_ROOT: quarantineRoot,
         GC_AUDIT_PEPPER: "foundation-browser-e2e-pepper-with-at-least-32-characters",
         GC_ALLOWED_DOCUMENT_SHA256: [fixtureDigest, secondFixtureDigest].join(","),
-        GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SHA256: secondFixtureDigest,
-        GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SET_ID: "checkup-2026-01",
       },
     },
     {

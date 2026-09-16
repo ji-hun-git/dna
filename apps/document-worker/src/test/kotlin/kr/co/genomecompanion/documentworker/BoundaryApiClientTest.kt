@@ -1,5 +1,6 @@
 package kr.co.genomecompanion.documentworker
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.sun.net.httpserver.HttpServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -8,6 +9,7 @@ import java.net.InetSocketAddress
 import java.net.URI
 import java.security.MessageDigest
 import java.time.Instant
+import java.time.LocalDate
 import java.util.HexFormat
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
@@ -48,6 +50,57 @@ class BoundaryApiClientTest {
         }.useClient { client, lease ->
             assertThatThrownBy { client.source(lease) }
                 .hasMessage("worker source digest mismatch")
+        }
+    }
+
+    @Test
+    fun `extraction result carries the parsed candidates and abstentions beside the preview`() {
+        val bytes = ("%PDF-1.7\n" + "synthetic-source".repeat(8) + "\n%%EOF\n").toByteArray()
+        val digest = sha256(bytes)
+        val observedBody = AtomicReference<String>()
+        withSourceServer(bytes, digest) { server ->
+            server.createContext("/internal/document-boundary/jobs/$JOB_ID/extraction-result") { exchange ->
+                observedBody.set(exchange.requestBody.readAllBytes().toString(Charsets.UTF_8))
+                exchange.responseHeaders.set("Content-Type", "application/json")
+                val response = """{"jobId":"$JOB_ID","status":"COMPLETED"}""".toByteArray()
+                exchange.sendResponseHeaders(200, response.size.toLong())
+                exchange.responseBody.use { it.write(response) }
+            }
+        }.useClient { client, lease ->
+            val outcome = ExtractionOutcome(
+                candidates = listOf(
+                    ParsedCandidate(1, "Cholesterol", "188", "mg/dL", LocalDate.of(2026, 7, 28), 1, TextBox(0.08, 0.1, 0.3, 0.02), "1".repeat(64)),
+                ),
+                abstentions = listOf(
+                    ParsedAbstention("LDL", AbstentionReason.AMBIGUOUS_VALUE, 1),
+                    ParsedAbstention("문서 전체", AbstentionReason.UNREADABLE, null),
+                ),
+                observedOn = LocalDate.of(2026, 7, 28),
+            )
+
+            client.extractionResult(lease, byteArrayOf(1, 2, 3), outcome)
+
+            val body = jacksonObjectMapper().readTree(observedBody.get())
+            assertThat(body["sourceSha256"].asText()).isEqualTo(digest)
+            assertThat(body["generatorVersion"].asText()).isEqualTo("document-worker-v2")
+            assertThat(body["extractionMethod"].asText()).isEqualTo("native-text")
+            assertThat(body["previewPngBase64"].asText()).isEqualTo("AQID")
+            assertThat(body["candidates"]).hasSize(1)
+            val candidate = body["candidates"][0]
+            assertThat(candidate["ordinal"].asInt()).isEqualTo(1)
+            assertThat(candidate["label"].asText()).isEqualTo("Cholesterol")
+            assertThat(candidate["value"].asText()).isEqualTo("188")
+            assertThat(candidate["unit"].asText()).isEqualTo("mg/dL")
+            assertThat(candidate["observedOn"].asText()).isEqualTo("2026-07-28")
+            assertThat(candidate["evidencePage"].asInt()).isEqualTo(1)
+            assertThat(candidate["evidenceBox"]["x"].asDouble()).isEqualTo(0.08)
+            assertThat(candidate["evidenceBox"]["height"].asDouble()).isEqualTo(0.02)
+            assertThat(candidate["sourceTextSha256"].asText()).isEqualTo("1".repeat(64))
+            assertThat(candidate.fieldNames().asSequence().toList()).doesNotContain("referenceRange", "conceptCode")
+            assertThat(body["abstentions"].map { it["reason"].asText() }).containsExactly("ambiguous_value", "unreadable")
+            assertThat(body["abstentions"][0]["label"].asText()).isEqualTo("LDL")
+            assertThat(body["abstentions"][0]["evidencePage"].asInt()).isEqualTo(1)
+            assertThat(body["abstentions"][1]["evidencePage"].isNull).isTrue()
         }
     }
 

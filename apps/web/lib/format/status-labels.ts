@@ -1,4 +1,5 @@
 import type {
+  FoundationAbstention,
   FoundationCandidate,
   FoundationConsent,
   FoundationRecord,
@@ -55,4 +56,15 @@ export function labelRecordStatus(status: Known<FoundationRecord["status"]>) {
 
 export function labelReviewDecision(decision: Known<FoundationRecord["reviewDecision"]>) {
   return labelled(reviewDecisionLabels, decision);
+}
+
+export const abstentionReasonLabels: Record<FoundationAbstention["reason"], string> = {
+  unreadable: "글자 정보를 읽을 수 없음",
+  ambiguous_value: "값이 여러 개로 읽힘",
+  ambiguous_unit: "단위를 확정할 수 없음",
+  missing_evidence: "검사일을 찾지 못함",
+};
+
+export function labelAbstentionReason(reason: Known<FoundationAbstention["reason"]>) {
+  return labelled(abstentionReasonLabels, reason);
 }

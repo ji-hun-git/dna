@@ -14,13 +14,15 @@ data class HealthEventSource(
 
 /**
  * One confirmed value as one event. This is a read-model over CURRENT record
- * versions: no new storage, no reference range, no direction, no judgement.
+ * versions: no reference range, no direction, no judgement; `conceptCode` is
+ * a dictionary key, not a meaning.
  */
 data class HealthEvent(
     val eventId: UUID,
     val recordId: UUID,
     val domain: String,
     val concept: String,
+    val conceptCode: String?,
     val value: String,
     val unit: String,
     val observedOn: String,
@@ -45,6 +47,7 @@ object HealthEventProjection {
                     recordId = record.recordId,
                     domain = DOMAIN_LAB,
                     concept = record.label,
+                    conceptCode = record.conceptCode,
                     value = record.currentValue,
                     unit = record.unit,
                     observedOn = record.observedOn.toString(),

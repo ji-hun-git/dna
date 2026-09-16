@@ -16,6 +16,7 @@ import {
 import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
 import {
+  labelAbstentionReason,
   labelConsentStatus,
   labelRecordStatus,
   labelReviewDecision,
@@ -53,8 +54,8 @@ const processingCopy: Record<ProcessingState, string> = {
   SECURITY_INSPECTION: "격리된 작업자가 문서를 안전하게 확인하고 있어요",
   SECURITY_REJECTED: "보안 정책에 따라 이 파일을 처리하지 않았어요",
   SECURITY_APPROVED: "검사한 바이트가 승인됐어요",
-  EXTRACTION_QUEUED: "승인된 바이트의 합성 후보 생성을 기다리고 있어요",
-  EXTRACTION_RUNNING: "격리된 작업자가 안전한 미리보기를 만들고 있어요",
+  EXTRACTION_QUEUED: "승인된 바이트에서 글자 정보를 읽을 차례를 기다리고 있어요",
+  EXTRACTION_RUNNING: "격리된 작업자가 결과지의 글자 정보를 읽고 안전한 미리보기를 만들고 있어요",
   REVIEW_REQUIRED: "직접 확인할 합성 후보가 준비됐어요",
   COMPLETED: "이 문서의 사용자 확인이 끝났어요",
   DELETION_PENDING: "문서와 파생물을 지우고 있어요",
@@ -104,7 +105,11 @@ export function IntegratedHealthExperience() {
     if (activity.document) {
       setDocumentReceipt(activity.document);
       setProcessingState(activity.document.status);
-      if (activity.document.status === "REVIEW_REQUIRED") {
+      if (activity.document.status === "REVIEW_REQUIRED" || activity.document.status === "COMPLETED") {
+        // A COMPLETED document reached this way (page load, or "홈으로") never
+        // goes through the live poll() branch that shows the zero-candidate
+        // screen, so re-derive the same view from the same candidates fetch
+        // the REVIEW_REQUIRED path already uses.
         const restored = await client.getCandidatesForDocument(activity.document.documentId);
         setCandidates(restored);
         setView(restored.some((item) => item.status === "PENDING") ? "review" : "complete");
@@ -164,6 +169,21 @@ export function IntegratedHealthExperience() {
           setErrorMessage("");
           setCandidates(extracted);
           setView(extracted.some((item) => item.status === "PENDING") ? "review" : "complete");
+          return;
+        }
+        if (current.status === "COMPLETED") {
+          // The document may have completed with zero readable items, or it may have
+          // already been reviewed elsewhere with candidates now CONFIRMED/REJECTED.
+          // Fetch and derive the view the same way the restore path (loadProductTruth)
+          // does, instead of assuming zero candidates.
+          const extracted = await client.getCandidatesForDocument(current.documentId);
+          if (cancelled) return;
+          setDocumentReceipt(current);
+          setProcessingState(current.status);
+          setPollingPaused(false);
+          setErrorMessage("");
+          setCandidates(extracted);
+          setView("complete");
           return;
         }
         setDocumentReceipt(current);
@@ -475,6 +495,45 @@ export function IntegratedHealthExperience() {
         onBack={() => setView("processing")}
         onClose={() => setView("home")}
       />
+    );
+  }
+
+  if (view === "complete" && candidates.length === 0) {
+    const abstentions = documentReceipt?.abstentions ?? [];
+    // The worker reports a file with no usable text layer (a scan/photo, or bytes it could not
+    // open) as one document-level "문서 전체" unreadable abstention. Every other shape — the
+    // "결과지" abstention for readable lines that matched no row, or ambiguous/unit-less rows —
+    // means text was present, so the copy must say that instead of blaming a scan.
+    const scanLikeDocument =
+      abstentions.length === 0 ||
+      abstentions.every((item) => item.reason === "unreadable" && item.label === "문서 전체");
+    return (
+      <main className="gc-integrated-shell gc-integrated-shell--center">
+        <section className="gc-integrated-auth" aria-labelledby="integrated-empty-title" role="status" aria-live="polite">
+          <p>서버 처리 완료</p>
+          <h1 id="integrated-empty-title">이 결과지에서 읽을 수 있는 항목이 없었어요</h1>
+          <p>
+            {scanLikeDocument
+              ? "글자 정보가 없는 파일(사진·스캔)은 아직 읽지 못해요."
+              : "읽은 글자는 있지만 항목·값·단위를 확실히 맞출 수 없었어요. 아래 사유를 확인해 주세요."}
+          </p>
+          {abstentions.length > 0 && (
+            <ul className="gc-review-saved" aria-label="읽지 못한 항목">
+              {abstentions.map((item, index) => (
+                <li key={`${item.label}-${index}`}>
+                  <strong>{item.label}</strong>
+                  <span>{labelAbstentionReason(item.reason)}</span>
+                  {item.evidencePage ? <span>{item.evidencePage}쪽</span> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="gc-integrated-actions">
+            <button type="button" onClick={() => { setView("home"); void loadProductTruth(); }}>홈으로</button>
+            <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>
+          </div>
+        </section>
+      </main>
     );
   }
 

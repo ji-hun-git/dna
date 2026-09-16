@@ -1,5 +1,7 @@
 package kr.co.genomecompanion.foundation
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import kr.co.genomecompanion.documentboundary.InspectionDecision
 import kr.co.genomecompanion.documentboundary.InspectionReport
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
@@ -89,6 +91,8 @@ data class FoundationCandidateRow(
     val evidencePage: Int,
     val sourceTextSha256: String,
     val documentSha256: String,
+    val conceptCode: String?,
+    val evidenceBox: EvidenceBox?,
     val createdAt: Instant,
 )
 
@@ -119,6 +123,7 @@ data class FoundationRecordRow(
     val evidencePage: Int,
     val sourceTextSha256: String,
     val documentSha256: String,
+    val conceptCode: String?,
 )
 
 
@@ -126,6 +131,7 @@ data class FoundationRecordRow(
 @ConditionalOnProperty(prefix = "gc.foundation", name = ["enabled"], havingValue = "true")
 class FoundationRepository(
     private val jdbc: JdbcTemplate,
+    private val objectMapper: ObjectMapper,
 ) {
     private val sessionMapper = RowMapper { result, _ ->
         FoundationSessionRow(
@@ -170,6 +176,15 @@ class FoundationRepository(
             evidencePage = result.getInt("evidence_page"),
             sourceTextSha256 = result.getString("source_text_sha256"),
             documentSha256 = result.getString("document_sha256"),
+            conceptCode = result.getString("concept_code"),
+            evidenceBox = result.getBigDecimal("evidence_box_x")?.let { x ->
+                EvidenceBox(
+                    x = x.toDouble(),
+                    y = result.getBigDecimal("evidence_box_y").toDouble(),
+                    width = result.getBigDecimal("evidence_box_w").toDouble(),
+                    height = result.getBigDecimal("evidence_box_h").toDouble(),
+                )
+            },
             createdAt = result.getObject("candidate_created_at", OffsetDateTime::class.java).toInstant(),
         )
     }
@@ -193,15 +208,19 @@ class FoundationRepository(
             evidencePage = result.getInt("evidence_page"),
             sourceTextSha256 = result.getString("source_text_sha256"),
             documentSha256 = result.getString("document_sha256"),
+            conceptCode = result.getString("concept_code"),
         )
     }
+
+    private val abstentionJson = objectMapper
 
     private val candidateProjection =
         """
         SELECT c.candidate_id, c.document_id, c.subject_id, c.status, c.ordinal,
                (SELECT COUNT(*) FROM gc_candidate t WHERE t.document_id = c.document_id AND t.subject_id = c.subject_id) AS total_candidates,
                c.label, c.candidate_value, c.unit,
-               c.observed_on, c.evidence_page, c.source_text_sha256,
+               c.observed_on, c.evidence_page, c.source_text_sha256, c.concept_code,
+               c.evidence_box_x, c.evidence_box_y, c.evidence_box_w, c.evidence_box_h,
                d.sha256 AS document_sha256, c.created_at AS candidate_created_at
         FROM gc_candidate c
         JOIN gc_document d ON d.document_id = c.document_id AND d.subject_id = c.subject_id
@@ -223,7 +242,7 @@ class FoundationRepository(
                r.candidate_id, r.document_id, r.subject_id, v.status AS version_status,
                r.label, v.value AS current_value, c.candidate_value AS original_value,
                r.unit, r.observed_on, v.changed_at AS confirmed_at, v.correction_reason,
-               c.evidence_page, c.source_text_sha256, d.sha256 AS document_sha256
+               c.evidence_page, c.source_text_sha256, d.sha256 AS document_sha256, v.concept_code
         FROM gc_health_record r
         JOIN gc_health_record_version v ON v.record_id = r.record_id
         JOIN gc_candidate c ON c.candidate_id = r.candidate_id AND c.subject_id = r.subject_id
@@ -886,14 +905,15 @@ class FoundationRepository(
         workerImageDigest: String,
         generatorVersion: String,
         now: Instant,
-        candidates: List<SyntheticCandidate>,
+        candidates: List<NormalizedCandidate>,
+        abstentions: List<ExtractionAbstention>,
     ) {
         jdbc.update(
             """
             INSERT INTO gc_extraction_job(
                 job_id, document_id, subject_id, status, created_at, finished_at,
-                worker_job_id, source_sha256, worker_image_digest, generator_version, attempt
-            ) VALUES (?, ?, ?, 'COMPLETED', ?, ?, ?, ?, ?, ?, ?)
+                worker_job_id, source_sha256, worker_image_digest, generator_version, attempt, abstentions
+            ) VALUES (?, ?, ?, 'COMPLETED', ?, ?, ?, ?, ?, ?, ?, ?::jsonb)
             """.trimIndent(),
             extractionJobId,
             workerJob.documentId,
@@ -905,14 +925,16 @@ class FoundationRepository(
             workerImageDigest,
             generatorVersion,
             workerJob.attempt,
+            abstentionJson.writeValueAsString(abstentions),
         )
         candidates.forEach { candidate ->
             jdbc.update(
                 """
                 INSERT INTO gc_candidate(
                     candidate_id, job_id, document_id, subject_id, status, ordinal, label, candidate_value,
-                    unit, observed_on, evidence_page, source_text_sha256, created_at
-                ) VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?)
+                    unit, observed_on, evidence_page, source_text_sha256, created_at, extraction_method,
+                    evidence_box_x, evidence_box_y, evidence_box_w, evidence_box_h, concept_code
+                ) VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, 'native-text', ?, ?, ?, ?, ?)
                 """.trimIndent(),
                 UUID.randomUUID(),
                 extractionJobId,
@@ -926,6 +948,11 @@ class FoundationRepository(
                 candidate.evidencePage,
                 candidate.sourceTextSha256,
                 now.atOffset(ZoneOffset.UTC),
+                candidate.evidenceBox?.x,
+                candidate.evidenceBox?.y,
+                candidate.evidenceBox?.width,
+                candidate.evidenceBox?.height,
+                candidate.conceptCode,
             )
         }
         jdbc.update(
@@ -943,20 +970,37 @@ class FoundationRepository(
             generatorVersion,
             now.atOffset(ZoneOffset.UTC),
         )
+        val nextStatus = if (candidates.isEmpty()) "COMPLETED" else "REVIEW_REQUIRED"
         jdbc.update(
             """
             UPDATE gc_document
-            SET status = 'REVIEW_REQUIRED', preview_object_key = ?, failure_code = NULL,
+            SET status = ?, preview_object_key = ?, failure_code = NULL,
+                completed_at = CASE WHEN ? = 'COMPLETED' THEN ? ELSE completed_at END,
                 state_version = state_version + 1, updated_at = ?
             WHERE document_id = ? AND status = 'EXTRACTION_RUNNING' AND sha256 = ?
             """.trimIndent(),
+            nextStatus,
             previewObjectKey,
+            nextStatus,
+            now.atOffset(ZoneOffset.UTC),
             now.atOffset(ZoneOffset.UTC),
             workerJob.documentId,
             workerJob.sourceSha256,
         ).also { check(it == 1) { "document extraction state changed" } }
         completeJob(workerJob.jobId, now)
     }
+
+    fun findExtractionAbstentions(subjectId: String, documentId: UUID): List<ExtractionAbstention> =
+        jdbc.query(
+            """
+            SELECT j.abstentions::text AS abstentions
+            FROM gc_extraction_job j
+            WHERE j.subject_id = ? AND j.document_id = ? AND j.status = 'COMPLETED'
+            """.trimIndent(),
+            RowMapper { result, _ -> abstentionJson.readValue<List<ExtractionAbstention>>(result.getString("abstentions")) },
+            subjectId,
+            documentId,
+        ).firstOrNull() ?: emptyList()
 
     private fun completeJob(jobId: UUID, now: Instant) {
         jdbc.update(
@@ -1160,14 +1204,15 @@ class FoundationRepository(
             """
             INSERT INTO gc_health_record_version(
                 version_id, record_id, subject_id, status, value,
-                supersedes_version_id, correction_reason, changed_at
-            ) VALUES (?, ?, ?, 'CURRENT', ?, NULL, NULL, ?)
+                supersedes_version_id, correction_reason, changed_at, concept_code
+            ) VALUES (?, ?, ?, 'CURRENT', ?, NULL, NULL, ?, ?)
             """.trimIndent(),
             versionId,
             recordId,
             candidate.subjectId,
             confirmedValue,
             now.atOffset(ZoneOffset.UTC),
+            candidate.conceptCode,
         )
         jdbc.update(
             """
@@ -1242,8 +1287,9 @@ class FoundationRepository(
             """
             INSERT INTO gc_health_record_version(
                 version_id, record_id, subject_id, status, value,
-                supersedes_version_id, correction_reason, changed_at
-            ) VALUES (?, ?, ?, 'CURRENT', ?, ?, ?, ?)
+                supersedes_version_id, correction_reason, changed_at, concept_code
+            ) VALUES (?, ?, ?, 'CURRENT', ?, ?, ?, ?,
+                (SELECT concept_code FROM gc_health_record_version WHERE version_id = ?))
             """.trimIndent(),
             newVersionId,
             recordId,
@@ -1252,6 +1298,7 @@ class FoundationRepository(
             previousVersionId,
             reason,
             now.atOffset(ZoneOffset.UTC),
+            previousVersionId,
         )
         return true
     }

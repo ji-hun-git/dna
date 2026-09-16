@@ -129,6 +129,8 @@ jobs:
           path: "**/build/test-results/test/**"
           if-no-files-found: warn
           retention-days: 7
+      - name: Score the native-text parser on the generated synthetic Korean checkup corpus
+        run: pnpm medical-ai:native-text-gate
       - name: Install browser used by the bounded lifecycle test
         run: pnpm --dir apps/web exec playwright install --with-deps chromium
       - name: Run browser-to-Spring-to-worker lifecycle
@@ -195,6 +197,7 @@ jobs:
           ./gradlew
           :packages:document-boundary:classes
           :apps:document-worker:classes
+          :packages:korean-checkup-benchmark:classes
           :apps:core-api:classes
           --no-daemon
       - name: Analyze

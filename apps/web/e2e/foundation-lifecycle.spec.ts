@@ -191,6 +191,12 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     .evaluate((node) => (node as HTMLImageElement).complete && (node as HTMLImageElement).naturalWidth > 0)).toBe(true);
   await expect(page.getByLabel("검토 진행")).toHaveText("1 / 3");
   await expect(page.getByText("188", { exact: true })).toBeVisible();
+  // Wave 2A: the value came from the PDF text layer, not from a server fixture and not from OCR.
+  await expect(page.getByText("서버가 미리 정한 예시 값")).toHaveCount(0);
+  await expect(page.getByText("결과지의 글자 정보에서 읽은 값이에요. 이미지를 판독한 결과가 아니며, 확인하기 전까지 기록이 아니에요.")).toBeVisible();
+  await expect(page.getByText("결과지 텍스트에서 읽은 값 · 문자 인식 아님").first()).toBeVisible();
+  await expect(page.getByText("근거 쪽수", { exact: true }).locator("..")).toContainText("1쪽");
+  await expect(page.getByText("근거 위치", { exact: true }).locator("..")).toContainText(/왼쪽 \d{1,2}% · 위 \d{1,2}% · 너비 \d{1,3}% · 높이 \d{1,2}%/);
   await captureMatrix(page, info, "review");
 
   await page.getByRole("button", { name: "값 수정" }).click();
@@ -266,8 +272,8 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("heading", { name: /값보다 먼저\s*출처를 확인하세요/ })).toBeVisible();
   expect(await browserApi(page, "/api/foundation/session")).toEqual(sessionBeforeRecovery);
 
-  // The second allow-listed document is bound to the 2026-01 candidate set, so
-  // the same three items come back with their own values and observation date.
+  // The second allow-listed document carries the 2026-01 date in its text layer, so the
+  // same three items come back with their own values and observation date.
   await expect(page.getByRole("heading", { name: /값보다 먼저\s*출처를 확인하세요/ })).toBeVisible();
   await page.getByRole("button", { name: "결과지 추가" }).click();
   await expect(page.getByRole("heading", { name: /허용된 합성 PDF를\s*선택해 주세요/ })).toBeVisible();
