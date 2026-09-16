@@ -283,6 +283,27 @@ class NativeTextExtractionProviderTest {
         assertThat(outcome.abstentions).containsExactly(ParsedAbstention("AST", AbstentionReason.MISSING_EVIDENCE, 1))
     }
 
+    @Test
+    fun `does not treat English date of birth as an exam-date label`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("Date of birth: 1987-03-14", "Exam date: 2026-07-28", "AST 24 U/L"),
+        )
+
+        assertThat(outcome.observedOn).isEqualTo(LocalDate.of(2026, 7, 28))
+        assertThat(outcome.abstentions).isEmpty()
+    }
+
+    @Test
+    fun `does not treat English birth date as an exam-date label`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("Birth date: 1987-03-14", "AST 24 U/L"),
+        )
+
+        assertThat(outcome.observedOn).isNull()
+        assertThat(outcome.candidates).isEmpty()
+        assertThat(outcome.abstentions).containsExactly(ParsedAbstention("AST", AbstentionReason.MISSING_EVIDENCE, 1))
+    }
+
     private fun lines(vararg texts: String): List<TextLine> = lines(texts.toList())
 
     private fun lines(texts: List<String>): List<TextLine> =

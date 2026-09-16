@@ -72,7 +72,8 @@ object NativeTextExtractionProvider {
     private val leadingBullets = Regex("^[·•\\-*]+\\s*")
     private val dateLabel = Regex(
         "(?:(?:검사\\s*일자|검진\\s*일자|채취\\s*일자|검사일|검진일|채취일)(?![가-힣])|" +
-            "(?<![A-Za-z])(?:exam\\s+|test\\s+|collection\\s+)?date(?![A-Za-z]))\\s*[:：]?",
+            "(?<![A-Za-z])(?<!birth\\s{1,10})(?:exam\\s+|test\\s+|collection\\s+)?date(?![A-Za-z])" +
+            "(?!\\s{1,10}of\\s{1,10}birth))\\s*[:：]?",
         RegexOption.IGNORE_CASE,
     )
     private val datePatterns = listOf(
