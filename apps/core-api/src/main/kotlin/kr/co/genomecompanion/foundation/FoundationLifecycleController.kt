@@ -75,6 +75,9 @@ data class DocumentActivityResponse(
 data class CandidateConfirmationRequest(
     @field:Size(min = 1, max = 64)
     val value: String,
+    /** Optional ISO date the person confirms the document states; null keeps the candidate's date. */
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$")
+    val observedOn: String? = null,
 )
 
 
@@ -281,6 +284,7 @@ class FoundationLifecycleController(
                     candidateId,
                     body.value,
                     idempotencyKey,
+                    body.observedOn,
                 ),
             )
 
