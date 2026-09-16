@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { afterEach, expect, it, vi } from "vitest";
@@ -57,7 +57,7 @@ it("keeps the tooltip for a focused cell when the pointer leaves it", async () =
   await userEvent.unhover(cell);
   expect(screen.getByRole("tooltip")).toHaveTextContent("총콜레스테롤");
   expect(cell).toHaveAttribute("aria-describedby", `cell-tip-${jul.eventId}`);
-  cell.blur();
+  fireEvent.blur(cell);
   expect(screen.queryByRole("tooltip")).toBeNull();
 });
 

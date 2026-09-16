@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { flushSync } from "react-dom";
 import type { HealthEvent } from "@/lib/foundation/client";
 import { layoutCells } from "@/lib/my-data/cell-layout";
 import { CellTooltip } from "@/components/my-data/CellTooltip";
@@ -83,7 +82,7 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
               onMouseEnter={() => setHoveredId(cell.eventId)}
               onMouseLeave={() => setHoveredId(undefined)}
               onFocus={() => setFocusedId(cell.eventId)}
-              onBlur={() => flushSync(() => setFocusedId(undefined))}
+              onBlur={() => setFocusedId(undefined)}
             >
               <rect data-cell="" x={cell.x} y={cell.y} width={cell.size} height={cell.size} rx="1.5" />
               {cell.state === "query-related" ? (
