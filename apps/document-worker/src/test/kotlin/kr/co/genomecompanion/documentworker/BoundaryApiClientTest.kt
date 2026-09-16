@@ -98,6 +98,8 @@ class BoundaryApiClientTest {
             assertThat(candidate["sourceTextSha256"].asText()).isEqualTo("1".repeat(64))
             assertThat(candidate.fieldNames().asSequence().toList()).doesNotContain("referenceRange", "conceptCode")
             assertThat(body["abstentions"].map { it["reason"].asText() }).containsExactly("ambiguous_value", "unreadable")
+            assertThat(body["abstentions"][0]["label"].asText()).isEqualTo("LDL")
+            assertThat(body["abstentions"][0]["evidencePage"].asInt()).isEqualTo(1)
             assertThat(body["abstentions"][1]["evidencePage"].isNull).isTrue()
         }
     }

@@ -93,7 +93,10 @@ object NativeTextExtractionProvider {
         for (line in lines) {
             when (val row = parseRow(line.text)) {
                 null -> continue
-                is RowParse.Ambiguous -> abstentions += ParsedAbstention(row.label.take(MAX_LABEL), row.reason, line.page)
+                is RowParse.Ambiguous -> {
+                    val reason = if (observedOn == null) AbstentionReason.MISSING_EVIDENCE else row.reason
+                    abstentions += ParsedAbstention(row.label.take(MAX_LABEL), reason, line.page)
+                }
                 is RowParse.Measurement -> when {
                     observedOn == null ->
                         abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.MISSING_EVIDENCE, line.page)

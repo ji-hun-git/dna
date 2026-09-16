@@ -110,6 +110,20 @@ class NativeTextExtractionProviderTest {
     }
 
     @Test
+    fun `folds ambiguous rows into missing_evidence abstentions when the document has no date`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("LDL 콜레스테롤 110 115 mg/dL", "AST 24 U/L"),
+        )
+
+        assertThat(outcome.observedOn).isNull()
+        assertThat(outcome.candidates).isEmpty()
+        assertThat(outcome.abstentions).containsExactly(
+            ParsedAbstention("LDL 콜레스테롤", AbstentionReason.MISSING_EVIDENCE, 1),
+            ParsedAbstention("AST", AbstentionReason.MISSING_EVIDENCE, 1),
+        )
+    }
+
+    @Test
     fun `abstains on ambiguous values and units and skips lines that are not measurements`() {
         val outcome = NativeTextExtractionProvider.parse(
             lines(
