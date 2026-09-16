@@ -253,6 +253,36 @@ class NativeTextExtractionProviderTest {
         assertThat(outcome.observedOn).isNull()
     }
 
+    @Test
+    fun `ignores a Korean compound word that merely starts with the exam-date label`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("검사일정: 2026-01-01 확인", "검사일: 2026-07-28", "AST 24 U/L"),
+        )
+
+        assertThat(outcome.observedOn).isEqualTo(LocalDate.of(2026, 7, 28))
+        assertThat(outcome.abstentions).isEmpty()
+    }
+
+    @Test
+    fun `prefers the exam-date label over a reception-date label on another line`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("접수일: 2026-07-01", "검사일: 2026-07-28", "AST 24 U/L"),
+        )
+
+        assertThat(outcome.observedOn).isEqualTo(LocalDate.of(2026, 7, 28))
+    }
+
+    @Test
+    fun `treats a serial-number label ending in 일련번호 as missing evidence, not an exam date`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("검사일련번호 2026-03-03-0001", "AST 24 U/L"),
+        )
+
+        assertThat(outcome.observedOn).isNull()
+        assertThat(outcome.candidates).isEmpty()
+        assertThat(outcome.abstentions).containsExactly(ParsedAbstention("AST", AbstentionReason.MISSING_EVIDENCE, 1))
+    }
+
     private fun lines(vararg texts: String): List<TextLine> = lines(texts.toList())
 
     private fun lines(texts: List<String>): List<TextLine> =
