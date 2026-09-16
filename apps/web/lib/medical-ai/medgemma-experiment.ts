@@ -141,14 +141,16 @@ export type ModelPageResult = { page: number; observedOn: string; rows: ModelRow
  * told apart from a genuinely malformed reply, and so the raw reply can be persisted for inspection.
  */
 export class ModelPageParseError extends Error {
-  constructor(
-    message: string,
-    readonly rawContent: string,
-    readonly doneReason?: string,
-    readonly evalCount?: number,
-  ) {
+  rawContent: string;
+  doneReason?: string;
+  evalCount?: number;
+
+  constructor(message: string, rawContent: string, doneReason?: string, evalCount?: number) {
     super(message);
     this.name = "ModelPageParseError";
+    this.rawContent = rawContent;
+    this.doneReason = doneReason;
+    this.evalCount = evalCount;
   }
 }
 
