@@ -63,7 +63,7 @@ remain outside the approved foundation.
 | AWS foundation | OpenTofu code and tests exist for Seoul synthetic staging; no account-backed plan or apply has occurred |
 | Hosted staging | Not deployed |
 | Kakao/Naver/MyHealthWay/NHIS/HIRA | Disabled; no live provider credentials or personal-record retrieval |
-| Medical AI/OCR | Synthetic evaluation and isolated-runner contracts only; no production inference or PHI authorization. The document worker reads the PDF text layer deterministically (PDFBox, no OCR, no model) into candidates with page/box evidence, scored by `pnpm medical-ai:native-text-gate` on a generated Korean checkup corpus |
+| Medical AI/OCR | Synthetic evaluation and isolated-runner contracts only; no production inference or PHI authorization. The document worker reads the PDF text layer deterministically (PDFBox, no OCR, no model) into candidates with page/box evidence, scored by `pnpm medical-ai:native-text-gate` on a generated Korean checkup corpus. A bounded local MedGemma 1.5 experiment (Ollama, synthetic pages only, manual script) was scored with the same evaluator as evidence only; its output is not in product code (`docs/status/2026-09-17/medgemma-local-experiment.md`). |
 | Real personal health data | Prohibited |
 | Release | `NO_GO`; see `release/readiness.json` |
 

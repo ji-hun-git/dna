@@ -344,6 +344,7 @@ must be supplied through approved secret stores, never chat. Real PHI remains pr
 | M9 observed validation | protocol only; no participant outcome or payment evidence |
 | M10 나의 데이터 living cells | implemented locally; `/my-data` read model, canvas, drawer and table; see `docs/status/2026-09-16/wave1-my-data.md` |
 | M11 결과지 텍스트 읽기 · 개념 정규화 · 검진 벤치마크 | implemented locally; worker reads the PDF text layer (no OCR, no model), core stores the worker's candidates with concept codes, `medical-ai:native-text-gate` passes on 24 generated documents; see `docs/status/2026-09-16/wave2a-native-text.md` |
+| M12 라벨 검사일 · 검사일 정정 · 벤치마크 R2 · MedGemma 로컬 실험 | implemented locally; worker uses labelled dates only, review can correct the exam date (V8 `original_observed_on`), benchmark is byte-deterministic with 25 documents, MedGemma 1.5 scored locally as evidence only (not a gate, not in product code); see `docs/status/2026-09-17/wave2b.md` |
 
 Next highest-leverage work is the private synthetic hosting boundary, not another
 visual redesign. Obtain non-secret account/OIDC/state identifiers, build and test
