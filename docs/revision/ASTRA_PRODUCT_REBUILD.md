@@ -343,6 +343,7 @@ must be supplied through approved secret stores, never chat. Real PHI remains pr
 | M8 release evidence | main protected, publishing paused; private ECR/hosted runtime blocked |
 | M9 observed validation | protocol only; no participant outcome or payment evidence |
 | M10 나의 데이터 living cells | implemented locally; `/my-data` read model, canvas, drawer and table; see `docs/status/2026-09-16/wave1-my-data.md` |
+| M11 결과지 텍스트 읽기 · 개념 정규화 · 검진 벤치마크 | implemented locally; worker reads the PDF text layer (no OCR, no model), core stores the worker's candidates with concept codes, `medical-ai:native-text-gate` passes on 24 generated documents; see `docs/status/2026-09-16/wave2a-native-text.md` |
 
 Next highest-leverage work is the private synthetic hosting boundary, not another
 visual redesign. Obtain non-secret account/OIDC/state identifiers, build and test
