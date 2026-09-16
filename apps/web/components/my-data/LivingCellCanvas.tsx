@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import type { HealthEvent } from "@/lib/foundation/client";
 import { layoutCells } from "@/lib/my-data/cell-layout";
 import { CellTooltip } from "@/components/my-data/CellTooltip";
@@ -25,12 +26,14 @@ const PADDING = 24;
  */
 export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSelect, width = 720 }: LivingCellCanvasProps) {
   const [hoveredId, setHoveredId] = useState<string>();
+  const [focusedId, setFocusedId] = useState<string>();
   const { cells, scale, height } = useMemo(
     () => layoutCells(events, { width, cellSize: CELL, gap: GAP, padding: PADDING, selectedId, matchedIds, newIds }),
     [events, width, selectedId, matchedIds, newIds],
   );
   const byId = useMemo(() => new Map(events.map((event) => [event.eventId, event])), [events]);
-  const hovered = hoveredId ? byId.get(hoveredId) : undefined;
+  const targetId = focusedId ?? hoveredId;
+  const hovered = targetId ? byId.get(targetId) : undefined;
   const hoveredCell = hovered ? cells.find((cell) => cell.eventId === hovered.eventId) : undefined;
   const dimmed = matchedIds !== null;
 
@@ -64,7 +67,7 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
               tabIndex={0}
               aria-label={label}
               aria-pressed={cell.state === "selected"}
-              aria-describedby={hoveredId === cell.eventId ? `cell-tip-${cell.eventId}` : undefined}
+              aria-describedby={targetId === cell.eventId ? `cell-tip-${cell.eventId}` : undefined}
               data-state={cell.state}
               data-uncertain={cell.uncertain ? "true" : undefined}
               data-corrected={cell.corrected ? "true" : undefined}
@@ -79,10 +82,13 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
               }}
               onMouseEnter={() => setHoveredId(cell.eventId)}
               onMouseLeave={() => setHoveredId(undefined)}
-              onFocus={() => setHoveredId(cell.eventId)}
-              onBlur={() => setHoveredId(undefined)}
+              onFocus={() => setFocusedId(cell.eventId)}
+              onBlur={() => flushSync(() => setFocusedId(undefined))}
             >
               <rect data-cell="" x={cell.x} y={cell.y} width={cell.size} height={cell.size} rx="1.5" />
+              {cell.state === "query-related" ? (
+                <rect data-query-ring="" x={cell.x - 2} y={cell.y - 2} width={cell.size + 4} height={cell.size + 4} rx="2.5" />
+              ) : null}
               {cell.uncertain ? (
                 <rect data-hatch="" x={cell.x} y={cell.y} width={cell.size} height={cell.size} rx="1.5" fill="url(#gc-cell-hatch)" />
               ) : null}
@@ -94,7 +100,7 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
         })}
       </svg>
       {hovered && hoveredCell ? (
-        <CellTooltip event={hovered} x={(hoveredCell.x / width) * 100} y={hoveredCell.y} />
+        <CellTooltip event={hovered} x={((hoveredCell.x + hoveredCell.size / 2) / width) * 100} y={hoveredCell.y} />
       ) : null}
       <figcaption className={styles.caption}>한 칸 = 확인한 기록 하나. 값의 의미나 변화의 방향은 판단하지 않아요.</figcaption>
     </figure>

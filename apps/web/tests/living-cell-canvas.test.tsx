@@ -30,6 +30,8 @@ it("marks selection, query match and uncertainty with data attributes, not colou
   const uncertain = screen.getByRole("button", { name: "비타민 D 42 ng/mL, 2026. 7. 28. (출처 미리보기 없음)" });
   expect(uncertain).toHaveAttribute("data-uncertain", "true");
   expect(uncertain.querySelector("[data-hatch]")).not.toBeNull();
+  expect(screen.getByRole("button", { name: "총콜레스테롤 194 mg/dL, 2026. 1. 15." }).querySelector("[data-query-ring]")).not.toBeNull();
+  expect(selected.querySelector("[data-query-ring]")).toBeNull();
 });
 
 it("selects with click and with Enter, and shows the tooltip for the hovered cell", async () => {
@@ -45,6 +47,18 @@ it("selects with click and with Enter, and shows the tooltip for the hovered cel
   expect(screen.getByRole("tooltip")).toHaveTextContent("총콜레스테롤");
   expect(screen.getByRole("tooltip")).toHaveTextContent("188 mg/dL");
   expect(screen.getByRole("tooltip")).toHaveTextContent("2026. 7. 28.");
+});
+
+it("keeps the tooltip for a focused cell when the pointer leaves it", async () => {
+  render(<LivingCellCanvas events={[jan, jul]} matchedIds={null} newIds={new Set()} onSelect={() => {}} />);
+  const cell = screen.getByRole("button", { name: "총콜레스테롤 188 mg/dL, 2026. 7. 28." });
+  cell.focus();
+  await userEvent.hover(cell);
+  await userEvent.unhover(cell);
+  expect(screen.getByRole("tooltip")).toHaveTextContent("총콜레스테롤");
+  expect(cell).toHaveAttribute("aria-describedby", `cell-tip-${jul.eventId}`);
+  cell.blur();
+  expect(screen.queryByRole("tooltip")).toBeNull();
 });
 
 it("draws one axis tick per month present in the data", () => {

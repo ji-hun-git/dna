@@ -13,6 +13,7 @@
 .cell rect[data-cell] { fill: var(--gc-color-surface-soft); stroke: var(--gc-color-line-strong); stroke-width: 1; }
 .cell[data-state="new"] rect[data-cell] { fill: var(--gc-color-surface-raised); stroke: var(--gc-color-brand-primary); stroke-width: 1.5; }
 .cell[data-state="query-related"] rect[data-cell] { fill: var(--gc-color-brand-primary); stroke: var(--gc-color-brand-primary); }
+.cell rect[data-query-ring] { fill: none; stroke: var(--gc-color-brand-primary); stroke-width: 1; stroke-dasharray: 2 1.5; }
 .cell[data-state="selected"] rect[data-cell] { fill: var(--gc-color-brand-deep); stroke: var(--gc-color-focus-ring); stroke-width: 2; }
 .cell[data-dim="true"] { opacity: 0.28; }
 .cell circle[data-corrected-mark] { fill: var(--gc-color-status-warning); }
