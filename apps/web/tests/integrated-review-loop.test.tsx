@@ -348,6 +348,8 @@ it("shows the abstention list instead of a review when the worker read no items"
       status: "COMPLETED",
       abstentions: [{ label: "문서 전체", reason: "unreadable" }, { label: "LDL", reason: "ambiguous_value", evidencePage: 1 }],
     })),
+    // The COMPLETED branch of poll() now fetches candidates (M5); this document truly has none.
+    http.get("/api/foundation/documents/:documentId/candidates", () => HttpResponse.json([])),
   );
   render(<IntegratedHealthExperience />);
 
@@ -361,6 +363,52 @@ it("shows the abstention list instead of a review when the worker read no items"
   expect(reasons[1]).toHaveTextContent("1쪽");
   expect(screen.queryByText("unreadable")).toBeNull();
   expect(screen.queryByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeNull();
+});
+
+it("shows the ambiguous-parse sentence instead of the scan sentence when the worker read text but matched no rows", async () => {
+  const completed = {
+    documentId: syntheticDocumentId,
+    sha256: "a".repeat(64),
+    contentLength: 2048,
+    stateVersion: 5,
+    previewAvailable: true,
+    quarantineBoundary: "HOSTILE_DOCUMENT_TRUST_ZONE",
+  };
+  server.use(
+    http.get("/api/foundation/documents/active", () => HttpResponse.json({ document: { ...completed, status: "EXTRACTION_RUNNING" } })),
+    http.get("/api/foundation/documents/:documentId", () => HttpResponse.json({
+      ...completed,
+      status: "COMPLETED",
+      abstentions: [{ label: "결과지", reason: "unreadable", evidencePage: 1 }],
+    })),
+    http.get("/api/foundation/documents/:documentId/candidates", () => HttpResponse.json([])),
+  );
+  render(<IntegratedHealthExperience />);
+
+  expect(await screen.findByRole("heading", { name: "이 결과지에서 읽을 수 있는 항목이 없었어요" }, { timeout: 5_000 })).toBeVisible();
+  expect(screen.getByText("읽은 글자는 있지만 항목·값·단위를 확실히 맞출 수 없었어요. 아래 사유를 확인해 주세요.")).toBeVisible();
+  expect(screen.queryByText("글자 정보가 없는 파일(사진·스캔)은 아직 읽지 못해요.")).toBeNull();
+});
+
+it("shows the reviewed summary, not the zero-candidate screen, when polling finds a document completed elsewhere", async () => {
+  const completed = {
+    documentId: syntheticDocumentId,
+    sha256: "a".repeat(64),
+    contentLength: 2048,
+    stateVersion: 5,
+    previewAvailable: true,
+    quarantineBoundary: "HOSTILE_DOCUMENT_TRUST_ZONE",
+  };
+  const confirmed = syntheticCandidates.map((candidate) => ({ ...candidate, status: "CONFIRMED" as const }));
+  server.use(
+    http.get("/api/foundation/documents/active", () => HttpResponse.json({ document: { ...completed, status: "EXTRACTION_RUNNING" } })),
+    http.get("/api/foundation/documents/:documentId", () => HttpResponse.json({ ...completed, status: "COMPLETED" })),
+    http.get("/api/foundation/documents/:documentId/candidates", () => HttpResponse.json(confirmed.slice(0, 2))),
+  );
+  render(<IntegratedHealthExperience />);
+
+  expect(await screen.findByRole("heading", { name: "이 결과지 확인을 마쳤어요" }, { timeout: 5_000 })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "이 결과지에서 읽을 수 있는 항목이 없었어요" })).toBeNull();
 });
 
 it("reaches the zero-candidate screen when the active document is already completed on load", async () => {

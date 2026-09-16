@@ -140,6 +140,9 @@ class NativeTextExtractionProviderTest {
         assertThat(outcome.abstentions).containsExactly(
             ParsedAbstention("LDL 콜레스테롤", AbstentionReason.AMBIGUOUS_VALUE, 1),
             ParsedAbstention("요산", AbstentionReason.AMBIGUOUS_UNIT, 1),
+            // "총 3 항목" ("3 items total") has a label+value shape but no recognised unit; it must
+            // surface as an abstention rather than vanish, same as any other unit-less row (I1).
+            ParsedAbstention("총", AbstentionReason.AMBIGUOUS_UNIT, 1),
         )
     }
 
@@ -167,6 +170,30 @@ class NativeTextExtractionProviderTest {
         assertThat(overLong.candidates).isEmpty()
         assertThat(overLong.abstentions.single().reason).isEqualTo(AbstentionReason.UNREADABLE)
         assertThat(overLong.abstentions.single().label).hasSize(80)
+    }
+
+    @Test
+    fun `abstains ambiguous_unit instead of dropping a value with no unit token at all`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("Date: 2026-07-28", "총콜레스테롤 188"),
+        )
+
+        assertThat(outcome.candidates).isEmpty()
+        assertThat(outcome.abstentions).containsExactly(
+            ParsedAbstention("총콜레스테롤", AbstentionReason.AMBIGUOUS_UNIT, 1),
+        )
+    }
+
+    @Test
+    fun `emits a document-level unreadable abstention when a text-layer page yields zero rows`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("Date: 2026-07-28", "수검자 합성-001", "항목 결과 단위 참고치"),
+        )
+
+        assertThat(outcome.candidates).isEmpty()
+        assertThat(outcome.abstentions).containsExactly(
+            ParsedAbstention(NativeTextExtractionProvider.UNREADABLE_ROWS_LABEL, AbstentionReason.UNREADABLE, 1),
+        )
     }
 
     private fun lines(vararg texts: String): List<TextLine> = lines(texts.toList())

@@ -54,6 +54,7 @@ data class ExtractionOutcome(
 object NativeTextExtractionProvider {
     const val METHOD = "native-text"
     const val DOCUMENT_LABEL = "문서 전체"
+    const val UNREADABLE_ROWS_LABEL = "결과지"
     private const val MAX_CANDIDATES = 100
     private const val MAX_ABSTENTIONS = 100
     private const val MAX_LABEL = 80
@@ -61,7 +62,6 @@ object NativeTextExtractionProvider {
     private const val MAX_UNIT = 32
 
     private val valueToken = Regex("^-?(\\d{1,3}(,\\d{3})+|\\d+)(\\.\\d+)?$")
-    private val unitLike = Regex("^[A-Za-z%µμ㎎㎗²³/.^]+$")
     private val rangeText = Regex(
         "^\\(?\\s*(?:참고치?|기준치?|정상\\s*범위|reference|ref\\.?)?\\s*[:：]?\\s*[<>≤≥]?\\s*" +
             "\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-–~]\\s*\\d[\\d,]*(?:\\.\\d+)?)?\\s*[^\\s()]*\\s*\\)?$",
@@ -116,6 +116,16 @@ object NativeTextExtractionProvider {
                 }
             }
         }
+        if (candidates.isEmpty() && abstentions.isEmpty()) {
+            // Text was readable but nothing on the page matched the row grammar (prose-only pages,
+            // headers/footers, etc). Say so explicitly rather than completing silently as if the
+            // document were a blank/zero-candidate scan.
+            return ExtractionOutcome(
+                candidates = emptyList(),
+                abstentions = listOf(ParsedAbstention(UNREADABLE_ROWS_LABEL, AbstentionReason.UNREADABLE, 1)),
+                observedOn = observedOn,
+            )
+        }
         return ExtractionOutcome(candidates.toList(), abstentions.take(MAX_ABSTENTIONS), observedOn)
     }
 
@@ -131,12 +141,15 @@ object NativeTextExtractionProvider {
         if (valueIndex < 1) return null
         val label = tokens.subList(0, valueIndex).joinToString(" ")
         val value = tokens[valueIndex]
-        val unitToken = tokens.getOrNull(valueIndex + 1) ?: return null
+        val unitToken = tokens.getOrNull(valueIndex + 1)
         val unit = when {
+            unitToken == null -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
             MedicalUnitSpelling.canonical(unitToken) != null -> unitToken
             valueToken.matches(unitToken) -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
-            unitLike.matches(unitToken) -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
-            else -> return null
+            // A bare range right after the value (e.g. "120-199") with no unit word at all is not a
+            // measurement row we can label ambiguous-unit about; leave it unrecognised, as before.
+            rangeText.matches(unitToken) -> return null
+            else -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
         }
         val rest = tokens.drop(valueIndex + 2)
         if (rest.isNotEmpty() && !rangeText.matches(rest.joinToString(" ")) && rest.any { valueToken.matches(it) }) {

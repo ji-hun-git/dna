@@ -113,6 +113,7 @@ describe("Korean UX language boundary", () => {
     const experience = source("components/integrated/IntegratedHealthExperience.tsx");
     expect(experience).toContain("이 결과지에서 읽을 수 있는 항목이 없었어요");
     expect(experience).toContain("글자 정보가 없는 파일(사진·스캔)은 아직 읽지 못해요.");
+    expect(experience).toContain("읽은 글자는 있지만 항목·값·단위를 확실히 맞출 수 없었어요. 아래 사유를 확인해 주세요.");
     expect(experience).not.toContain("{item.reason}");
     for (const path of userFacingFiles) expect(source(path), `${path} still calls the value a fixture`).not.toContain("서버가 미리 정한 예시 값");
     for (const path of userFacingFiles) expect(source(path), `${path} still contains retired preset-example copy`).not.toContain("미리 정한");

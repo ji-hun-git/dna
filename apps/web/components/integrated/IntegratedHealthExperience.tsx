@@ -172,12 +172,17 @@ export function IntegratedHealthExperience() {
           return;
         }
         if (current.status === "COMPLETED") {
-          // Zero readable items: the server completed the document without a review.
+          // The document may have completed with zero readable items, or it may have
+          // already been reviewed elsewhere with candidates now CONFIRMED/REJECTED.
+          // Fetch and derive the view the same way the restore path (loadProductTruth)
+          // does, instead of assuming zero candidates.
+          const extracted = await client.getCandidatesForDocument(current.documentId);
+          if (cancelled) return;
           setDocumentReceipt(current);
           setProcessingState(current.status);
           setPollingPaused(false);
           setErrorMessage("");
-          setCandidates([]);
+          setCandidates(extracted);
           setView("complete");
           return;
         }
@@ -495,12 +500,24 @@ export function IntegratedHealthExperience() {
 
   if (view === "complete" && candidates.length === 0) {
     const abstentions = documentReceipt?.abstentions ?? [];
+    // The default copy assumes the file has no text layer (a scan/photo). That is only true
+    // when every abstention is the single document-level "결과지" unreadable abstention the
+    // worker emits for a genuine scan-shaped failure. Any other shape (a real scan reported
+    // under a different label, or a text-layer document that had readable lines but no row
+    // matched the grammar) means text was present, so say that instead of blaming a scan.
+    const onlyUnreadableResultSheet =
+      abstentions.length > 0 &&
+      abstentions.every((item) => item.reason === "unreadable" && item.label === "결과지");
     return (
       <main className="gc-integrated-shell gc-integrated-shell--center">
         <section className="gc-integrated-auth" aria-labelledby="integrated-empty-title" role="status" aria-live="polite">
           <p>서버 처리 완료</p>
           <h1 id="integrated-empty-title">이 결과지에서 읽을 수 있는 항목이 없었어요</h1>
-          <p>글자 정보가 없는 파일(사진·스캔)은 아직 읽지 못해요.</p>
+          <p>
+            {onlyUnreadableResultSheet
+              ? "읽은 글자는 있지만 항목·값·단위를 확실히 맞출 수 없었어요. 아래 사유를 확인해 주세요."
+              : "글자 정보가 없는 파일(사진·스캔)은 아직 읽지 못해요."}
+          </p>
           {abstentions.length > 0 && (
             <ul className="gc-review-saved" aria-label="읽지 못한 항목">
               {abstentions.map((item, index) => (
