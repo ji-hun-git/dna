@@ -161,4 +161,12 @@ describe("Korean UX language boundary", () => {
     expect(formatKoreanDateTime("2026-09-16T06:52:59.605506Z")).toBe("2026. 9. 16. 15:52");
     expect(formatKoreanDateTime("2026-09-16T06:52:59+00:00")).toBe("2026. 9. 16. 15:52");
   });
+
+  it("asks for the exam date correction without judging the value", () => {
+    const review = source("components/integrated/CandidateReview.tsx");
+    expect(review).toContain("검사일 수정");
+    expect(review).toContain("결과지에 적힌 검사일과 다르면 고쳐 주세요. 값의 의미는 판단하지 않아요.");
+    expect(source("lib/format/status-labels.ts")).toContain("사용자가 검사일을 수정함 · 원래 ");
+    expect(source("components/integrated/IntegratedRecords.tsx")).toContain("describeReviewDecision(record)");
+  });
 });

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FoundationCandidate } from "@/lib/foundation/client";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import { isCorrectableObservedOn, localIsoDate } from "@/lib/format/observed-on";
 import { labelCandidateStatus } from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
 
@@ -20,7 +21,7 @@ type CandidateReviewProps = {
   previewUrl?: string;
   busy: boolean;
   errorMessage: string;
-  onConfirm: (value: string) => void;
+  onConfirm: (value: string, observedOn?: string) => void;
   onExclude: () => void;
   onBack: () => void;
   onClose: () => void;
@@ -38,6 +39,10 @@ export function CandidateReview({
 }: CandidateReviewProps) {
   const [correctionMode, setCorrectionMode] = useState(false);
   const [draftValue, setDraftValue] = useState(candidate.value);
+  const [dateCorrectionMode, setDateCorrectionMode] = useState(false);
+  const [draftObservedOn, setDraftObservedOn] = useState(candidate.observedOn);
+  const today = localIsoDate();
+  const draftDateValid = isCorrectableObservedOn(draftObservedOn, today);
   const [reviewedCandidateId, setReviewedCandidateId] = useState(candidate.candidateId);
   const heading = useRef<HTMLHeadingElement>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
@@ -56,7 +61,9 @@ export function CandidateReview({
   if (reviewedCandidateId !== candidate.candidateId) {
     setReviewedCandidateId(candidate.candidateId);
     setDraftValue(candidate.value);
+    setDraftObservedOn(candidate.observedOn);
     setCorrectionMode(false);
+    setDateCorrectionMode(false);
   }
 
   return (
@@ -87,7 +94,15 @@ export function CandidateReview({
             <p className="gc-import__candidate-value"><strong>{candidate.value}</strong><span>{candidate.unit}</span></p>
             <p className="gc-import__candidate-source">결과지 텍스트에서 읽은 값 · 문자 인식 아님</p>
             <dl>
-              <div><dt>검사일</dt><dd>{formatKoreanDate(candidate.observedOn)}</dd></div>
+              <div>
+                <dt>검사일</dt>
+                <dd>
+                  {formatKoreanDate(candidate.observedOn)}
+                  {!correctionMode && !dateCorrectionMode && (
+                    <button type="button" className="gc-import__action gc-import__action--text" onClick={() => setDateCorrectionMode(true)} disabled={busy || !previewReady}>검사일 수정</button>
+                  )}
+                </dd>
+              </div>
               <div><dt>근거 쪽수</dt><dd>{candidate.evidencePage}쪽</dd></div>
               {candidate.evidenceBox && <div><dt>근거 위치</dt><dd>{describeEvidenceBox(candidate.evidenceBox)}</dd></div>}
             </dl>
@@ -126,6 +141,30 @@ export function CandidateReview({
               <div className="gc-integrated-actions">
                 <button type="button" onClick={() => { setCorrectionMode(false); setDraftValue(candidate.value); }}>취소</button>
                 <button type="submit" disabled={busy || !previewReady}>{busy ? "저장 중" : "수정한 값 확인"}</button>
+              </div>
+            </form>
+          ) : dateCorrectionMode ? (
+            <form
+              className="gc-integrated-correction gc-review-decision-bar"
+              onSubmit={(event) => { event.preventDefault(); if (!busy && previewReady && draftDateValid) onConfirm(candidate.value, draftObservedOn); }}
+            >
+              <label htmlFor="integrated-candidate-observed-on">검사일 수정</label>
+              <p id="integrated-candidate-observed-on-help">결과지에 적힌 검사일과 다르면 고쳐 주세요. 값의 의미는 판단하지 않아요.</p>
+              <input
+                id="integrated-candidate-observed-on"
+                type="date"
+                value={draftObservedOn}
+                min="1900-01-01"
+                max={today}
+                onChange={(event) => setDraftObservedOn(event.target.value)}
+                aria-describedby="integrated-candidate-observed-on-help"
+                autoFocus
+                disabled={busy}
+                required
+              />
+              <div className="gc-integrated-actions">
+                <button type="button" onClick={() => { setDateCorrectionMode(false); setDraftObservedOn(candidate.observedOn); }}>취소</button>
+                <button type="submit" disabled={busy || !previewReady || !draftDateValid}>{busy ? "저장 중" : "수정한 검사일 확인"}</button>
               </div>
             </form>
           ) : (

@@ -120,3 +120,41 @@ it("omits the evidence box row when the server sent none", () => {
   render(<CandidateReview {...reviewProps()} candidate={withoutBox} />);
   expect(screen.queryByText("근거 위치")).toBeNull();
 });
+
+it("sends a corrected exam date with the untouched value", async () => {
+  const props = reviewProps();
+  render(<CandidateReview {...props} />);
+  fireEvent.load(screen.getByRole("img"));
+
+  await userEvent.click(screen.getByRole("button", { name: "검사일 수정" }));
+  expect(screen.getByText("결과지에 적힌 검사일과 다르면 고쳐 주세요. 값의 의미는 판단하지 않아요.")).toBeVisible();
+  const input = screen.getByLabelText("검사일 수정");
+  expect(input).toHaveValue("2026-07-28");
+  fireEvent.change(input, { target: { value: "2026-07-27" } });
+  await userEvent.click(screen.getByRole("button", { name: "수정한 검사일 확인" }));
+
+  expect(props.onConfirm).toHaveBeenCalledWith("188", "2026-07-27");
+});
+
+it("refuses a future or pre-1900 exam date and keeps the value untouched", async () => {
+  const props = reviewProps();
+  render(<CandidateReview {...props} />);
+  fireEvent.load(screen.getByRole("img"));
+
+  await userEvent.click(screen.getByRole("button", { name: "검사일 수정" }));
+  const input = screen.getByLabelText("검사일 수정");
+  fireEvent.change(input, { target: { value: "2999-01-01" } });
+  expect(screen.getByRole("button", { name: "수정한 검사일 확인" })).toBeDisabled();
+  fireEvent.change(input, { target: { value: "1899-12-31" } });
+  expect(screen.getByRole("button", { name: "수정한 검사일 확인" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "취소" }));
+  expect(screen.getByRole("button", { name: "검사일 수정" })).toBeVisible();
+  expect(props.onConfirm).not.toHaveBeenCalled();
+});
+
+it("does not offer the date form until the source image is visible", () => {
+  render(<CandidateReview {...reviewProps()} />);
+  expect(screen.getByRole("button", { name: "검사일 수정" })).toBeDisabled();
+  fireEvent.load(screen.getByRole("img"));
+  expect(screen.getByRole("button", { name: "검사일 수정" })).toBeEnabled();
+});

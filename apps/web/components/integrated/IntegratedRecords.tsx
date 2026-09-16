@@ -6,7 +6,7 @@ import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { RecordComparison } from "@/components/integrated/RecordComparison";
 import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate, formatKoreanDateTime } from "@/lib/format/korean-date";
-import { labelRecordStatus } from "@/lib/format/status-labels";
+import { describeReviewDecision, labelRecordStatus } from "@/lib/format/status-labels";
 import { compareRecords } from "@/lib/records/compare-records";
 import { shortDigest } from "@/lib/format/short-digest";
 import { SourcePreview } from "@/components/integrated/SourcePreview";
@@ -161,7 +161,7 @@ export function IntegratedRecords() {
                       <li key={record.recordId} id={`record-${record.recordId}`} data-testid="durable-record" tabIndex={-1}>
                         <div className={styles.historyDate}><span>{String(index + 1).padStart(2, "0")}</span><time dateTime={record.observedOn}>{formatKoreanDate(record.observedOn)}</time></div>
                         <div className={styles.historyValue}><strong>{record.value}</strong><span>{record.unit}</span></div>
-                        <div className={styles.historySource}><strong>{record.label}</strong><span>예시 데이터</span><span>{record.reviewDecision === "CORRECTED" ? "사용자가 값을 수정함" : "사용자가 원문과 같다고 확인함"}</span></div>
+                        <div className={styles.historySource}><strong>{record.label}</strong><span>예시 데이터</span><span>{describeReviewDecision(record)}</span></div>
                         <details>
                           <summary>출처와 버전 보기</summary>
                           <SourcePreview key={record.documentId} documentId={record.documentId} page={record.evidencePage} />
