@@ -24,6 +24,7 @@ const userFacingFiles = [
   "components/records/HealthTimeline.tsx",
   "components/my-data/LivingCellCanvas.tsx",
   "components/my-data/CellTooltip.tsx",
+  "components/my-data/EvidenceDrawer.tsx",
 ] as const;
 
 const forbiddenUserTerms = [
