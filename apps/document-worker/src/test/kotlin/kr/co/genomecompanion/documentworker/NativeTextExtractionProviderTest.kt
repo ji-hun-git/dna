@@ -196,6 +196,63 @@ class NativeTextExtractionProviderTest {
         )
     }
 
+    @Test
+    fun `ignores a bare date when no labelled date exists`() {
+        val outcome = NativeTextExtractionProvider.parse(lines("발급 2026-09-01", "AST 24 U/L"))
+
+        assertThat(outcome.observedOn).isNull()
+        assertThat(outcome.candidates).isEmpty()
+        assertThat(outcome.abstentions).containsExactly(ParsedAbstention("AST", AbstentionReason.MISSING_EVIDENCE, 1))
+    }
+
+    @Test
+    fun `finds the labelled date anywhere in a two-column line and skips a birth date printed first`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("생년월일: 1987-03-14", "수검자 합성-6 검사일: 2026-01-20", "AST 24 U/L"),
+        )
+
+        assertThat(outcome.observedOn).isEqualTo(LocalDate.of(2026, 1, 20))
+        assertThat(outcome.candidates.single().observedOn).isEqualTo(LocalDate.of(2026, 1, 20))
+        assertThat(outcome.abstentions).isEmpty()
+    }
+
+    @Test
+    fun `takes the first date after the label, not an earlier date on the same line`() {
+        val outcome = NativeTextExtractionProvider.parse(lines("발급 2026-09-01 Exam date 2026.07.28", "AST 24 U/L"))
+
+        assertThat(outcome.observedOn).isEqualTo(LocalDate.of(2026, 7, 28))
+    }
+
+    @Test
+    fun `accepts the same labelled date printed twice`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("검사일 2026-07-28", "채취일: 2026년 7월 28일", "AST 24 U/L"),
+        )
+
+        assertThat(outcome.observedOn).isEqualTo(LocalDate.of(2026, 7, 28))
+        assertThat(outcome.candidates).hasSize(1)
+    }
+
+    @Test
+    fun `abstains for the whole document with zero candidates when labelled dates disagree`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("검사일 2026-07-28", "채취일 2026-07-27", "AST 24 U/L", "ALT 19 U/L"),
+        )
+
+        assertThat(outcome.observedOn).isNull()
+        assertThat(outcome.candidates).isEmpty()
+        assertThat(outcome.abstentions).containsExactly(
+            ParsedAbstention(NativeTextExtractionProvider.DOCUMENT_LABEL, AbstentionReason.AMBIGUOUS_VALUE, 1),
+        )
+    }
+
+    @Test
+    fun `does not treat a word that merely contains date letters as a label`() {
+        val outcome = NativeTextExtractionProvider.parse(lines("Update 2026-09-01", "AST 24 U/L"))
+
+        assertThat(outcome.observedOn).isNull()
+    }
+
     private fun lines(vararg texts: String): List<TextLine> = lines(texts.toList())
 
     private fun lines(texts: List<String>): List<TextLine> =
