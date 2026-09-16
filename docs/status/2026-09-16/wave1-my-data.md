@@ -19,3 +19,10 @@ Branch `codex/wave3-my-data-living-cells` on top of PR #5 head. Synthetic only. 
 
 ## Limits
 No hosted run, no real screen reader, no real browser zoom, no user research. The `uncertain` state reflects preview availability only; it is not an extraction-accuracy claim.
+
+## CI evidence (2026-09-16, later the same day)
+
+- PR #7 head `15cda78`: [run 35077628831](https://github.com/ji-hun-git/dna/actions/runs/35077628831) passed all required jobs, including the browser-to-Spring-to-worker lifecycle with the `/my-data` step at seven viewports.
+- Base PR #5 head `89a8b73`: [run 35075564272](https://github.com/ji-hun-git/dna/actions/runs/35075564272) passed after two remediations that were not caused by either PR: `sharp` pinned to 0.35.4 via a `pnpm-workspace.yaml` override (GHSA-rgj7-g3m4-5g8c) and Debian security updates applied in the web runtime image (libpcre2 CVE-2026-86145; the pinned node base image predates the fix).
+- Three CI-only failures on `/my-data` at 320px were real layout defects invisible on Windows font metrics: the five-column table, and then the search input's intrinsic width. Both are fixed structurally (scrolling table wrapper; container-bounded search grid), and the lifecycle assertion now names overflowing elements on failure.
+
