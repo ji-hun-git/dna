@@ -90,7 +90,8 @@ export function assertLocalOllamaUrl(url: string) {
 async function localJson<T>(fetchImpl: ChatFetch, path: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T> {
   const url = `${OLLAMA_ORIGIN}${path}`;
   assertLocalOllamaUrl(url);
-  const response = await fetchImpl(url, init);
+  const response = await fetchImpl(url, { ...init, redirect: "error" });
+  assertLocalOllamaUrl(response.url || url);
   if (!response.ok) throw new Error(`${path} responded ${response.status}`);
   return schema.parse(await response.json());
 }
@@ -136,6 +137,7 @@ export async function askModelForPage(
       method: "POST",
       headers: { "content-type": "application/json" },
       signal: controller.signal,
+      redirect: "error",
       body: JSON.stringify({
         model: EXPERIMENT_PROTOCOL.model,
         stream: false,
@@ -149,6 +151,7 @@ export async function askModelForPage(
         ],
       }),
     });
+    assertLocalOllamaUrl(response.url || url);
     if (!response.ok) throw new Error(`/api/chat responded ${response.status} for ${input.documentId} p${input.page}`);
     const rawContent = chatResponseSchema.parse(await response.json()).message.content;
     const parsed = modelPageResponseSchema.parse(JSON.parse(rawContent));

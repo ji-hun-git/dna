@@ -91,6 +91,29 @@ describe("Ollama client", () => {
     const fetchImpl: ChatFetch = async (url) => url.endsWith("/api/version") ? Response.json({ version: "0.34.1" }) : Response.json({ models: [] });
     await expect(describeOllamaModel(fetchImpl)).rejects.toThrow(/medgemma1\.5:latest/);
   });
+
+  it("requests no redirects and refuses a response that reports it was redirected off-host", async () => {
+    const calls: (RequestInit | undefined)[] = [];
+    const fetchImpl: ChatFetch = async (_url, init) => {
+      calls.push(init);
+      const response = chatReply({ observedOn: "", rows: [], abstentions: [] });
+      Object.defineProperty(response, "url", { value: "http://example.com/api/chat" });
+      return response;
+    };
+    await expect(askModelForPage({ documentId: gold.documentId, page: 1, pngBase64: "p1" }, { fetchImpl, timeoutMs: 5_000 })).rejects.toThrow(/example\.com/);
+    expect(calls[0]?.redirect).toBe("error");
+  });
+
+  it("marks a document unreadable when the local Ollama server's reply reports a redirect off-host", async () => {
+    const fetchImpl: ChatFetch = async () => {
+      const response = chatReply({ observedOn: "", rows: [], abstentions: [] });
+      Object.defineProperty(response, "url", { value: "http://example.com/api/chat" });
+      return response;
+    };
+    const outcome = await runDocument({ documentId: gold.documentId, pages: [{ page: 1, pngBase64: "p1" }] }, { fetchImpl });
+    expect(outcome.status).toBe("unreadable");
+    expect(outcome.failure).toMatch(/example\.com/);
+  });
 });
 
 describe("runDocument", () => {
