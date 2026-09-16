@@ -2,6 +2,7 @@ package kr.co.genomecompanion.benchmark
 
 import kr.co.genomecompanion.documentboundary.MedicalConceptCatalogue
 import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.pdmodel.PDDocumentInformation
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
@@ -12,7 +13,10 @@ import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
+import java.util.Calendar
+import java.util.GregorianCalendar
 import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.roundToLong
 import kotlin.random.Random
 
@@ -100,7 +104,7 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
         val random = Random(layout.ordinal * 100 + variant.index)
         val omitDate = layout == Layout.HOSPITAL_TWO_COLUMN && variant.index == 4
         val isoDate = DATES[variant.index]
-        PDDocument().use { document ->
+        pinnedDocument().use { document ->
             val font = PDType0Font.load(document, fontFile.toFile())
             val rows = mutableListOf<PlacedRow>()
             var ambiguousLabel: String? = null
@@ -161,6 +165,19 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
                 ambiguousLabel = ambiguousLabel,
                 imageOnly = false,
             )
+        }
+    }
+
+    /**
+     * PDFBox otherwise derives the trailer /ID from the wall clock and stamps creation time, so the
+     * same seed would give different bytes. No XMP metadata stream is written at all.
+     */
+    private fun pinnedDocument(): PDDocument = PDDocument().apply {
+        documentId = FIXED_DOCUMENT_ID
+        documentInformation = PDDocumentInformation().apply {
+            producer = "korean-checkup-benchmark"
+            creationDate = fixedTimestamp()
+            modificationDate = fixedTimestamp()
         }
     }
 
@@ -232,7 +249,7 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
 
     /** A page that is only a picture: what a phone scan looks like. The parser must abstain, not guess. */
     private fun imageOnly(documentId: String, layout: Layout, variant: Variant): GeneratedDocument =
-        PDDocument().use { document ->
+        pinnedDocument().use { document ->
             val page = PDPage(PDRectangle.A4)
             document.addPage(page)
             val image = BufferedImage(1240, 1754, BufferedImage.TYPE_INT_RGB)
@@ -299,6 +316,13 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
     }
 
     companion object {
+        const val FIXED_DOCUMENT_ID = 20260917L
+
+        fun fixedTimestamp(): Calendar = GregorianCalendar(TimeZone.getTimeZone("UTC")).apply {
+            clear()
+            set(2026, Calendar.SEPTEMBER, 17, 0, 0, 0)
+        }
+
         val DATES = listOf("2026-07-28", "2026-06-18", "2026-05-09", "2026-04-21", "2026-03-12", "2026-02-03", "2026-01-20")
 
         val VARIANTS = listOf(

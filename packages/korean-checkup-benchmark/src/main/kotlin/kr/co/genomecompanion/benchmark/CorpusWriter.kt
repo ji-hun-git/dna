@@ -49,8 +49,8 @@ data class GoldDocument(
 
 data class Corpus(
     val documents: List<GoldDocument>,
+    val corpusId: String,
     val schemaVersion: String = "medical-document-corpus.v1",
-    val corpusId: String = "synthetic-ko-checkup-r1",
     val description: String = "합성 한국 검진 결과지 4 레이아웃 × 6 변형 + 생년월일 선행 1종 (25종, 1종은 텍스트 레이어 없는 스캔, 1종은 무날짜). PDFBox 텍스트 레이어 파서 채점용. 실제 데이터 없음.",
     val syntheticOnly: Boolean = true,
 )
@@ -58,6 +58,14 @@ data class Corpus(
 
 /** Writes `<documentId>.pdf` files and `corpus.json` (medical-document-corpus.v1). No reference range is written. */
 object CorpusWriter {
+    const val CORPUS_ID_PREFIX = "synthetic-ko-checkup-r2-"
+
+    /** sha256 over `"<documentId> <sha256(pdf bytes)>"` lines in corpus order. Recomputed by the TypeScript scripts. */
+    fun pdfDigest(documents: List<GeneratedDocument>): String =
+        BenchmarkJson.sha256(documents.joinToString("\n") { "${it.documentId} ${BenchmarkJson.sha256(it.bytes)}" })
+
+    fun corpusId(documents: List<GeneratedDocument>): String = CORPUS_ID_PREFIX + pdfDigest(documents).take(16)
+
     fun write(documents: List<GeneratedDocument>, out: Path): Corpus {
         Files.createDirectories(out)
         val corpus = Corpus(
@@ -65,6 +73,7 @@ object CorpusWriter {
                 Files.write(out.resolve("${generated.documentId}.pdf"), generated.bytes)
                 gold(generated)
             },
+            corpusId = corpusId(documents),
         )
         BenchmarkJson.mapper.writerWithDefaultPrettyPrinter().writeValue(out.resolve("corpus.json").toFile(), corpus)
         return corpus

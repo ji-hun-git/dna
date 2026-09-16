@@ -18,7 +18,7 @@ fun main(args: Array<String>) {
             val out = Path.of(options.getValue("--out"))
             val font = Path.of(options.getValue("--font"))
             val corpus = CorpusWriter.write(CheckupCorpusGenerator(font).generateAll(), out)
-            println("generated ${corpus.documents.size} synthetic documents into $out")
+            println("generated ${corpus.documents.size} synthetic documents into $out (corpusId ${corpus.corpusId})")
         }
         "run-native-text" -> {
             val corpusDir = Path.of(options.getValue("--corpus"))
