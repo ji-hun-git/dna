@@ -27,6 +27,8 @@
 .search input { min-height: 48px; padding: 0 var(--gc-space-4); border: 1px solid var(--gc-color-line-strong); border-radius: 8px; font: 16px var(--gc-type-sans); background: var(--gc-color-surface-raised); }
 .search input:focus-visible { outline: 3px solid var(--gc-color-focus-ring); outline-offset: 2px; }
 
+/* Five columns do not fit a 320px phone; the wrapper scrolls so the document never does. */
+.tableWrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table { width: 100%; border-collapse: collapse; font-size: 15px; }
 .table th, .table td { text-align: left; padding: var(--gc-space-2) var(--gc-space-3); border-bottom: 1px solid var(--gc-color-line-subtle); }
 .table td.num { font-family: var(--gc-type-mono); text-align: right; }
@@ -50,7 +52,8 @@
   outline: 3px solid var(--gc-color-focus-ring);
   outline-offset: 2px;
 }
-.drawer dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--gc-space-1) var(--gc-space-4); margin: 0; }
+.drawer { min-width: 0; overflow-wrap: anywhere; }
+.drawer dl { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: var(--gc-space-1) var(--gc-space-4); margin: 0; }
 .drawer dt { color: var(--gc-color-text-tertiary); }
 .drawer dd { margin: 0; font-family: var(--gc-type-mono); overflow-wrap: anywhere; }
 .secondary { display: flex; flex-wrap: wrap; gap: var(--gc-space-3); margin-top: var(--gc-space-6); }

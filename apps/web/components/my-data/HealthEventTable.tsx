@@ -13,6 +13,7 @@ type HealthEventTableProps = {
 export function HealthEventTable({ events, selectedId, matchedIds, onSelect }: HealthEventTableProps) {
   const visible = matchedIds ? events.filter((event) => matchedIds.has(event.eventId)) : events;
   return (
+    <div className={styles.tableWrap}>
     <table className={styles.table} aria-label="기록 목록">
       <thead>
         <tr><th scope="col">항목</th><th scope="col">값</th><th scope="col">검사일</th><th scope="col">확인</th><th scope="col">근거</th></tr>
@@ -34,5 +35,6 @@ export function HealthEventTable({ events, selectedId, matchedIds, onSelect }: H
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
