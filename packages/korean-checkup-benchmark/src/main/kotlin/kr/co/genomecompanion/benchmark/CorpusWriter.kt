@@ -51,7 +51,7 @@ data class Corpus(
     val documents: List<GoldDocument>,
     val schemaVersion: String = "medical-document-corpus.v1",
     val corpusId: String = "synthetic-ko-checkup-r1",
-    val description: String = "합성 한국 검진 결과지 4 레이아웃 × 6 변형 (24종, 1종은 텍스트 레이어 없는 스캔). PDFBox 텍스트 레이어 파서 채점용. 실제 데이터 없음.",
+    val description: String = "합성 한국 검진 결과지 4 레이아웃 × 6 변형 + 생년월일 선행 1종 (25종, 1종은 텍스트 레이어 없는 스캔, 1종은 무날짜). PDFBox 텍스트 레이어 파서 채점용. 실제 데이터 없음.",
     val syntheticOnly: Boolean = true,
 )
 

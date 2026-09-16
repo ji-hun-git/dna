@@ -37,6 +37,8 @@ data class Variant(
     val rangeColumn: Boolean,
     val rangeSeparator: String,
     val thousandsComma: Boolean,
+    /** Print a 생년월일 line first and the labelled 검사일 later, mid-line (first-date mistakes are scored). */
+    val birthDateFirst: Boolean = false,
 )
 
 
@@ -89,7 +91,8 @@ class GeneratedDocument(
 
 class CheckupCorpusGenerator(private val fontFile: Path) {
     fun generateAll(): List<GeneratedDocument> =
-        Layout.entries.flatMap { layout -> VARIANTS.map { variant -> generate(layout, variant) } }
+        Layout.entries.flatMap { layout -> VARIANTS.map { variant -> generate(layout, variant) } } +
+            generate(Layout.HOSPITAL_TWO_COLUMN, BIRTH_DATE_VARIANT)
 
     fun generate(layout: Layout, variant: Variant): GeneratedDocument {
         val documentId = "synthetic-${layout.id}-v${variant.index}"
@@ -112,7 +115,13 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
                 }
                 Layout.HOSPITAL_TWO_COLUMN -> Canvas(document, font, 1).use { canvas ->
                     canvas.line(listOf(56f to "혈액검사 결과 (합성 예시)"), 14f)
-                    if (!omitDate) canvas.line(listOf(56f to dateLine(isoDate, variant.dateStyle)))
+                    when {
+                        variant.birthDateFirst -> {
+                            canvas.line(listOf(56f to "생년월일: $BIRTH_DATE"))
+                            canvas.line(listOf(56f to "수검자 합성-${variant.index}", 320f to dateLine(isoDate, variant.dateStyle)))
+                        }
+                        !omitDate -> canvas.line(listOf(56f to dateLine(isoDate, variant.dateStyle)))
+                    }
                     canvas.skip()
                     canvas.line(listOf(56f to "검사항목", 320f to "결과"))
                     canvas.rule()
@@ -290,7 +299,7 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
     }
 
     companion object {
-        val DATES = listOf("2026-07-28", "2026-06-18", "2026-05-09", "2026-04-21", "2026-03-12", "2026-02-03")
+        val DATES = listOf("2026-07-28", "2026-06-18", "2026-05-09", "2026-04-21", "2026-03-12", "2026-02-03", "2026-01-20")
 
         val VARIANTS = listOf(
             Variant(0, englishLabels = false, lowercaseUnits = false, extraDecimal = false, dateStyle = DateStyle.ISO, rangeColumn = false, rangeSeparator = "-", thousandsComma = false),
@@ -299,6 +308,13 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
             Variant(3, englishLabels = true, lowercaseUnits = false, extraDecimal = true, dateStyle = DateStyle.ISO, rangeColumn = false, rangeSeparator = "-", thousandsComma = false),
             Variant(4, englishLabels = false, lowercaseUnits = false, extraDecimal = false, dateStyle = DateStyle.ISO, rangeColumn = true, rangeSeparator = "-", thousandsComma = true),
             Variant(5, englishLabels = false, lowercaseUnits = false, extraDecimal = false, dateStyle = DateStyle.DOTTED, rangeColumn = true, rangeSeparator = "~", thousandsComma = true),
+        )
+
+        const val BIRTH_DATE = "1987-03-14"
+
+        val BIRTH_DATE_VARIANT = Variant(
+            6, englishLabels = false, lowercaseUnits = false, extraDecimal = false, dateStyle = DateStyle.ISO,
+            rangeColumn = true, rangeSeparator = "-", thousandsComma = false, birthDateFirst = true,
         )
 
         val NHIS_ROWS = listOf(

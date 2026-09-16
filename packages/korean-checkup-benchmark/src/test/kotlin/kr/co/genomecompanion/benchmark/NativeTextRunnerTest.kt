@@ -21,7 +21,7 @@ class NativeTextRunnerTest {
 
         val runs = NativeTextRunner.run(out, OffsetDateTime.of(2026, 9, 16, 9, 0, 0, 0, ZoneOffset.UTC))
 
-        assertThat(runs).hasSize(24)
+        assertThat(runs).hasSize(25)
         val run = runs.first { it.documentId == "synthetic-nhis-table-v0" }
         assertThat(run.schemaVersion).isEqualTo("medical-document-run.v1")
         assertThat(run.pipelineId).isEqualTo("pdfbox-native-text")
@@ -53,6 +53,10 @@ class NativeTextRunnerTest {
         assertThat(undated.candidates).isEmpty()
         assertThat(undated.abstentions.map { it.reason }).containsOnly("missing_evidence")
         assertThat(undated.abstentions.map { it.fieldId }).contains("ast", "alt", "gamma-gtp")
+
+        val birthDateFirst = runs.first { it.documentId == "synthetic-hospital-two-column-v6" }
+        assertThat(birthDateFirst.candidates.map { it.observedAt }).containsOnly("2026-01-20")
+        assertThat(birthDateFirst.abstentions).isEmpty()
 
         val json = BenchmarkJson.mapper.writeValueAsString(run)
         assertThat(json).doesNotContain("referenceRange").doesNotContain("null")

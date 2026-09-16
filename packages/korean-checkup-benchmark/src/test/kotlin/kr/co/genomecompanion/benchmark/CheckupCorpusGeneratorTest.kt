@@ -22,9 +22,9 @@ class CheckupCorpusGeneratorTest {
         val documents = CheckupCorpusGenerator(font).generateAll()
         val corpus = CorpusWriter.write(documents, out)
 
-        assertThat(documents).hasSize(24)
+        assertThat(documents).hasSize(25)
         assertThat(documents.map { it.documentId }).doesNotHaveDuplicates()
-        assertThat(Files.list(out).use { paths -> paths.filter { it.toString().endsWith(".pdf") }.count() }).isEqualTo(24L)
+        assertThat(Files.list(out).use { paths -> paths.filter { it.toString().endsWith(".pdf") }.count() }).isEqualTo(25L)
         assertThat(Files.exists(out.resolve("corpus.json"))).isTrue()
         assertThat(documents.count { it.imageOnly }).isEqualTo(1)
         assertThat(corpus.corpusId).isEqualTo("synthetic-ko-checkup-r1")
@@ -91,6 +91,19 @@ class CheckupCorpusGeneratorTest {
         assertThat(NativeTextExtractionProvider.extract(scan.bytes).abstentions.single().reason).isEqualTo(AbstentionReason.UNREADABLE)
         assertThat(CorpusWriter.gold(scan).requiredAbstentions)
             .containsExactly(GoldAbstention("document", "문서 전체", listOf("unreadable")))
+
+        val birthDateFirst = generator.generate(Layout.HOSPITAL_TWO_COLUMN, CheckupCorpusGenerator.BIRTH_DATE_VARIANT)
+        assertThat(birthDateFirst.documentId).isEqualTo("synthetic-hospital-two-column-v6")
+        assertThat(birthDateFirst.observedOn).isEqualTo("2026-01-20")
+        val printed = NativeTextExtractionProvider.extractLines(birthDateFirst.bytes).map { it.text }
+        assertThat(printed).contains("생년월일: 1987-03-14")
+        assertThat(printed.indexOfFirst { it.startsWith("생년월일") })
+            .isLessThan(printed.indexOfFirst { it.startsWith("수검자 합성-6") && it.endsWith("검사일: 2026-01-20") })
+        val parsedBirthDateFirst = NativeTextExtractionProvider.extract(birthDateFirst.bytes)
+        assertThat(parsedBirthDateFirst.observedOn).isEqualTo(java.time.LocalDate.of(2026, 1, 20))
+        assertThat(parsedBirthDateFirst.candidates).hasSize(8)
+        assertThat(CorpusWriter.gold(birthDateFirst).expectedMeasurements.map { it.observedAt }).containsOnly("2026-01-20")
+        assertThat(generator.generateAll().last().documentId).isEqualTo("synthetic-hospital-two-column-v6")
     }
 
     private fun iou(expected: Box, actual: TextBox): Double {
