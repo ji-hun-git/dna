@@ -211,6 +211,13 @@ describe("foundation same-origin client", () => {
     const rejectingClient = createFoundationClient({ fetcher: rejectingFetcher, readCsrfToken: () => "csrf-value" });
 
     await expect(rejectingClient.getHealthEvents()).rejects.toThrow();
+
+    const nestedRejectingFetcher = vi.fn(async () => jsonResponse([
+      { ...syntheticHealthEvent(), source: { ...syntheticHealthEvent().source, direction: "high" } },
+    ]));
+    const nestedRejectingClient = createFoundationClient({ fetcher: nestedRejectingFetcher, readCsrfToken: () => "csrf-value" });
+
+    await expect(nestedRejectingClient.getHealthEvents()).rejects.toThrow();
   });
 });
 

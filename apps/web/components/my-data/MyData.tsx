@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFoundationClient, type HealthEvent } from "@/lib/foundation/client";
 import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { searchEvents } from "@/lib/my-data/search-events";
@@ -26,7 +26,21 @@ export function MyData() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string>();
-  const toggleSelected = (eventId: string) => setSelectedId((current) => (current === eventId ? undefined : eventId));
+  const invokerRef = useRef<HTMLElement | SVGElement | null>(null);
+  const toggleSelected = (eventId: string, invoker?: HTMLElement | SVGElement) => {
+    setSelectedId((current) => {
+      if (current === eventId) {
+        invokerRef.current?.focus();
+        return undefined;
+      }
+      invokerRef.current = invoker ?? null;
+      return eventId;
+    });
+  };
+  const closeDrawer = () => {
+    setSelectedId(undefined);
+    invokerRef.current?.focus();
+  };
 
   useEffect(() => {
     let active = true;
@@ -92,7 +106,9 @@ export function MyData() {
                 <p role="status" aria-label="검색 결과" aria-live="polite">{searchStatus}</p>
               </form>
 
-              {selected && <EvidenceDrawer event={selected} onClose={() => setSelectedId(undefined)} />}
+              {selected && (
+                <EvidenceDrawer event={selected} onClose={closeDrawer} returnFocusTo={invokerRef.current} />
+              )}
 
               <HealthEventTable events={events} selectedId={selectedId} matchedIds={search.matchedIds} onSelect={toggleSelected} />
             </>

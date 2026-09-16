@@ -30,10 +30,13 @@ it("loads events into cells and a table, and opens the drawer from either", asyn
   expect(within(figure).getAllByRole("button")).toHaveLength(3);
   const table = screen.getByRole("table", { name: "기록 목록" });
   expect(within(table).getAllByRole("row")).toHaveLength(4);
-  await userEvent.click(within(figure).getByRole("button", { name: "총콜레스테롤 194 mg/dL, 2026. 1. 15." }));
+  const januaryCell = within(figure).getByRole("button", { name: "총콜레스테롤 194 mg/dL, 2026. 1. 15." });
+  await userEvent.click(januaryCell);
   expect(screen.getByRole("region", { name: "총콜레스테롤 근거" })).toHaveTextContent("194 mg/dL");
+  expect(screen.getByRole("heading", { name: "총콜레스테롤 근거" })).toHaveFocus();
   await userEvent.click(screen.getByRole("button", { name: "근거 닫기" }));
   expect(screen.queryByRole("region", { name: "총콜레스테롤 근거" })).toBeNull();
+  expect(januaryCell).toHaveFocus();
   await userEvent.click(within(table).getByRole("button", { name: "당화혈색소 5.2 %, 2026. 7. 28. 근거 보기" }));
   expect(screen.getByRole("region", { name: "당화혈색소 근거" })).toBeVisible();
   expect(within(table).getByRole("row", { name: /당화혈색소/ })).toHaveAttribute("aria-current", "true");

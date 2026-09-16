@@ -106,7 +106,9 @@ describe("Korean UX language boundary", () => {
   });
 
   it("labels every server enum in Korean instead of rendering it raw", () => {
-    const integratedFiles = userFacingFiles.filter((path) => path.startsWith("components/integrated/"));
+    const integratedFiles = userFacingFiles.filter(
+      (path) => path.startsWith("components/integrated/") || path.startsWith("components/my-data/"),
+    );
     expect(integratedFiles.length).toBeGreaterThan(0);
     for (const path of integratedFiles) {
       const content = source(path);

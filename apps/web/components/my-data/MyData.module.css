@@ -16,7 +16,7 @@
 .cell rect[data-query-ring] { fill: none; stroke: var(--gc-color-brand-primary); stroke-width: 1; stroke-dasharray: 2 1.5; }
 .cell[data-state="selected"] rect[data-cell] { fill: var(--gc-color-brand-deep); stroke: var(--gc-color-focus-ring); stroke-width: 2; }
 .cell[data-dim="true"] { opacity: 0.28; }
-.cell circle[data-corrected-mark] { fill: var(--gc-color-status-warning); }
+.cell circle[data-corrected-mark] { fill: var(--gc-color-text-secondary); }
 .cell:focus-visible { outline: none; }
 .cell:focus-visible rect[data-cell] { stroke: var(--gc-color-focus-ring); stroke-width: 2.5; }
 
@@ -33,6 +33,23 @@
 .table tr[aria-current="true"] td { background: var(--gc-color-surface-soft); }
 
 .drawer { border: 1px solid var(--gc-color-line-subtle); border-radius: 8px; background: var(--gc-color-surface-raised); padding: var(--gc-space-4); margin-top: var(--gc-space-4); display: grid; gap: var(--gc-space-3); }
+.drawer header { display: flex; align-items: center; justify-content: space-between; gap: var(--gc-space-3); }
+.drawer header h2 { margin: 0; font-size: 20px; }
+.drawer header button, .table button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--gc-space-4);
+  border: 1px solid var(--gc-color-line-strong);
+  border-radius: 8px;
+  background: var(--gc-color-surface-raised);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.drawer header button:focus-visible, .table button:focus-visible {
+  outline: 3px solid var(--gc-color-focus-ring);
+  outline-offset: 2px;
+}
 .drawer dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--gc-space-1) var(--gc-space-4); margin: 0; }
 .drawer dt { color: var(--gc-color-text-tertiary); }
 .drawer dd { margin: 0; font-family: var(--gc-type-mono); overflow-wrap: anywhere; }

@@ -11,7 +11,7 @@ type LivingCellCanvasProps = {
   selectedId?: string;
   matchedIds: Set<string> | null;
   newIds: Set<string>;
-  onSelect: (eventId: string) => void;
+  onSelect: (eventId: string, invoker: HTMLElement | SVGElement) => void;
   width?: number;
 };
 
@@ -72,11 +72,11 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
               data-corrected={cell.corrected ? "true" : undefined}
               data-dim={dim ? "true" : undefined}
               className={styles.cell}
-              onClick={() => onSelect(cell.eventId)}
+              onClick={(mouse) => onSelect(cell.eventId, mouse.currentTarget)}
               onKeyDown={(keyboard) => {
                 if (keyboard.key === "Enter" || keyboard.key === " ") {
                   keyboard.preventDefault();
-                  onSelect(cell.eventId);
+                  onSelect(cell.eventId, keyboard.currentTarget);
                 }
               }}
               onMouseEnter={() => setHoveredId(cell.eventId)}

@@ -45,6 +45,18 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
       const search = await page.getByRole("searchbox", { name: "내 데이터에서 항목 찾기" }).boundingBox();
       expect(search).not.toBeNull();
       expect(search!.height).toBeGreaterThanOrEqual(44);
+      const closeButton = page.getByRole("button", { name: "근거 닫기" });
+      if (await closeButton.count()) {
+        const box = await closeButton.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+      }
+      const evidenceButton = page.getByRole("button", { name: "근거 보기" }).first();
+      if (await evidenceButton.count()) {
+        const box = await evidenceButton.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+      }
     }
     if (state === "review") {
       for (const name of ["확인: 원문과 같아요", "값 수정", "제외: 이 항목 빼기"]) {
@@ -135,6 +147,13 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   // nav entry: 기록/진료 준비 live under 나의 데이터, and 홈 is the brand link.
   for (const path of ["/records", "/prepare", "/"]) {
     await page.goto(path);
+    if (path === "/records") {
+      await expect(page.getByRole("heading", { name: "내 기록" })).toBeVisible();
+    } else if (path === "/prepare") {
+      await expect(page.getByRole("heading", { name: "다음 진료에서 물어볼 것" })).toBeVisible();
+    } else {
+      await expect(page.getByRole("navigation", { name: "주요 메뉴" })).toBeVisible();
+    }
   }
 
   await page.getByRole("button", { name: "결과지 추가" }).click();

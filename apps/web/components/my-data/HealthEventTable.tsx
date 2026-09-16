@@ -6,7 +6,7 @@ type HealthEventTableProps = {
   events: HealthEvent[];
   selectedId?: string;
   matchedIds: Set<string> | null;
-  onSelect: (eventId: string) => void;
+  onSelect: (eventId: string, invoker: HTMLElement) => void;
 };
 
 /** The same events as the canvas, as a table. This is the accessible equivalent, not a summary. */
@@ -25,7 +25,7 @@ export function HealthEventTable({ events, selectedId, matchedIds, onSelect }: H
             <td>{formatKoreanDate(event.observedOn)}</td>
             <td>{event.corrected ? "직접 수정" : "직접 확인"}{event.verification === "uncertain" ? " · 출처 미리보기 없음" : ""}</td>
             <td>
-              <button type="button" onClick={() => onSelect(event.eventId)}
+              <button type="button" onClick={(click) => onSelect(event.eventId, click.currentTarget)}
                 aria-label={`${event.concept} ${event.value} ${event.unit}, ${formatKoreanDate(event.observedOn)} 근거 보기`}>
                 근거 보기
               </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { HealthEvent } from "@/lib/foundation/client";
 import { SourcePreview } from "@/components/integrated/SourcePreview";
 import { formatKoreanDate, formatKoreanDateTime } from "@/lib/format/korean-date";
@@ -10,12 +11,32 @@ import styles from "@/components/my-data/MyData.module.css";
  * Second-level detail for one cell. Every line here is a stored fact or a
  * stored status; the drawer never adds a comparison or a meaning.
  */
-export function EvidenceDrawer({ event, onClose }: { event: HealthEvent; onClose: () => void }) {
+export function EvidenceDrawer({
+  event,
+  onClose,
+  returnFocusTo,
+}: {
+  event: HealthEvent;
+  onClose: () => void;
+  returnFocusTo?: HTMLElement | SVGElement | null;
+}) {
   const titleId = `evidence-${event.eventId}`;
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, [event.eventId]);
+
+  useEffect(() => {
+    return () => {
+      returnFocusTo?.focus();
+    };
+  }, [returnFocusTo]);
+
   return (
     <section className={styles.drawer} aria-labelledby={titleId}>
       <header>
-        <h2 id={titleId}>{event.concept} 근거</h2>
+        <h2 id={titleId} ref={headingRef} tabIndex={-1}>{event.concept} 근거</h2>
         <button type="button" onClick={onClose}>근거 닫기</button>
       </header>
       <dl>

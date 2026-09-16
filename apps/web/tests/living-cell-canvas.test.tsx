@@ -39,7 +39,7 @@ it("selects with click and with Enter, and shows the tooltip for the hovered cel
   render(<LivingCellCanvas events={[jan, jul]} matchedIds={null} newIds={new Set()} onSelect={onSelect} />);
   const cell = screen.getByRole("button", { name: "총콜레스테롤 188 mg/dL, 2026. 7. 28." });
   await userEvent.click(cell);
-  expect(onSelect).toHaveBeenCalledWith(jul.eventId);
+  expect(onSelect).toHaveBeenCalledWith(jul.eventId, expect.any(Element));
   cell.focus();
   await userEvent.keyboard("{Enter}");
   expect(onSelect).toHaveBeenCalledTimes(2);
