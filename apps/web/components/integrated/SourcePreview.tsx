@@ -9,6 +9,6 @@ export function SourcePreview({ documentId, page = 1 }: { documentId: string; pa
   return <figure className="gc-source-preview">
     <img src={`/api/foundation/documents/${encodeURIComponent(documentId)}/preview`}
       alt={`예시 결과지 ${page}쪽 미리보기`} loading="lazy" onError={() => setFailed(true)} />
-    <figcaption>예시 데이터 · 업로드한 결과지의 첫 페이지를 이미지로 보여드려요. 항목은 미리 정한 예시이며 문자 인식 결과가 아니에요.</figcaption>
+    <figcaption>예시 데이터 · 업로드한 결과지의 첫 페이지를 이미지로 보여드려요. 항목은 결과지의 글자 정보에서 읽은 값이며, 이미지를 판독한 결과가 아니에요.</figcaption>
   </figure>;
 }

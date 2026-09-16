@@ -115,6 +115,7 @@ describe("Korean UX language boundary", () => {
     expect(experience).toContain("글자 정보가 없는 파일(사진·스캔)은 아직 읽지 못해요.");
     expect(experience).not.toContain("{item.reason}");
     for (const path of userFacingFiles) expect(source(path), `${path} still calls the value a fixture`).not.toContain("서버가 미리 정한 예시 값");
+    for (const path of userFacingFiles) expect(source(path), `${path} still contains retired preset-example copy`).not.toContain("미리 정한");
   });
 
   it("labels every server enum in Korean instead of rendering it raw", () => {

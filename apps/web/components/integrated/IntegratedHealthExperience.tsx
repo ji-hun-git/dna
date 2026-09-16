@@ -105,7 +105,11 @@ export function IntegratedHealthExperience() {
     if (activity.document) {
       setDocumentReceipt(activity.document);
       setProcessingState(activity.document.status);
-      if (activity.document.status === "REVIEW_REQUIRED") {
+      if (activity.document.status === "REVIEW_REQUIRED" || activity.document.status === "COMPLETED") {
+        // A COMPLETED document reached this way (page load, or "홈으로") never
+        // goes through the live poll() branch that shows the zero-candidate
+        // screen, so re-derive the same view from the same candidates fetch
+        // the REVIEW_REQUIRED path already uses.
         const restored = await client.getCandidatesForDocument(activity.document.documentId);
         setCandidates(restored);
         setView(restored.some((item) => item.status === "PENDING") ? "review" : "complete");

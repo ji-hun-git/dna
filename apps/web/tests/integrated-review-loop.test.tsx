@@ -362,3 +362,27 @@ it("shows the abstention list instead of a review when the worker read no items"
   expect(screen.queryByText("unreadable")).toBeNull();
   expect(screen.queryByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeNull();
 });
+
+it("reaches the zero-candidate screen when the active document is already completed on load", async () => {
+  server.use(
+    http.get("/api/foundation/documents/active", () => HttpResponse.json({
+      document: {
+        documentId: syntheticDocumentId,
+        status: "COMPLETED",
+        sha256: "a".repeat(64),
+        contentLength: 2048,
+        stateVersion: 6,
+        previewAvailable: true,
+        quarantineBoundary: "HOSTILE_DOCUMENT_TRUST_ZONE",
+        abstentions: [{ label: "스캔 페이지", reason: "unreadable", evidencePage: 1 }],
+      },
+    })),
+    http.get("/api/foundation/documents/:documentId/candidates", () => HttpResponse.json([])),
+  );
+
+  render(<IntegratedHealthExperience />);
+
+  expect(await screen.findByText("이 결과지에서 읽을 수 있는 항목이 없었어요")).toBeVisible();
+  expect(screen.getByText("글자 정보를 읽을 수 없음")).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "서버가 알려준 상태를 그대로 보여드려요" })).toBeNull();
+});
