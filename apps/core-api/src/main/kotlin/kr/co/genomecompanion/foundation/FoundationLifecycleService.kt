@@ -41,6 +41,7 @@ data class DocumentReceipt(
     val stateVersion: Long,
     val failureCode: String?,
     val previewAvailable: Boolean,
+    val abstentions: List<ExtractionAbstention> = emptyList(),
     val quarantineBoundary: String = "HOSTILE_DOCUMENT_TRUST_ZONE",
 )
 
@@ -64,8 +65,10 @@ data class CandidateReceipt(
     val evidencePage: Int,
     val sourceTextSha256: String,
     val documentSha256: String,
-    val sourceType: String = "SYNTHETIC_FIXED_FIXTURE",
-    val extractionMethod: String = "DETERMINISTIC_FOUNDATION_FIXTURE",
+    val conceptCode: String?,
+    val evidenceBox: EvidenceBox?,
+    val sourceType: String = "DOCUMENT_TEXT_LAYER",
+    val extractionMethod: String = "native-text",
     val createdAt: Instant,
 )
 
@@ -88,6 +91,7 @@ data class RecordReceipt(
     val evidencePage: Int,
     val sourceTextSha256: String,
     val documentSha256: String,
+    val conceptCode: String?,
 )
 
 
@@ -630,6 +634,11 @@ class FoundationLifecycleService(
             stateVersion = document.stateVersion,
             failureCode = document.failureCode,
             previewAvailable = document.previewObjectKey != null,
+            abstentions = if (document.status == "REVIEW_REQUIRED" || document.status == "COMPLETED") {
+                repository.findExtractionAbstentions(document.subjectId, document.documentId)
+            } else {
+                emptyList()
+            },
         )
 
     private fun candidateReceipt(candidate: FoundationCandidateRow): CandidateReceipt =
@@ -646,6 +655,8 @@ class FoundationLifecycleService(
             evidencePage = candidate.evidencePage,
             sourceTextSha256 = candidate.sourceTextSha256,
             documentSha256 = candidate.documentSha256,
+            conceptCode = candidate.conceptCode,
+            evidenceBox = candidate.evidenceBox,
             createdAt = candidate.createdAt,
         )
 
@@ -668,6 +679,7 @@ class FoundationLifecycleService(
             evidencePage = record.evidencePage,
             sourceTextSha256 = record.sourceTextSha256,
             documentSha256 = record.documentSha256,
+            conceptCode = record.conceptCode,
         )
 
     private fun subjectHash(subjectId: String): String =

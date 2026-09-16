@@ -1,9 +1,11 @@
 package kr.co.genomecompanion.foundation
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
+import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.DecimalMax
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Max
@@ -101,7 +103,17 @@ data class EvidenceBox(
     val width: Double,
     @field:DecimalMin("0.0") @field:DecimalMax("1.0")
     val height: Double,
-)
+) {
+    @get:AssertTrue(message = "evidence box exceeds the page horizontally")
+    @get:JsonIgnore
+    val isWithinPageHorizontally: Boolean
+        get() = x + width <= 1.0
+
+    @get:AssertTrue(message = "evidence box exceeds the page vertically")
+    @get:JsonIgnore
+    val isWithinPageVertically: Boolean
+        get() = y + height <= 1.0
+}
 
 
 /** One row the worker read from the text layer. Raw label and unit; core normalizes. No reference range. */
@@ -177,6 +189,7 @@ class DocumentWorkerBoundaryService(
     private val repository: FoundationRepository,
     private val storage: FoundationDocumentStorage,
     private val properties: FoundationProperties,
+    private val normalizer: MedicalConceptNormalizer,
     private val clock: Clock,
 ) {
     @Transactional
@@ -350,6 +363,14 @@ class DocumentWorkerBoundaryService(
             repository.markJobFailed(job, "approved_source_changed", retryable = false, now)
             return WorkerResultReceipt(jobId, "DEAD_LETTER")
         }
+        val ordinals = request.candidates.map { it.ordinal }
+        val candidates = runCatching {
+            require(ordinals.distinct().size == ordinals.size) { "duplicate ordinal" }
+            request.candidates.sortedBy { it.ordinal }.map(normalizer::normalize)
+        }.getOrElse {
+            repository.markJobFailed(job, "extraction_candidates_invalid", retryable = false, now)
+            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+        }
         val previewBytes = runCatching { Base64.getDecoder().decode(request.previewPngBase64) }
             .getOrElse {
                 repository.markJobFailed(job, "preview_base64_invalid", retryable = false, now)
@@ -358,13 +379,6 @@ class DocumentWorkerBoundaryService(
         val preview = runCatching { storage.putDerivedPreview(job.documentId, job.sourceSha256, previewBytes) }
             .getOrElse {
                 repository.markJobFailed(job, "preview_artifact_invalid", retryable = false, now)
-                return WorkerResultReceipt(jobId, "DEAD_LETTER")
-            }
-        val candidates = runCatching {
-            SyntheticCandidateFixture.candidatesFor(properties.candidateSetFor(job.sourceSha256))
-        }
-            .getOrElse {
-                repository.markJobFailed(job, "synthetic_candidate_set_unavailable", retryable = false, now)
                 return WorkerResultReceipt(jobId, "DEAD_LETTER")
             }
         registerRollbackDelete(preview, StorageTrustZone.DERIVED_SAFE_ARTIFACT)
@@ -378,8 +392,10 @@ class DocumentWorkerBoundaryService(
             generatorVersion = request.generatorVersion,
             now = now,
             candidates = candidates,
+            abstentions = request.abstentions,
         )
-        audit(job, "SYNTHETIC_CANDIDATE_CREATED", "SUCCESS", now)
+        // Count only: the audit row names the extraction job, never a value.
+        audit(job, if (candidates.isEmpty()) "EXTRACTION_NO_CANDIDATES" else "EXTRACTION_CANDIDATES_CREATED", "SUCCESS", now)
         return WorkerResultReceipt(jobId, "COMPLETED")
     }
 

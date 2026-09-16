@@ -12,6 +12,7 @@ ALTER TABLE gc_candidate
         OR (
             evidence_box_x BETWEEN 0 AND 1 AND evidence_box_y BETWEEN 0 AND 1
             AND evidence_box_w BETWEEN 0 AND 1 AND evidence_box_h BETWEEN 0 AND 1
+            AND evidence_box_x + evidence_box_w <= 1 AND evidence_box_y + evidence_box_h <= 1
         )
     );
 
@@ -77,3 +78,11 @@ INSERT INTO gc_medical_concept (concept_code, display_ko, loinc_code, canonical_
     ('potassium', '칼륨', '2823-3', 'mmol/L', '["Potassium","K"]'),
     ('calcium', '칼슘', '17861-6', 'mg/dL', '["Calcium","Ca"]'),
     ('total-protein', '총단백', '2885-2', 'g/dL', '["Total Protein","TP"]');
+
+ALTER TABLE gc_candidate
+    ADD CONSTRAINT gc_candidate_concept_code_fkey FOREIGN KEY (concept_code)
+        REFERENCES gc_medical_concept(concept_code);
+
+ALTER TABLE gc_health_record_version
+    ADD CONSTRAINT gc_health_record_version_concept_code_fkey FOREIGN KEY (concept_code)
+        REFERENCES gc_medical_concept(concept_code);

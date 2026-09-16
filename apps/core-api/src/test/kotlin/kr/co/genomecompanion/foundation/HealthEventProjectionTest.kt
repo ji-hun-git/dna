@@ -36,6 +36,7 @@ class HealthEventProjectionTest {
         evidencePage = 1,
         sourceTextSha256 = "b".repeat(64),
         documentSha256 = "a".repeat(64),
+        conceptCode = null,
     )
 
     @Test

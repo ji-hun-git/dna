@@ -43,6 +43,7 @@ class ExtractionResultRequestValidationTest {
         assertThat(validator.validate(request(candidates = listOf(candidate(evidencePage = 21))))).isNotEmpty()
         assertThat(validator.validate(request(candidates = listOf(candidate(sourceTextSha256 = "Z".repeat(64)))))).isNotEmpty()
         assertThat(validator.validate(request(candidates = listOf(candidate(evidenceBox = EvidenceBox(1.2, 0.1, 0.1, 0.1)))))).isNotEmpty()
+        assertThat(validator.validate(request(candidates = listOf(candidate(evidenceBox = EvidenceBox(0.9, 0.1, 0.9, 0.1)))))).isNotEmpty()
     }
 
     @Test

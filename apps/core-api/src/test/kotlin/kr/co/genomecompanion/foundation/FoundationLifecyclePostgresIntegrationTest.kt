@@ -47,6 +47,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     data class TestClient(val cookie: Cookie, val csrf: String)
     data class TestUploadCapability(val capabilityId: UUID, val rawToken: String)
 
+    @Autowired
+    private lateinit var conceptSource: JdbcMedicalConceptSource
+
     private val uploadCapabilities = mutableMapOf<UUID, TestUploadCapability>()
 
     @BeforeEach
@@ -180,6 +183,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             workerImageDigest = "b".repeat(64),
             generatorVersion = "test-worker-v1",
             previewPngBase64 = onePixelPngBase64,
+            candidates = julyCandidates,
         )
         val executor = Executors.newFixedThreadPool(2)
         val ready = CountDownLatch(2)
@@ -736,7 +740,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
-    fun boundDigestSelectsItsNamedCandidateSetWhileAnUnboundDigestKeepsTheDefault() {
+    fun theWorkerRequestDecidesTheCandidatesOfEachDocumentNotConfiguration() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
 
@@ -790,6 +794,140 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun storesTheWorkerCandidatesWithNormalizedLabelsUnitsConceptCodesAndEvidence() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "native-text-candidates")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dl", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64)),
+                ExtractedCandidate(2, "알 수 없는 항목", "7", "mg/dL", "2026-07-28", 2, null, "2".repeat(64)),
+            ),
+            abstentions = listOf(ExtractionAbstention("LDL", "ambiguous_value", 1)),
+        )
+
+        val listed = responseJson(
+            read(get("/api/foundation/documents/$documentId/candidates"), alice)
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.length()").value(2))
+                .andReturn().response.contentAsByteArray,
+        ).toList()
+        assertThat(listed[0]["label"].asText()).isEqualTo("총콜레스테롤")
+        assertThat(listed[0]["conceptCode"].asText()).isEqualTo("total-cholesterol")
+        assertThat(listed[0]["unit"].asText()).isEqualTo("mg/dL")
+        assertThat(listed[0]["value"].asText()).isEqualTo("188")
+        assertThat(listed[0]["evidencePage"].asInt()).isEqualTo(1)
+        assertThat(listed[0]["evidenceBox"]["x"].asDouble()).isEqualTo(0.08)
+        assertThat(listed[0]["evidenceBox"]["height"].asDouble()).isEqualTo(0.02)
+        assertThat(listed[0]["sourceType"].asText()).isEqualTo("DOCUMENT_TEXT_LAYER")
+        assertThat(listed[0]["extractionMethod"].asText()).isEqualTo("native-text")
+        assertThat(listed[0]["sourceTextSha256"].asText()).isEqualTo("1".repeat(64))
+        assertThat(listed[1]["label"].asText()).isEqualTo("알 수 없는 항목")
+        assertThat(listed[1].hasNonNull("conceptCode")).isFalse()
+        assertThat(listed[1].hasNonNull("evidenceBox")).isFalse()
+        assertThat(listed[1]["evidencePage"].asInt()).isEqualTo(2)
+        assertThat(listed.flatMap { it.fieldNames().asSequence().toList() }).doesNotContain("referenceRange")
+
+        read(get("/api/foundation/documents/$documentId"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("REVIEW_REQUIRED"))
+            .andExpect(jsonPath("$.abstentions.length()").value(1))
+            .andExpect(jsonPath("$.abstentions[0].label").value("LDL"))
+            .andExpect(jsonPath("$.abstentions[0].reason").value("ambiguous_value"))
+            .andExpect(jsonPath("$.abstentions[0].evidencePage").value(1))
+
+        mutate(
+            post("/api/foundation/candidates/${listed[0]["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "confirm-native-text-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.conceptCode").value("total-cholesterol"))
+            .andExpect(jsonPath("$.label").value("총콜레스테롤"))
+        assertThat(
+            jdbc.queryForObject("SELECT concept_code FROM gc_health_record_version WHERE status = 'CURRENT'", String::class.java),
+        ).isEqualTo("total-cholesterol")
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'EXTRACTION_CANDIDATES_CREATED'", Long::class.java),
+        ).isEqualTo(1L)
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'SYNTHETIC_CANDIDATE_CREATED'", Long::class.java),
+        ).isEqualTo(0L)
+    }
+
+    @Test
+    fun zeroCandidatesCompleteTheDocumentAndKeepTheAbstentionsVisible() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "zero-candidate-document")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = emptyList(),
+            abstentions = listOf(ExtractionAbstention("문서 전체", "unreadable", null)),
+            expectedStatus = "COMPLETED",
+        )
+
+        assertThat(count("gc_candidate")).isZero()
+        assertThat(count("gc_preview_artifact")).isEqualTo(1)
+        read(get("/api/foundation/documents/$documentId"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andExpect(jsonPath("$.previewAvailable").value(true))
+            .andExpect(jsonPath("$.abstentions.length()").value(1))
+            .andExpect(jsonPath("$.abstentions[0].label").value("문서 전체"))
+            .andExpect(jsonPath("$.abstentions[0].reason").value("unreadable"))
+        assertThat(
+            jdbc.queryForObject("SELECT completed_at IS NOT NULL FROM gc_document WHERE document_id = ?", Boolean::class.java, documentId),
+        ).isTrue()
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'EXTRACTION_NO_CANDIDATES'", Long::class.java),
+        ).isEqualTo(1L)
+        read(get("/api/foundation/records"), alice).andExpect(status().isOk).andExpect(jsonPath("$.length()").value(0))
+    }
+
+    @Test
+    fun duplicateOrdinalsOrImpossibleDatesDeadLetterTheExtractionJob() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "invalid-candidates-document")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        val inspectionLease = checkNotNull(workerService.lease("a".repeat(64)))
+        workerService.completeInspection(inspectionLease.jobId, inspectionLease.leaseToken, approvedInspectionRequest())
+        val extractionLease = checkNotNull(workerService.lease("a".repeat(64)))
+
+        val receipt = workerService.completeExtraction(
+            extractionLease.jobId,
+            extractionLease.leaseToken,
+            ExtractionResultRequest(
+                sourceSha256 = fixtureDigest,
+                workerImageDigest = "b".repeat(64),
+                generatorVersion = "test-worker-v1",
+                previewPngBase64 = onePixelPngBase64,
+                candidates = listOf(julyCandidates[0], julyCandidates[1].copy(ordinal = 1)),
+            ),
+        )
+
+        assertThat(receipt.status).isEqualTo("DEAD_LETTER")
+        assertThat(count("gc_candidate")).isZero()
+        assertThat(
+            jdbc.queryForObject("SELECT failure_code FROM gc_document_job WHERE job_id = ?", String::class.java, extractionLease.jobId),
+        ).isEqualTo("extraction_candidates_invalid")
+    }
+
+    @Test
+    fun medicalConceptSeedMatchesTheSharedCatalogue() {
+        assertThat(conceptSource.concepts())
+            .containsExactlyInAnyOrderElementsOf(kr.co.genomecompanion.documentboundary.MedicalConceptCatalogue.entries)
+    }
+
+    @Test
     fun healthEventsProjectCurrentRecordsWithSourceAndPreviewFlag() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
@@ -839,6 +977,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(event["corrected"].asBoolean()).isFalse()
         assertThat(event["source"]["previewAvailable"].asBoolean()).isTrue()
         assertThat(event["source"]["page"].asInt()).isEqualTo(1)
+        assertThat(event["conceptCode"].asText()).isEqualTo("total-cholesterol")
         assertThat(event.fieldNames().asSequence().toList()).doesNotContain("referenceRange", "trend")
     }
 
@@ -889,7 +1028,11 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         uploadDocument(client, documentId, pdf).andExpect(status().isOk)
         mutate(post("/api/foundation/documents/$documentId/finalization"), client)
             .andExpect(status().isAccepted)
-        runWorkerPipeline(documentId, sourceSha256 = digest)
+        runWorkerPipeline(
+            documentId,
+            sourceSha256 = digest,
+            candidates = if (digest == januaryFixtureDigest) januaryCandidates else julyCandidates,
+        )
         return responseJson(
             read(get("/api/foundation/documents/$documentId/candidates"), client)
                 .andExpect(status().isOk)
@@ -1020,6 +1163,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         documentId: UUID,
         simulateTransientExtractionFailure: Boolean = false,
         sourceSha256: String = fixtureDigest,
+        candidates: List<ExtractedCandidate> = julyCandidates,
+        abstentions: List<ExtractionAbstention> = emptyList(),
+        expectedStatus: String = "REVIEW_REQUIRED",
     ) {
         val inspectionLease = checkNotNull(workerService.lease("a".repeat(64)))
         assertThat(inspectionLease.jobType).isEqualTo("SECURITY_INSPECTION")
@@ -1052,6 +1198,8 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 workerImageDigest = "b".repeat(64),
                 generatorVersion = "test-worker-v1",
                 previewPngBase64 = onePixelPngBase64,
+                candidates = candidates,
+                abstentions = abstentions,
             ),
         )
         assertThat(
@@ -1060,7 +1208,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 String::class.java,
                 documentId,
             ),
-        ).isEqualTo("REVIEW_REQUIRED")
+        ).isEqualTo(expectedStatus)
     }
 
     private fun approvedInspectionRequest(sourceSha256: String = fixtureDigest) = InspectionResultRequest(
@@ -1123,6 +1271,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             "%PDF-1.7\nGenome Companion synthetic fixture 2026-01 only; no real health data.\n%%EOF\n"
                 .toByteArray()
         private val januaryFixtureDigest = FoundationHashing.sha256(januaryFixturePdf)
+        private fun demoCandidates(observedOn: String, values: List<String>) = listOf(
+            ExtractedCandidate(1, "Cholesterol", values[0], "mg/dL", observedOn, 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64)),
+            ExtractedCandidate(2, "HbA1c", values[1], "%", observedOn, 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64)),
+            ExtractedCandidate(3, "Vitamin D", values[2], "ng/mL", observedOn, 1, EvidenceBox(0.08, 0.18, 0.25, 0.02), "3".repeat(64)),
+        )
+        private val julyCandidates = demoCandidates("2026-07-28", listOf("188", "5.2", "42"))
+        private val januaryCandidates = demoCandidates("2026-01-15", listOf("194", "5.4", "45"))
         private const val onePixelPngBase64 =
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
         private val quarantineRoot: Path = Path.of(
@@ -1152,8 +1307,6 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 "foundation-integration-test-pepper-64-characters-minimum-value"
             }
             registry.add("gc.foundation.allowed-document-sha256") { "$fixtureDigest,$januaryFixtureDigest" }
-            registry.add("gc.foundation.synthetic-documents[0].sha256") { januaryFixtureDigest }
-            registry.add("gc.foundation.synthetic-documents[0].set-id") { "checkup-2026-01" }
             registry.add("gc.foundation.local-identities[0].subject-id") { "synthetic-alice" }
             registry.add("gc.foundation.local-identities[0].credential-sha256") {
                 FoundationHashing.sha256(aliceCredential)
