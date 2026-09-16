@@ -99,7 +99,11 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
         })}
       </svg>
       {hovered && hoveredCell ? (
-        <CellTooltip event={hovered} x={((hoveredCell.x + hoveredCell.size / 2) / width) * 100} y={hoveredCell.y} />
+        <CellTooltip
+          event={hovered}
+          x={Math.min(88, Math.max(12, ((hoveredCell.x + hoveredCell.size / 2) / width) * 100))}
+          y={hoveredCell.y}
+        />
       ) : null}
       <figcaption className={styles.caption}>한 칸 = 확인한 기록 하나. 값의 의미나 변화의 방향은 판단하지 않아요.</figcaption>
     </figure>

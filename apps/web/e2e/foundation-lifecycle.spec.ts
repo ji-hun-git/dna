@@ -14,7 +14,26 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
     await page.setViewportSize({ width, height });
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     await page.evaluate(() => window.scrollTo(0, 0));
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Name the offending elements when a viewport overflows, so a CI-only font
+    // metric difference is diagnosable from the failure message alone.
+    const overflow = await page.evaluate(() => new Promise<string[]>((resolve) => {
+      const started = Date.now();
+      const check = () => {
+        if (document.documentElement.scrollWidth <= window.innerWidth) return resolve([]);
+        if (Date.now() - started < 5_000) return void setTimeout(check, 100);
+        const offenders = [...document.querySelectorAll("body *")]
+          .filter((element) => element.getBoundingClientRect().right > window.innerWidth + 1)
+          .slice(0, 12)
+          .map((element) => {
+            const rect = element.getBoundingClientRect();
+            const name = typeof element.className === "string" ? element.className : element.getAttribute("class") ?? "";
+            return `${element.tagName.toLowerCase()}.${name.split(" ")[0]} right=${Math.round(rect.right)} width=${Math.round(rect.width)}`;
+          });
+        resolve([`scrollWidth=${document.documentElement.scrollWidth} innerWidth=${window.innerWidth}`, ...offenders]);
+      };
+      check();
+    }));
+    expect(overflow, `${state} at ${width}x${height} overflows horizontally`).toEqual([]);
     const nav = page.getByRole("navigation", { name: "주요 메뉴" });
     if (await nav.count()) {
       await expect(nav.locator('[aria-current="page"]')).toHaveCount(state === "home" || state === "entry" ? 0 : 1);

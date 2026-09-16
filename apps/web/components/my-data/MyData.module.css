@@ -5,7 +5,7 @@
 .hero p { margin: 0; color: var(--gc-color-text-secondary); }
 
 .canvasWrap { position: relative; margin: 0; border: 1px solid var(--gc-color-line-subtle); border-radius: 8px; background: var(--gc-color-surface-raised); padding: var(--gc-space-3); }
-.canvas { display: block; width: 100%; height: auto; overflow: visible; }
+.canvas { display: block; width: 100%; height: auto; overflow: hidden; }
 .axis line { stroke: var(--gc-color-line-strong); stroke-width: 1; }
 .axis text { fill: var(--gc-color-text-tertiary); font: 12px var(--gc-type-mono); }
 
@@ -20,7 +20,7 @@
 .cell:focus-visible { outline: none; }
 .cell:focus-visible rect[data-cell] { stroke: var(--gc-color-focus-ring); stroke-width: 2.5; }
 
-.tooltip { position: absolute; transform: translate(-50%, -110%); display: grid; gap: 2px; padding: 6px 10px; border-radius: 6px; background: var(--gc-color-surface-inverse); color: var(--gc-color-text-inverse); font: 13px var(--gc-type-mono); pointer-events: none; white-space: nowrap; }
+.tooltip { position: absolute; transform: translate(-50%, -110%); display: grid; gap: 2px; padding: 6px 10px; border-radius: 6px; background: var(--gc-color-surface-inverse); color: var(--gc-color-text-inverse); font: 13px var(--gc-type-mono); pointer-events: none; white-space: normal; max-width: min(240px, calc(100vw - 32px)); }
 .caption { margin-top: var(--gc-space-2); color: var(--gc-color-text-tertiary); font-size: 13px; }
 
 .search { display: grid; gap: var(--gc-space-2); margin: var(--gc-space-6) 0; }
