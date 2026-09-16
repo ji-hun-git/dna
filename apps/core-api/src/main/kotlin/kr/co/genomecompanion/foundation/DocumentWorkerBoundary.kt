@@ -4,6 +4,10 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
+import jakarta.validation.constraints.DecimalMax
+import jakarta.validation.constraints.DecimalMin
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import kr.co.genomecompanion.documentboundary.InspectionDecision
@@ -88,6 +92,50 @@ data class InspectionResultRequest(
 )
 
 
+data class EvidenceBox(
+    @field:DecimalMin("0.0") @field:DecimalMax("1.0")
+    val x: Double,
+    @field:DecimalMin("0.0") @field:DecimalMax("1.0")
+    val y: Double,
+    @field:DecimalMin("0.0") @field:DecimalMax("1.0")
+    val width: Double,
+    @field:DecimalMin("0.0") @field:DecimalMax("1.0")
+    val height: Double,
+)
+
+
+/** One row the worker read from the text layer. Raw label and unit; core normalizes. No reference range. */
+data class ExtractedCandidate(
+    @field:Min(1) @field:Max(100)
+    val ordinal: Int,
+    @field:Size(min = 1, max = 80)
+    val label: String,
+    @field:Pattern(regexp = "^-?(\\d{1,3}(,\\d{3})+|\\d+)(\\.\\d+)?$") @field:Size(max = 64)
+    val value: String,
+    @field:Size(min = 1, max = 32)
+    val unit: String,
+    @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$")
+    val observedOn: String,
+    @field:Min(1) @field:Max(20)
+    val evidencePage: Int,
+    @field:Valid
+    val evidenceBox: EvidenceBox?,
+    @field:Pattern(regexp = "^[0-9a-f]{64}$")
+    val sourceTextSha256: String,
+)
+
+
+/** Why a row (or the whole document) produced no candidate. Visible to the person, never hidden. */
+data class ExtractionAbstention(
+    @field:Size(min = 1, max = 80)
+    val label: String,
+    @field:Pattern(regexp = "^(unreadable|ambiguous_value|ambiguous_unit|missing_evidence)$")
+    val reason: String,
+    @field:Min(1) @field:Max(20)
+    val evidencePage: Int? = null,
+)
+
+
 data class ExtractionResultRequest(
     @field:Pattern(regexp = "^[0-9a-f]{64}$")
     val sourceSha256: String,
@@ -97,6 +145,12 @@ data class ExtractionResultRequest(
     val generatorVersion: String,
     @field:Size(min = 92, max = 2_796_204)
     val previewPngBase64: String,
+    @field:Pattern(regexp = "^native-text$")
+    val extractionMethod: String = "native-text",
+    @field:Valid @field:Size(max = 100)
+    val candidates: List<ExtractedCandidate> = emptyList(),
+    @field:Valid @field:Size(max = 100)
+    val abstentions: List<ExtractionAbstention> = emptyList(),
 )
 
 
