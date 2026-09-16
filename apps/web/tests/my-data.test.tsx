@@ -10,7 +10,7 @@ import { syntheticHealthEvent } from "./fixtures/foundation";
 const events = [
   syntheticHealthEvent({ eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d51", observedOn: "2026-01-15", value: "194" }),
   syntheticHealthEvent({ eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d52" }),
-  syntheticHealthEvent({ eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d53", concept: "당화혈색소", value: "5.2", unit: "%" }),
+  syntheticHealthEvent({ eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d53", concept: "당화혈색소", conceptCode: "hba1c", value: "5.2", unit: "%" }),
 ];
 
 const server = setupServer(
@@ -53,6 +53,9 @@ it("filters by exact concept and says so, including zero results", async () => {
   await userEvent.clear(input);
   await userEvent.type(input, "LDL");
   expect(screen.getByRole("status", { name: "검색 결과" })).toHaveTextContent("LDL 기록이 없어요");
+  await userEvent.clear(input);
+  await userEvent.type(input, "total-cholesterol");
+  expect(screen.getByRole("status", { name: "검색 결과" })).toHaveTextContent("total-cholesterol 기록 2개");
 });
 
 it("shows the empty state and the server error state honestly", async () => {

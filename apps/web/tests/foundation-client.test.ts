@@ -204,6 +204,12 @@ describe("foundation same-origin client", () => {
     expect(events).toHaveLength(1);
     expect(events[0].concept).toBe("총콜레스테롤");
     expect(events[0].source.previewAvailable).toBe(true);
+    expect(events[0].conceptCode).toBe("total-cholesterol");
+    const uncodedFetcher = vi.fn(async () => jsonResponse([{ ...syntheticHealthEvent(), conceptCode: undefined }]));
+    const uncodedEvents = await createFoundationClient({ fetcher: uncodedFetcher, readCsrfToken: () => "csrf-value" }).getHealthEvents();
+    expect(uncodedEvents[0].conceptCode).toBeUndefined();
+    const badCodeFetcher = vi.fn(async () => jsonResponse([{ ...syntheticHealthEvent(), conceptCode: "Total Cholesterol" }]));
+    await expect(createFoundationClient({ fetcher: badCodeFetcher, readCsrfToken: () => "csrf-value" }).getHealthEvents()).rejects.toThrow();
 
     const rejectingFetcher = vi.fn(async () => jsonResponse([
       { ...syntheticHealthEvent(), referenceRange: { high: 130 } },

@@ -88,6 +88,7 @@ export function syntheticHealthEvent(overrides: Partial<HealthEvent> = {}): Heal
     recordId: "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c40",
     domain: "lab",
     concept: "총콜레스테롤",
+    conceptCode: "total-cholesterol",
     value: "188",
     unit: "mg/dL",
     observedOn: "2026-07-28",

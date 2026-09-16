@@ -18,6 +18,7 @@ class HealthEventProjectionTest {
         status: String = "CURRENT",
         documentId: UUID = docWithPreview,
         confirmedAt: Instant = Instant.parse("2026-07-28T09:10:00Z"),
+        conceptCode: String? = "total-cholesterol",
     ) = FoundationRecordRow(
         recordId = UUID.randomUUID(),
         recordVersionId = UUID.randomUUID(),
@@ -36,7 +37,7 @@ class HealthEventProjectionTest {
         evidencePage = 1,
         sourceTextSha256 = "b".repeat(64),
         documentSha256 = "a".repeat(64),
-        conceptCode = null,
+        conceptCode = conceptCode,
     )
 
     @Test
@@ -80,5 +81,16 @@ class HealthEventProjectionTest {
     fun carriesNoInterpretationFields() {
         val fields = HealthEvent::class.java.declaredFields.map { it.name }
         assertThat(fields).doesNotContain("referenceRange", "trend", "direction", "flag", "normal", "abnormal", "risk")
+    }
+
+    @Test
+    fun carriesTheConceptCodeOfTheCurrentVersionAndAllowsNull() {
+        val coded = row("총콜레스테롤", "188", observedOn = LocalDate.of(2026, 7, 28))
+        val uncoded = row("알 수 없는 항목", "7", observedOn = LocalDate.of(2026, 7, 28), conceptCode = null)
+
+        val events = HealthEventProjection.project(listOf(coded, uncoded), setOf(docWithPreview))
+
+        assertThat(events.map { it.conceptCode }).containsExactly(null, "total-cholesterol")
+        assertThat(events.map { it.concept }).containsExactly("알 수 없는 항목", "총콜레스테롤")
     }
 }

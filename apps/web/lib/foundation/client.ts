@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const uuidSchema = z.string().uuid();
 const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{8,80}$/);
+const conceptCodeSchema = z.string().regex(/^[a-z0-9-]{1,64}$/);
 
 const sessionSchema = z.object({
   sessionId: uuidSchema,
@@ -124,6 +125,8 @@ const healthEventSchema = z.object({
   recordId: uuidSchema,
   domain: z.enum(["lab"]),
   concept: z.string().min(1).max(80),
+  // Dictionary key from the alias catalogue (null/omitted when the label matched nothing).
+  conceptCode: conceptCodeSchema.nullable().optional(),
   value: z.string().min(1).max(64),
   unit: z.string().min(1).max(32),
   observedOn: z.string().date(),
