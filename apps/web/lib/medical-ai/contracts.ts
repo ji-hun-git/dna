@@ -75,7 +75,7 @@ export const medicalDocumentGoldSchema = z.strictObject({
   documentType: z.enum(["health-screening-lab-report", "public-health-lab-report"]),
   language: z.literal("ko-KR"),
   synthetic: z.literal(true),
-  expectedMeasurements: z.array(expectedMeasurementSchema).min(1).max(100),
+  expectedMeasurements: z.array(expectedMeasurementSchema).max(100),
   requiredAbstentions: z.array(z.strictObject({
     fieldId: z.string().regex(/^[a-z0-9-]+$/),
     label: z.string().min(1).max(80),
@@ -88,6 +88,9 @@ export const medicalDocumentGoldSchema = z.strictObject({
   ];
   if (new Set(ids).size !== ids.length) {
     context.addIssue({ code: "custom", message: "gold measurement and abstention field IDs must be unique" });
+  }
+  if (document.expectedMeasurements.length === 0 && document.requiredAbstentions.length === 0) {
+    context.addIssue({ code: "custom", message: "a gold document needs at least one expected measurement or required abstention" });
   }
 });
 

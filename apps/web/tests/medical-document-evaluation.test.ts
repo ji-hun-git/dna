@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { medicalDocumentRunSchema } from "@/lib/medical-ai/contracts";
+import { medicalDocumentGoldSchema, medicalDocumentRunSchema } from "@/lib/medical-ai/contracts";
 import {
   compareMedicalDocumentPipelines,
   evaluateMedicalDocumentPipeline,
@@ -67,4 +67,15 @@ it("rejects diagnosis-like annotations and every unreviewed extra output key", (
 
   const parsed = medicalDocumentRunSchema.safeParse(runWithClinicalJudgment);
   expect(parsed.success).toBe(false);
+});
+
+it("accepts a gold document that only requires abstentions and rejects one that expects nothing", () => {
+  const scanOnly = {
+    ...corpus.documents[0],
+    documentId: "synthetic-scan-001",
+    expectedMeasurements: [],
+    requiredAbstentions: [{ fieldId: "document", label: "문서 전체", acceptedReasons: ["unreadable"] }],
+  };
+  expect(medicalDocumentGoldSchema.safeParse(scanOnly).success).toBe(true);
+  expect(medicalDocumentGoldSchema.safeParse({ ...scanOnly, requiredAbstentions: [] }).success).toBe(false);
 });
