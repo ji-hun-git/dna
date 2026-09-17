@@ -133,6 +133,16 @@ data class HealthEventExport(
     val documents: List<ExportedDocument>,
 )
 
+/**
+ * The export body plus the filename computed from the same instant as `exportedAt`, so the
+ * `Content-Disposition` date and the JSON's own `exportedAt` can never disagree about which
+ * side of midnight the export happened on.
+ */
+data class HealthEventExportEnvelope(
+    val filename: String,
+    val export: HealthEventExport,
+)
+
 
 @Service
 @ConditionalOnProperty(prefix = "gc.foundation", name = ["enabled"], havingValue = "true")
@@ -588,7 +598,8 @@ class FoundationLifecycleService(
         )
 
     @Transactional
-    fun exportHealthEvents(principal: FoundationPrincipal): HealthEventExport {
+    fun exportHealthEvents(principal: FoundationPrincipal): HealthEventExportEnvelope {
+        val now = Instant.now(clock)
         val events = listHealthEvents(principal)
         val documents = events
             .map { it.source.documentId }
@@ -606,11 +617,12 @@ class FoundationLifecycleService(
             }
         // The audit row says that an export happened. It carries no count, no value and no date.
         audit(principal, "HEALTH_EVENTS_EXPORTED", "EXPORT", null, "SUCCESS")
-        return HealthEventExport(exportedAt = Instant.now(clock), events = events, documents = documents)
+        val filename = "alm-health-events-${LocalDate.ofInstant(now, seoul).format(DateTimeFormatter.BASIC_ISO_DATE)}.json"
+        return HealthEventExportEnvelope(
+            filename = filename,
+            export = HealthEventExport(exportedAt = now, events = events, documents = documents),
+        )
     }
-
-    fun exportFilename(): String =
-        "alm-health-events-${LocalDate.ofInstant(Instant.now(clock), seoul).format(DateTimeFormatter.BASIC_ISO_DATE)}.json"
 
     @Transactional
     fun correctRecord(
