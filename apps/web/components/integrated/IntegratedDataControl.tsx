@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   createFoundationClient,
-  type FoundationConsent,
+  type FoundationConsentPurpose,
   type FoundationDeletion,
   type FoundationSession,
 } from "@/lib/foundation/client";
@@ -11,10 +11,51 @@ import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { describeFoundationError } from "@/lib/foundation/messages";
 import { labelConsentStatus } from "@/lib/format/status-labels";
 
+type FixedPurposeCode = "DOCUMENT_EXTRACTION" | "RESEARCH_USE" | "RESEARCH_CONTACT";
+
+type ConsentRowCopy = {
+  purposeCode: FixedPurposeCode;
+  title: string;
+  short: string;
+  description: string;
+  purpose: string;
+};
+
+/** The three fixed purposes in the order the server lists them. The sentences are fixed by the Wave 2C design. */
+const consentRows: ConsentRowCopy[] = [
+  {
+    purposeCode: "DOCUMENT_EXTRACTION",
+    title: "서비스 제공(결과지 처리)",
+    short: "결과지 처리",
+    description: "허용된 합성 PDF에 대해 문서 요청, 논리 격리, 검사, 합성 후보 확인을 허용합니다. 철회하면 새 결과지를 처리하지 않아요.",
+    purpose: "결과지 항목 확인",
+  },
+  {
+    purposeCode: "RESEARCH_USE",
+    title: "연구 활용",
+    short: "연구 활용",
+    description: "가명처리 후 연구에 쓰는 것에 대한 선택. 지금은 진행 중인 연구가 없어요.",
+    purpose: "연구 활용 · 현재 없음",
+  },
+  {
+    purposeCode: "RESEARCH_CONTACT",
+    title: "연구 연락",
+    short: "연구 연락",
+    description: "적합한 연구가 있을 때 참여 제안을 받을지. 지금은 연락 채널이 없어요.",
+    purpose: "참여 제안 연락 · 현재 없음",
+  },
+];
+
+const projectPrefix = "PROJECT:";
+
+function newIdempotencyKey(prefix: string) {
+  return `${prefix}-${crypto.randomUUID()}`;
+}
+
 export function IntegratedDataControl() {
   const client = useMemo(() => createFoundationClient(), []);
   const [session, setSession] = useState<FoundationSession>();
-  const [consent, setConsent] = useState<FoundationConsent>();
+  const [consents, setConsents] = useState<FoundationConsentPurpose[]>([]);
   const [deletion, setDeletion] = useState<FoundationDeletion>();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -27,13 +68,13 @@ export function IntegratedDataControl() {
     let active = true;
     void (async () => {
       try {
-        const [loadedSession, loadedConsent] = await Promise.all([
+        const [loadedSession, loadedConsents] = await Promise.all([
           client.getSession(),
-          client.getDocumentConsent(),
+          client.getConsents(),
         ]);
         if (active) {
           setSession(loadedSession);
-          setConsent(loadedConsent);
+          setConsents(loadedConsents);
         }
       } catch (error) {
         if (active) setErrorMessage(describeFoundationError(error));
@@ -44,15 +85,34 @@ export function IntegratedDataControl() {
     return () => { active = false; };
   }, [client]);
 
-  const revokeConsent = async () => {
-    if (!consent?.consentId) return;
+  const consentFor = (purposeCode: string) => consents.find((item) => item.purposeCode === purposeCode);
+  const documentConsentStatus = consentFor("DOCUMENT_EXTRACTION")?.status ?? "NOT_GRANTED";
+  const projectConsents = consents.filter((item) => item.purposeCode.startsWith(projectPrefix));
+
+  // Every consent change re-reads the server list, so the four rows always show what the server holds.
+  const grantConsent = async (purposeCode: string, short: string) => {
     setBusy(true);
     setErrorMessage("");
     setActionMessage("");
     try {
-      const revoked = await client.revokeConsent(consent.consentId);
-      setConsent(revoked);
-      setActionMessage("결과지 처리 동의를 서버에서 철회했어요.");
+      await client.grantConsent(purposeCode, newIdempotencyKey("consent"));
+      setConsents(await client.getConsents());
+      setActionMessage(`${short} 동의를 서버에 기록했어요.`);
+    } catch (error) {
+      setErrorMessage(describeFoundationError(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const revokeConsent = async (consentId: string, short: string) => {
+    setBusy(true);
+    setErrorMessage("");
+    setActionMessage("");
+    try {
+      await client.revokeConsent(consentId);
+      setConsents(await client.getConsents());
+      setActionMessage(`${short} 동의를 서버에서 철회했어요.`);
     } catch (error) {
       setErrorMessage(describeFoundationError(error));
     } finally {
@@ -68,7 +128,7 @@ export function IntegratedDataControl() {
       const completed = await client.deleteProfile();
       setDeletion(completed);
       setSession(undefined);
-      setConsent(undefined);
+      setConsents([]);
       setReviewingDeletion(false);
     } catch (error) {
       setErrorMessage(describeFoundationError(error));
@@ -83,7 +143,7 @@ export function IntegratedDataControl() {
         <div className="gc-data-control__shell">
           <section className="gc-data-control__hero" aria-labelledby="integrated-data-title">
             <div><p>동의와 보관 상태</p><h1 id="integrated-data-title">내 데이터</h1></div>
-            <div className="gc-data-control__hero-copy"><p>결과지 처리 동의를 확인하고, 체험 중 만든 기록을 삭제할 수 있어요.</p><strong>예시 데이터 전용 · 실제 개인정보 없음</strong></div>
+            <div className="gc-data-control__hero-copy"><p>목적별 동의를 확인하고, 체험 중 만든 기록을 삭제할 수 있어요.</p><strong>예시 데이터 전용 · 실제 개인정보 없음</strong></div>
           </section>
           <div className="gc-integrated-actions"><a href="/connections">연결 상태 확인</a><a href="/providers">공공정보 실험실</a></div>
 
@@ -95,21 +155,56 @@ export function IntegratedDataControl() {
             <>
               <section className="gc-data-control__summary" aria-label="현재 서버 데이터 상태">
                 <article><span>체험 상태</span><strong>활성</strong><p>이 브라우저에서 체험 중</p></article>
-                <article><span>결과지 처리 동의</span><strong>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</strong><p>예시 결과지 항목 확인</p></article>
+                <article><span>결과지 처리 동의</span><strong>{labelConsentStatus(documentConsentStatus)}</strong><p>예시 결과지 항목 확인</p></article>
                 <article><span>외부 연결</span><strong>0</strong><p>카카오·네이버·MyHealthWay 비활성화</p><a href="/connections">외부 연결 상태</a></article>
               </section>
 
               <section className="gc-data-control__purposes" aria-labelledby="server-consent-title">
-                <header><div><p>현재 동의 상태</p><h2 id="server-consent-title">결과지 처리 동의</h2></div><p>동의를 철회하면 새 결과지를 처리하지 않아요.</p></header>
+                <header>
+                  <div><p>현재 동의 상태</p><h2 id="server-consent-title">목적별 동의</h2></div>
+                  <p>연구 동의 없이도 모든 기능을 쓸 수 있어요. 연구 동의는 저장만 되고, 실제 활용 전에는 프로젝트별 동의를 다시 물어요.</p>
+                </header>
                 <div className="gc-data-control__purpose-list">
-                  <article data-status={consent?.status === "ACTIVE" ? "active" : "revoked"}>
-                    <span className="gc-data-control__purpose-index">01</span>
+                  {consentRows.map((row, index) => {
+                    const consent = consentFor(row.purposeCode);
+                    const status = consent?.status ?? "NOT_GRANTED";
+                    return (
+                      <article key={row.purposeCode} data-purpose={row.purposeCode} data-status={status === "ACTIVE" ? "active" : "revoked"}>
+                        <span className="gc-data-control__purpose-index">{String(index + 1).padStart(2, "0")}</span>
+                        <div className="gc-data-control__purpose-copy">
+                          <div><h3>{row.title}</h3><strong>{labelConsentStatus(status)}</strong></div>
+                          <p>{row.description}</p>
+                          <dl><div><dt>사용 목적</dt><dd>{row.purpose}</dd></div><div><dt>실제 외부 제공</dt><dd>없음</dd></div></dl>
+                        </div>
+                        {status === "ACTIVE" && consent?.consentId
+                          ? <button type="button" onClick={() => void revokeConsent(consent.consentId!, row.short)} disabled={busy}>{`${row.short} 동의 철회`}</button>
+                          : <button type="button" onClick={() => void grantConsent(row.purposeCode, row.short)} disabled={busy}>{`${row.short} 동의`}</button>}
+                      </article>
+                    );
+                  })}
+                  <article data-purpose="PROJECT" data-status={projectConsents.some((item) => item.status === "ACTIVE") ? "active" : "revoked"}>
+                    <span className="gc-data-control__purpose-index">04</span>
                     <div className="gc-data-control__purpose-copy">
-                      <div><h3>합성 결과지 후보 확인</h3><strong>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</strong></div>
-                      <p>허용된 합성 PDF에 대해 문서 요청, 논리 격리, 검사, 합성 후보 확인을 허용합니다.</p>
-                      <dl><div><dt>사용 목적</dt><dd>결과지 항목 확인</dd></div><div><dt>실제 외부 제공</dt><dd>없음</dd></div></dl>
+                      <div><h3>프로젝트별</h3><strong>{projectConsents.length === 0 ? "아직 없음" : `${projectConsents.filter((item) => item.status === "ACTIVE").length}개 동의함`}</strong></div>
+                      <p>프로젝트가 생기면 여기서 개별로 물어요.</p>
+                      {projectConsents.length > 0 && (
+                        <ul className="gc-review-saved" aria-label="프로젝트별 동의">
+                          {projectConsents.map((item) => {
+                            const name = item.purposeCode.slice(projectPrefix.length);
+                            return (
+                              <li key={item.purposeCode}>
+                                <strong>{name}</strong>
+                                <span>{labelConsentStatus(item.status)}</span>
+                                {item.status === "ACTIVE" && item.consentId && (
+                                  <button type="button" onClick={() => void revokeConsent(item.consentId!, name)} disabled={busy}>{`${name} 동의 철회`}</button>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </div>
-                    {consent?.status === "ACTIVE" ? <button type="button" onClick={() => void revokeConsent()} disabled={busy}>{busy ? "철회 반영 중" : "동의 철회"}</button> : <span className="gc-data-control__purpose-lock">현재 허용되지 않음</span>}
+                    <span className="gc-data-control__purpose-lock">지금은 물어볼 프로젝트가 없어요</span>
                   </article>
                 </div>
               </section>

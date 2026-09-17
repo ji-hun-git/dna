@@ -369,7 +369,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     const response = await fetch("/api/foundation/consents/document-extraction", { credentials: "include", cache: "no-store" });
     return String((await response.json()).consentId);
   });
-  await page.getByRole("button", { name: "동의 철회" }).click();
+  await page.getByRole("button", { name: "결과지 처리 동의 철회", exact: true }).click();
   await expect(page.getByText("철회함", { exact: true }).first()).toBeVisible();
 
   const blockedAfterRevocation = await browserApi(page, "/api/foundation/documents", {
@@ -459,7 +459,7 @@ test(`server states remain keyboard operable at a ${zoom} percent equivalent vie
   await expect(page.getByRole("button", { name: "인쇄하기" })).toBeFocused();
 
   await page.goto("/data-control");
-  await page.getByRole("button", { name: "동의 철회" }).focus();
+  await page.getByRole("button", { name: "결과지 처리 동의 철회", exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByText("철회함", { exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "삭제 요청 검토" }).focus();

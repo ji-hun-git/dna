@@ -5,6 +5,9 @@ const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{8,80}$/);
 const confirmationBodySchema = z.object({ value: z.string().min(1).max(64), observedOn: z.string().date().optional() }).strict();
 const conceptCodeSchema = z.string().regex(/^[a-z0-9-]{1,64}$/);
 
+// One consent row per purpose. Research purposes are stored only; nothing in the product depends on them.
+const consentPurposeCodeSchema = z.string().regex(/^(DOCUMENT_EXTRACTION|RESEARCH_USE|RESEARCH_CONTACT|PROJECT:[a-z0-9-]{1,40})$/);
+
 // Where on the page the worker read a line: normalized 0..1, top-left origin. Display only.
 const evidenceBoxSchema = z.object({
   x: z.number().min(0).max(1),
@@ -33,8 +36,17 @@ const consentSchema = z.object({
   // The API deliberately omits null JSON properties. NOT_GRANTED therefore has
   // no consentId, while ACTIVE and REVOKED carry a UUID.
   consentId: uuidSchema.nullable().optional(),
-  purposeCode: z.literal("DOCUMENT_EXTRACTION"),
+  purposeCode: consentPurposeCodeSchema,
   status: z.enum(["NOT_GRANTED", "ACTIVE", "REVOKED"]),
+}).strict();
+
+const consentPurposeSchema = z.object({
+  consentId: uuidSchema.nullable().optional(),
+  purposeCode: consentPurposeCodeSchema,
+  status: z.enum(["NOT_GRANTED", "ACTIVE", "REVOKED"]),
+  policyVersion: z.string().min(1).max(40),
+  grantedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  revokedAt: z.string().datetime({ offset: true }).nullable().optional(),
 }).strict();
 
 const documentSchema = z.object({
@@ -199,6 +211,7 @@ const problemSchema = z.object({ code: z.string().min(1).max(100) }).passthrough
 
 export type FoundationSession = z.infer<typeof sessionSchema>;
 export type FoundationConsent = z.infer<typeof consentSchema>;
+export type FoundationConsentPurpose = z.infer<typeof consentPurposeSchema>;
 export type FoundationDocument = z.infer<typeof documentSchema>;
 export type FoundationCandidate = z.infer<typeof candidateSchema>;
 export type FoundationRecord = z.infer<typeof recordSchema>;
@@ -342,6 +355,12 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     return parsed.data;
   }
 
+  function requirePurposeCode(value: string) {
+    const parsed = consentPurposeCodeSchema.safeParse(value);
+    if (!parsed.success) throw new FoundationClientError("validation_error", 0);
+    return parsed.data;
+  }
+
   return {
     getSession: () => request("/api/foundation/session", sessionSchema, { method: "GET" }),
     bootstrapDemo: () => request("/api/foundation/demo-session", issuedSessionSchema, { method: "POST" }),
@@ -363,6 +382,13 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       "/api/foundation/consents/document-extraction",
       consentSchema,
       { method: "POST" },
+      true,
+    ),
+    getConsents: () => request("/api/foundation/consents", z.array(consentPurposeSchema).max(50), { method: "GET" }),
+    grantConsent: async (purposeCode: string, idempotencyKey: string) => request(
+      `/api/foundation/consents/${encodeURIComponent(requirePurposeCode(purposeCode))}`,
+      consentPurposeSchema,
+      { method: "POST", headers: { "Idempotency-Key": requireIdempotencyKey(idempotencyKey) } },
       true,
     ),
     requestDocument: async (

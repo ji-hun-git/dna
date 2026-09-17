@@ -178,4 +178,19 @@ describe("Korean UX language boundary", () => {
     expect(source("lib/format/status-labels.ts")).toContain("사용자가 검사일을 수정함 · 원래 ");
     expect(source("components/integrated/IntegratedRecords.tsx")).toContain("describeReviewDecision(record)");
   });
+
+  it("states that research consent is optional, stored only, and asked again per project", () => {
+    const control = source("components/integrated/IntegratedDataControl.tsx");
+    for (const sentence of [
+      "연구 동의 없이도 모든 기능을 쓸 수 있어요.",
+      "실제 활용 전에는 프로젝트별 동의를 다시 물어요.",
+      "가명처리 후 연구에 쓰는 것에 대한 선택. 지금은 진행 중인 연구가 없어요.",
+      "적합한 연구가 있을 때 참여 제안을 받을지. 지금은 연락 채널이 없어요.",
+      "프로젝트가 생기면 여기서 개별로 물어요.",
+    ]) {
+      expect(control, `data control lacks: ${sentence}`).toContain(sentence);
+    }
+    expect(control).not.toContain("{consent.status}");
+    expect(control).not.toContain("{status}</strong>");
+  });
 });
