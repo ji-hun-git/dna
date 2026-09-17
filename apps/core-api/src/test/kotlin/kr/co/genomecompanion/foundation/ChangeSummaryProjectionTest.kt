@@ -142,6 +142,92 @@ class ChangeSummaryProjectionTest {
     }
 
     @Test
+    fun breaksATieOnObservedOnAndConfirmedAtByDocumentIdTextRegardlessOfInputOrder() {
+        val latestDocument = UUID.fromString("44444444-4444-4444-8444-444444444444")
+        val tiedObservedOn = LocalDate.of(2026, 1, 15)
+        val tiedConfirmedAt = Instant.parse("2026-01-16T00:00:00Z")
+        val latest = row("총콜레스테롤", "150", LocalDate.of(2026, 7, 28), latestDocument)
+        // aprilDocument's UUID text ("22222222-...") is lexicographically greater than
+        // januaryDocument's ("11111111-..."), so it must win the tie regardless of input order.
+        val fromJanuaryDoc = row(
+            "총콜레스테롤", "190", tiedObservedOn, januaryDocument,
+            confirmedAt = tiedConfirmedAt,
+        )
+        val fromAprilDoc = row(
+            "총콜레스테롤", "191", tiedObservedOn, aprilDocument,
+            confirmedAt = tiedConfirmedAt,
+        )
+        val documents = listOf(
+            completed(latestDocument, "2026-07-28T10:00:00Z"),
+            completed(januaryDocument, "2026-02-01T00:00:00Z"),
+            completed(aprilDocument, "2026-04-11T00:00:00Z"),
+        )
+
+        val forwardOrder = ChangeSummaryProjection.project(listOf(latest, fromJanuaryDoc, fromAprilDoc), documents)
+        val reverseOrder = ChangeSummaryProjection.project(listOf(latest, fromAprilDoc, fromJanuaryDoc), documents)
+
+        assertThat(forwardOrder.items.single().previous)
+            .isEqualTo(ChangeValue(fromAprilDoc.recordVersionId, "191", tiedObservedOn.toString()))
+        assertThat(reverseOrder.items.single().previous)
+            .isEqualTo(ChangeValue(fromAprilDoc.recordVersionId, "191", tiedObservedOn.toString()))
+    }
+
+    @Test
+    fun breaksALatestDocumentTieOnCompletedAtByDocumentIdText() {
+        // Existing rule: verified here alongside the previous-value tie-break above.
+        val records = listOf(
+            row("총콜레스테롤", "188", LocalDate.of(2026, 7, 28), julyDocument),
+            row("총콜레스테롤", "190", LocalDate.of(2026, 7, 28), aprilDocument),
+        )
+        val tiedCompletedAt = "2026-07-28T10:00:00Z"
+        val documents = listOf(
+            completed(julyDocument, tiedCompletedAt),
+            completed(aprilDocument, tiedCompletedAt),
+        )
+
+        val summary = ChangeSummaryProjection.project(records, documents)
+
+        // julyDocument ("33333333-...") is lexicographically greater than aprilDocument ("22222222-...").
+        assertThat(checkNotNull(summary.latestDocument).documentId).isEqualTo(julyDocument)
+    }
+
+    @Test
+    fun pairsRecordsWhenTheLatestGainedAConceptCodeTheEarlierOneLacked() {
+        val earlier = row("당화혈색소", "5.4", LocalDate.of(2026, 1, 15), januaryDocument, unit = "%", conceptCode = null)
+        val latest = row("당화혈색소", "5.2", LocalDate.of(2026, 7, 28), julyDocument, unit = "%", conceptCode = "hba1c")
+        val documents = listOf(completed(januaryDocument, "2026-02-01T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
+
+        val summary = ChangeSummaryProjection.project(listOf(earlier, latest), documents)
+
+        assertThat(summary.items.single().previous).isEqualTo(ChangeValue(earlier.recordVersionId, "5.4", "2026-01-15"))
+        assertThat(summary.unchangedCount).isZero()
+    }
+
+    @Test
+    fun pairsRecordsWhenTheLatestLostItsConceptCodeButTheLabelStillMatches() {
+        val earlier = row("당화혈색소", "5.4", LocalDate.of(2026, 1, 15), januaryDocument, unit = "%", conceptCode = "hba1c")
+        val latest = row("당화혈색소", "5.2", LocalDate.of(2026, 7, 28), julyDocument, unit = "%", conceptCode = null)
+        val documents = listOf(completed(januaryDocument, "2026-02-01T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
+
+        val summary = ChangeSummaryProjection.project(listOf(earlier, latest), documents)
+
+        assertThat(summary.items.single().previous).isEqualTo(ChangeValue(earlier.recordVersionId, "5.4", "2026-01-15"))
+        assertThat(summary.unchangedCount).isZero()
+    }
+
+    @Test
+    fun doesNotPairRecordsWithDifferentLabelsAndNoConceptCodes() {
+        val earlier = row("항목 A", "1", LocalDate.of(2026, 1, 15), januaryDocument, unit = "unit", conceptCode = null)
+        val latest = row("항목 B", "2", LocalDate.of(2026, 7, 28), julyDocument, unit = "unit", conceptCode = null)
+        val documents = listOf(completed(januaryDocument, "2026-02-01T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
+
+        val summary = ChangeSummaryProjection.project(listOf(earlier, latest), documents)
+
+        assertThat(summary.items.single().previous).isNull()
+        assertThat(summary.unchangedCount).isEqualTo(1)
+    }
+
+    @Test
     fun carriesNoInterpretationFields() {
         val itemFields = ChangeItem::class.java.declaredFields.map { it.name }
         val summaryFields = ChangeSummary::class.java.declaredFields.map { it.name }

@@ -1,5 +1,6 @@
 package kr.co.genomecompanion.foundation
 
+import java.text.Normalizer
 import java.time.Instant
 import java.util.UUID
 
@@ -38,12 +39,14 @@ data class ChangeItem(
 
 data class ChangeSummary(
     val latestDocument: ChangeDocument?,
+    /** Ordered by label using plain String (UTF-16) comparison via `compareBy { it.concept }` — not a Korean-locale `Collator`. */
     val items: List<ChangeItem>,
     val newConcepts: List<String>,
     val unchangedCount: Int,
 )
 
 object ChangeSummaryProjection {
+    /** The result when no completed document still has current records. Same shape as any real summary: an absent latest document, no items, nothing new, nothing unchanged. */
     val EMPTY = ChangeSummary(latestDocument = null, items = emptyList(), newConcepts = emptyList(), unchangedCount = 0)
 
     fun project(records: List<FoundationRecordRow>, documents: List<DocumentCompletionRow>): ChangeSummary {
@@ -56,14 +59,25 @@ object ChangeSummaryProjection {
         val latestRecords = current.filter { it.documentId == latestDocument.documentId }
         val otherRecords = current.filter { it.documentId != latestDocument.documentId }
 
+        // Sorted by label using plain String ordering (Kotlin's natural/UTF-16 comparison via
+        // compareBy), not a Korean-locale Collator. Two labels that a Collator would treat as
+        // equivalent (e.g. differing only in trailing whitespace before trimming elsewhere) may
+        // therefore sort differently than a human reader expects.
         val items = latestRecords
             .sortedWith(compareBy<FoundationRecordRow> { it.label }.thenBy { it.confirmedAt })
             .map { record ->
                 // The latest observation of the same concept in any other document. A different
-                // unit is not converted: the item is shown alone and counted as new.
+                // unit is not converted: the item is shown alone and counted as new. Ties on
+                // observedOn and confirmedAt are broken by documentId text, then recordId text,
+                // so the choice never depends on input order.
                 val previous = otherRecords
-                    .filter { conceptKey(it) == conceptKey(record) }
-                    .maxWithOrNull(compareBy<FoundationRecordRow> { it.observedOn }.thenBy { it.confirmedAt })
+                    .filter { conceptsMatch(it, record) }
+                    .maxWithOrNull(
+                        compareBy<FoundationRecordRow> { it.observedOn }
+                            .thenBy { it.confirmedAt }
+                            .thenBy { it.documentId.toString() }
+                            .thenBy { it.recordId.toString() },
+                    )
                     ?.takeIf { it.unit == record.unit }
                 ChangeItem(
                     conceptCode = record.conceptCode,
@@ -73,8 +87,16 @@ object ChangeSummaryProjection {
                     previous = previous?.let { ChangeValue(it.recordVersionId, it.currentValue, it.observedOn.toString()) },
                 )
             }
-        val latestKeys = latestRecords.map(::conceptKey).toSet()
-        val unchangedCount = otherRecords.map(::conceptKey).toSet().count { it !in latestKeys }
+        // Concepts in other documents that don't match any latest-document concept, deduplicated
+        // by the same matcher (not a single key, since code/label matching isn't a fixed key).
+        val unmatchedOtherRecords = otherRecords.filter { other -> latestRecords.none { conceptsMatch(it, other) } }
+        val distinctUnmatchedConcepts = mutableListOf<FoundationRecordRow>()
+        for (candidate in unmatchedOtherRecords) {
+            if (distinctUnmatchedConcepts.none { conceptsMatch(it, candidate) }) {
+                distinctUnmatchedConcepts += candidate
+            }
+        }
+        val unchangedCount = distinctUnmatchedConcepts.size
 
         return ChangeSummary(
             latestDocument = ChangeDocument(
@@ -89,7 +111,21 @@ object ChangeSummaryProjection {
         )
     }
 
-    /** Same concept code, or the same label when the label matched no catalogue entry. A key, not a meaning. */
-    private fun conceptKey(record: FoundationRecordRow): String =
-        record.conceptCode?.let { "code:$it" } ?: "label:${record.label}"
+    /**
+     * Two records are the same concept when both carry a concept code and the codes are equal,
+     * or when at least one lacks a code and their labels are equal once trimmed and Unicode
+     * NFC-normalized. A record that gained or lost its concept code between documents still
+     * matches its earlier/later self by label, instead of silently becoming "new".
+     */
+    private fun conceptsMatch(a: FoundationRecordRow, b: FoundationRecordRow): Boolean {
+        val codeA = a.conceptCode
+        val codeB = b.conceptCode
+        return if (codeA != null && codeB != null) {
+            codeA == codeB
+        } else {
+            normalizeLabel(a.label) == normalizeLabel(b.label)
+        }
+    }
+
+    private fun normalizeLabel(label: String): String = Normalizer.normalize(label.trim(), Normalizer.Form.NFC)
 }
