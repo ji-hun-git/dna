@@ -1601,6 +1601,88 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun storesTheResultSheetLabelCopiesItAtConfirmationInheritsItOnCorrectionAndGuardsTheUnit() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "original-label-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64)),
+                ExtractedCandidate(2, "혈당", "95", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64)),
+                ExtractedCandidate(3, "UA", "1.2", "g/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.18, 0.25, 0.02), "3".repeat(64)),
+            ),
+        )
+        assertThat(
+            jdbc.queryForList("SELECT label || '|' || original_label || '|' || COALESCE(concept_code, '-') FROM gc_candidate ORDER BY ordinal", String::class.java),
+        ).containsExactly("총콜레스테롤|Cholesterol|total-cholesterol", "혈당|혈당|glucose", "UA|UA|-")
+
+        val candidates = responseJson(
+            read(get("/api/foundation/documents/$documentId/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).toList()
+        confirmEveryCandidate(alice, candidates, "original-label")
+        assertThat(
+            jdbc.queryForList(
+                """
+                SELECT v.original_label FROM gc_health_record_version v
+                JOIN gc_health_record r ON r.record_id = v.record_id
+                JOIN gc_candidate c ON c.candidate_id = r.candidate_id
+                WHERE v.status = 'CURRENT' ORDER BY c.ordinal
+                """.trimIndent(),
+                String::class.java,
+            ),
+        ).containsExactly("Cholesterol", "혈당", "UA")
+
+        val recordId = responseJson(
+            read(get("/api/foundation/records"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).single { it["label"].asText() == "총콜레스테롤" }["recordId"].asText()
+        // The label is never client-writable: the strict Jackson posture rejects the unknown field.
+        mutate(
+            post("/api/foundation/records/$recordId/corrections")
+                .header("Idempotency-Key", "original-label-correction-rejected")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인", "originalLabel" to "LDL"))),
+            alice,
+        ).andExpect(status().isBadRequest)
+        mutate(
+            post("/api/foundation/records/$recordId/corrections")
+                .header("Idempotency-Key", "original-label-correction-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인"))),
+            alice,
+        ).andExpect(status().isOk)
+        assertThat(
+            jdbc.queryForList(
+                "SELECT original_label FROM gc_health_record_version WHERE record_id = ?::uuid ORDER BY changed_at",
+                String::class.java,
+                recordId,
+            ),
+        ).containsExactly("Cholesterol", "Cholesterol")
+        // Audit rows never carry the label.
+        assertThat(
+            jdbc.queryForList(
+                "SELECT event_type || ' ' || resource_type || ' ' || COALESCE(purpose_code, '') || ' ' || outcome FROM gc_audit_event",
+                String::class.java,
+            ),
+        ).noneMatch { it.contains("Cholesterol") || it.contains("혈당") }
+    }
+
+    @Test
+    fun existingRowsKeepANullResultSheetLabel() {
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT is_nullable FROM information_schema.columns WHERE table_name = 'gc_health_record_version' AND column_name = 'original_label'",
+                String::class.java,
+            ),
+        ).isEqualTo("YES")
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM gc_medical_concept WHERE jsonb_array_length(accepted_units) = 0", Long::class.java),
+        ).isZero()
+    }
+
+    @Test
     fun exportV2CarriesTheReferenceRangeTextTheCorrectionHistoryAndEveryCompletedDocument() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
