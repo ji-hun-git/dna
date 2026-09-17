@@ -1,4 +1,4 @@
-import type { FoundationCandidate, FoundationRecord, HealthEvent } from "@/lib/foundation/client";
+import type { FoundationCandidate, FoundationRecord, HealthEvent, SeriesResponse } from "@/lib/foundation/client";
 
 const documentId = "e64ddaae-a326-4f23-88a9-05ac59a48625";
 const documentSha256 = "a".repeat(64);
@@ -112,5 +112,48 @@ export function syntheticHealthEvent(overrides: Partial<HealthEvent> = {}): Heal
       previewAvailable: true,
     },
     ...overrides,
+  };
+}
+
+const januaryDocumentId = "f75eebbf-b437-4034-99ba-16bd6ab59736";
+
+/**
+ * What GET /api/foundation/series returns after the e2e lifecycle: July uploaded first
+ * (총콜레스테롤 corrected to 190, 당화혈색소 re-dated to 07-27, 비타민 D excluded), January second.
+ * Null members are omitted exactly as the server omits them (Jackson non_null).
+ */
+export function syntheticSeries(): SeriesResponse {
+  return {
+    series: [
+      {
+        conceptCode: "hba1c",
+        concept: "당화혈색소",
+        unit: "%",
+        points: [
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d61", value: "5.4", observedOn: "2026-01-15", documentId: januaryDocumentId },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d62", value: "5.2", observedOn: "2026-07-27", documentId },
+        ],
+        derived: { lastDifference: { absolute: "-0.2" }, per30Days: "-0.03" },
+      },
+      {
+        conceptCode: "vitamin-d",
+        concept: "비타민 D",
+        unit: "ng/mL",
+        points: [
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d63", value: "45", observedOn: "2026-01-15", documentId: januaryDocumentId },
+        ],
+        derived: {},
+      },
+      {
+        conceptCode: "total-cholesterol",
+        concept: "총콜레스테롤",
+        unit: "mg/dL",
+        points: [
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d64", value: "194", observedOn: "2026-01-15", documentId: januaryDocumentId },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d65", value: "190", observedOn: "2026-07-28", documentId },
+        ],
+        derived: { lastDifference: { absolute: "-4", percent: "-2.1" }, per30Days: "-0.6" },
+      },
+    ],
   };
 }

@@ -152,7 +152,7 @@ object ChangeSummaryProjection {
      * NFC-normalized. A record that gained or lost its concept code between documents still
      * matches its earlier/later self by label, instead of silently becoming "new".
      */
-    private fun conceptsMatch(a: FoundationRecordRow, b: FoundationRecordRow): Boolean {
+    internal fun conceptsMatch(a: FoundationRecordRow, b: FoundationRecordRow): Boolean {
         val codeA = a.conceptCode
         val codeB = b.conceptCode
         return if (codeA != null && codeB != null) {

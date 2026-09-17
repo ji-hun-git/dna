@@ -31,6 +31,7 @@ it("renders the side-by-side report with the model localization column marked no
   expect(markdown).toContain("| Metric | pdfbox-native-text | ollama-medgemma-1.5-4b-page-image |");
   expect(markdown).toContain("측정 불가 (페이지 전체 박스)");
   expect(markdown).toContain("| Gate | PASS | 게이트 아님 (evidence only) |");
+  expect(markdown).toMatch(/\| Reference-range text carried verbatim \| \d+\.\d% \| \d+\.\d% \|/);
   expect(markdown).toContain("| Ollama | 0.34.1 |");
   expect(markdown).toContain("AbortError: timeout");
   expect(markdown).toContain("## 문서별");

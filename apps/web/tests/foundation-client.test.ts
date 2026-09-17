@@ -3,7 +3,7 @@ import {
   createFoundationClient,
   FoundationClientError,
 } from "@/lib/foundation/client";
-import { syntheticHealthEvent } from "./fixtures/foundation";
+import { syntheticHealthEvent, syntheticSeries } from "./fixtures/foundation";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -314,6 +314,35 @@ describe("foundation same-origin client", () => {
       readCsrfToken: () => "csrf-value",
     });
     await expect(deltaWithDirection.getChanges()).rejects.toMatchObject({ code: "invalid_server_response" });
+  });
+
+  it("reads the measurement series with omitted derived keys and refuses a direction, a range or a null", async () => {
+    const fetcher = vi.fn(async () => jsonResponse(syntheticSeries()));
+    const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
+
+    const loaded = await client.getSeries();
+    expect(loaded.series.map((item) => item.concept)).toEqual(["당화혈색소", "비타민 D", "총콜레스테롤"]);
+    expect(loaded.series[2].derived).toEqual({ lastDifference: { absolute: "-4", percent: "-2.1" }, per30Days: "-0.6" });
+    expect(loaded.series[1].derived).toEqual({});
+    expect(fetcher).toHaveBeenCalledWith("/api/foundation/series", expect.objectContaining({
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    }));
+
+    const base = syntheticSeries().series[2];
+    for (const broken of [
+      { ...base, direction: "down" },
+      { ...base, referenceRangeText: "120-199" },
+      { ...base, derived: { ...base.derived, slope: "-0.02" } },
+      { ...base, derived: { ...base.derived, meanOfLast3: null } },
+      { ...base, derived: { ...base.derived, per30Days: "-0.6 mg/dL" } },
+      { ...base, points: [{ ...base.points[0], recordId: "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c40" }] },
+      { ...base, points: [] },
+    ]) {
+      const rejecting = createFoundationClient({ fetcher: vi.fn(async () => jsonResponse({ series: [broken] })), readCsrfToken: () => "csrf-value" });
+      await expect(rejecting.getSeries()).rejects.toMatchObject({ code: "invalid_server_response" });
+    }
   });
 
   it("reads the consent list, grants a purpose with an idempotency key and refuses an unknown purpose", async () => {

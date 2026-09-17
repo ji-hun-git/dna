@@ -54,7 +54,8 @@ data class ExtractionOutcome(
  * (검사일/검진일/채취일/Date…, label anywhere in the line, first date after the label). A bare date is
  * never used; two different labelled dates make the whole document ambiguous.
  * Labels stay raw (core normalizes). Reference-range text on a row is excluded from the value and
- * carried verbatim as `referenceRangeText` (range body only, at most 40 characters) so the person's
+ * carried verbatim as `referenceRangeText` (range body only — two bodies on one row joined by one
+ * space — at most 40 characters, else null) so the person's
  * own export can keep it; the worker never compares a value against it.
  */
 object NativeTextExtractionProvider {
@@ -178,7 +179,14 @@ object NativeTextExtractionProvider {
         if (rest.isNotEmpty() && !restIsRange && rest.any { valueToken.matches(it) }) {
             return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
         }
-        val rangeBodyMatch = if (restIsRange) rangeBody.find(restText)?.value?.trim() else null
+        // Two ranges on one row ("70-99 100-200") are both document text: keep them verbatim, joined
+        // by one space. Only when the row already parses as a measurement (restIsRange), only when
+        // both bodies really bound a value and nothing else is left over; otherwise the single rule.
+        val bodies = if (restIsRange) rangeBody.findAll(restText).map { it.value.trim() }.toList() else emptyList()
+        val twoRanges = bodies.size == 2 &&
+            bodies.all { rangeBoundaryMarker.containsMatchIn(it) } &&
+            bodies.fold(restText) { remaining, body -> remaining.replaceFirst(body, "") }.isBlank()
+        val rangeBodyMatch = if (twoRanges) bodies.joinToString(" ") else bodies.firstOrNull()
         val referenceRangeText = rangeBodyMatch?.takeIf {
             it.length <= MAX_REFERENCE_RANGE && rangeBoundaryMarker.containsMatchIn(it)
         }

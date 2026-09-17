@@ -164,12 +164,18 @@ class FoundationLifecycleService(
     private val documentStorage: FoundationDocumentStorage,
     private val properties: FoundationProperties,
     private val clock: Clock,
+    private val conceptSource: MedicalConceptSource,
 ) {
     private val subjectPattern = Regex("^synthetic-[a-z0-9-]+$")
     private val idempotencyPattern = Regex("^[A-Za-z0-9._:-]{8,80}$")
     private val confirmedValuePattern = Regex("^[0-9]{1,4}(?:\\.[0-9]{1,2})?$")
     private val seoul: ZoneId = ZoneId.of("Asia/Seoul")
     private val earliestObservedOn: LocalDate = LocalDate.of(1900, 1, 1)
+
+    /** Informational LOINC codes from the seed-only concept table, read once per process. */
+    private val loincByConceptCode: Map<String, String> by lazy {
+        conceptSource.concepts().mapNotNull { concept -> concept.loincCode?.let { concept.conceptCode to it } }.toMap()
+    }
 
     @Transactional
     fun createSession(subjectId: String, credential: String): IssuedFoundationSession {
@@ -610,6 +616,11 @@ class FoundationLifecycleService(
             repository.listDocumentCompletions(principal.subjectId),
         )
 
+    /** The person's CURRENT values per item and unit in exam-date order. Read-only: no audit row, no range text. */
+    @Transactional(readOnly = true)
+    fun getSeries(principal: FoundationPrincipal): SeriesResponse =
+        SeriesProjection.project(repository.listRecords(principal.subjectId))
+
     @Transactional
     fun exportHealthEvents(principal: FoundationPrincipal): HealthEventExportEnvelope {
         val now = Instant.now(clock)
@@ -641,6 +652,16 @@ class FoundationLifecycleService(
             filename = filename,
             export = HealthEventExport(exportedAt = now, events = events, documents = documents),
         )
+    }
+
+    @Transactional
+    fun exportHealthEventsAsFhir(principal: FoundationPrincipal): FhirExportEnvelope {
+        val now = Instant.now(clock)
+        val bundle = FhirObservationMapper.bundle(repository.listRecords(principal.subjectId), loincByConceptCode, now)
+        // Same event as the JSON export; the format is a value-free resource-type code. No count, value or date.
+        audit(principal, "HEALTH_EVENTS_EXPORTED", "EXPORT_FHIR", null, "SUCCESS")
+        val filename = "alm-health-events-${LocalDate.ofInstant(now, seoul).format(DateTimeFormatter.BASIC_ISO_DATE)}.fhir.json"
+        return FhirExportEnvelope(filename = filename, bundle = bundle)
     }
 
     @Transactional

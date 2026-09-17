@@ -127,3 +127,23 @@ it("plays the arrival animation once for a new cell and not under prefers-reduce
   // @ts-expect-error jsdom has no matchMedia; remove the stub so other tests see the default.
   delete window.matchMedia;
 });
+
+it("drops the arrival class when the animation ends and never replays it in the same mount", () => {
+  stubReducedMotion(false);
+  const newIds = new Set([jul.eventId]);
+  const view = render(<LivingCellCanvas events={[jan, jul]} matchedIds={null} newIds={newIds} onSelect={() => {}} />);
+  const name = "총콜레스테롤 188 mg/dL, 2026. 7. 28.";
+  expect(screen.getByRole("button", { name }).getAttribute("class")).toMatch(/cellArrived/);
+
+  fireEvent.animationEnd(screen.getByRole("button", { name }));
+  expect(screen.getByRole("button", { name }).getAttribute("class")).not.toMatch(/cellArrived/);
+  expect(screen.getByRole("button", { name })).not.toHaveAttribute("data-arrived");
+  // Still the new cell (state is data, not animation).
+  expect(screen.getByRole("button", { name })).toHaveAttribute("data-state", "new");
+
+  view.rerender(<LivingCellCanvas events={[jan, jul]} matchedIds={new Set([jan.eventId])} newIds={newIds} onSelect={() => {}} />);
+  view.rerender(<LivingCellCanvas events={[jan, jul]} matchedIds={null} newIds={newIds} onSelect={() => {}} />);
+  expect(screen.getByRole("button", { name }).getAttribute("class")).not.toMatch(/cellArrived/);
+  // @ts-expect-error jsdom has no matchMedia; remove the stub so other tests see the default.
+  delete window.matchMedia;
+});

@@ -404,6 +404,26 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("status", { name: "검색 결과" })).toContainText("총콜레스테롤 기록");
   await captureMatrix(page, info, "my-data");
 
+  // Wave 4: 측정 이력. /changes omits delta here because the upload order runs against the exam
+  // dates, but /series is always in time order, so its lastDifference IS present.
+  const seriesResponse = await browserApi(page, "/api/foundation/series");
+  expect(seriesResponse.status).toBe(200);
+  expect(JSON.stringify(seriesResponse.body).toLowerCase()).not.toMatch(/reference|120-199|direction|trend|slope|forecast/);
+  const seriesList = (seriesResponse.body as unknown as {
+    series: Array<{ concept: string; unit: string; points: Array<{ value: string; observedOn: string }>; derived: { lastDifference?: { absolute: string; percent?: string }; per30Days?: string; meanOfLast3?: string } }>;
+  }).series;
+  expect(seriesList.map((item) => item.concept)).toEqual(["당화혈색소", "비타민 D", "총콜레스테롤"]);
+  expect(seriesList[2].points.map((point) => `${point.observedOn} ${point.value}`)).toEqual(["2026-01-15 194", "2026-07-28 190"]);
+  // 194 days: 190 − 194 = -4; -4 / 194 = -2.1 %; -4 / 194 × 30 = -0.6.
+  expect(seriesList[2].derived).toEqual({ lastDifference: { absolute: "-4", percent: "-2.1" }, per30Days: "-0.6" });
+  // 193 days (07-27): -0.2; no percent for a % unit; -0.2 / 193 × 30 = -0.03.
+  expect(seriesList[0].points.map((point) => `${point.observedOn} ${point.value}`)).toEqual(["2026-01-15 5.4", "2026-07-27 5.2"]);
+  expect(seriesList[0].derived).toEqual({ lastDifference: { absolute: "-0.2" }, per30Days: "-0.03" });
+  expect(seriesList[1].points).toHaveLength(1);
+  expect(seriesList[1].derived).toEqual({});
+
+  // 측정 이력 screen assertions are added with the screen task (parked pending mockup approval).
+
   await page.goto("/records");
   const groupHeadings = page.locator(".gc-records-group h3");
   await expect(groupHeadings).toHaveCount(3);
@@ -487,6 +507,46 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     page.getByRole("link", { name: "내 기록 내보내기(JSON)" }).click(),
   ]);
   expect(download.suggestedFilename()).toMatch(/^alm-health-events-\d{8}\.json$/);
+
+  // Wave 4: the same records as a FHIR R4 Bundle. The JSON export above is unchanged.
+  await expect(page.getByText("다른 건강기록 도구가 읽을 수 있는 형식이에요.")).toBeVisible();
+  const fhirResponse = await page.request.get("/api/foundation/health-events/export/fhir");
+  expect(fhirResponse.status()).toBe(200);
+  expect(fhirResponse.headers()["content-type"]).toMatch(/^application\/fhir\+json/);
+  expect(fhirResponse.headers()["content-disposition"]).toMatch(/^attachment; filename="alm-health-events-\d{8}\.fhir\.json"$/);
+  expect(fhirResponse.headers()["cache-control"]).toBe("no-store");
+  expect(fhirResponse.headers()["x-content-type-options"]).toBe("nosniff");
+  const fhirText = await fhirResponse.text();
+  expect(fhirText).not.toMatch(/interpretation|"subject"|"performer"|"low"|"high"/);
+  const fhirBundle = JSON.parse(fhirText) as {
+    resourceType: string; type: string; meta: { tag: Array<{ system: string; code: string }> };
+    entry: Array<{ resource: {
+      resourceType: string; id: string; status: string; effectiveDateTime: string;
+      code: { coding?: Array<{ system: string; code: string }>; text: string };
+      valueQuantity?: { value: number; unit: string }; referenceRange?: Array<{ text: string }>; note?: Array<{ text: string }>;
+    } }>;
+  };
+  expect(fhirBundle.resourceType).toBe("Bundle");
+  expect(fhirBundle.type).toBe("collection");
+  expect(fhirBundle.meta.tag).toEqual([{ system: "https://alm.example/fhir/tag", code: "synthetic" }]);
+  expect(fhirBundle.entry).toHaveLength(5);
+  expect(fhirBundle.entry.every((entry) => entry.resource.resourceType === "Observation" && entry.resource.status === "final")).toBe(true);
+  const fhirRanged = fhirBundle.entry.filter((entry) => entry.resource.referenceRange);
+  expect(fhirRanged).toHaveLength(1);
+  expect(fhirRanged[0].resource).toMatchObject({
+    code: { coding: [{ system: "http://loinc.org", code: "2093-3" }], text: "총콜레스테롤" },
+    effectiveDateTime: "2026-07-28",
+    valueQuantity: { value: 190, unit: "mg/dL" },
+    referenceRange: [{ text: "120-199" }],
+    note: [{ text: "본인이 값을 수정함" }],
+  });
+  // The date-only correction (당화혈색소) carries no value note.
+  expect(fhirBundle.entry.filter((entry) => entry.resource.note)).toHaveLength(1);
+  const [fhirDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "내 기록 내보내기(FHIR)" }).click(),
+  ]);
+  expect(fhirDownload.suggestedFilename()).toMatch(/^alm-health-events-\d{8}\.fhir\.json$/);
 
   const consentId = await page.locator("body").evaluate(async () => {
     const response = await fetch("/api/foundation/consents/document-extraction", { credentials: "include", cache: "no-store" });

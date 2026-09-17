@@ -219,6 +219,27 @@ class NativeTextExtractionProviderTest {
     }
 
     @Test
+    fun `keeps two ranges printed on one row verbatim joined by one space, or nothing when that exceeds forty characters`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines(
+                "검사일 2026-07-28",
+                "혈당 95 mg/dL 70-99 100-200",
+                "총콜레스테롤 188 mg/dL 120-199   200-239",
+                "요산 5.1 mg/dL 1000000000-2000000000 3000000000-4000000000",
+                "AST 22 U/L 15-35 40",
+            ),
+        )
+
+        assertThat(outcome.abstentions).isEmpty()
+        assertThat(outcome.candidates.map { it.value }).containsExactly("95", "188", "5.1", "22")
+        assertThat(outcome.candidates.map { it.unit }).containsExactly("mg/dL", "mg/dL", "mg/dL", "U/L")
+        assertThat(outcome.candidates.map { it.referenceRangeText })
+            .containsExactly("70-99 100-200", "120-199 200-239", null, "15-35")
+        assertThat(outcome.candidates.mapNotNull { it.referenceRangeText })
+            .allMatch { Regex("^[0-9.,\\s\\-~–<>≤≥]{1,40}$").matches(it) }
+    }
+
+    @Test
     fun `caps candidates at one hundred and marks over-long fields unreadable`() {
         val many = (1..105).map { "항목$it $it mg/dL" }
         val outcome = NativeTextExtractionProvider.parse(lines(listOf("검사일 2026-07-28") + many))
