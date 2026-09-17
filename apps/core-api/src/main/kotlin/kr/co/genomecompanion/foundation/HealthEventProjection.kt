@@ -15,7 +15,8 @@ data class HealthEventSource(
 /**
  * One confirmed value as one event. This is a read-model over CURRENT record
  * versions: no reference range, no direction, no judgement; `conceptCode` is
- * a dictionary key, not a meaning.
+ * a dictionary key, not a meaning. `originalValue`/`correctionReason`/`originalObservedOn`
+ * are the person's own correction history (the parser's value and date), nothing derived.
  */
 data class HealthEvent(
     val eventId: UUID,
@@ -29,6 +30,10 @@ data class HealthEvent(
     val verification: String,
     val corrected: Boolean,
     val confirmedAt: Instant,
+    val originalValue: String,
+    val correctionReason: String?,
+    /** The parser's exam date when the person corrected it on review (V8); null when unchanged. */
+    val originalObservedOn: String?,
     val source: HealthEventSource,
 )
 
@@ -54,6 +59,9 @@ object HealthEventProjection {
                     verification = if (previewAvailable) VERIFIED else UNCERTAIN,
                     corrected = record.currentValue != record.originalValue || record.originalObservedOn != null,
                     confirmedAt = record.confirmedAt,
+                    originalValue = record.originalValue,
+                    correctionReason = record.correctionReason,
+                    originalObservedOn = record.originalObservedOn?.toString(),
                     source = HealthEventSource(
                         documentId = record.documentId,
                         page = record.evidencePage,

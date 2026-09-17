@@ -1,5 +1,6 @@
 package kr.co.genomecompanion.foundation
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped
 import kr.co.genomecompanion.documentboundary.BoundedUploadCapability
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -116,20 +117,30 @@ data class DeletionReceipt(
     val rawHealthValuesPresentInAudit: Boolean,
 )
 
-/** One source document of the export: id, exam date when all its events share one, status and abstentions. */
+/** One source document of the export: id, exam date when all its events share one, status, abstentions, event count. */
 data class ExportedDocument(
     val documentId: UUID,
     val observedOn: String?,
     val status: String,
     val abstentions: List<ExtractionAbstention>,
+    val eventCount: Int,
 )
 
-/** The person's own events as one file. Same read-model as GET /health-events; no range, no judgement. */
+/**
+ * A HealthEvent plus the document's own reference-range text. The text appears only here, in the
+ * person's own file, exactly as printed; it is never displayed, compared or interpreted.
+ */
+data class ExportedHealthEvent(
+    @get:JsonUnwrapped val event: HealthEvent,
+    val referenceRangeText: String?,
+)
+
+/** The person's own events as one file. Same read-model as GET /health-events plus the verbatim range text. */
 data class HealthEventExport(
-    val schemaVersion: String = "alm-health-events-export.v1",
+    val schemaVersion: String = "alm-health-events-export.v2",
     val exportedAt: Instant,
     val subjectKind: String = "synthetic",
-    val events: List<HealthEvent>,
+    val events: List<ExportedHealthEvent>,
     val documents: List<ExportedDocument>,
 )
 
@@ -600,21 +611,27 @@ class FoundationLifecycleService(
     @Transactional
     fun exportHealthEvents(principal: FoundationPrincipal): HealthEventExportEnvelope {
         val now = Instant.now(clock)
-        val events = listHealthEvents(principal)
-        val documents = events
-            .map { it.source.documentId }
-            .distinct()
-            .sortedBy { it.toString() }
-            .map { documentId ->
-                val document = requireDocument(principal, documentId)
-                val dates = events.filter { it.source.documentId == documentId }.map { it.observedOn }.distinct()
-                ExportedDocument(
-                    documentId = documentId,
-                    observedOn = dates.singleOrNull(),
-                    status = document.status,
-                    abstentions = repository.findExtractionAbstentions(principal.subjectId, documentId),
-                )
-            }
+        val records = repository.listRecords(principal.subjectId)
+        val rangeByVersion = records.associate { it.recordVersionId to it.referenceRangeText }
+        val events = HealthEventProjection.project(records, repository.listDocumentIdsWithPreview(principal.subjectId))
+            .map { ExportedHealthEvent(event = it, referenceRangeText = rangeByVersion[it.eventId]) }
+        // Every COMPLETED document (even one whose candidates were all excluded) plus every document
+        // that has events, once each, sorted by id text so the file is the same on every call.
+        val documentIds = (
+            repository.listDocumentCompletions(principal.subjectId).map { it.documentId } +
+                events.map { it.event.source.documentId }
+            ).distinct().sortedBy { it.toString() }
+        val documents = documentIds.map { documentId ->
+            val document = requireDocument(principal, documentId)
+            val own = events.filter { it.event.source.documentId == documentId }
+            ExportedDocument(
+                documentId = documentId,
+                observedOn = own.map { it.event.observedOn }.distinct().singleOrNull(),
+                status = document.status,
+                abstentions = repository.findExtractionAbstentions(principal.subjectId, documentId),
+                eventCount = own.size,
+            )
+        }
         // The audit row says that an export happened. It carries no count, no value and no date.
         audit(principal, "HEALTH_EVENTS_EXPORTED", "EXPORT", null, "SUCCESS")
         val filename = "alm-health-events-${LocalDate.ofInstant(now, seoul).format(DateTimeFormatter.BASIC_ISO_DATE)}.json"

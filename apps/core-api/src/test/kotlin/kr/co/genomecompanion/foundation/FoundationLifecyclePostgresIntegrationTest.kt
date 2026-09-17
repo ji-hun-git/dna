@@ -1330,7 +1330,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
         val empty = read(get("/api/foundation/health-events/export"), alice)
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v1"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
             .andExpect(jsonPath("$.events.length()").value(0))
             .andExpect(jsonPath("$.documents.length()").value(0))
             .andReturn().response
@@ -1346,7 +1346,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(header().string("Cache-Control", "no-store"))
             .andExpect(header().string("X-Content-Type-Options", "nosniff"))
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v1"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
             .andExpect(jsonPath("$.subjectKind").value("synthetic"))
             .andExpect(jsonPath("$.exportedAt").isNotEmpty)
             .andExpect(jsonPath("$.events.length()").value(3))
@@ -1356,6 +1356,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.documents[0].observedOn").value("2026-07-28"))
             .andExpect(jsonPath("$.documents[0].status").value("COMPLETED"))
             .andExpect(jsonPath("$.documents[0].abstentions.length()").value(0))
+            .andExpect(jsonPath("$.documents[0].eventCount").value(3))
             .andReturn().response
         assertThat(response.contentType).startsWith("application/json")
         assertThat(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
@@ -1483,6 +1484,80 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(
             jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type LIKE '%120%' OR resource_type LIKE '%199%'", Long::class.java),
         ).isZero()
+    }
+
+    @Test
+    fun exportV2CarriesTheReferenceRangeTextTheCorrectionHistoryAndEveryCompletedDocument() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+
+        // Document 1: one candidate with a printed range; its value is corrected at confirmation.
+        val rangedDocument = requestDocument(alice, consentId, fixturePdf, "export-v2-ranged")
+        uploadDocument(alice, rangedDocument, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$rangedDocument/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            rangedDocument,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64), "120-199"),
+            ),
+        )
+        val ranged = responseJson(
+            read(get("/api/foundation/documents/$rangedDocument/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).single()
+        mutate(
+            post("/api/foundation/candidates/${ranged["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "export-v2-confirm-ranged")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "190", "observedOn" to "2026-07-27"))),
+            alice,
+        ).andExpect(status().isCreated)
+
+        // Document 2: every candidate excluded — COMPLETED with zero events.
+        val excludedDocument = requestDocument(alice, consentId, januaryFixturePdf, "export-v2-excluded")
+        uploadDocument(alice, excludedDocument, januaryFixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$excludedDocument/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(excludedDocument, sourceSha256 = januaryFixtureDigest, candidates = januaryCandidates)
+        responseJson(
+            read(get("/api/foundation/documents/$excludedDocument/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).forEach { candidate ->
+            mutate(
+                post("/api/foundation/candidates/${candidate["candidateId"].asText()}/exclusion")
+                    .header("Idempotency-Key", "export-v2-exclude-${candidate["ordinal"].asInt()}"),
+                alice,
+            ).andExpect(status().isOk)
+        }
+        assertThat(documentStatus(excludedDocument)).isEqualTo("COMPLETED")
+
+        val export = responseJson(
+            read(get("/api/foundation/health-events/export"), alice)
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+                .andExpect(jsonPath("$.events.length()").value(1))
+                .andExpect(jsonPath("$.documents.length()").value(2))
+                .andReturn().response.contentAsByteArray,
+        )
+        val event = export["events"].single()
+        assertThat(event["value"].asText()).isEqualTo("190")
+        assertThat(event["originalValue"].asText()).isEqualTo("188")
+        assertThat(event["observedOn"].asText()).isEqualTo("2026-07-27")
+        assertThat(event["originalObservedOn"].asText()).isEqualTo("2026-07-28")
+        assertThat(event["corrected"].asBoolean()).isTrue()
+        assertThat(event.has("correctionReason")).isFalse()
+        assertThat(event["referenceRangeText"].asText()).isEqualTo("120-199")
+        assertThat(event["source"]["documentId"].asText()).isEqualTo(rangedDocument.toString())
+        val documents = export["documents"].associateBy { it["documentId"].asText() }
+        assertThat(documents.keys).containsExactlyElementsOf(listOf(rangedDocument, excludedDocument).map { it.toString() }.sorted())
+        assertThat(export["documents"].map { it["documentId"].asText() }).isSorted()
+        assertThat(documents.getValue(rangedDocument.toString())["eventCount"].asInt()).isEqualTo(1)
+        assertThat(documents.getValue(rangedDocument.toString())["observedOn"].asText()).isEqualTo("2026-07-27")
+        assertThat(documents.getValue(excludedDocument.toString())["eventCount"].asInt()).isZero()
+        assertThat(documents.getValue(excludedDocument.toString())["status"].asText()).isEqualTo("COMPLETED")
+        assertThat(documents.getValue(excludedDocument.toString()).has("observedOn")).isFalse()
+
+        // The same record is served to the product without the range.
+        val healthEvents = read(get("/api/foundation/health-events"), alice).andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(healthEvents.lowercase()).doesNotContain("reference")
+        assertThat(responseJson(healthEvents.toByteArray()).single()["originalValue"].asText()).isEqualTo("188")
     }
 
     private fun importSyntheticDocument(
