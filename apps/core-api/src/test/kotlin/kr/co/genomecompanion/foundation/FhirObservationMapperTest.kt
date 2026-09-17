@@ -108,24 +108,30 @@ class FhirObservationMapperTest {
 
     @Test
     fun emitsLoincCodingOnlyWhenTheConceptDataAllowsItAndTheUnitIsCanonicalAndKeepsTheResultSheetLabelAsText() {
+        // ldl-cholesterol, fasting-glucose and total-cholesterol are loincExport=true per the audit
+        // (docs/status/2026-09-17/loinc-audit.md § Final values); egfr is the real false-with-a-code
+        // case (62238-1 names a specific formula) rather than a fabricated value for ldl-cholesterol.
         val concepts = mapOf(
             "total-cholesterol" to concept("total-cholesterol", "2093-3", true),
-            "ldl-cholesterol" to concept("ldl-cholesterol", "13457-7", false),
+            "ldl-cholesterol" to concept("ldl-cholesterol", "2089-1", true),
             "glucose" to concept("glucose", null, false),
             "fasting-glucose" to concept("fasting-glucose", "1558-6", true),
+            "egfr" to concept("egfr", "62238-1", false, unit = "mL/min/1.73m²"),
         )
         val ldl = row(label = "LDL 콜레스테롤", value = "110", conceptCode = "ldl-cholesterol", originalLabel = "LDL-C")
         val glucose = row(label = "혈당", value = "95", conceptCode = "glucose", originalLabel = "혈당")
         val fasting = row(label = "공복혈당", value = "92", conceptCode = "fasting-glucose", originalLabel = "FBS")
         val molar = row(label = "총콜레스테롤", value = "4.9", unit = "mmol/L", originalLabel = "TC")
+        val gfr = row(label = "GFR", value = "90", unit = "mL/min/1.73m²", conceptCode = "egfr", originalLabel = "eGFR")
         val old = row(label = "총콜레스테롤", value = "190")
-        val byText = FhirObservationMapper.bundle(listOf(ldl, glucose, fasting, molar, old), concepts, now)
+        val byText = FhirObservationMapper.bundle(listOf(ldl, glucose, fasting, molar, gfr, old), concepts, now)
             .entry!!.map { it.resource }.associateBy { it.code.text }
 
-        assertThat(byText.getValue("LDL-C").code.coding).isNull()
+        assertThat(byText.getValue("LDL-C").code.coding).containsExactly(FhirCoding("http://loinc.org", "2089-1"))
         assertThat(byText.getValue("혈당").code.coding).isNull()
         assertThat(byText.getValue("FBS").code.coding).containsExactly(FhirCoding("http://loinc.org", "1558-6"))
         assertThat(byText.getValue("TC").code.coding).isNull()
+        assertThat(byText.getValue("eGFR").code.coding).isNull()
         // A row stored before V11 has no result-sheet label: the display label is the text.
         assertThat(byText.getValue("총콜레스테롤").code.coding).containsExactly(FhirCoding("http://loinc.org", "2093-3"))
     }

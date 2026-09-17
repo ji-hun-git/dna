@@ -1681,6 +1681,74 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).noneMatch { it.contains("Cholesterol") || it.contains("혈당") }
     }
 
+    /**
+     * The FHIR `loincExport`/unit-guard behaviour end to end through the REAL seeded
+     * `gc_medical_concept` table (V11), not a hand-built map: this is the concept data the audit
+     * (docs/status/2026-09-17/loinc-audit.md § Final values) actually produced.
+     */
+    @Test
+    fun exportsFhirCodingFromTheRealSeededConceptTableForEveryAuditedCase() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "loinc-audit-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "CRP", "0.2", "mg/L", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.20, 0.02), "1".repeat(64)),
+                ExtractedCandidate(2, "T-Bil", "0.8", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64)),
+                ExtractedCandidate(3, "FBS", "92", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.18, 0.20, 0.02), "3".repeat(64)),
+                ExtractedCandidate(4, "LDL-C", "110", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.22, 0.20, 0.02), "4".repeat(64)),
+                ExtractedCandidate(5, "e-GFR", "90", "mL/min/1.73m²", "2026-07-28", 1, EvidenceBox(0.08, 0.26, 0.20, 0.02), "5".repeat(64)),
+                ExtractedCandidate(6, "Vitamin D", "42", "ng/mL", "2026-07-28", 1, EvidenceBox(0.08, 0.30, 0.20, 0.02), "6".repeat(64)),
+                ExtractedCandidate(7, "Waist", "82", "cm", "2026-07-28", 1, EvidenceBox(0.08, 0.34, 0.20, 0.02), "7".repeat(64)),
+                ExtractedCandidate(8, "혈당", "95", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.38, 0.20, 0.02), "8".repeat(64)),
+                ExtractedCandidate(9, "Cholesterol", "4.9", "mmol/L", "2026-07-28", 1, EvidenceBox(0.08, 0.42, 0.20, 0.02), "9".repeat(64)),
+            ),
+        )
+        val candidates = responseJson(
+            read(get("/api/foundation/documents/$documentId/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).toList()
+        confirmEveryCandidate(alice, candidates, "loinc-audit")
+
+        val fhir = responseJson(
+            read(get("/api/foundation/health-events/export/fhir"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )["entry"].map { it["resource"] }.associateBy { it["code"]["text"].asText() }
+        assertThat(fhir.keys).containsExactlyInAnyOrder(
+            "CRP", "T-Bil", "FBS", "LDL-C", "e-GFR", "Vitamin D", "Waist", "혈당", "Cholesterol",
+        )
+
+        // Codes the audit found no more specific than the label: coding present with the exact audited code.
+        assertThat(fhir.getValue("CRP")["code"]["coding"].single()["code"].asText()).isEqualTo("1988-5")
+        assertThat(fhir.getValue("T-Bil")["code"]["coding"].single()["code"].asText()).isEqualTo("1975-2")
+        assertThat(fhir.getValue("FBS")["code"]["coding"].single()["code"].asText()).isEqualTo("1558-6")
+        assertThat(fhir.getValue("LDL-C")["code"]["coding"].single()["code"].asText()).isEqualTo("2089-1")
+
+        // Codes the audit found more specific than the label (method/site/formula), or no concept
+        // code at all, or a value not in the concept's canonical unit: coding absent.
+        assertThat(fhir.getValue("e-GFR")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("Vitamin D")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("Waist")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("혈당")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("Cholesterol")["code"].has("coding")).isFalse()
+
+        // category: omitted only for the body-measurement concept, laboratory for every coded/uncoded lab item.
+        assertThat(fhir.getValue("Waist").has("category")).isFalse()
+        assertThat(fhir.getValue("CRP")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("T-Bil")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("FBS")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("LDL-C")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("e-GFR")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("Vitamin D")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("혈당")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("Cholesterol")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+
+        // code.text is each row's own sheet label (verified above by keying the map on code.text
+        // itself): none of the normalized display labels ("총빌리루빈", "공복혈당" ...) appear instead.
+        assertThat(fhir.keys).doesNotContain("총빌리루빈", "공복혈당", "LDL 콜레스테롤", "eGFR", "비타민 D", "허리둘레", "총콜레스테롤")
+    }
+
     @Test
     fun existingRowsKeepANullResultSheetLabel() {
         assertThat(
