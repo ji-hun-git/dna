@@ -342,6 +342,15 @@ class FoundationLifecycleController(
             .cacheControlNoStore()
             .body(service.getChangeSummary(request.foundationPrincipal()))
 
+    @GetMapping("/health-events/export", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun exportHealthEvents(request: HttpServletRequest): ResponseEntity<HealthEventExport> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Content-Type-Options", "nosniff")
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${service.exportFilename()}\"")
+            .body(service.exportHealthEvents(request.foundationPrincipal()))
+
     @GetMapping("/records/{recordId}")
     fun getRecord(
         request: HttpServletRequest,

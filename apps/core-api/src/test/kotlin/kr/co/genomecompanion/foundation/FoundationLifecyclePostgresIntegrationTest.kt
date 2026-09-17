@@ -1247,6 +1247,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         read(get("/api/foundation/changes"), alice)
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.latestDocument.eventCount").value(3))
+        read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.events.length()").value(3))
 
         // PROJECT purposes: the prefix and shape are validated; a granted one is listed after the fixed three.
         mutate(post("/api/foundation/consents/STUDY-1").header("Idempotency-Key", "project-no-prefix"), alice)
@@ -1305,6 +1308,71 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value("COMPLETED"))
             .andExpect(jsonPath("$.rawHealthValuesPresentInAudit").value(false))
         assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isZero()
+    }
+
+    @Test
+    fun exportsTheOwnersHealthEventsAsAJsonAttachmentWithoutRangesAndAuditsNoValue() {
+        mockMvc.perform(get("/api/foundation/health-events/export")).andExpect(status().isUnauthorized)
+        val alice = login("synthetic-alice")
+        val bob = login("synthetic-bob")
+
+        val empty = read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v1"))
+            .andExpect(jsonPath("$.events.length()").value(0))
+            .andExpect(jsonPath("$.documents.length()").value(0))
+            .andReturn().response
+        assertThat(empty.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .matches("attachment; filename=\"alm-health-events-\\d{8}\\.json\"")
+
+        val consentId = grantConsent(alice)
+        val candidates = importSyntheticDocument(alice, consentId, fixturePdf, fixtureDigest, "export")
+        confirmEveryCandidate(alice, candidates, "export")
+        val documentId = candidates[0]["documentId"].asText()
+
+        val response = read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isOk)
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v1"))
+            .andExpect(jsonPath("$.subjectKind").value("synthetic"))
+            .andExpect(jsonPath("$.exportedAt").isNotEmpty)
+            .andExpect(jsonPath("$.events.length()").value(3))
+            .andExpect(jsonPath("$.events[0].source.documentId").value(documentId))
+            .andExpect(jsonPath("$.documents.length()").value(1))
+            .andExpect(jsonPath("$.documents[0].documentId").value(documentId))
+            .andExpect(jsonPath("$.documents[0].observedOn").value("2026-07-28"))
+            .andExpect(jsonPath("$.documents[0].status").value("COMPLETED"))
+            .andExpect(jsonPath("$.documents[0].abstentions.length()").value(0))
+            .andReturn().response
+        assertThat(response.contentType).startsWith("application/json")
+        assertThat(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .matches("attachment; filename=\"alm-health-events-\\d{8}\\.json\"")
+        assertThat(response.contentAsString).doesNotContain("referenceRange", "trend", "direction", "normal", "risk")
+        assertThat(responseJson(response.contentAsByteArray)["events"].map { it["value"].asText() })
+            .containsExactlyInAnyOrder("188", "5.2", "42")
+
+        read(get("/api/foundation/health-events/export"), bob)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.events.length()").value(0))
+            .andExpect(jsonPath("$.documents.length()").value(0))
+
+        assertThat(
+            jdbc.queryForObject(
+                """
+                SELECT COUNT(*) FROM gc_audit_event
+                WHERE event_type = 'HEALTH_EVENTS_EXPORTED' AND resource_type = 'EXPORT'
+                  AND resource_id IS NULL AND purpose_code IS NULL AND outcome = 'SUCCESS'
+                """.trimIndent(),
+                Long::class.java,
+            ),
+        ).isEqualTo(3L)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM gc_audit_event WHERE event_type LIKE '%188%' OR resource_type LIKE '%mg/dL%' OR event_type LIKE '%3%'",
+                Long::class.java,
+            ),
+        ).isZero()
     }
 
     private fun importSyntheticDocument(

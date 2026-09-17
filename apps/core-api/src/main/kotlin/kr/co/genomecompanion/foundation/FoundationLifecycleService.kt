@@ -11,6 +11,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 
@@ -113,6 +114,23 @@ data class DeletionReceipt(
     val status: String,
     val auditEventTypes: List<String>,
     val rawHealthValuesPresentInAudit: Boolean,
+)
+
+/** One source document of the export: id, exam date when all its events share one, status and abstentions. */
+data class ExportedDocument(
+    val documentId: UUID,
+    val observedOn: String?,
+    val status: String,
+    val abstentions: List<ExtractionAbstention>,
+)
+
+/** The person's own events as one file. Same read-model as GET /health-events; no range, no judgement. */
+data class HealthEventExport(
+    val schemaVersion: String = "alm-health-events-export.v1",
+    val exportedAt: Instant,
+    val subjectKind: String = "synthetic",
+    val events: List<HealthEvent>,
+    val documents: List<ExportedDocument>,
 )
 
 
@@ -568,6 +586,31 @@ class FoundationLifecycleService(
             repository.listRecords(principal.subjectId),
             repository.listDocumentCompletions(principal.subjectId),
         )
+
+    @Transactional
+    fun exportHealthEvents(principal: FoundationPrincipal): HealthEventExport {
+        val events = listHealthEvents(principal)
+        val documents = events
+            .map { it.source.documentId }
+            .distinct()
+            .sortedBy { it.toString() }
+            .map { documentId ->
+                val document = requireDocument(principal, documentId)
+                val dates = events.filter { it.source.documentId == documentId }.map { it.observedOn }.distinct()
+                ExportedDocument(
+                    documentId = documentId,
+                    observedOn = dates.singleOrNull(),
+                    status = document.status,
+                    abstentions = repository.findExtractionAbstentions(principal.subjectId, documentId),
+                )
+            }
+        // The audit row says that an export happened. It carries no count, no value and no date.
+        audit(principal, "HEALTH_EVENTS_EXPORTED", "EXPORT", null, "SUCCESS")
+        return HealthEventExport(exportedAt = Instant.now(clock), events = events, documents = documents)
+    }
+
+    fun exportFilename(): String =
+        "alm-health-events-${LocalDate.ofInstant(Instant.now(clock), seoul).format(DateTimeFormatter.BASIC_ISO_DATE)}.json"
 
     @Transactional
     fun correctRecord(
