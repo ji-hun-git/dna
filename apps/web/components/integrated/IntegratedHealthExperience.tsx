@@ -13,7 +13,7 @@ import {
   type FoundationRecord,
   type FoundationSession,
 } from "@/lib/foundation/client";
-import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
+import { describeFoundationError, describeRefusedBootstrap, foundationShellState, type RefusedBootstrap } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
 import {
   labelConsentStatus,
@@ -90,6 +90,7 @@ export function IntegratedHealthExperience() {
   const [savedRecords, setSavedRecords] = useState<FoundationRecord[]>([]);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [bootstrapRefusal, setBootstrapRefusal] = useState<RefusedBootstrap>();
   const [pollingPaused, setPollingPaused] = useState(false);
   const [pollingNonce, setPollingNonce] = useState(0);
 
@@ -117,6 +118,7 @@ export function IntegratedHealthExperience() {
   const initialize = useCallback(async () => {
     setShellState("INITIALIZING_SESSION");
     setErrorMessage("");
+    setBootstrapRefusal(undefined);
     try {
       const restored = await client.getSession();
       setSession(restored);
@@ -192,8 +194,19 @@ export function IntegratedHealthExperience() {
   const signIn = async () => {
     setBusy(true);
     setErrorMessage("");
+    setBootstrapRefusal(undefined);
     try {
-      const issued = await client.bootstrapDemo();
+      let issued;
+      try {
+        issued = await client.bootstrapDemo();
+      } catch (error) {
+        // The server refused the bootstrap itself: nothing was issued, nothing to restore.
+        // Stay on the entry screen and say why and what to do next (PR #5 review F-3).
+        const refusal = describeRefusedBootstrap(error);
+        if (!refusal) throw error;
+        setBootstrapRefusal(refusal);
+        return;
+      }
       setSession(issued);
       await loadProductTruth();
       setShellState("AUTHENTICATED");
@@ -369,6 +382,12 @@ export function IntegratedHealthExperience() {
           {shellState === "SESSION_EXPIRED" && <strong role="status">로그인 시간이 끝났어요.</strong>}
           <button className="gc-button gc-button--primary" type="button" onClick={() => void signIn()} disabled={busy}>{busy ? "체험을 준비하고 있어요" : "체험 시작"}</button>
           <p className="gc-demo-entry__limit">이 브라우저의 체험 시간 동안 기록을 이어서 볼 수 있어요. 시간이 끝나거나 쿠키를 지우면 이전 체험에 다시 들어갈 수 없어요.</p>
+          {bootstrapRefusal && (
+            <div className="gc-integrated-error" role="alert">
+              <p>{bootstrapRefusal.message}</p>
+              <p>{bootstrapRefusal.nextAction}</p>
+            </div>
+          )}
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
         </section>
       </main>

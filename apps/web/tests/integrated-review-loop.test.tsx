@@ -136,6 +136,30 @@ it("does not bootstrap twice when the first bootstrap succeeds but its following
   expect(bootstrap).toHaveBeenCalledTimes(1);
 });
 
+it.each([
+  [429, "rate_limited", "체험 시작 요청이 너무 많아요.", "1분쯤 뒤에 체험 시작을 다시 눌러 주세요."],
+  [403, "demo_capacity_exhausted", "체험 공간이 가득 찼어요.", "운영자에게 알려 주세요."],
+  [403, "demo_bootstrap_disabled", "이 환경에서는 체험 시작이 열려 있지 않아요.", "체험 시작을 열어 달라고 요청해 주세요."],
+  [403, "origin_denied", "이 주소에서는 체험을 시작할 수 없어요.", "안내받은 주소로 다시 열어 주세요."],
+] as const)("keeps a refused bootstrap (%i %s) on the entry screen with its own reason and next action", async (status, code, message, nextAction) => {
+  const bootstrap = vi.fn(() => HttpResponse.json({ code }, { status }));
+  server.use(
+    http.get("/api/foundation/session", () => HttpResponse.json({ code: "session_required" }, { status: 401 })),
+    http.post("/api/foundation/demo-session", bootstrap),
+  );
+  render(<IntegratedHealthExperience />);
+  await userEvent.click(await screen.findByRole("button", { name: "체험 시작" }));
+
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent(message);
+  expect(alert).toHaveTextContent(nextAction);
+  // Not a failed restoration: no "restore failed" heading, no re-check action, and the entry stays.
+  expect(screen.queryByRole("heading", { name: "체험 상태를 불러오지 못했어요" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "체험 상태 다시 확인" })).toBeNull();
+  expect(screen.getByRole("button", { name: "체험 시작" })).toBeEnabled();
+  expect(bootstrap).toHaveBeenCalledTimes(1);
+});
+
 it("offers a new demo only after the server reports an expired session", async () => {
   server.use(http.get("/api/foundation/session", () =>
     HttpResponse.json({ code: "session_expired" }, { status: 401 })));
