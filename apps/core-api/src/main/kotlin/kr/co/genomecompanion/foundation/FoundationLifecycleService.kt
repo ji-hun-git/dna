@@ -479,6 +479,13 @@ class FoundationLifecycleService(
             repository.listDocumentIdsWithPreview(principal.subjectId),
         )
 
+    @Transactional(readOnly = true)
+    fun getChangeSummary(principal: FoundationPrincipal): ChangeSummary =
+        ChangeSummaryProjection.project(
+            repository.listRecords(principal.subjectId),
+            repository.listDocumentCompletions(principal.subjectId),
+        )
+
     @Transactional
     fun correctRecord(
         principal: FoundationPrincipal,

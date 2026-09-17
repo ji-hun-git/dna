@@ -1133,6 +1133,23 @@ class FoundationRepository(
             subjectId,
         ).toSet()
 
+    /** Documents of this owner that the server has marked COMPLETED (a completion instant exists). */
+    fun listDocumentCompletions(subjectId: String): List<DocumentCompletionRow> =
+        jdbc.query(
+            """
+            SELECT document_id, completed_at
+            FROM gc_document
+            WHERE subject_id = ? AND completed_at IS NOT NULL
+            """.trimIndent(),
+            RowMapper { result, _ ->
+                DocumentCompletionRow(
+                    documentId = result.getObject("document_id", UUID::class.java),
+                    completedAt = result.getObject("completed_at", OffsetDateTime::class.java).toInstant(),
+                )
+            },
+            subjectId,
+        )
+
     fun excludeCandidate(subjectId: String, candidateId: UUID, now: Instant): Boolean {
         val updated = jdbc.update(
             """

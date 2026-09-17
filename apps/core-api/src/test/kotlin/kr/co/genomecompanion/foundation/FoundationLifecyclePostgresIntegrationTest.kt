@@ -1090,6 +1090,62 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).isEqualTo(1L)
     }
 
+    @Test
+    fun changesListTheLatestDocumentValuesBesideThePreviousValueOfTheSameConcept() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+
+        read(get("/api/foundation/changes"), alice)
+            .andExpect(status().isOk)
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(jsonPath("$.latestDocument").doesNotExist())
+            .andExpect(jsonPath("$.items.length()").value(0))
+            .andExpect(jsonPath("$.newConcepts.length()").value(0))
+            .andExpect(jsonPath("$.unchangedCount").value(0))
+
+        val january = importSyntheticDocument(alice, consentId, januaryFixturePdf, januaryFixtureDigest, "changes-january")
+        confirmEveryCandidate(alice, january, "changes-january")
+        val firstOnly = responseJson(
+            read(get("/api/foundation/changes"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(firstOnly["latestDocument"]["documentId"].asText()).isEqualTo(january[0]["documentId"].asText())
+        assertThat(firstOnly["latestDocument"]["observedOn"].asText()).isEqualTo("2026-01-15")
+        assertThat(firstOnly["latestDocument"]["eventCount"].asInt()).isEqualTo(3)
+        assertThat(firstOnly["items"].map { it.has("previous") }).containsExactly(false, false, false)
+        assertThat(firstOnly["newConcepts"].map(JsonNode::asText)).containsExactlyInAnyOrder("총콜레스테롤", "당화혈색소", "비타민 D")
+
+        val july = importSyntheticDocument(alice, consentId, fixturePdf, fixtureDigest, "changes-july")
+        confirmEveryCandidate(alice, july, "changes-july")
+
+        val summary = responseJson(
+            read(get("/api/foundation/changes"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(summary["latestDocument"]["documentId"].asText()).isEqualTo(july[0]["documentId"].asText())
+        assertThat(summary["latestDocument"]["observedOn"].asText()).isEqualTo("2026-07-28")
+        assertThat(summary["latestDocument"]["eventCount"].asInt()).isEqualTo(3)
+        val byConcept = summary["items"].associateBy { it["concept"].asText() }
+        assertThat(byConcept.keys).containsExactlyInAnyOrder("총콜레스테롤", "당화혈색소", "비타민 D")
+        assertThat(byConcept.getValue("총콜레스테롤")["conceptCode"].asText()).isEqualTo("total-cholesterol")
+        assertThat(byConcept.getValue("총콜레스테롤")["unit"].asText()).isEqualTo("mg/dL")
+        assertThat(byConcept.getValue("총콜레스테롤")["latest"]["value"].asText()).isEqualTo("188")
+        assertThat(byConcept.getValue("총콜레스테롤")["latest"]["observedOn"].asText()).isEqualTo("2026-07-28")
+        assertThat(byConcept.getValue("총콜레스테롤")["previous"]["value"].asText()).isEqualTo("194")
+        assertThat(byConcept.getValue("총콜레스테롤")["previous"]["observedOn"].asText()).isEqualTo("2026-01-15")
+        assertThat(byConcept.getValue("당화혈색소")["previous"]["value"].asText()).isEqualTo("5.4")
+        assertThat(byConcept.getValue("비타민 D")["previous"]["value"].asText()).isEqualTo("45")
+        assertThat(summary["newConcepts"].size()).isZero()
+        assertThat(summary["unchangedCount"].asInt()).isZero()
+        assertThat(summary.toString()).doesNotContain("referenceRange", "difference", "direction", "trend")
+
+        val bob = login("synthetic-bob")
+        read(get("/api/foundation/changes"), bob)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.latestDocument").doesNotExist())
+            .andExpect(jsonPath("$.items.length()").value(0))
+
+        mockMvc.perform(get("/api/foundation/changes")).andExpect(status().isUnauthorized)
+    }
+
     private fun importSyntheticDocument(
         client: TestClient,
         consentId: UUID,
