@@ -49,7 +49,10 @@
 .leader { stroke: var(--hist-ink); stroke-width: 1; stroke-dasharray: 2 2; }
 .anchor { cursor: pointer; }
 .anchor rect[data-hit] { fill: transparent; }
-.anchor rect[data-anchor] { fill: var(--hist-card); stroke: currentColor; stroke-width: 2; }
+/* Anchors are black squares (wave4-mockup-decision.md), not the series identity colour: some
+   series colours fall under the 3:1 graphical-object contrast the anchor's own outline needs
+   against the card background, so the outline always uses --hist-ink. */
+.anchor rect[data-anchor] { fill: var(--hist-card); stroke: var(--hist-ink); stroke-width: 2; }
 .anchor[aria-pressed="true"] rect[data-anchor] { fill: var(--hist-fill-accent); stroke: var(--hist-ink); }
 .anchor:focus-visible { outline: none; }
 .anchor:focus-visible rect[data-anchor] { stroke: var(--gc-color-focus-ring); stroke-width: 3; }
