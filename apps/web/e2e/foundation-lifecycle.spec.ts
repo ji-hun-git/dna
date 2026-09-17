@@ -231,6 +231,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
 
   // Wave 3 (a): the printed range is stored, never shown. Not on the review screen, not on the summary.
   await expect(page.getByText("120-199")).toHaveCount(0);
+  expect(await page.content()).not.toContain("120-199");
 
   // The first document alone must feed both destinations; no second/static set can mask a gap.
   // Keep the outage active until recovery: development StrictMode may issue
@@ -356,6 +357,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     .toHaveText("두 값의 차이: +0.2 % (+3.8%)");
   await expect(page.getByTestId("change-item").filter({ hasText: "비타민 D" }).locator("..").getByTestId("change-delta")).toHaveCount(0);
   await expect(page.getByText("120-199")).toHaveCount(0);
+  expect(await page.content()).not.toContain("120-199");
   expect(await page.locator("main").innerText()).not.toMatch(/→|↑|↓|증가|감소|상승|하락/);
   const changes = await browserApi(page, "/api/foundation/changes");
   expect(changes.status).toBe(200);
@@ -365,6 +367,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.goto("/records");
   await expect(page.getByTestId("durable-record")).toHaveCount(5);
   await expect(page.getByText("120-199")).toHaveCount(0);
+  expect(await page.content()).not.toContain("120-199");
 
   await page.goto("/my-data");
   const figure = page.getByRole("figure", { name: "나의 데이터: 한 칸이 하나의 기록" });
@@ -377,6 +380,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(drawer).toBeVisible();
   await expect(drawer.getByRole("img")).toBeVisible();
   await expect(page.getByText("120-199")).toHaveCount(0);
+  expect(await page.content()).not.toContain("120-199");
   // The July 총콜레스테롤 was corrected at review (188 → 190): the drawer lists the original value only.
   await page.getByRole("button", { name: "근거 닫기" }).click();
   await figure.getByRole("button", { name: "총콜레스테롤 190 mg/dL, 2026. 7. 28." }).click();
@@ -384,6 +388,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(correctedDrawer).toContainText("수정 이력");
   await expect(correctedDrawer).toContainText("원래 값 188 mg/dL");
   await expect(correctedDrawer).not.toContainText("120-199");
+  expect(await page.content()).not.toContain("120-199");
   await page.getByRole("button", { name: "근거 닫기" }).click();
   // The date-corrected 당화혈색소 lists the parser's date only.
   await figure.getByRole("button", { name: "당화혈색소 5.2 %, 2026. 7. 27." }).click();

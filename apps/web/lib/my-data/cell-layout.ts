@@ -65,6 +65,45 @@ function stateFor(eventId: string, options: LayoutOptions): CellState {
 }
 
 /**
+ * Dates close together (e.g. one day apart on a months-wide axis) would otherwise map to
+ * x positions closer than one cell width, so their rects overlap and steal pointer/click
+ * events from each other. Given day-ordered target centres and a minimum centre-to-centre
+ * `step`, returns centres that keep that order, respect `[minX, maxX]`, and are spaced by at
+ * least `step` whenever the available span (`maxX - minX`) can fit that spacing.
+ *
+ * When it cannot fit (more dates than the width has room for at minimum spacing), the
+ * degrade rule is: spread all of them evenly across the full available span, in date order,
+ * inside the canvas — never negative, never clamped into an undefined pile-up. Pure and O(n):
+ * two linear passes, no loop that depends on convergence.
+ */
+export function declumpPositions(targets: number[], step: number, minX: number, maxX: number): number[] {
+  const count = targets.length;
+  if (count === 0) return [];
+  if (count === 1) return [Math.min(Math.max(targets[0], minX), maxX)];
+
+  const availableSpan = maxX - minX;
+  const requiredSpan = (count - 1) * step;
+  if (requiredSpan > availableSpan) {
+    return targets.map((_, index) => minX + (index * availableSpan) / (count - 1));
+  }
+
+  // Forward pass: the smallest sequence that is >= each target, >= minX, and spaced by `step`.
+  const forward: number[] = [Math.max(targets[0], minX)];
+  for (let index = 1; index < count; index++) {
+    forward.push(Math.max(targets[index], forward[index - 1] + step));
+  }
+
+  // Backward pass: pull the sequence back under maxX without breaking the minimum spacing.
+  // Because requiredSpan <= availableSpan was checked above, this always stays >= minX too.
+  const resolved = forward.slice();
+  resolved[count - 1] = Math.min(resolved[count - 1], maxX);
+  for (let index = count - 2; index >= 0; index--) {
+    resolved[index] = Math.min(resolved[index], resolved[index + 1] - step);
+  }
+  return resolved;
+}
+
+/**
  * One rect per event. Same-day events stack upward in concept order so the
  * picture is stable across renders. Nothing here reads the value as a number.
  */
@@ -84,29 +123,11 @@ export function layoutCells(events: HealthEvent[], options: LayoutOptions) {
   }
   const height = options.padding * 2 + tallest * step;
   const baseline = height - options.padding - options.cellSize;
-  // Dates close together (e.g. one day apart on a months-wide axis) would otherwise map to
-  // x positions closer than one cell width, so their rects overlap and steal pointer/click
-  // events from each other. Keep the day order and spread any that are too close, then pull
-  // the right edge back inside the padded width without re-introducing overlap.
-  const days = [...byDay.keys()];
-  const orderedDays = [...days].sort((left, right) => scale.x(left) - scale.x(right));
-  const resolvedX = new Map<string, number>();
-  let previousX: number | undefined;
-  for (const day of orderedDays) {
-    let x = scale.x(day);
-    if (previousX !== undefined && x - previousX < step) x = previousX + step;
-    resolvedX.set(day, x);
-    previousX = x;
-  }
+  const orderedDays = [...byDay.keys()].sort((left, right) => scale.x(left) - scale.x(right));
+  const minX = options.padding + options.cellSize / 2;
   const maxX = options.width - options.padding - options.cellSize / 2;
-  let nextX: number | undefined;
-  for (const day of [...orderedDays].reverse()) {
-    let x = resolvedX.get(day)!;
-    if (x > maxX) x = maxX;
-    if (nextX !== undefined && nextX - x < step) x = nextX - step;
-    resolvedX.set(day, x);
-    nextX = x;
-  }
+  const declumped = declumpPositions(orderedDays.map((day) => scale.x(day)), step, minX, maxX);
+  const resolvedX = new Map<string, number>(orderedDays.map((day, index) => [day, declumped[index]]));
   const cells: CellLayout[] = [];
   for (const [observedOn, stack] of byDay) {
     stack.forEach((event, index) => {
