@@ -1158,6 +1158,86 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun seriesListCurrentValuesInTimeOrderWithThreeComputedNumbersAndNoRangeText() {
+        mockMvc.perform(get("/api/foundation/series")).andExpect(status().isUnauthorized)
+        val alice = login("synthetic-alice")
+        val bob = login("synthetic-bob")
+        val consentId = grantConsent(alice)
+
+        read(get("/api/foundation/series"), alice)
+            .andExpect(status().isOk)
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(jsonPath("$.series.length()").value(0))
+
+        // July is uploaded first, January second: the series is ordered by exam date, not upload order.
+        val july = importJulyWithRange(alice, consentId, "series-july")
+        confirmEveryCandidate(alice, july, "series-july")
+        val january = importSyntheticDocument(alice, consentId, januaryFixturePdf, januaryFixtureDigest, "series-january")
+        confirmEveryCandidate(alice, january, "series-january")
+
+        val records = responseJson(
+            read(get("/api/foundation/records"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).toList()
+        val julyCholesterol = records.single { it["label"].asText() == "총콜레스테롤" && it["observedOn"].asText() == "2026-07-28" }
+        mutate(
+            post("/api/foundation/records/${julyCholesterol["recordId"].asText()}/corrections")
+                .header("Idempotency-Key", "series-correction-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "190", "reason" to "합성 원문 재확인"))),
+            alice,
+        ).andExpect(status().isOk)
+
+        val response = read(get("/api/foundation/series"), alice)
+            .andExpect(status().isOk)
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andReturn().response
+        val series = responseJson(response.contentAsByteArray)["series"].toList()
+        assertThat(series.map { it["concept"].asText() }).containsExactly("당화혈색소", "비타민 D", "총콜레스테롤")
+        assertThat(series.map { it["unit"].asText() }).containsExactly("%", "ng/mL", "mg/dL")
+        assertThat(series.map { it["conceptCode"].asText() }).containsExactly("hba1c", "vitamin-d", "total-cholesterol")
+
+        val cholesterol = series[2]
+        // CURRENT only: the superseded 188 is gone, the corrected 190 is the point.
+        assertThat(cholesterol["points"].map { it["value"].asText() }).containsExactly("194", "190")
+        assertThat(cholesterol["points"].map { it["observedOn"].asText() }).containsExactly("2026-01-15", "2026-07-28")
+        assertThat(cholesterol["points"][0]["documentId"].asText()).isEqualTo(january[0]["documentId"].asText())
+        assertThat(cholesterol["points"][1]["documentId"].asText()).isEqualTo(july[0]["documentId"].asText())
+        assertThat(cholesterol["points"][0].fieldNames().asSequence().toList())
+            .containsExactlyInAnyOrder("eventId", "value", "observedOn", "documentId")
+        // 194 days apart: -4, -4/194 = -2.1 %, -4/194×30 = -0.6.
+        assertThat(cholesterol["derived"]["lastDifference"]["absolute"].asText()).isEqualTo("-4")
+        assertThat(cholesterol["derived"]["lastDifference"]["percent"].asText()).isEqualTo("-2.1")
+        assertThat(cholesterol["derived"]["per30Days"].asText()).isEqualTo("-0.6")
+        assertThat(cholesterol["derived"].has("meanOfLast3")).isFalse()
+
+        val hba1c = series[0]
+        assertThat(hba1c["derived"]["lastDifference"]["absolute"].asText()).isEqualTo("-0.2")
+        assertThat(hba1c["derived"]["lastDifference"].has("percent")).isFalse()
+        assertThat(hba1c["derived"]["per30Days"].asText()).isEqualTo("-0.03")
+
+        val vitaminD = series[1]
+        assertThat(vitaminD["derived"]["lastDifference"]["absolute"].asText()).isEqualTo("-3")
+        assertThat(vitaminD["derived"]["lastDifference"]["percent"].asText()).isEqualTo("-6.7")
+        assertThat(vitaminD["derived"]["per30Days"].asText()).isEqualTo("-0.5")
+
+        // Every point is a CURRENT HealthEvent of the same owner.
+        val eventIds = responseJson(
+            read(get("/api/foundation/health-events"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).map { it["eventId"].asText() }
+        assertThat(series.flatMap { item -> item["points"].map { it["eventId"].asText() } })
+            .containsExactlyInAnyOrderElementsOf(eventIds)
+
+        // The printed range is stored (export only) and appears nowhere in this response.
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_health_record_version WHERE reference_range_text = '120-199'", Long::class.java))
+            .isGreaterThan(0L)
+        assertThat(response.contentAsString.lowercase()).doesNotContain("reference", "120-199", "direction", "trend", "slope", "forecast")
+
+        read(get("/api/foundation/series"), bob)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.series.length()").value(0))
+    }
+
+    @Test
     fun consentIdempotencyKeysAreScopedPerPurposeAndRejectCrossPurposeReuse() {
         val alice = login("synthetic-alice")
 
@@ -1616,6 +1696,25 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val healthEvents = read(get("/api/foundation/health-events"), alice).andExpect(status().isOk).andReturn().response.contentAsString
         assertThat(healthEvents.lowercase()).doesNotContain("reference")
         assertThat(responseJson(healthEvents.toByteArray()).map { it["originalValue"].asText() }).contains("188")
+    }
+
+    /** The July document whose first row prints the range `120-199` (stored, exported only). */
+    private fun importJulyWithRange(client: TestClient, consentId: UUID, keyPrefix: String): List<JsonNode> {
+        val documentId = requestDocument(client, consentId, fixturePdf, "$keyPrefix-document-request")
+        uploadDocument(client, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), client).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64), "120-199"),
+                ExtractedCandidate(2, "HbA1c", "5.2", "%", "2026-07-28", 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64), null),
+                ExtractedCandidate(3, "Vitamin D", "42", "ng/mL", "2026-07-28", 1, EvidenceBox(0.08, 0.18, 0.25, 0.02), "3".repeat(64), null),
+            ),
+        )
+        return responseJson(
+            read(get("/api/foundation/documents/$documentId/candidates"), client)
+                .andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).toList()
     }
 
     private fun importSyntheticDocument(

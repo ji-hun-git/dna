@@ -342,6 +342,12 @@ class FoundationLifecycleController(
             .cacheControlNoStore()
             .body(service.getChangeSummary(request.foundationPrincipal()))
 
+    @GetMapping("/series")
+    fun getSeries(request: HttpServletRequest): ResponseEntity<SeriesResponse> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(service.getSeries(request.foundationPrincipal()))
+
     @GetMapping("/health-events/export", produces = [MediaType.APPLICATION_JSON_VALUE])
     fun exportHealthEvents(request: HttpServletRequest): ResponseEntity<HealthEventExport> {
         val envelope = service.exportHealthEvents(request.foundationPrincipal())

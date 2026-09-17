@@ -610,6 +610,11 @@ class FoundationLifecycleService(
             repository.listDocumentCompletions(principal.subjectId),
         )
 
+    /** The person's CURRENT values per item and unit in exam-date order. Read-only: no audit row, no range text. */
+    @Transactional(readOnly = true)
+    fun getSeries(principal: FoundationPrincipal): SeriesResponse =
+        SeriesProjection.project(repository.listRecords(principal.subjectId))
+
     @Transactional
     fun exportHealthEvents(principal: FoundationPrincipal): HealthEventExportEnvelope {
         val now = Instant.now(clock)
