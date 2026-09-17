@@ -19,16 +19,23 @@ export type HistoryLayoutOptions = {
   minGap: number;
   /** Minimum distance between two labelled ticks. */
   minLabelGap: number;
+  /**
+   * The shared x domain (ISO dates), the same for every series on the page (wave4-mockup-decision.md:
+   * "the same gradient for every series", which requires the same date to fall at the same x
+   * everywhere). Omit to fall back to this series' own earliest/latest exam date.
+   */
+  domainStart?: string;
+  domainEnd?: string;
 };
 
-export const HISTORY_LAYOUT_DEFAULTS: Omit<HistoryLayoutOptions, "width"> = {
+export const HISTORY_LAYOUT_DEFAULTS: Omit<HistoryLayoutOptions, "width" | "domainStart" | "domainEnd"> = {
   height: 180,
   paddingX: 28,
   paddingY: 24,
   anchorSize: 9,
   hitSize: 24,
   minGap: 26,
-  minLabelGap: 72,
+  minLabelGap: 96,
 };
 
 export type HistoryAnchor = { eventId: string; x: number; y: number; value: string; observedOn: string };
@@ -63,12 +70,15 @@ function dayNumber(date: string) {
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
 export function layoutHistory(points: readonly HistoryPointInput[], options: HistoryLayoutOptions): HistoryLayout {
-  const numeric = points
-    .map((point, index) => ({ point, index, number: parseHistoryValue(point.value) }))
-    .filter((entry): entry is { point: HistoryPointInput; index: number; number: number } => entry.number !== null)
-    // Time order; equal dates keep a stable, input-independent order by event id.
-    .sort((a, b) => a.point.observedOn.localeCompare(b.point.observedOn) || a.point.eventId.localeCompare(b.point.eventId));
-  if (numeric.length < 2) return NOTHING;
+  if (points.length < 2) return NOTHING;
+  const parsed = points.map((point, index) => ({ point, index, number: parseHistoryValue(point.value) }));
+  // Any non-numeric value anywhere in the series: no plot at all (table only), never a line
+  // silently drawn across the gap where that value should have been.
+  if (parsed.some((entry) => entry.number === null)) return NOTHING;
+  const numeric = (parsed as Array<{ point: HistoryPointInput; index: number; number: number }>)
+    .slice()
+    // Time order; equal dates keep the server's own input order, not an id-derived one.
+    .sort((a, b) => a.point.observedOn.localeCompare(b.point.observedOn) || a.index - b.index);
 
   const { width, height, paddingX, paddingY, minGap, minLabelGap } = options;
   const left = paddingX;
@@ -84,9 +94,12 @@ export function layoutHistory(points: readonly HistoryPointInput[], options: His
   const flat = min === max;
 
   const days = numeric.map((entry) => dayNumber(entry.point.observedOn));
-  const span = days[count - 1] - days[0];
+  // Shared page domain when given (I2); otherwise this series' own earliest/latest exam date.
+  const domainStartDay = options.domainStart !== undefined ? dayNumber(options.domainStart) : days[0];
+  const domainEndDay = options.domainEnd !== undefined ? dayNumber(options.domainEnd) : days[count - 1];
+  const span = domainEndDay - domainStartDay;
   const even = numeric.map((_, index) => left + (index / (count - 1)) * innerWidth);
-  const byDate = span > 0 ? days.map((day) => left + ((day - days[0]) / span) * innerWidth) : even;
+  const byDate = span > 0 ? days.map((day) => left + ((day - domainStartDay) / span) * innerWidth) : even;
   let xs = [...byDate];
   if ((count - 1) * minGap > innerWidth) {
     xs = even; // cannot keep every point apart: even spacing in time order
@@ -97,7 +110,7 @@ export function layoutHistory(points: readonly HistoryPointInput[], options: His
       for (let index = count - 2; index >= 0; index -= 1) xs[index] = Math.min(xs[index], xs[index + 1] - minGap);
     }
   }
-  const adjusted = span === 0 || xs.some((x, index) => Math.abs(x - byDate[index]) > 0.5);
+  const adjusted = span <= 0 || xs.some((x, index) => Math.abs(x - byDate[index]) > 0.5);
 
   const anchors: HistoryAnchor[] = numeric.map((entry, index) => ({
     eventId: entry.point.eventId,

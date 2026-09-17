@@ -41,8 +41,10 @@ describe("history layout", () => {
       const none = layoutHistory(points, at(375));
       expect(none).toMatchObject({ drawable: false, anchors: [], segments: [], ticks: [], path: "", adjusted: false, min: null, max: null });
     }
-    // A non-numeric point is left out of the graph; the numeric ones still draw.
-    expect(layoutHistory([...three, point(4, "음성", "2026-08-01")], at(720)).anchors).toHaveLength(3);
+    // Any non-numeric value anywhere in the series: no plot at all, not a line silently drawn
+    // across the gap where that value should have been.
+    expect(layoutHistory([...three, point(4, "음성", "2026-08-01")], at(720)))
+      .toMatchObject({ drawable: false, anchors: [], segments: [], ticks: [], path: "" });
   });
 
   it("joins neighbouring anchors with straight segments only", () => {
@@ -104,5 +106,50 @@ describe("history layout", () => {
   it("is deterministic and independent of input order", () => {
     expect(layoutHistory(crowded, at(320))).toEqual(layoutHistory(crowded, at(320)));
     expect(layoutHistory([...monthly].reverse(), at(375))).toEqual(layoutHistory(monthly, at(375)));
+  });
+
+  it("keeps same-day points in the server's input order, not sorted by event id", () => {
+    // eventId "…4001" would sort before "…4002" alphabetically; input order says the other way.
+    const points = [point(2, "2", "2026-07-28"), point(1, "1", "2026-07-28")];
+    const layout = layoutHistory(points, at(320));
+    expect(layout.anchors.map((anchor) => anchor.value)).toEqual(["2", "1"]);
+  });
+
+  it("shares one x domain across every series on the page, so the same date is the same x fraction everywhere (I2)", () => {
+    for (const width of [320, 375, 1280]) {
+      const domain = { domainStart: "2025-01-01", domainEnd: "2026-08-15" };
+      const options = { ...at(width), ...domain };
+      const short = [point(1, "10", "2026-07-28"), point(2, "12", "2026-08-15")];
+      const long = [point(1, "5", "2025-01-01"), point(2, "6", "2026-07-28"), point(3, "7", "2026-08-15")];
+      const shortLayout = layoutHistory(short, options);
+      const longLayout = layoutHistory(long, options);
+      // The shared date 2026-07-28 must land at the same x in both series.
+      const shortShared = shortLayout.anchors.find((anchor) => anchor.observedOn === "2026-07-28")!;
+      const longShared = longLayout.anchors.find((anchor) => anchor.observedOn === "2026-07-28")!;
+      expect(shortShared.x).toBeCloseTo(longShared.x, 1);
+      // The domain's own start/end land at the padded edges for the series that reaches them.
+      expect(longLayout.anchors[0].x).toBe(HISTORY_LAYOUT_DEFAULTS.paddingX);
+      expect(longLayout.anchors[2].x).toBe(width - HISTORY_LAYOUT_DEFAULTS.paddingX);
+      // Bounds and nudging still hold under a shared domain.
+      const half = HISTORY_LAYOUT_DEFAULTS.hitSize / 2;
+      for (const layout of [shortLayout, longLayout]) {
+        for (const anchor of layout.anchors) {
+          expect(anchor.x - half).toBeGreaterThanOrEqual(0);
+          expect(anchor.x + half).toBeLessThanOrEqual(width);
+        }
+      }
+    }
+    // A series whose points share one date still gets a real (non-arbitrary) x position under a
+    // shared domain, rather than the own-domain "cannot divide by zero span" even-spacing fallback.
+    const domain = { domainStart: "2025-01-01", domainEnd: "2026-08-15" };
+    const sameDayUnderSharedDomain = layoutHistory(
+      [point(1, "1", "2026-07-28"), point(2, "2", "2026-07-28")],
+      { ...at(1280), ...domain },
+    );
+    const expectedX = HISTORY_LAYOUT_DEFAULTS.paddingX
+      + ((Date.UTC(2026, 6, 28) - Date.UTC(2025, 0, 1)) / (Date.UTC(2026, 7, 15) - Date.UTC(2025, 0, 1)))
+      * (1280 - 2 * HISTORY_LAYOUT_DEFAULTS.paddingX);
+    expect(sameDayUnderSharedDomain.anchors[0].x).toBeCloseTo(expectedX, 0);
+    expect(sameDayUnderSharedDomain.adjusted).toBe(true); // still nudged apart so both are visible
   });
 });
