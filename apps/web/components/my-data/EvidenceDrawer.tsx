@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { HealthEvent } from "@/lib/foundation/client";
 import { SourcePreview } from "@/components/integrated/SourcePreview";
+import { ORIGINAL_LABEL_NOT_KEPT, originalLabelLine } from "@/lib/format/original-label";
 import { formatKoreanDate, formatKoreanDateTime } from "@/lib/format/korean-date";
 import { shortDigest } from "@/lib/format/short-digest";
 import styles from "@/components/my-data/MyData.module.css";
@@ -50,6 +51,10 @@ export function EvidenceDrawer({
         <button type="button" onClick={onClose}>근거 닫기</button>
       </header>
       <dl>
+        {originalLabelLine(event.originalLabel, event.concept) && (
+          <><dt>결과지</dt><dd data-testid="original-label">{originalLabelLine(event.originalLabel, event.concept)}</dd></>
+        )}
+        {!event.originalLabel && <><dt>결과지</dt><dd>{ORIGINAL_LABEL_NOT_KEPT}</dd></>}
         <dt>값</dt><dd>{event.value} {event.unit}</dd>
         <dt>검사일</dt><dd>{formatKoreanDate(event.observedOn)}</dd>
         <dt>확인</dt><dd><span>{event.corrected ? "직접 수정한 값" : "직접 확인한 값"}</span> · {formatKoreanDateTime(event.confirmedAt)}</dd>

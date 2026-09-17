@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFoundationClient, type MeasurementSeries } from "@/lib/foundation/client";
 import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import { originalLabelLine } from "@/lib/format/original-label";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { HistoryGraph } from "@/components/my-data/history/HistoryGraph";
 import styles from "@/components/my-data/history/History.module.css";
@@ -139,7 +140,9 @@ export function MeasurementHistory() {
             <p>아직 확인한 기록이 없어요. 결과지를 추가해 값을 확인하면 여기에 항목별로 모여요.</p>
           )}
 
-          {series.map((item, index) => (
+          {series.map((item, index) => {
+            const showsOriginalLabel = item.points.some((point) => originalLabelLine(point.originalLabel, item.concept) !== null);
+            return (
             <section key={`${item.conceptCode ?? item.concept}|${item.unit}`} className={styles.series} data-testid="history-series" aria-labelledby={`history-series-title-${index}`}>
               <header className={styles.seriesHeader}>
                 <h2 id={`history-series-title-${index}`} tabIndex={-1}>{item.concept}</h2>
@@ -158,13 +161,14 @@ export function MeasurementHistory() {
 
               <div className={styles.tableWrap}>
                 <table className={styles.table} aria-label={`${item.concept} 측정 이력`}>
-                  <thead><tr><th scope="col">검사일</th><th scope="col">값</th><th scope="col">단위</th><th scope="col">출처</th></tr></thead>
+                  <thead><tr><th scope="col">검사일</th><th scope="col">값</th><th scope="col">단위</th>{showsOriginalLabel && <th scope="col">결과지 표기</th>}<th scope="col">출처</th></tr></thead>
                   <tbody>
                     {item.points.map((point) => (
                       <tr key={point.eventId}>
                         <th scope="row">{formatKoreanDate(point.observedOn)}</th>
                         <td className={styles.number}>{point.value}</td>
                         <td>{item.unit}</td>
+                        {showsOriginalLabel && <td className={styles.originalLabel}>{originalLabelLine(point.originalLabel, item.concept) ? point.originalLabel : ""}</td>}
                         <td><a href={`/my-data#event-${point.eventId}`} aria-label={`${item.concept} ${point.value} ${item.unit}, ${formatKoreanDate(point.observedOn)} 출처 보기`}>출처 보기</a></td>
                       </tr>
                     ))}
@@ -172,7 +176,8 @@ export function MeasurementHistory() {
                 </table>
               </div>
             </section>
-          ))}
+            );
+          })}
         </div>
       </main>
     </IntegratedShell>

@@ -2367,6 +2367,7 @@ svg {
 }
 
 .gc-import__candidate-source { margin: 0 0 12px; font-size: 0.875rem; color: var(--gc-color-text-secondary, #555); }
+.gc-import__candidate-original { margin: 0 0 8px; min-width: 0; overflow-wrap: anywhere; font-size: 0.875rem; color: var(--gc-color-text-secondary, #555); }
 
 .gc-import__candidate dl {
   margin: 0;

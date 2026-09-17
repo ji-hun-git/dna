@@ -75,6 +75,7 @@
 .table { width: 100%; border-collapse: collapse; font-size: 15px; }
 .table th, .table td { text-align: left; padding: var(--gc-space-2) var(--gc-space-3); border-bottom: 1px solid var(--hist-line); font-weight: 400; }
 .table .number { font-family: var(--hist-font-number); text-align: right; }
+.originalLabel { min-width: 0; overflow-wrap: anywhere; }
 
 .visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 

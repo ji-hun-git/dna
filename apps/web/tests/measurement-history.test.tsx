@@ -29,9 +29,9 @@ it("lists every series with its three computed numbers as text and the same numb
   expect(cholesterol.getByTestId("derived-mean-of-last-3")).toHaveTextContent(/^측정 3회부터 계산해요$/);
   const rows = within(cholesterol.getByRole("table", { name: "총콜레스테롤 측정 이력" })).getAllByRole("row");
   expect(rows.map((row) => row.textContent)).toEqual([
-    "검사일값단위출처",
-    "2026. 1. 15.194mg/dL출처 보기",
-    "2026. 7. 28.190mg/dL출처 보기",
+    "검사일값단위결과지 표기출처",
+    "2026. 1. 15.194mg/dLCholesterol출처 보기",
+    "2026. 7. 28.190mg/dLCholesterol출처 보기",
   ]);
   expect(cholesterol.getByRole("link", { name: "총콜레스테롤 190 mg/dL, 2026. 7. 28. 출처 보기" }))
     .toHaveAttribute("href", "/my-data#event-8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d65");
@@ -46,6 +46,22 @@ it("lists every series with its three computed numbers as text and the same numb
   for (const term of ["마지막 두 값의 차이", "30일로 환산한 차이", "최근 3회 평균"]) expect(cholesterol.getByText(term)).toBeVisible();
   expect(container.textContent).not.toMatch(/120-199|참고치|상승|하락|증가|감소|빨라|느려|좋아|나빠|추세|→|↑|↓/);
   expect(await axe(container)).toHaveNoViolations();
+});
+
+it("adds the 결과지 표기 column only to a series where a label differs, and leaves a same-name cell empty", async () => {
+  const data = syntheticSeries();
+  data.series[1].points[0].originalLabel = "비타민 D";
+  data.series[2].points[0].originalLabel = "총콜레스테롤";
+  server.use(http.get("/api/foundation/series", () => HttpResponse.json(data)));
+  render(<MeasurementHistory />);
+  const sections = await screen.findAllByTestId("history-series");
+  expect(within(sections[1]).queryByRole("columnheader", { name: "결과지 표기" })).toBeNull();
+  const rows = within(within(sections[2]).getByRole("table", { name: "총콜레스테롤 측정 이력" })).getAllByRole("row");
+  expect(rows.map((row) => row.textContent)).toEqual([
+    "검사일값단위결과지 표기출처",
+    "2026. 1. 15.194mg/dL출처 보기",
+    "2026. 7. 28.190mg/dLCholesterol출처 보기",
+  ]);
 });
 
 it("draws one labelled image per series with two or more points, with focusable anchors and straight lines only", async () => {

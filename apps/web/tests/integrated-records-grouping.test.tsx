@@ -19,6 +19,7 @@ const records = [
     unit: "mg/dL",
     observedOn: "2026-07-28",
     documentSha256: olderDocumentSha256,
+    originalLabel: "Cholesterol",
   }),
   syntheticRecord({
     recordId: "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c41",
@@ -29,8 +30,9 @@ const records = [
     unit: "%",
     observedOn: "2026-07-28",
     documentSha256: olderDocumentSha256,
+    originalLabel: "당화혈색소",
   }),
-  syntheticRecord({
+  (({ originalLabel: _n, ...rest }) => rest)(syntheticRecord({
     recordId: "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c42",
     recordVersionId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d52",
     label: "비타민 D",
@@ -38,7 +40,7 @@ const records = [
     originalValue: "31",
     unit: "ng/mL",
     observedOn: "2026-08-11",
-  }),
+  })),
 ];
 
 const server = setupServer(
@@ -88,6 +90,14 @@ it("groups records by the day and the document they came from, newest first", as
     "2026. 7. 28. · 결과지 eeeeeeeeeeee…eeeeeeee",
   ]);
   expect(screen.getAllByTestId("durable-record")).toHaveLength(3);
+});
+
+it("prints the result-sheet label beside a record only when it differs from the shown name", async () => {
+  render(<IntegratedRecords />);
+  const items = await screen.findAllByTestId("durable-record");
+  const lines = items.map((item) => item.querySelector('[data-testid="original-label"]')?.textContent ?? null);
+  expect(lines).toContain("결과지 표기: Cholesterol");
+  expect(lines.filter((line) => line !== null)).toHaveLength(1);
 });
 
 it("scrolls to, opens and focuses the record a source link points at", async () => {

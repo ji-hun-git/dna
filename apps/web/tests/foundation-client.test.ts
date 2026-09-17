@@ -226,6 +226,16 @@ describe("foundation same-origin client", () => {
     const nestedRejectingClient = createFoundationClient({ fetcher: nestedRejectingFetcher, readCsrfToken: () => "csrf-value" });
 
     await expect(nestedRejectingClient.getHealthEvents()).rejects.toThrow();
+
+    const labelled = createFoundationClient({ fetcher: vi.fn(async () => jsonResponse([syntheticHealthEvent({ originalLabel: "Cholesterol" })])), readCsrfToken: () => "csrf-value" });
+    await expect(labelled.getHealthEvents()).resolves.toMatchObject([{ originalLabel: "Cholesterol" }]);
+    const { originalLabel: _omitted, ...preV11 } = syntheticHealthEvent();
+    const older = createFoundationClient({ fetcher: vi.fn(async () => jsonResponse([preV11])), readCsrfToken: () => "csrf-value" });
+    await expect(older.getHealthEvents()).resolves.toHaveLength(1);
+    for (const broken of [{ originalLabel: null }, { originalLabel: "" }, { originalLabel: "가".repeat(81) }]) {
+      const rejecting = createFoundationClient({ fetcher: vi.fn(async () => jsonResponse([{ ...syntheticHealthEvent(), ...broken }])), readCsrfToken: () => "csrf-value" });
+      await expect(rejecting.getHealthEvents()).rejects.toThrow();
+    }
   });
 
   it("rejects a candidate that still claims the retired fixture method and accepts an uncoded one", async () => {
@@ -324,6 +334,7 @@ describe("foundation same-origin client", () => {
     expect(loaded.series.map((item) => item.concept)).toEqual(["당화혈색소", "비타민 D", "총콜레스테롤"]);
     expect(loaded.series[2].derived).toEqual({ lastDifference: { absolute: "-4", percent: "-2.1" }, per30Days: "-0.6" });
     expect(loaded.series[1].derived).toEqual({});
+    expect(loaded.series[2].points.map((point) => point.originalLabel)).toEqual(["Cholesterol", "Cholesterol"]);
     expect(fetcher).toHaveBeenCalledWith("/api/foundation/series", expect.objectContaining({
       method: "GET",
       credentials: "include",
@@ -339,6 +350,7 @@ describe("foundation same-origin client", () => {
       { ...base, derived: { ...base.derived, per30Days: "-0.6 mg/dL" } },
       { ...base, points: [{ ...base.points[0], recordId: "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c40" }] },
       { ...base, points: [] },
+      { ...base, points: [{ ...base.points[0], originalLabel: null }] },
     ]) {
       const rejecting = createFoundationClient({ fetcher: vi.fn(async () => jsonResponse({ series: [broken] })), readCsrfToken: () => "csrf-value" });
       await expect(rejecting.getSeries()).rejects.toMatchObject({ code: "invalid_server_response" });

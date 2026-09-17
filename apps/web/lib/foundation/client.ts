@@ -5,6 +5,10 @@ const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{8,80}$/);
 const confirmationBodySchema = z.object({ value: z.string().min(1).max(64), observedOn: z.string().date().optional() }).strict();
 const conceptCodeSchema = z.string().regex(/^[a-z0-9-]{1,64}$/);
 
+// The item name exactly as the result sheet printed it. The server omits the key for rows stored
+// before it was kept (Jackson non_null), so it is optional and never null.
+const originalLabelSchema = z.string().min(1).max(80);
+
 // One consent row per purpose. Research purposes are stored only; nothing in the product depends on them.
 const consentPurposeCodeSchema = z.string().regex(/^(DOCUMENT_EXTRACTION|RESEARCH_USE|RESEARCH_CONTACT|PROJECT:[a-z0-9-]{1,40})$/);
 
@@ -119,6 +123,7 @@ const candidateSchema = z.object({
   // position within `totalCandidates`, both 1-based and server-owned.
   ordinal: z.number().int().positive(),
   totalCandidates: z.number().int().positive(),
+  originalLabel: originalLabelSchema.optional(),
 }).strict();
 
 const recordSchema = z.object({
@@ -142,6 +147,7 @@ const recordSchema = z.object({
   sourceTextSha256: z.string().regex(/^[0-9a-f]{64}$/),
   documentSha256: z.string().regex(/^[0-9a-f]{64}$/),
   conceptCode: conceptCodeSchema.nullable().optional(),
+  originalLabel: originalLabelSchema.optional(),
 }).strict();
 
 const healthEventSourceSchema = z.object({
@@ -172,6 +178,7 @@ const healthEventSchema = z.object({
   // The parser's exam date when the person corrected it on review; omitted when unchanged.
   originalObservedOn: z.string().date().nullable().optional(),
   source: healthEventSourceSchema,
+  originalLabel: originalLabelSchema.optional(),
 }).strict();
 
 const changeValueSchema = z.object({
@@ -219,6 +226,7 @@ const seriesPointSchema = z.object({
   value: z.string().min(1).max(64),
   observedOn: z.string().date(),
   documentId: uuidSchema,
+  originalLabel: originalLabelSchema.optional(),
 }).strict();
 
 // Three numbers from subtraction and division, in time order. The server omits a key it cannot
