@@ -471,3 +471,34 @@ it("shows 최근 변화 on the home screen only when the server reports items", 
     "총콜레스테롤 · 이번 2026. 7. 28. 188 mg/dL · 이전 2026. 1. 15. 194 mg/dL",
   );
 });
+
+it("keeps the home screen working when /changes fails, hiding 최근 변화 instead of blocking restore", async () => {
+  server.use(
+    http.get("/api/foundation/documents/active", () => HttpResponse.json({})),
+    http.get("/api/foundation/changes", () => HttpResponse.json({ code: "retryable_dependency_failure" }, { status: 500 })),
+  );
+  render(<IntegratedHealthExperience />);
+
+  expect(await screen.findByRole("heading", { name: "아직 저장된 기록이 없어요" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "최근 변화" })).toBeNull();
+  expect(screen.queryByText("체험 상태를 불러오지 못했어요")).toBeNull();
+  expect(screen.queryByRole("button", { name: "체험 상태 다시 확인" })).toBeNull();
+});
+
+it("keeps the home screen working when /changes returns a schema-rejected body, hiding 최근 변화", async () => {
+  server.use(
+    http.get("/api/foundation/documents/active", () => HttpResponse.json({})),
+    http.get("/api/foundation/changes", () => HttpResponse.json({
+      items: [],
+      newConcepts: [],
+      unchangedCount: 0,
+      unexpectedField: "should cause strict schema rejection",
+    })),
+  );
+  render(<IntegratedHealthExperience />);
+
+  expect(await screen.findByRole("heading", { name: "아직 저장된 기록이 없어요" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "최근 변화" })).toBeNull();
+  expect(screen.queryByText("체험 상태를 불러오지 못했어요")).toBeNull();
+  expect(screen.queryByRole("button", { name: "체험 상태 다시 확인" })).toBeNull();
+});

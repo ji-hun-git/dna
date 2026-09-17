@@ -98,12 +98,15 @@ export function IntegratedHealthExperience() {
   const [pollingNonce, setPollingNonce] = useState(0);
 
   const loadProductTruth = useCallback(async () => {
-    const [loadedConsent, loadedRecords, activity, loadedChanges] = await Promise.all([
+    const [loadedConsent, loadedRecords, activity] = await Promise.all([
       client.getDocumentConsent(),
       client.getRecords(),
       client.getActiveDocument(),
-      client.getChanges(),
     ]);
+    // A failed or schema-rejected /changes read must not break the home
+    // screen: isolate it from the core loads above and simply hide the
+    // "최근 변화" section when it fails.
+    const loadedChanges = await client.getChanges().catch(() => undefined);
     setConsent(loadedConsent);
     setRecords(loadedRecords);
     setChanges(loadedChanges);
