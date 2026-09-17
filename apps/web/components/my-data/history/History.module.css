@@ -1,23 +1,25 @@
-/* Visual-language pilot, this screen only. Tokens are scoped to .page so nothing leaks into the app. */
+/* Visual-language pilot, this screen only. Tokens are scoped to .page so nothing leaks into the
+   app. Ground/ink/soft-ink/rule/card/link are the mockup's own literal hexes
+   (wave4-mockup-decision.md, wave4-mockup.html), not the app's usual --gc-color-* fallbacks. */
 .page {
-  --hist-bg: #f4f4f1;                 /* wave4-mockup-decision.md: ground */
-  --hist-grid-dot: #cfcfca;           /* wave4-mockup-decision.md: dot grid */
-  --hist-ink: var(--gc-color-text-primary);
-  --hist-ink-soft: var(--gc-color-text-secondary);
-  --hist-card: var(--gc-color-surface-raised);
-  --hist-line: var(--gc-color-line-strong);
-  --hist-fill-accent: #c8f02a;        /* lime: fills only, never text */
+  --hist-bg: #f4f4f1;
+  --hist-grid-dot: #cfcfca;
+  --hist-ink: #1b1c1f;
+  --hist-ink-soft: #5d5f66;
+  --hist-card: #f1f0ea;
+  --hist-line: #b9b8b0;
+  --hist-link: #0b4fe0;
   --hist-ribbon-band: 26px;           /* fixed thickness: carries no meaning */
   --hist-ribbon-body: 13px;
   --hist-ribbon-centre: 1px;
-  --hist-font-title: Georgia, "Noto Serif KR", serif;
+  --hist-font-title: "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
   --hist-font-number: var(--gc-type-mono);
 
   min-height: 100vh;
   color: var(--hist-ink);
   background-color: var(--hist-bg);
-  background-image: radial-gradient(var(--hist-grid-dot) 1px, transparent 1px);
-  background-size: 16px 16px;
+  background-image: radial-gradient(var(--hist-grid-dot) 1px, transparent 1.2px);
+  background-size: 10px 10px;
 }
 .shell { max-width: 1120px; margin: 0 auto; padding: var(--gc-space-6) var(--gc-space-4) var(--gc-space-10); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gc-space-6); min-width: 0; }
 .hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gc-space-2); min-width: 0; overflow-wrap: anywhere; }
@@ -51,15 +53,16 @@
 .ribbonCentre { fill: none; stroke-opacity: 0.55; stroke-width: var(--hist-ribbon-centre); stroke-dasharray: 7 5; }
 .ticks line { stroke: var(--hist-line); stroke-width: 1; }
 .ticks text { fill: var(--hist-ink-soft); font: 12px var(--hist-font-number); }
-.leader { stroke: var(--hist-ink); stroke-width: 1; stroke-dasharray: 2 2; }
+.leader { stroke: var(--hist-ink); stroke-width: 1; }
 .anchor { cursor: pointer; }
 .anchor rect[data-hit] { fill: transparent; }
 .anchor:focus-visible { outline: none; }
 .anchor:focus-visible rect[data-anchor] { stroke: var(--gc-color-focus-ring); stroke-width: 3; }
 
-.card { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gc-space-2) var(--gc-space-4); min-width: 0; margin-top: var(--gc-space-1); padding: var(--gc-space-3); border: 1px solid var(--hist-ink); border-radius: 7px; background: var(--hist-card); color: var(--hist-ink); overflow-wrap: anywhere; }
+.card { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gc-space-2) var(--gc-space-4); min-width: 0; margin-top: var(--gc-space-1); padding: var(--gc-space-3); border: 1px solid var(--hist-line); border-radius: 7px; background: var(--hist-card); color: var(--hist-ink); overflow-wrap: anywhere; }
+.cardLabel { display: block; width: 100%; font-family: var(--hist-font-number); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--hist-ink-soft); }
 .cardNumber { font: 700 22px/1.2 var(--hist-font-number); }
-.card a, .table a { color: var(--hist-ink); min-height: 44px; display: inline-flex; align-items: center; }
+.card a, .table a { color: var(--hist-link); min-height: 44px; display: inline-flex; align-items: center; }
 .note { margin: var(--gc-space-2) 0 0; color: var(--hist-ink-soft); font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
 
 .derived { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--gc-space-3); margin: 0; min-width: 0; }
@@ -75,7 +78,4 @@
 
 .visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
-/* The pilot has no animation. Any transition the mockup notes ask for goes inside this query only. */
-@media (prefers-reduced-motion: no-preference) {
-  .anchor rect[data-anchor] { transition: none; }
-}
+/* The pilot has no motion at all, so there is nothing here for prefers-reduced-motion to disable. */

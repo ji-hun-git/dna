@@ -40,7 +40,8 @@ it("lists every series with its three computed numbers as text and the same numb
   expect(within(sections[0]).getByTestId("derived-last-difference")).toHaveTextContent(/^-0\.2 %$/);
   expect(within(sections[0]).getByTestId("derived-per-30-days")).toHaveTextContent(/^-0\.03 %$/);
 
-  expect(screen.getByText("점은 확인한 값이고, 점 사이의 선은 값이 아니에요. 선의 모양이 건강 상태를 뜻하지 않아요.")).toBeVisible();
+  expect(screen.getByText("직접 확인한 값을 검사일 순서로 모았어요. 점은 확인한 값이고, 점 사이의 선은 값이 아니에요.")).toBeVisible();
+  expect(screen.getByText("선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.")).toBeVisible();
   expect(screen.getByText("뺄셈과 나눗셈으로만 계산했어요. 의미는 판단하지 않아요.")).toBeVisible();
   for (const term of ["마지막 두 값의 차이", "30일로 환산한 차이", "최근 3회 평균"]) expect(cholesterol.getByText(term)).toBeVisible();
   expect(container.textContent).not.toMatch(/120-199|참고치|상승|하락|증가|감소|빨라|느려|좋아|나빠|추세|→|↑|↓/);
@@ -53,8 +54,9 @@ it("draws one labelled image per series with two or more points, with focusable 
 
   const graph = within(sections[2]).getByRole("group", { name: "총콜레스테롤 mg/dL, 측정 2회, 2026. 1. 15.부터 2026. 7. 28.까지. 같은 값이 아래 표에 있어요." });
   expect(graph.tagName.toLowerCase()).toBe("svg");
-  const anchors = within(sections[2]).getAllByRole("button", { name: /^총콜레스테롤 \d+ mg\/dL, / });
-  expect(anchors.map((anchor) => anchor.getAttribute("aria-label"))).toEqual(["총콜레스테롤 194 mg/dL, 2026. 1. 15.", "총콜레스테롤 190 mg/dL, 2026. 7. 28."]);
+  // Order "검사일 값 단위" (wave4-mockup-decision.md), no series name — the heading already names it.
+  const anchors = within(sections[2]).getAllByRole("button", { name: /^2026\.\d{2}\.\d{2} \d+ mg\/dL$/ });
+  expect(anchors.map((anchor) => anchor.getAttribute("aria-label"))).toEqual(["2026.01.15 194 mg/dL", "2026.07.28 190 mg/dL"]);
   anchors.forEach((anchor) => expect(anchor).toHaveAttribute("tabindex", "0"));
   const paths = [...sections[2].querySelectorAll("path[data-ribbon]")];
   expect(paths.length).toBeGreaterThan(0);
@@ -63,7 +65,7 @@ it("draws one labelled image per series with two or more points, with focusable 
 
   // One point: the table only, and it says why.
   expect(within(sections[1]).queryByRole("img")).toBeNull();
-  expect(within(sections[1]).getByText("값이 하나라서 그래프 없이 표로만 보여드려요.")).toBeVisible();
+  expect(within(sections[1]).getByText("측정이 한 번이라 그래프 없이 표만 보여드려요.")).toBeVisible();
   expect(within(sections[1]).getByRole("table", { name: "비타민 D 측정 이력" })).toBeVisible();
 });
 
@@ -104,7 +106,7 @@ it("draws every series' ribbon with the same time gradient, never a per-series c
   const ids = [...container.querySelectorAll("linearGradient")].map((gradient) => gradient.getAttribute("id"));
   expect(new Set(ids).size).toBe(ids.length);
 
-  expect(screen.getByText("색은 시간의 위치만 나타내요.")).toBeVisible();
+  expect(screen.getByText("선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.")).toBeVisible();
   const timebar = screen.getByTestId("history-timebar");
   expect(timebar).toHaveAttribute("aria-hidden", "true");
   expect(timebar).toHaveTextContent("2026. 1. 15. 먼저");
@@ -115,13 +117,19 @@ it("draws every series' ribbon with the same time gradient, never a per-series c
 it("opens an annotation card for the chosen anchor by click and by keyboard, and closes it again", async () => {
   render(<MeasurementHistory />);
   const section = within((await screen.findAllByTestId("history-series"))[2]);
-  const anchor = section.getByRole("button", { name: "총콜레스테롤 190 mg/dL, 2026. 7. 28." });
+  const anchor = section.getByRole("button", { name: "2026.07.28 190 mg/dL" });
 
   await userEvent.click(anchor);
   expect(anchor).toHaveAttribute("aria-pressed", "true");
   const card = section.getByRole("group", { name: "선택한 측정값" });
+  // First line "YYYY.MM.DD 확인한 값" (wave4-mockup-decision.md), then the value.
+  expect(card).toHaveTextContent("2026.07.28 확인한 값");
   expect(card).toHaveTextContent("190 mg/dL");
-  expect(card).toHaveTextContent("2026. 7. 28.");
+  expect(card).toHaveAttribute("aria-live", "polite");
+  expect(anchor).toHaveAttribute("aria-describedby", card.id);
+  // Selection is shown by the card, the leader line and aria-pressed — never by recolouring the anchor.
+  expect(section.getByRole("button", { name: "2026.07.28 190 mg/dL" }).querySelector("rect[data-anchor]"))
+    .toHaveAttribute("fill", "var(--hist-ink)");
   expect(within(card).getByRole("link", { name: "출처 보기" })).toHaveAttribute("href", "/my-data#event-8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d65");
 
   await userEvent.click(anchor);
@@ -131,6 +139,45 @@ it("opens an annotation card for the chosen anchor by click and by keyboard, and
   expect(section.getByRole("group", { name: "선택한 측정값" })).toBeVisible();
   await userEvent.keyboard(" ");
   expect(section.queryByRole("group", { name: "선택한 측정값" })).toBeNull();
+});
+
+it("keeps the lede on the page even when the first drawable series is later in the list (I1)", async () => {
+  server.use(http.get("/api/foundation/series", () => HttpResponse.json({
+    series: [
+      {
+        conceptCode: "single",
+        concept: "단일측정",
+        unit: "mg/dL",
+        points: [{ eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f10", value: "10", observedOn: "2026-01-01", documentId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f11" }],
+        derived: {},
+      },
+      {
+        conceptCode: "drawn",
+        concept: "그려지는측정",
+        unit: "mg/dL",
+        points: [
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f12", value: "10", observedOn: "2026-01-01", documentId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f11" },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f13", value: "12", observedOn: "2026-02-01", documentId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f11" },
+        ],
+        derived: { lastDifference: { absolute: "2" } },
+      },
+    ],
+  })));
+  render(<MeasurementHistory />);
+  await screen.findAllByTestId("history-series");
+  expect(screen.getByText("직접 확인한 값을 검사일 순서로 모았어요. 점은 확인한 값이고, 점 사이의 선은 값이 아니에요.")).toBeVisible();
+  expect(screen.getByText("선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.")).toBeVisible();
+});
+
+it("shares one x domain across series so the same exam date lands at the same x (I2)", async () => {
+  render(<MeasurementHistory />);
+  const sections = await screen.findAllByTestId("history-series");
+  // 당화혈색소 and 총콜레스테롤 both have a point on 2026-01-15 (fixtures/foundation.ts).
+  const hba1cAnchor = within(sections[0]).getByRole("button", { name: "2026.01.15 5.4 %" });
+  const cholesterolAnchor = within(sections[2]).getByRole("button", { name: "2026.01.15 194 mg/dL" });
+  const hba1cX = hba1cAnchor.querySelector("rect[data-anchor]")!.getAttribute("x");
+  const cholesterolX = cholesterolAnchor.querySelector("rect[data-anchor]")!.getAttribute("x");
+  expect(hba1cX).toBe(cholesterolX);
 });
 
 it("names the specific reason a number is missing, decided from the points themselves", async () => {

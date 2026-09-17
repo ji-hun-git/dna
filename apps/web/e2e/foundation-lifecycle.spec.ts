@@ -441,12 +441,15 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(cholesterolRows.nth(2)).toContainText("2026. 7. 28.");
   expect(await page.content()).not.toContain("120-199");
 
-  const cholesterolAnchor = cholesterolHistory.getByRole("button", { name: "총콜레스테롤 190 mg/dL, 2026. 7. 28." });
+  // Anchor accessible name is "검사일 값 단위" (wave4-mockup-decision.md), e.g. "2026.07.28 190 mg/dL" —
+  // no series name, since the nearest heading already names the series.
+  const cholesterolAnchor = cholesterolHistory.getByRole("button", { name: "2026.07.28 190 mg/dL" });
   await expect(cholesterolAnchor).toBeVisible();
   await cholesterolAnchor.click();
   const annotationCard = cholesterolHistory.getByRole("group", { name: "선택한 측정값" });
+  // First line "YYYY.MM.DD 확인한 값" (wave4-mockup-decision.md), then the value.
+  await expect(annotationCard).toContainText("2026.07.28 확인한 값");
   await expect(annotationCard).toContainText("190 mg/dL");
-  await expect(annotationCard).toContainText("2026. 7. 28.");
 
   // The card's 출처 보기 round-trips to 내 데이터's evidence drawer, which links back here.
   // The real event id is server-assigned, so the round trip is checked against itself rather

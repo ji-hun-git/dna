@@ -225,8 +225,10 @@ describe("Korean UX language boundary", () => {
   it("states on the history screen that the line is not data and that nothing is judged", () => {
     const history = source("components/my-data/history/MeasurementHistory.tsx");
     const graph = source("components/my-data/history/HistoryGraph.tsx");
-    expect(graph).toContain("점은 확인한 값이고, 점 사이의 선은 값이 아니에요. 선의 모양이 건강 상태를 뜻하지 않아요.");
-    expect(graph).toContain("색은 시간의 위치만 나타내요.");
+    // I1: the lede lives in the hero (MeasurementHistory.tsx), not tied to any one series'
+    // drawable state, so it cannot disappear when that series has no graph.
+    expect(history).toContain("직접 확인한 값을 검사일 순서로 모았어요. 점은 확인한 값이고, 점 사이의 선은 값이 아니에요.");
+    expect(history).toContain("선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.");
     expect(history).toContain("뺄셈과 나눗셈으로만 계산했어요. 의미는 판단하지 않아요.");
     for (const term of ["마지막 두 값의 차이", "30일로 환산한 차이", "최근 3회 평균"]) expect(history).toContain(term);
     for (const file of [history, graph]) {

@@ -114,7 +114,10 @@ export function MeasurementHistory() {
           <section className={styles.hero} aria-labelledby="history-title">
             <p><a href="/my-data">나의 데이터로 돌아가기</a></p>
             <h1 id="history-title">측정 이력</h1>
-            <p>같은 항목의 확인한 값을 검사일 순서로 모았어요. 값의 의미나 변화의 방향은 판단하지 않아요.</p>
+            {/* Verbatim, wave4-mockup-decision.md — always in the hero, never tied to any one
+                series' drawable state (I1), so it cannot disappear when a series has no graph. */}
+            <p>직접 확인한 값을 검사일 순서로 모았어요. 점은 확인한 값이고, 점 사이의 선은 값이 아니에요.</p>
+            <p>선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.</p>
             <p>뺄셈과 나눗셈으로만 계산했어요. 의미는 판단하지 않아요.</p>
             {earliestDate && latestDate ? (
               <div className={styles.timebar} aria-hidden="true" data-testid="history-timebar">
@@ -143,7 +146,9 @@ export function MeasurementHistory() {
                 <span className={styles.unit}>{item.unit}</span>
               </header>
 
-              <HistoryGraph series={item} seriesIndex={index} />
+              {earliestDate && latestDate ? (
+                <HistoryGraph series={item} seriesIndex={index} domainStart={earliestDate} domainEnd={latestDate} />
+              ) : null}
 
               <dl className={styles.derived}>
                 <div><dt>마지막 두 값의 차이</dt><dd data-testid="derived-last-difference">{lastDifferenceText(item)}</dd></div>
