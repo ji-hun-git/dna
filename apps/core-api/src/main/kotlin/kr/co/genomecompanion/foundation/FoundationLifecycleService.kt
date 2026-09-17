@@ -16,6 +16,7 @@ class FoundationBadRequestException(val code: String) : RuntimeException(code)
 class FoundationForbiddenException(val code: String) : RuntimeException(code)
 class FoundationNotFoundException(val code: String) : RuntimeException(code)
 class FoundationConflictException(val code: String) : RuntimeException(code)
+class FoundationRateLimitedException : RuntimeException("rate_limited")
 
 
 data class IssuedFoundationSession(
@@ -134,6 +135,25 @@ class FoundationLifecycleService(
         if (!repository.ensureActiveSyntheticSubject(subjectId, now)) {
             throw FoundationForbiddenException("subject_deleted")
         }
+        return issueSession(subjectId, now)
+    }
+
+    @Transactional
+    fun bootstrapDemo(): Pair<String, IssuedFoundationSession> {
+        if (!properties.demoBootstrapEnabled) throw FoundationForbiddenException("demo_bootstrap_disabled")
+        val now = Instant.now(clock)
+        when (repository.reserveDemoBootstrap(now)) {
+            DemoBootstrapBudget.CAPACITY_EXHAUSTED -> throw FoundationForbiddenException("demo_capacity_exhausted")
+            DemoBootstrapBudget.RATE_LIMITED -> throw FoundationRateLimitedException()
+            DemoBootstrapBudget.AVAILABLE -> Unit
+        }
+        // No caller-chosen identity, reusable credential, implicit consent, or shared demo account.
+        val subjectId = "synthetic-demo-${UUID.randomUUID()}"
+        check(repository.ensureActiveSyntheticSubject(subjectId, now))
+        return subjectId to issueSession(subjectId, now)
+    }
+
+    private fun issueSession(subjectId: String, now: Instant): IssuedFoundationSession {
         val rawToken = FoundationHashing.randomToken()
         val rawCsrf = FoundationHashing.randomToken()
         val sessionId = UUID.randomUUID()

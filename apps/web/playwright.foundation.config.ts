@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { defineConfig } from "@playwright/test";
+import { buildSyntheticResultPdf } from "./lib/foundation/synthetic-document";
 
 const databaseUrl = process.env.GC_TEST_POSTGRES_URL;
 const quarantineRoot = process.env.GC_TEST_QUARANTINE_ROOT;
@@ -7,45 +8,12 @@ if (!databaseUrl || !quarantineRoot) {
   throw new Error("GC_TEST_POSTGRES_URL and GC_TEST_QUARANTINE_ROOT are required");
 }
 
-// `text` is the only thing that differs between the generated documents, so the
-// bytes stay deterministic and the first document keeps the digest it has today.
-function buildSyntheticPdf(text: string) {
-  const content = `BT /F1 18 Tf 72 740 Td (${text}) Tj ET`;
-  const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${Buffer.byteLength(content, "ascii")} >>\nstream\n${content}\nendstream`,
-  ];
-  let pdf = "%PDF-1.7\n%GC-SYNTHETIC-ONLY\n";
-  const offsets = [0];
-  objects.forEach((object, index) => {
-    offsets.push(Buffer.byteLength(pdf, "ascii"));
-    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
-  });
-  const xrefOffset = Buffer.byteLength(pdf, "ascii");
-  pdf += `xref\n0 ${objects.length + 1}\n`;
-  pdf += "0000000000 65535 f \n";
-  offsets.slice(1).forEach((offset) => { pdf += `${String(offset).padStart(10, "0")} 00000 n \n`; });
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
-  return Buffer.from(pdf, "ascii");
-}
-
-const fixtureBytes = buildSyntheticPdf("Genome Companion synthetic fixture");
+const fixtureBytes = Buffer.from(buildSyntheticResultPdf("2026-07"));
 const fixtureDigest = createHash("sha256").update(fixtureBytes).digest("hex");
 // A second allow-listed document, bound below to the `checkup-2026-01` candidate
 // set so the browser sees confirmed values from two different dates.
-const secondFixtureBytes = buildSyntheticPdf("Genome Companion synthetic fixture 2026-01");
+const secondFixtureBytes = Buffer.from(buildSyntheticResultPdf("2026-01"));
 const secondFixtureDigest = createHash("sha256").update(secondFixtureBytes).digest("hex");
-const browserSubject = process.env.GC_BROWSER_SUBJECT ?? ("synthetic-browser-" + process.pid);
-const browserCredential = process.env.GC_BROWSER_CREDENTIAL ??
-  ("browser-foundation-credential-" + process.pid + "-0000000000000000");
-const browserA11ySubject = process.env.GC_BROWSER_A11Y_SUBJECT ?? ("synthetic-browser-a11y-" + process.pid);
-const browserA11yCredential = process.env.GC_BROWSER_A11Y_CREDENTIAL ??
-  ("browser-a11y-foundation-credential-" + process.pid + "-000000000000");
-const credentialDigest = createHash("sha256").update(browserCredential, "utf8").digest("hex");
-const a11yCredentialDigest = createHash("sha256").update(browserA11yCredential, "utf8").digest("hex");
 const webPort = 3138;
 const apiPort = 8087;
 const workerHealthPort = 8091;
@@ -54,10 +22,6 @@ const apiOrigin = "http://127.0.0.1:" + apiPort;
 const gradleCommand = process.platform === "win32"
   ? "..\\..\\gradlew.bat --project-dir ..\\.."
   : "bash ../../gradlew --project-dir ../..";
-process.env.GC_BROWSER_SUBJECT = browserSubject;
-process.env.GC_BROWSER_CREDENTIAL = browserCredential;
-process.env.GC_BROWSER_A11Y_SUBJECT = browserA11ySubject;
-process.env.GC_BROWSER_A11Y_CREDENTIAL = browserA11yCredential;
 process.env.GC_BROWSER_FIXTURE_BASE64 = fixtureBytes.toString("base64");
 process.env.GC_BROWSER_FIXTURE_2_BASE64 = secondFixtureBytes.toString("base64");
 const workerCredential = "browser-document-worker-credential-000000000001";
@@ -83,6 +47,7 @@ export default defineConfig({
         GC_DATABASE_USERNAME: "postgres",
         GC_DATABASE_PASSWORD: "",
         GC_FOUNDATION_ENABLED: "true",
+        GC_FOUNDATION_DEMO_BOOTSTRAP_ENABLED: "true",
         GC_FOUNDATION_DOCUMENT_BOUNDARY_ENABLED: "true",
         GC_DOCUMENT_WORKER_CREDENTIAL_SHA256: workerCredentialDigest,
         GC_ALLOW_SYNTHETIC_SCANNER_RESULTS: "true",
@@ -93,10 +58,6 @@ export default defineConfig({
         GC_ALLOWED_DOCUMENT_SHA256: [fixtureDigest, secondFixtureDigest].join(","),
         GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SHA256: secondFixtureDigest,
         GC_FOUNDATION_SYNTHETIC_DOCUMENTS_0_SET_ID: "checkup-2026-01",
-        GC_FOUNDATION_LOCAL_IDENTITIES_0_SUBJECT_ID: browserSubject,
-        GC_FOUNDATION_LOCAL_IDENTITIES_0_CREDENTIAL_SHA256: credentialDigest,
-        GC_FOUNDATION_LOCAL_IDENTITIES_1_SUBJECT_ID: browserA11ySubject,
-        GC_FOUNDATION_LOCAL_IDENTITIES_1_CREDENTIAL_SHA256: a11yCredentialDigest,
       },
     },
     {
@@ -123,18 +84,14 @@ export default defineConfig({
       env: {
         ...process.env,
         GC_APPLICATION_INSTANCE_ID: "playwright-foundation-browser-e2e",
-        GC_INTEGRATED_SYNTHETIC_UI: "true",
         GC_CORE_API_ORIGIN: apiOrigin,
-        GC_BROWSER_SUBJECT: browserSubject,
-        GC_BROWSER_CREDENTIAL: browserCredential,
-        GC_BROWSER_A11Y_SUBJECT: browserA11ySubject,
-        GC_BROWSER_A11Y_CREDENTIAL: browserA11yCredential,
         GC_BROWSER_FIXTURE_BASE64: fixtureBytes.toString("base64"),
         GC_BROWSER_FIXTURE_2_BASE64: secondFixtureBytes.toString("base64"),
       },
     },
   ],
   use: {
+    screenshot: "only-on-failure",
     baseURL: webOrigin,
     trace: "retain-on-failure",
   },

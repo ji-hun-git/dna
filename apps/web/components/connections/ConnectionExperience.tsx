@@ -41,18 +41,18 @@ function ArrowIcon() {
   );
 }
 
-export function ConnectionExperience() {
+export function ConnectionExperience({ embedded = false }: { embedded?: boolean }) {
   return (
     <main className="gc-connections">
       <div className="gc-connections__shell">
-        <header className="gc-connections__appbar">
+        {!embedded && <header className="gc-connections__appbar">
           <a className="gc-connections__brand" href="/" aria-label="앎 건강 홈으로 돌아가기">
             <span aria-hidden="true">앎</span>
             <strong>앎</strong>
           </a>
           <span>로그인 · 동의 · 관리</span>
           <a className="gc-connections__back" href="/">홈으로 <ArrowIcon /></a>
-        </header>
+        </header>}
 
         <section className="gc-connections__hero" aria-labelledby="connections-title">
           <p>데이터 연결</p>

@@ -2,7 +2,7 @@
 
 **Start here.** This is the human- and agent-readable operating guide for the repository.
 
-**Last evidence review:** 2026-09-02 (Asia/Seoul)
+**Last evidence review:** 2026-09-07 (Asia/Seoul)
 **Repository:** `ji-hun-git/dna`
 **Current release target:** `HOSTED_SYNTHETIC_STAGING`
 **Current release verdict:** **NO_GO**
@@ -15,10 +15,21 @@
 > explicit founder decision. Do not deploy these images or dispatch the publication workflow
 > again until that decision is recorded.
 >
-> Root cause (2026-09-02 review): `publish-runtime-images.yml` logs in to GHCR with the
-> repository's own `github.token`, so the packages are linked to this public repository and
-> inherit its visibility. Republishing the same way would make them public again. The remedy
-> options are recorded in `docs/reviews/2026-09-02-project-review.md` finding F-2.
+> Correction (2026-09-07): the cause of public visibility has not been established.
+> Repository access inheritance and package visibility are separate controls; using
+> `github.token` does not by itself prove public visibility inheritance.
+> [GitHub documents default private container visibility](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+> Under the founder's rebuild instruction, publication was disabled on GitHub (workflow
+> `publish-runtime-images.yml`, state `disabled_manually`), and main protection was enabled:
+> one PR approval, seven required checks, strict up-to-date checks, enforced for admins,
+> conversation resolution, no force-push or deletion. Private ECR is the intended path;
+> no existing package was deleted, no cloud resource was created, and no stop-ship gate
+> was upgraded. See the [rebuild ledger](docs/revision/ASTRA_PRODUCT_REBUILD.md).
+>
+> Fresh rebuild CI also blocked on three scanner-rated Critical Tomcat 10.1.55
+> findings on 2026-09-07. The rebuild branch pins published Tomcat 10.1.59 and tests
+> the actual loaded version. Previously published images were not rebuilt by that
+> source change; historical scan success is not current vulnerability clearance.
 
 ## 1. What this product is
 
@@ -43,7 +54,7 @@ remain outside the approved foundation.
 | Area | Evidence-backed status |
 |---|---|
 | Product and program design | Founder-approved direction; public brand clearance remains separate |
-| Korean consumer web | Implemented and tested with synthetic/demo content; integrated flow reviews an ordered three-candidate synthetic set per document, groups records by date and document, lists two dated values of the same item side by side without interpretation, shows Korean status labels instead of server enums, and prints neutral visit-preparation questions (2026-09-02 waves 1 and 2); CI evidence run 33576825427 (33e6ac8) and main run 33592526743 (merge 07d77fe) |
+| Korean consumer web | The rebuild branch makes the four primary routes use Spring-backed state by default, adds opt-in bounded synthetic bootstrap and generated allowlisted examples, and derives at most three source-linked visit questions. Local tests and browser evidence are tracked in `docs/revision/ASTRA_PRODUCT_REBUILD.md`; not yet a hosted service |
 | Core API | Spring/Kotlin authority for sessions, CSRF/origin checks, consent, lifecycle, provenance, audit, and deletion in the synthetic foundation |
 | Durable store | PostgreSQL/Flyway lifecycle verified in CI with synthetic data |
 | Hostile-document boundary | Digest-bound upload, quarantine/approval states, ClamAV contract, separate worker artifact, retry/DLQ behavior, and safe-preview boundary verified in CI |
@@ -216,9 +227,9 @@ clinical judgment, or automatic interpretation.
 
 The safe order from here is:
 
-1. Resolve the public-GHCR stop-ship with a founder-approved private-ECR migration (recommended),
-   PAT-based private republish, or an explicit accept-public decision; then protect `main`
-   (required PR and CI, no force-push). See the roadmap, Track B.
+1. Complete the intended private-ECR migration with reviewed account-backed provisioning,
+   attestation verification and anonymous-pull denial. Main protection is now enabled and
+   GHCR publication paused; neither action resolves the existing public artifacts.
 2. Add production S3/SQS runtime adapters and the hosted network boundary.
 3. Obtain only the non-secret identifiers needed for a reviewed AWS account-backed OpenTofu plan.
 4. Review the plan; authorize apply separately.
@@ -244,7 +255,8 @@ Not needed for ordinary product work:
 
 Needed only at the corresponding gate:
 
-- explicit decision for deletion/republication of the three public GHCR packages;
+- AWS identifiers and reviewed plan for the intended private-ECR migration; old public
+  packages remain untouched and require a separate decision only if deletion is wanted;
 - dedicated AWS non-production account ID;
 - same-account GitHub OIDC provider ARN;
 - separately bootstrapped private Seoul state bucket and lock policy;
@@ -254,6 +266,8 @@ Needed only at the corresponding gate:
 See `docs/operations/founder-real-data-and-provider-activation.md` for the complete future checklist.
 
 ## 11. Where to go next
+
+- Current unified-product implementation and open work: [`docs/revision/ASTRA_PRODUCT_REBUILD.md`](docs/revision/ASTRA_PRODUCT_REBUILD.md)
 
 - Agent operating contract: [`AGENTS.md`](AGENTS.md); project skills in `.claude/skills/`; agent roles in `.claude/agents/`
 - Independent review and critique: [`docs/reviews/2026-09-02-project-review.md`](docs/reviews/2026-09-02-project-review.md)

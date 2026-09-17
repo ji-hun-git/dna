@@ -4,3 +4,7 @@ packages:
 allowBuilds:
   esbuild: true
   msw: true
+
+# Trivy HIGH GHSA-rgj7-g3m4-5g8c (libheif via sharp 0.35.3, transitive from next 16.3.3)
+overrides:
+  sharp: 0.35.4

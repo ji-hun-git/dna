@@ -134,11 +134,11 @@ jobs:
       - name: Run browser-to-Spring-to-worker lifecycle
         id: foundation-e2e
         run: pnpm foundation:e2e
-      - name: Preserve browser failure evidence
-        if: ${{ failure() && steps.foundation-e2e.outcome == 'failure' }}
+      - name: Preserve synthetic browser and viewport evidence
+        if: ${{ always() && (steps.foundation-e2e.outcome == 'success' || steps.foundation-e2e.outcome == 'failure') }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: foundation-browser-failure-evidence
+          name: foundation-browser-evidence
           path: apps/web/test-results
           if-no-files-found: error
           retention-days: 7

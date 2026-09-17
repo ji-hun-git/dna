@@ -13,6 +13,8 @@ const userFacingFiles = [
   "components/integrated/RecordComparison.tsx",
   "components/integrated/PrepareConceptNotice.tsx",
   "components/integrated/VisitPreparation.tsx",
+  "components/integrated/SourcePreview.tsx",
+  "lib/records/visit-questions.ts",
   "components/concept/RecordImportConcept.tsx",
   "components/connections/ConnectionExperience.tsx",
   "components/experience/HealthExperience.tsx",
@@ -126,5 +128,9 @@ describe("Korean UX language boundary", () => {
   it("shows Korean dates without exposing ISO punctuation in visible copy", () => {
     expect(formatKoreanDate("2026-07-28")).toBe("2026. 7. 28.");
     expect(formatKoreanDateTime("2026-08-10 09:44")).toBe("2026. 8. 10. 09:44");
+    // The server sends confirmation instants as ISO 8601 with fractional seconds
+    // and a zone. They must land on screen as Korean local time, never raw.
+    expect(formatKoreanDateTime("2026-09-16T06:52:59.605506Z")).toBe("2026. 9. 16. 15:52");
+    expect(formatKoreanDateTime("2026-09-16T06:52:59+00:00")).toBe("2026. 9. 16. 15:52");
   });
 });

@@ -260,6 +260,7 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
 
   return {
     getSession: () => request("/api/foundation/session", sessionSchema, { method: "GET" }),
+    bootstrapDemo: () => request("/api/foundation/demo-session", issuedSessionSchema, { method: "POST" }),
     createSession: (subjectId: string, credential: string) => request(
       "/api/foundation/session",
       issuedSessionSchema,

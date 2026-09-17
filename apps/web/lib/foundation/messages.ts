@@ -21,6 +21,10 @@ const koreanMessage: Record<FoundationErrorCode, string> = {
 };
 
 export function describeFoundationError(error: unknown) {
+  if (error instanceof FoundationClientError) {
+    if (error.problemCode === "demo_bootstrap_disabled") return "이 환경에서는 체험 시작이 열려 있지 않아요.";
+    if (error.problemCode === "demo_capacity_exhausted") return "체험 공간이 가득 찼어요. 운영자가 확인한 뒤 다시 시작할 수 있어요.";
+  }
   return error instanceof FoundationClientError
     ? koreanMessage[error.code]
     : "요청을 완료하지 못했어요. 네트워크 연결을 확인해 주세요.";
@@ -31,4 +35,28 @@ export function foundationShellState(error: unknown) {
   if (error.code === "authentication_required") return "UNAUTHENTICATED" as const;
   if (error.code === "session_expired" || error.code === "csrf_unavailable") return "SESSION_EXPIRED" as const;
   return "AUTHORIZATION_DENIED" as const;
+}
+
+export type RefusedBootstrap = { message: string; nextAction: string };
+
+/**
+ * A bootstrap the server itself refused (403/429). No session was issued, so this is not a failed
+ * restoration: the person stays on the entry screen with the reason and what to do next.
+ * Anything else (5xx, network, a later read) returns undefined and keeps the restore path.
+ */
+export function describeRefusedBootstrap(error: unknown): RefusedBootstrap | undefined {
+  if (!(error instanceof FoundationClientError)) return undefined;
+  if (error.status !== 403 && error.status !== 429) return undefined;
+  switch (error.problemCode) {
+    case "rate_limited":
+      return { message: "체험 시작 요청이 너무 많아요.", nextAction: "1분쯤 뒤에 체험 시작을 다시 눌러 주세요." };
+    case "demo_capacity_exhausted":
+      return { message: "체험 공간이 가득 찼어요. 운영자가 확인한 뒤 다시 시작할 수 있어요.", nextAction: "기다려도 자리가 생기지 않아요. 운영자에게 알려 주세요." };
+    case "demo_bootstrap_disabled":
+      return { message: "이 환경에서는 체험 시작이 열려 있지 않아요.", nextAction: "이 환경의 운영자에게 체험 시작을 열어 달라고 요청해 주세요." };
+    case "origin_denied":
+      return { message: "이 주소에서는 체험을 시작할 수 없어요.", nextAction: "안내받은 주소로 다시 열어 주세요." };
+    default:
+      return { message: "체험 시작이 거절됐어요.", nextAction: "페이지를 새로 고친 뒤 다시 시도해 주세요." };
+  }
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { PublicProviderExplorer } from "@/components/providers/PublicProviderExplorer";
 
 export const metadata: Metadata = {
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ProvidersPage() {
-  return <PublicProviderExplorer />;
+  return <IntegratedShell current="data-control" status="공공정보 실험실 · 예시 데이터"><PublicProviderExplorer embedded /></IntegratedShell>;
 }

@@ -3,16 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFoundationClient, type FoundationRecord } from "@/lib/foundation/client";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
-import { describeFoundationError } from "@/lib/foundation/messages";
+import { describeFoundationError, foundationShellState } from "@/lib/foundation/messages";
 import { formatKoreanDate } from "@/lib/format/korean-date";
 import { shortDigest } from "@/lib/format/short-digest";
-
-/** The questions a person can take to the next visit. They ask, they never answer. */
-export const visitQuestions: readonly string[] = [
-  "이 값은 어떤 검사에서 나온 건가요?",
-  "지난 결과와 비교해 설명해 주실 수 있나요?",
-  "다시 확인이 필요하다면 언제가 좋을까요?",
-];
+import { buildVisitQuestions } from "@/lib/records/visit-questions";
 
 const preparationNote = "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.";
 
@@ -24,9 +18,11 @@ type VisitPreparationProps = {
   loading: boolean;
   errorMessage: string;
   onPrint: () => void;
+  onRetry?: () => void;
 };
 
-export function VisitPreparation({ records, loading, errorMessage, onPrint }: VisitPreparationProps) {
+export function VisitPreparation({ records, loading, errorMessage, onPrint, onRetry }: VisitPreparationProps) {
+  const questions = !loading && !errorMessage ? buildVisitQuestions(records) : [];
   return (
     <main className="gc-prepare">
       <header className="gc-prepare__heading">
@@ -37,7 +33,14 @@ export function VisitPreparation({ records, loading, errorMessage, onPrint }: Vi
       </header>
 
       {loading && <p role="status" aria-live="polite">확인한 기록을 불러오고 있어요.</p>}
-      {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage} <a href="/">홈에서 다시 로그인</a></p>}
+      {errorMessage && <div className="gc-integrated-error" role="alert">
+        <p>{errorMessage}</p>
+        <div className="gc-prepare__actions">
+          {onRetry
+            ? <button type="button" disabled={loading} onClick={onRetry}>질문 목록 다시 불러오기</button>
+            : <a href="/">홈에서 다시 로그인</a>}
+        </div>
+      </div>}
 
       {!loading && !errorMessage && records.length === 0 && (
         <section className="gc-prepare__empty" aria-labelledby="prepare-empty-title">
@@ -47,27 +50,29 @@ export function VisitPreparation({ records, loading, errorMessage, onPrint }: Vi
         </section>
       )}
 
-      {records.length > 0 && (
+      {questions.length > 0 && (
         <>
           <div className="gc-prepare__actions">
             <button type="button" onClick={onPrint}>인쇄하기</button>
             <a href="/records">기록으로 돌아가기</a>
           </div>
           <ol className="gc-prepare__list">
-            {records.map((record) => (
-              <li key={record.recordVersionId}>
-                <article aria-labelledby={`prepare-${record.recordId}`}>
-                  <h2 id={`prepare-${record.recordId}`}>{record.label}</h2>
+            {questions.map((question, index) => (
+              <li key={question.id}>
+                <article aria-labelledby={`prepare-question-${index}`}>
+                  <p className="gc-import__eyebrow">질문 {index + 1} · 기록으로 만든 고정 질문</p>
+                  <h2 id={`prepare-question-${index}`}>{question.text}</h2>
+                  <p>{question.reason}</p>
+                  <div className="gc-prepare__sources">{question.records.map((record) => <div key={record.recordVersionId} className="gc-prepare__source">
+                  <p>예시 데이터 · {formatKoreanDate(record.observedOn)}</p>
                   <p className="gc-prepare__value"><strong>{record.value}</strong><span>{record.unit}</span></p>
-                  <dl>
-                    <div><dt>검사일</dt><dd>{formatKoreanDate(record.observedOn)}</dd></div>
+                  <details className="gc-prepare__detail"><summary>확인 정보</summary><dl>
                     <div><dt>근거 쪽수</dt><dd>{record.evidencePage}쪽</dd></div>
                     <div><dt>문서 확인값</dt><dd><code>{shortDigest(record.documentSha256)}</code></dd></div>
                     <div><dt>확인 방식</dt><dd>{record.reviewDecision === "CORRECTED" ? "사용자가 값을 수정함" : "사용자가 원문과 같다고 확인함"}</dd></div>
-                  </dl>
-                  <ul className="gc-prepare__questions">
-                    {visitQuestions.map((question) => <li key={question}>{question}</li>)}
-                  </ul>
+                  </dl></details>
+                  <a href={`/records#record-${record.recordId}`}>이 질문의 출처 보기</a>
+                  </div>)}</div>
                 </article>
               </li>
             ))}
@@ -84,22 +89,31 @@ export function IntegratedVisitPreparation() {
   const [records, setRecords] = useState<FoundationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [requiresSignIn, setRequiresSignIn] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setErrorMessage("");
+    setRequiresSignIn(false);
     void (async () => {
       try {
         await client.getSession();
         const loaded = await client.getRecords();
         if (active) setRecords(loaded);
       } catch (error) {
-        if (active) setErrorMessage(describeFoundationError(error));
+        if (active) {
+          setErrorMessage(describeFoundationError(error));
+          const state = foundationShellState(error);
+          setRequiresSignIn(state === "UNAUTHENTICATED" || state === "SESSION_EXPIRED");
+        }
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
-  }, [client]);
+  }, [client, loadAttempt]);
 
   return (
     <IntegratedShell current="prepare" status="확인한 기록으로 만든 질문">
@@ -108,6 +122,7 @@ export function IntegratedVisitPreparation() {
         loading={loading}
         errorMessage={errorMessage}
         onPrint={() => window.print()}
+        onRetry={requiresSignIn ? undefined : () => setLoadAttempt((attempt) => attempt + 1)}
       />
     </IntegratedShell>
   );

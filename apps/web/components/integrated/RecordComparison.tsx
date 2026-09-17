@@ -21,6 +21,7 @@ export function RecordComparison({ comparisons }: RecordComparisonProps) {
   return (
     <section className="gc-records-comparison" aria-labelledby="record-comparison-title">
       <h2 id="record-comparison-title">날짜별로 본 내 기록</h2>
+      <p>예시 데이터 · 직접 확인한 두 날짜의 값</p>
       <p className="gc-records-comparison__note">
         같은 항목의 두 날짜 값을 그대로 나란히 둔 목록이에요. 변화의 의미는 판단하지 않아요.
       </p>

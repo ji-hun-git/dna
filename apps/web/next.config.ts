@@ -31,6 +31,7 @@ function resolveCoreApiOrigin() {
 const coreApiOrigin = resolveCoreApiOrigin();
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   output: "standalone",
   outputFileTracingRoot: resolve(import.meta.dirname, "../.."),
   poweredByHeader: false,

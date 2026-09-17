@@ -1,5 +1,6 @@
 import { ConnectionExperience } from "@/components/connections/ConnectionExperience";
 import type { Metadata } from "next";
+import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 
 export const metadata: Metadata = {
   title: "데이터 연결",
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ConnectionsPage() {
-  return <ConnectionExperience />;
+  return <IntegratedShell current="data-control" status="외부 연결 없음"><ConnectionExperience embedded /></IntegratedShell>;
 }
