@@ -1698,6 +1698,115 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(responseJson(healthEvents.toByteArray()).map { it["originalValue"].asText() }).contains("188")
     }
 
+    @Test
+    fun exportsTheOwnersEventsAsAFhirBundleWithRangeTextOnlyAndAuditsNoValue() {
+        mockMvc.perform(get("/api/foundation/health-events/export/fhir")).andExpect(status().isUnauthorized)
+        val alice = login("synthetic-alice")
+        val bob = login("synthetic-bob")
+
+        val empty = read(get("/api/foundation/health-events/export/fhir"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resourceType").value("Bundle"))
+            .andExpect(jsonPath("$.type").value("collection"))
+            .andExpect(jsonPath("$.entry").doesNotExist())
+            .andReturn().response
+        assertThat(empty.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .matches("attachment; filename=\"alm-health-events-\\d{8}\\.fhir\\.json\"")
+
+        val consentId = grantConsent(alice)
+        val july = importJulyWithRange(alice, consentId, "fhir-july")
+        // 총콜레스테롤 is corrected at confirmation (188 → 190); the other two are confirmed as read.
+        july.forEach { candidate ->
+            val value = if (candidate["ordinal"].asInt() == 1) "190" else candidate["value"].asText()
+            mutate(
+                post("/api/foundation/candidates/${candidate["candidateId"].asText()}/confirmation")
+                    .header("Idempotency-Key", "fhir-july-confirm-${candidate["ordinal"].asInt()}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json(mapOf("value" to value))),
+                alice,
+            ).andExpect(status().isCreated)
+        }
+
+        val response = read(get("/api/foundation/health-events/export/fhir"), alice)
+            .andExpect(status().isOk)
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+            .andReturn().response
+        assertThat(response.contentType).startsWith("application/fhir+json")
+        assertThat(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .matches("attachment; filename=\"alm-health-events-\\d{8}\\.fhir\\.json\"")
+        val bundle = responseJson(response.contentAsByteArray)
+        assertThat(bundle["resourceType"].asText()).isEqualTo("Bundle")
+        assertThat(bundle["type"].asText()).isEqualTo("collection")
+        assertThat(bundle["timestamp"].asText()).matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z")
+        assertThat(bundle["meta"]["tag"].single()["system"].asText()).isEqualTo("https://alm.example/fhir/tag")
+        assertThat(bundle["meta"]["tag"].single()["code"].asText()).isEqualTo("synthetic")
+
+        val observations = bundle["entry"].map { it["resource"] }.associateBy { it["code"]["text"].asText() }
+        assertThat(observations.keys).containsExactlyInAnyOrder("총콜레스테롤", "당화혈색소", "비타민 D")
+        val eventIds = responseJson(
+            read(get("/api/foundation/health-events"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).map { it["eventId"].asText() }
+        assertThat(observations.values.map { it["id"].asText() }).containsExactlyInAnyOrderElementsOf(eventIds)
+
+        val cholesterol = observations.getValue("총콜레스테롤")
+        assertThat(cholesterol["resourceType"].asText()).isEqualTo("Observation")
+        assertThat(cholesterol["status"].asText()).isEqualTo("final")
+        assertThat(cholesterol["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(cholesterol["code"]["coding"].single()["system"].asText()).isEqualTo("http://loinc.org")
+        assertThat(cholesterol["code"]["coding"].single()["code"].asText()).isEqualTo("2093-3")
+        assertThat(cholesterol["effectiveDateTime"].asText()).isEqualTo("2026-07-28")
+        assertThat(cholesterol["valueQuantity"]["value"].isNumber).isTrue()
+        assertThat(cholesterol["valueQuantity"]["value"].decimalValue()).isEqualByComparingTo("190")
+        assertThat(cholesterol["valueQuantity"]["unit"].asText()).isEqualTo("mg/dL")
+        assertThat(cholesterol["referenceRange"].single().fieldNames().asSequence().toList()).containsExactly("text")
+        assertThat(cholesterol["referenceRange"].single()["text"].asText()).isEqualTo("120-199")
+        assertThat(cholesterol["note"].single()["text"].asText()).isEqualTo("본인이 값을 수정함")
+
+        val hba1c = observations.getValue("당화혈색소")
+        assertThat(hba1c["code"]["coding"].single()["code"].asText()).isEqualTo("4548-4")
+        assertThat(hba1c["valueQuantity"]["value"].decimalValue()).isEqualByComparingTo("5.2")
+        assertThat(hba1c.has("referenceRange")).isFalse()
+        assertThat(hba1c.has("note")).isFalse()
+        assertThat(response.contentAsString).doesNotContain("interpretation", "subject", "performer", "\"low\"", "\"high\"", "valueString")
+
+        read(get("/api/foundation/health-events/export/fhir"), bob)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.entry").doesNotExist())
+
+        // The JSON export is untouched: same schema, same filename shape, its own audit resource type.
+        val jsonExport = read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+            .andReturn().response
+        assertThat(jsonExport.contentType).startsWith("application/json")
+        assertThat(jsonExport.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .matches("attachment; filename=\"alm-health-events-\\d{8}\\.json\"")
+
+        fun auditCount(resourceType: String) = jdbc.queryForObject(
+            """
+            SELECT COUNT(*) FROM gc_audit_event
+            WHERE event_type = 'HEALTH_EVENTS_EXPORTED' AND resource_type = ?
+              AND resource_id IS NULL AND purpose_code IS NULL AND outcome = 'SUCCESS'
+            """.trimIndent(),
+            Long::class.java,
+            resourceType,
+        )
+        assertThat(auditCount("EXPORT_FHIR")).isEqualTo(3L)
+        assertThat(auditCount("EXPORT")).isEqualTo(1L)
+        // No value, count or date in any text column of the export audit rows.
+        val exportAuditText = jdbc.queryForList(
+            """
+            SELECT event_type || ' ' || resource_type || ' ' || COALESCE(purpose_code, '')
+            FROM gc_audit_event WHERE event_type = 'HEALTH_EVENTS_EXPORTED'
+            """.trimIndent(),
+            String::class.java,
+        )
+        assertThat(exportAuditText).hasSize(4).allSatisfy { line ->
+            assertThat(line).doesNotContainPattern("\\d").doesNotContain("mg/dL", "120-199")
+        }
+    }
+
     /** The July document whose first row prints the range `120-199` (stored, exported only). */
     private fun importJulyWithRange(client: TestClient, consentId: UUID, keyPrefix: String): List<JsonNode> {
         val documentId = requestDocument(client, consentId, fixturePdf, "$keyPrefix-document-request")

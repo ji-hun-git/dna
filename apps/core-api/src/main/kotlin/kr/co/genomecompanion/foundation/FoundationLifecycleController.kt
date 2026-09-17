@@ -359,6 +359,17 @@ class FoundationLifecycleController(
             .body(envelope.export)
     }
 
+    @GetMapping("/health-events/export/fhir", produces = ["application/fhir+json"])
+    fun exportHealthEventsAsFhir(request: HttpServletRequest): ResponseEntity<FhirBundle> {
+        val envelope = service.exportHealthEventsAsFhir(request.foundationPrincipal())
+        return ResponseEntity.ok()
+            .cacheControlNoStore()
+            .contentType(MediaType.parseMediaType("application/fhir+json"))
+            .header("X-Content-Type-Options", "nosniff")
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${envelope.filename}\"")
+            .body(envelope.bundle)
+    }
+
     @GetMapping("/records/{recordId}")
     fun getRecord(
         request: HttpServletRequest,
