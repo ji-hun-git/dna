@@ -3838,6 +3838,11 @@ svg {
   white-space: nowrap;
 }
 
+.gc-data-control__purpose-list .gc-data-control__project-revoke {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
 .gc-data-control__retention {
   overflow: hidden;
   box-sizing: border-box;

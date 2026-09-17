@@ -11,6 +11,7 @@ const userFacingFiles = [
   "components/integrated/IntegratedRecords.tsx",
   "components/integrated/IntegratedShell.tsx",
   "components/integrated/RecordComparison.tsx",
+  "components/integrated/RecentChanges.tsx",
   "components/integrated/PrepareConceptNotice.tsx",
   "components/integrated/VisitPreparation.tsx",
   "components/integrated/SourcePreview.tsx",
@@ -125,6 +126,14 @@ describe("Korean UX language boundary", () => {
     expect(source("components/integrated/IntegratedHealthExperience.tsx")).not.toContain("labelAbstentionReason(item.reason)");
   });
 
+  it("describes the recent changes as two values without a judgement", () => {
+    const recent = source("components/integrated/RecentChanges.tsx");
+    expect(recent).toContain("최근 변화");
+    expect(recent).toContain("새 결과지에서 확인한 값과 같은 항목의 이전 값이에요. 변화의 의미는 판단하지 않아요.");
+    expect(recent).not.toContain("→");
+    expect(source("components/integrated/IntegratedHealthExperience.tsx")).toContain("<RecentChanges changes={changes} />");
+  });
+
   it("labels every server enum in Korean instead of rendering it raw", () => {
     const integratedFiles = userFacingFiles.filter(
       (path) => path.startsWith("components/integrated/") || path.startsWith("components/my-data/"),
@@ -168,5 +177,29 @@ describe("Korean UX language boundary", () => {
     expect(review).toContain("결과지에 적힌 검사일과 다르면 고쳐 주세요. 값의 의미는 판단하지 않아요.");
     expect(source("lib/format/status-labels.ts")).toContain("사용자가 검사일을 수정함 · 원래 ");
     expect(source("components/integrated/IntegratedRecords.tsx")).toContain("describeReviewDecision(record)");
+  });
+
+  it("states that research consent is optional, stored only, and asked again per project", () => {
+    const control = source("components/integrated/IntegratedDataControl.tsx");
+    for (const sentence of [
+      "연구 동의 없이도 모든 기능을 쓸 수 있어요.",
+      "실제 활용 전에는 프로젝트별 동의를 다시 물어요.",
+      "가명처리 후 연구에 쓰는 것에 대한 선택. 지금은 진행 중인 연구가 없어요.",
+      "적합한 연구가 있을 때 참여 제안을 받을지. 지금은 연락 채널이 없어요.",
+      "프로젝트가 생기면 여기서 개별로 물어요.",
+    ]) {
+      expect(control, `data control lacks: ${sentence}`).toContain(sentence);
+    }
+    expect(control).not.toContain("{consent.status}");
+    expect(control).not.toContain("{status}</strong>");
+  });
+
+  it("explains the export as a browser download with no server copy", () => {
+    const control = source("components/integrated/IntegratedDataControl.tsx");
+    expect(control).toContain('href="/api/foundation/health-events/export"');
+    expect(control).toContain("내 기록 내보내기(JSON)");
+    expect(control).toContain("브라우저가 파일을 저장해요. 서버에 사본이 남지 않아요.");
+    expect(control).toContain("내보낼 기록이 없어요");
+    expect(control).not.toContain("/api/export");
   });
 });

@@ -256,5 +256,53 @@ describe("foundation same-origin client", () => {
     const bad = vi.fn(async () => jsonResponse({ ...(await (await fetcher()).json()), abstentions: [{ label: "x", reason: "low_confidence" }] }));
     await expect(createFoundationClient({ fetcher: bad, readCsrfToken: () => "csrf-value" }).getDocument("e64ddaae-a326-4f23-88a9-05ac59a48625")).rejects.toThrow();
   });
+
+  it("accepts a change summary whose null members are omitted and refuses a judgement field", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ items: [], newConcepts: [], unchangedCount: 0 }));
+    const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
+
+    await expect(client.getChanges()).resolves.toEqual({ items: [], newConcepts: [], unchangedCount: 0 });
+    expect(fetcher).toHaveBeenCalledWith("/api/foundation/changes", expect.objectContaining({
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    }));
+
+    const judging = createFoundationClient({
+      fetcher: vi.fn(async () => jsonResponse({
+        items: [{
+          concept: "총콜레스테롤",
+          unit: "mg/dL",
+          latest: { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d50", value: "188", observedOn: "2026-07-28" },
+          direction: "down",
+        }],
+        newConcepts: [],
+        unchangedCount: 0,
+      })),
+      readCsrfToken: () => "csrf-value",
+    });
+    await expect(judging.getChanges()).rejects.toMatchObject({ code: "invalid_server_response" });
+  });
+
+  it("reads the consent list, grants a purpose with an idempotency key and refuses an unknown purpose", async () => {
+    const list = [
+      { purposeCode: "DOCUMENT_EXTRACTION", status: "NOT_GRANTED", policyVersion: "foundation-v1" },
+      { consentId: "89116f1a-2026-457e-8942-409ff8f8fc4f", purposeCode: "RESEARCH_USE", status: "ACTIVE", policyVersion: "research-consent-policy.v1", grantedAt: "2026-07-28T09:00:00Z" },
+      { purposeCode: "RESEARCH_CONTACT", status: "NOT_GRANTED", policyVersion: "research-contact-policy.v1" },
+    ];
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => init?.method === "POST"
+      ? jsonResponse(list[1], 201)
+      : jsonResponse(list));
+    const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
+
+    await expect(client.getConsents()).resolves.toHaveLength(3);
+    await expect(client.grantConsent("RESEARCH_USE", "consent-000000000001")).resolves.toMatchObject({ status: "ACTIVE" });
+    const [path, request] = fetcher.mock.calls[1] as unknown as [string, RequestInit];
+    expect(path).toBe("/api/foundation/consents/RESEARCH_USE");
+    expect(new Headers(request.headers).get("Idempotency-Key")).toBe("consent-000000000001");
+    expect(new Headers(request.headers).get("X-GC-CSRF")).toBe("csrf-value");
+    await expect(client.grantConsent("STUDY-1", "consent-000000000002")).rejects.toMatchObject({ code: "validation_error" });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
 });
 

@@ -1090,6 +1090,303 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).isEqualTo(1L)
     }
 
+    @Test
+    fun changesListTheLatestDocumentValuesBesideThePreviousValueOfTheSameConcept() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+
+        read(get("/api/foundation/changes"), alice)
+            .andExpect(status().isOk)
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(jsonPath("$.latestDocument").doesNotExist())
+            .andExpect(jsonPath("$.items.length()").value(0))
+            .andExpect(jsonPath("$.newConcepts.length()").value(0))
+            .andExpect(jsonPath("$.unchangedCount").value(0))
+
+        val january = importSyntheticDocument(alice, consentId, januaryFixturePdf, januaryFixtureDigest, "changes-january")
+        confirmEveryCandidate(alice, january, "changes-january")
+        val firstOnly = responseJson(
+            read(get("/api/foundation/changes"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(firstOnly["latestDocument"]["documentId"].asText()).isEqualTo(january[0]["documentId"].asText())
+        assertThat(firstOnly["latestDocument"]["observedOn"].asText()).isEqualTo("2026-01-15")
+        assertThat(firstOnly["latestDocument"]["eventCount"].asInt()).isEqualTo(3)
+        assertThat(firstOnly["items"].map { it.has("previous") }).containsExactly(false, false, false)
+        assertThat(firstOnly["newConcepts"].map(JsonNode::asText)).containsExactlyInAnyOrder("총콜레스테롤", "당화혈색소", "비타민 D")
+
+        val july = importSyntheticDocument(alice, consentId, fixturePdf, fixtureDigest, "changes-july")
+        confirmEveryCandidate(alice, july, "changes-july")
+
+        val summary = responseJson(
+            read(get("/api/foundation/changes"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(summary["latestDocument"]["documentId"].asText()).isEqualTo(july[0]["documentId"].asText())
+        assertThat(summary["latestDocument"]["observedOn"].asText()).isEqualTo("2026-07-28")
+        assertThat(summary["latestDocument"]["eventCount"].asInt()).isEqualTo(3)
+        val byConcept = summary["items"].associateBy { it["concept"].asText() }
+        assertThat(byConcept.keys).containsExactlyInAnyOrder("총콜레스테롤", "당화혈색소", "비타민 D")
+        assertThat(byConcept.getValue("총콜레스테롤")["conceptCode"].asText()).isEqualTo("total-cholesterol")
+        assertThat(byConcept.getValue("총콜레스테롤")["unit"].asText()).isEqualTo("mg/dL")
+        assertThat(byConcept.getValue("총콜레스테롤")["latest"]["value"].asText()).isEqualTo("188")
+        assertThat(byConcept.getValue("총콜레스테롤")["latest"]["observedOn"].asText()).isEqualTo("2026-07-28")
+        assertThat(byConcept.getValue("총콜레스테롤")["previous"]["value"].asText()).isEqualTo("194")
+        assertThat(byConcept.getValue("총콜레스테롤")["previous"]["observedOn"].asText()).isEqualTo("2026-01-15")
+        assertThat(byConcept.getValue("당화혈색소")["previous"]["value"].asText()).isEqualTo("5.4")
+        assertThat(byConcept.getValue("비타민 D")["previous"]["value"].asText()).isEqualTo("45")
+        assertThat(summary["newConcepts"].size()).isZero()
+        assertThat(summary["unchangedCount"].asInt()).isZero()
+        assertThat(summary.toString()).doesNotContain("referenceRange", "difference", "direction", "trend")
+
+        val bob = login("synthetic-bob")
+        read(get("/api/foundation/changes"), bob)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.latestDocument").doesNotExist())
+            .andExpect(jsonPath("$.items.length()").value(0))
+
+        mockMvc.perform(get("/api/foundation/changes")).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun consentIdempotencyKeysAreScopedPerPurposeAndRejectCrossPurposeReuse() {
+        val alice = login("synthetic-alice")
+
+        // Same key, same purpose: replay returns the same receipt, no second row.
+        val first = responseJson(
+            mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "shared-key-1"), alice)
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.purposeCode").value("RESEARCH_USE"))
+                .andReturn().response.contentAsByteArray,
+        )
+        val researchUseId = UUID.fromString(first["consentId"].asText())
+        mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "shared-key-1"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.consentId").value(researchUseId.toString()))
+            .andExpect(jsonPath("$.purposeCode").value("RESEARCH_USE"))
+
+        // Same key, different purpose: rejected rather than replaying the other purpose's receipt.
+        mutate(post("/api/foundation/consents/PROJECT:study1").header("Idempotency-Key", "shared-key-1"), alice)
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("idempotency_key_reused"))
+        assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isEqualTo(1)
+
+        // The project purpose can still be granted under its own key.
+        mutate(post("/api/foundation/consents/PROJECT:study1").header("Idempotency-Key", "shared-key-2"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.purposeCode").value("PROJECT:study1"))
+        assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isEqualTo(2)
+    }
+
+    @Test
+    fun researchConsentsAreStoredPerPurposeAndNeverGateTheLifecycle() {
+        val alice = login("synthetic-alice")
+        val bob = login("synthetic-bob")
+
+        val initial = responseJson(
+            read(get("/api/foundation/consents"), alice)
+                .andExpect(status().isOk)
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andReturn().response.contentAsByteArray,
+        )
+        assertThat(initial.map { it["purposeCode"].asText() }).containsExactly("DOCUMENT_EXTRACTION", "RESEARCH_USE", "RESEARCH_CONTACT")
+        assertThat(initial.map { it["status"].asText() }).containsExactly("NOT_GRANTED", "NOT_GRANTED", "NOT_GRANTED")
+        assertThat(initial.map { it["policyVersion"].asText() })
+            .containsExactly("foundation-v1", "research-consent-policy.v1", "research-contact-policy.v1")
+        assertThat(initial.map { it.has("consentId") }).containsExactly(false, false, false)
+
+        val researchUse = responseJson(
+            mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "research-use-grant-1"), alice)
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.purposeCode").value("RESEARCH_USE"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.policyVersion").value("research-consent-policy.v1"))
+                .andExpect(jsonPath("$.grantedAt").isNotEmpty)
+                .andExpect(jsonPath("$.revokedAt").doesNotExist())
+                .andReturn().response.contentAsByteArray,
+        )
+        val researchUseId = UUID.fromString(researchUse["consentId"].asText())
+        mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "research-use-grant-1"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.consentId").value(researchUseId.toString()))
+        mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "research-use-grant-2"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.consentId").value(researchUseId.toString()))
+        assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isEqualTo(1)
+
+        // A research consent is not a document consent: it cannot open the lifecycle.
+        mutate(
+            post("/api/foundation/documents")
+                .header("Idempotency-Key", "doc-with-research-consent")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(documentRequest(researchUseId, fixturePdf)),
+            alice,
+        ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("active_consent_required"))
+
+        // The whole lifecycle runs while the other research purpose is absent and this one is later revoked.
+        val documentConsentId = grantConsent(alice)
+        val candidates = importSyntheticDocument(alice, documentConsentId, fixturePdf, fixtureDigest, "research-invariant")
+        confirmEveryCandidate(alice, candidates, "research-invariant")
+        read(get("/api/foundation/records"), alice).andExpect(status().isOk).andExpect(jsonPath("$.length()").value(3))
+
+        mutate(post("/api/foundation/consents/$researchUseId/revocation"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.purposeCode").value("RESEARCH_USE"))
+            .andExpect(jsonPath("$.status").value("REVOKED"))
+        val afterRevoke = responseJson(
+            read(get("/api/foundation/consents"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(afterRevoke.map { "${it["purposeCode"].asText()}=${it["status"].asText()}" })
+            .containsExactly("DOCUMENT_EXTRACTION=ACTIVE", "RESEARCH_USE=REVOKED", "RESEARCH_CONTACT=NOT_GRANTED")
+        assertThat(afterRevoke[1]["revokedAt"].asText()).isNotEmpty()
+        assertThat(afterRevoke[0]["consentId"].asText()).isEqualTo(documentConsentId.toString())
+        read(get("/api/foundation/documents/${candidates[0]["documentId"].asText()}/candidates"), alice)
+            .andExpect(status().isOk)
+
+        // The lifecycle keeps working after the research revoke: importing and fully confirming a
+        // second document is unaffected, proving the revoked purpose never gated it.
+        val januaryAfterRevoke = importSyntheticDocument(
+            alice,
+            documentConsentId,
+            januaryFixturePdf,
+            januaryFixtureDigest,
+            "research-invariant-after-revoke",
+        )
+        confirmEveryCandidate(alice, januaryAfterRevoke, "research-invariant-after-revoke")
+
+        read(get("/api/foundation/health-events"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(6))
+        read(get("/api/foundation/changes"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.latestDocument.eventCount").value(3))
+        read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.events.length()").value(6))
+
+        // PROJECT purposes: the prefix and shape are validated; a granted one is listed after the fixed three.
+        mutate(post("/api/foundation/consents/STUDY-1").header("Idempotency-Key", "project-no-prefix"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("consent_purpose_invalid"))
+        mutate(post("/api/foundation/consents/PROJECT:Demo_Study").header("Idempotency-Key", "project-bad-shape"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("consent_purpose_invalid"))
+        mutate(post("/api/foundation/consents/PROJECT:${"a".repeat(41)}").header("Idempotency-Key", "project-too-long"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("consent_purpose_invalid"))
+        mutate(post("/api/foundation/consents/PROJECT:demo-study-1").header("Idempotency-Key", "project-grant-1"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.purposeCode").value("PROJECT:demo-study-1"))
+            .andExpect(jsonPath("$.policyVersion").value("project-consent-policy.v1"))
+        val withProject = responseJson(
+            read(get("/api/foundation/consents"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(withProject.map { it["purposeCode"].asText() })
+            .containsExactly("DOCUMENT_EXTRACTION", "RESEARCH_USE", "RESEARCH_CONTACT", "PROJECT:demo-study-1")
+
+        // Owner isolation: bob neither sees nor revokes alice's consents.
+        val bobList = responseJson(
+            read(get("/api/foundation/consents"), bob).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(bobList.map { it["status"].asText() }).containsExactly("NOT_GRANTED", "NOT_GRANTED", "NOT_GRANTED")
+        mutate(post("/api/foundation/consents/$researchUseId/revocation"), bob)
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("consent_not_found"))
+        mockMvc.perform(get("/api/foundation/consents")).andExpect(status().isUnauthorized)
+
+        // Audit rows name the purpose and nothing else.
+        assertThat(
+            jdbc.queryForList(
+                "SELECT purpose_code FROM gc_audit_event WHERE event_type = 'CONSENT_GRANTED' ORDER BY audit_sequence",
+                String::class.java,
+            ),
+        ).containsExactly("RESEARCH_USE", "DOCUMENT_EXTRACTION", "PROJECT:demo-study-1")
+        assertThat(
+            jdbc.queryForList("SELECT purpose_code FROM gc_audit_event WHERE event_type = 'CONSENT_REVOKED'", String::class.java),
+        ).containsExactly("RESEARCH_USE")
+        assertThat(
+            jdbc.queryForObject(
+                """
+                SELECT COUNT(*) FROM gc_audit_event
+                WHERE event_type LIKE '%policy%' OR resource_type LIKE '%policy%' OR purpose_code LIKE '%policy%'
+                   OR event_type LIKE '%188%' OR resource_type LIKE '%mg/dL%'
+                """.trimIndent(),
+                Long::class.java,
+            ),
+        ).isZero()
+
+        // Deletion removes every purpose row; nothing research-related was ever a condition.
+        mutate(delete("/api/foundation/profile"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andExpect(jsonPath("$.rawHealthValuesPresentInAudit").value(false))
+        assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isZero()
+    }
+
+    @Test
+    fun exportsTheOwnersHealthEventsAsAJsonAttachmentWithoutRangesAndAuditsNoValue() {
+        mockMvc.perform(get("/api/foundation/health-events/export")).andExpect(status().isUnauthorized)
+        val alice = login("synthetic-alice")
+        val bob = login("synthetic-bob")
+
+        val empty = read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v1"))
+            .andExpect(jsonPath("$.events.length()").value(0))
+            .andExpect(jsonPath("$.documents.length()").value(0))
+            .andReturn().response
+        assertThat(empty.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .matches("attachment; filename=\"alm-health-events-\\d{8}\\.json\"")
+
+        val consentId = grantConsent(alice)
+        val candidates = importSyntheticDocument(alice, consentId, fixturePdf, fixtureDigest, "export")
+        confirmEveryCandidate(alice, candidates, "export")
+        val documentId = candidates[0]["documentId"].asText()
+
+        val response = read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isOk)
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v1"))
+            .andExpect(jsonPath("$.subjectKind").value("synthetic"))
+            .andExpect(jsonPath("$.exportedAt").isNotEmpty)
+            .andExpect(jsonPath("$.events.length()").value(3))
+            .andExpect(jsonPath("$.events[0].source.documentId").value(documentId))
+            .andExpect(jsonPath("$.documents.length()").value(1))
+            .andExpect(jsonPath("$.documents[0].documentId").value(documentId))
+            .andExpect(jsonPath("$.documents[0].observedOn").value("2026-07-28"))
+            .andExpect(jsonPath("$.documents[0].status").value("COMPLETED"))
+            .andExpect(jsonPath("$.documents[0].abstentions.length()").value(0))
+            .andReturn().response
+        assertThat(response.contentType).startsWith("application/json")
+        assertThat(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .matches("attachment; filename=\"alm-health-events-\\d{8}\\.json\"")
+        assertThat(response.contentAsString).doesNotContain("referenceRange", "trend", "direction", "normal", "risk")
+        assertThat(responseJson(response.contentAsByteArray)["events"].map { it["value"].asText() })
+            .containsExactlyInAnyOrder("188", "5.2", "42")
+
+        read(get("/api/foundation/health-events/export"), bob)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.events.length()").value(0))
+            .andExpect(jsonPath("$.documents.length()").value(0))
+
+        assertThat(
+            jdbc.queryForObject(
+                """
+                SELECT COUNT(*) FROM gc_audit_event
+                WHERE event_type = 'HEALTH_EVENTS_EXPORTED' AND resource_type = 'EXPORT'
+                  AND resource_id IS NULL AND purpose_code IS NULL AND outcome = 'SUCCESS'
+                """.trimIndent(),
+                Long::class.java,
+            ),
+        ).isEqualTo(3L)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM gc_audit_event WHERE event_type LIKE '%188%' OR resource_type LIKE '%mg/dL%' OR event_type LIKE '%3%'",
+                Long::class.java,
+            ),
+        ).isZero()
+    }
+
     private fun importSyntheticDocument(
         client: TestClient,
         consentId: UUID,

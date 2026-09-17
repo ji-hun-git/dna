@@ -169,6 +169,23 @@ class FoundationLifecycleController(
             .body(ConsentResponse(consentId = consentId, status = "ACTIVE"))
     }
 
+    @GetMapping("/consents")
+    fun listConsents(request: HttpServletRequest): ResponseEntity<List<ConsentReceipt>> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(service.listConsents(request.foundationPrincipal()))
+
+    /** The literal `/consents/document-extraction` mapping above wins over this variable for that path. */
+    @PostMapping("/consents/{purposeCode}")
+    fun grantConsent(
+        request: HttpServletRequest,
+        @PathVariable purposeCode: String,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+    ): ResponseEntity<ConsentReceipt> =
+        ResponseEntity.status(HttpStatus.CREATED)
+            .cacheControlNoStore()
+            .body(service.grantConsent(request.foundationPrincipal(), purposeCode, idempotencyKey))
+
     @PostMapping("/documents")
     fun requestDocument(
         request: HttpServletRequest,
@@ -319,6 +336,23 @@ class FoundationLifecycleController(
             .cacheControlNoStore()
             .body(service.listHealthEvents(request.foundationPrincipal()))
 
+    @GetMapping("/changes")
+    fun getChanges(request: HttpServletRequest): ResponseEntity<ChangeSummary> =
+        ResponseEntity.ok()
+            .cacheControlNoStore()
+            .body(service.getChangeSummary(request.foundationPrincipal()))
+
+    @GetMapping("/health-events/export", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun exportHealthEvents(request: HttpServletRequest): ResponseEntity<HealthEventExport> {
+        val envelope = service.exportHealthEvents(request.foundationPrincipal())
+        return ResponseEntity.ok()
+            .cacheControlNoStore()
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Content-Type-Options", "nosniff")
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${envelope.filename}\"")
+            .body(envelope.export)
+    }
+
     @GetMapping("/records/{recordId}")
     fun getRecord(
         request: HttpServletRequest,
@@ -352,10 +386,10 @@ class FoundationLifecycleController(
         request: HttpServletRequest,
         @PathVariable consentId: UUID,
     ): ResponseEntity<ConsentResponse> {
-        service.revokeConsent(request.foundationPrincipal(), consentId)
+        val revoked = service.revokeConsent(request.foundationPrincipal(), consentId)
         return ResponseEntity.ok()
             .cacheControlNoStore()
-            .body(ConsentResponse(consentId = consentId, status = "REVOKED"))
+            .body(ConsentResponse(consentId = consentId, purposeCode = revoked.purposeCode, status = "REVOKED"))
     }
 
     @DeleteMapping("/profile")

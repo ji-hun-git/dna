@@ -55,7 +55,7 @@ remain outside the approved foundation.
 |---|---|
 | Product and program design | Founder-approved direction; public brand clearance remains separate |
 | Korean consumer web | The rebuild branch makes the four primary routes use Spring-backed state by default, adds opt-in bounded synthetic bootstrap and generated allowlisted examples, and derives at most three source-linked visit questions. `/my-data` renders one cell per CURRENT record with exact search and an evidence drawer. Local tests and browser evidence are tracked in `docs/revision/ASTRA_PRODUCT_REBUILD.md`; not yet a hosted service |
-| Core API | Spring/Kotlin authority for sessions, CSRF/origin checks, consent, lifecycle, provenance, audit, and deletion in the synthetic foundation |
+| Core API | Spring/Kotlin authority for sessions, CSRF/origin checks, consent, lifecycle, provenance, audit, and deletion in the synthetic foundation. Since Wave 2C it also serves the judgement-free what-changed summary, per-purpose consent (research consent stored only, never a condition) and the person's own HealthEvent export (`docs/status/2026-09-17/wave2c.md`) |
 | Durable store | PostgreSQL/Flyway lifecycle verified in CI with synthetic data |
 | Hostile-document boundary | Digest-bound upload, quarantine/approval states, ClamAV contract, separate worker artifact, retry/DLQ behavior, and safe-preview boundary verified in CI |
 | Research app | Separate DataON/AIDA public-metadata runtime; hosted isolation is not deployed |

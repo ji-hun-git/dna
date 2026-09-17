@@ -11,6 +11,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 
@@ -32,6 +33,16 @@ data class IssuedFoundationSession(
 data class DocumentConsentReceipt(
     val consentId: UUID?,
     val status: String,
+)
+
+/** One purpose as the person sees it. NOT_GRANTED rows have no id and no instants. */
+data class ConsentReceipt(
+    val consentId: UUID?,
+    val purposeCode: String,
+    val status: String,
+    val policyVersion: String,
+    val grantedAt: Instant?,
+    val revokedAt: Instant?,
 )
 
 
@@ -103,6 +114,33 @@ data class DeletionReceipt(
     val status: String,
     val auditEventTypes: List<String>,
     val rawHealthValuesPresentInAudit: Boolean,
+)
+
+/** One source document of the export: id, exam date when all its events share one, status and abstentions. */
+data class ExportedDocument(
+    val documentId: UUID,
+    val observedOn: String?,
+    val status: String,
+    val abstentions: List<ExtractionAbstention>,
+)
+
+/** The person's own events as one file. Same read-model as GET /health-events; no range, no judgement. */
+data class HealthEventExport(
+    val schemaVersion: String = "alm-health-events-export.v1",
+    val exportedAt: Instant,
+    val subjectKind: String = "synthetic",
+    val events: List<HealthEvent>,
+    val documents: List<ExportedDocument>,
+)
+
+/**
+ * The export body plus the filename computed from the same instant as `exportedAt`, so the
+ * `Content-Disposition` date and the JSON's own `exportedAt` can never disagree about which
+ * side of midnight the export happened on.
+ */
+data class HealthEventExportEnvelope(
+    val filename: String,
+    val export: HealthEventExport,
 )
 
 
@@ -180,22 +218,95 @@ class FoundationLifecycleService(
     }
 
     @Transactional
-    fun grantDocumentConsent(principal: FoundationPrincipal): UUID {
-        repository.findActiveConsent(principal.subjectId)?.let { return it }
-        val consentId = UUID.randomUUID()
-        repository.grantConsent(consentId, principal.subjectId, "foundation-v1", Instant.now(clock))
-        audit(principal, "CONSENT_GRANTED", "CONSENT", consentId, "SUCCESS")
-        return consentId
-    }
+    fun grantDocumentConsent(principal: FoundationPrincipal): UUID =
+        checkNotNull(grantConsent(principal, ConsentPurpose.DOCUMENT_EXTRACTION, idempotencyKey = null).consentId)
 
     @Transactional(readOnly = true)
     fun getDocumentConsent(principal: FoundationPrincipal): DocumentConsentReceipt {
-        val consent = repository.findLatestConsent(principal.subjectId)
+        val consent = repository.findLatestConsent(principal.subjectId, ConsentPurpose.DOCUMENT_EXTRACTION)
         return DocumentConsentReceipt(
             consentId = consent?.consentId,
             status = consent?.status ?: "NOT_GRANTED",
         )
     }
+
+    /**
+     * Grants one purpose. An ACTIVE row for the same purpose is returned as-is (no second row, no second
+     * audit); a replayed Idempotency-Key returns the row it created even after revocation.
+     */
+    @Transactional
+    fun grantConsent(principal: FoundationPrincipal, purposeCode: String, idempotencyKey: String?): ConsentReceipt {
+        if (!ConsentPurpose.isValid(purposeCode)) throw FoundationBadRequestException("consent_purpose_invalid")
+        idempotencyKey?.let(::requireIdempotencyKey)
+        val subjectHash = subjectHash(principal.subjectId)
+        val operation = consentGrantOperation(purposeCode)
+        if (idempotencyKey != null) {
+            // The key is unique per subject+operation, so a different purpose never collides in storage;
+            // but a client that reuses the same key across purposes is almost certainly a bug, so reject
+            // it explicitly instead of silently minting a second, unrelated consent under the same key.
+            repository.findConsentGrantOperationForKey(subjectHash, idempotencyKey)?.let { existingOperation ->
+                if (existingOperation != operation) throw FoundationConflictException("idempotency_key_reused")
+            }
+            repository.findIdempotentResource(subjectHash, operation, idempotencyKey)?.let { existingId ->
+                return consentReceipt(
+                    repository.findConsent(principal.subjectId, existingId)
+                        ?: throw FoundationConflictException("idempotency_resource_missing"),
+                )
+            }
+        }
+        repository.findActiveConsent(principal.subjectId, purposeCode)?.let { activeId ->
+            return consentReceipt(checkNotNull(repository.findConsent(principal.subjectId, activeId)))
+        }
+        val consentId = UUID.randomUUID()
+        val now = Instant.now(clock)
+        if (idempotencyKey != null &&
+            !repository.insertIdempotency(subjectHash, operation, idempotencyKey, consentId, now)
+        ) {
+            val concurrentId = repository.findIdempotentResource(subjectHash, operation, idempotencyKey)
+                ?: throw FoundationConflictException("idempotency_conflict")
+            return consentReceipt(
+                repository.findConsent(principal.subjectId, concurrentId)
+                    ?: throw FoundationConflictException("idempotency_resource_missing"),
+            )
+        }
+        repository.grantConsent(consentId, principal.subjectId, purposeCode, ConsentPurpose.policyVersion(purposeCode), now)
+        audit(principal, "CONSENT_GRANTED", "CONSENT", consentId, "SUCCESS", purposeCode)
+        return consentReceipt(checkNotNull(repository.findConsent(principal.subjectId, consentId)))
+    }
+
+    /** Idempotency operation scoped by purpose, so a replayed key for one purpose never returns another's receipt. */
+    private fun consentGrantOperation(purposeCode: String): String = "CONSENT_GRANT:$purposeCode"
+
+    /** The three fixed purposes in fixed order (NOT_GRANTED when absent), then every PROJECT purpose that exists. */
+    @Transactional(readOnly = true)
+    fun listConsents(principal: FoundationPrincipal): List<ConsentReceipt> {
+        val latest = repository.listLatestConsents(principal.subjectId).associateBy { it.purposeCode }
+        val fixed = ConsentPurpose.FIXED_ORDER.map { purposeCode ->
+            latest[purposeCode]?.let(::consentReceipt) ?: ConsentReceipt(
+                consentId = null,
+                purposeCode = purposeCode,
+                status = "NOT_GRANTED",
+                policyVersion = ConsentPurpose.policyVersion(purposeCode),
+                grantedAt = null,
+                revokedAt = null,
+            )
+        }
+        val projects = latest.keys
+            .filter { it.startsWith(ConsentPurpose.PROJECT_PREFIX) }
+            .sorted()
+            .map { consentReceipt(latest.getValue(it)) }
+        return fixed + projects
+    }
+
+    private fun consentReceipt(row: FoundationConsentRow): ConsentReceipt =
+        ConsentReceipt(
+            consentId = row.consentId,
+            purposeCode = row.purposeCode,
+            status = row.status,
+            policyVersion = row.policyVersion,
+            grantedAt = row.grantedAt,
+            revokedAt = row.revokedAt,
+        )
 
     @Transactional
     fun requestDocument(
@@ -479,6 +590,40 @@ class FoundationLifecycleService(
             repository.listDocumentIdsWithPreview(principal.subjectId),
         )
 
+    @Transactional(readOnly = true)
+    fun getChangeSummary(principal: FoundationPrincipal): ChangeSummary =
+        ChangeSummaryProjection.project(
+            repository.listRecords(principal.subjectId),
+            repository.listDocumentCompletions(principal.subjectId),
+        )
+
+    @Transactional
+    fun exportHealthEvents(principal: FoundationPrincipal): HealthEventExportEnvelope {
+        val now = Instant.now(clock)
+        val events = listHealthEvents(principal)
+        val documents = events
+            .map { it.source.documentId }
+            .distinct()
+            .sortedBy { it.toString() }
+            .map { documentId ->
+                val document = requireDocument(principal, documentId)
+                val dates = events.filter { it.source.documentId == documentId }.map { it.observedOn }.distinct()
+                ExportedDocument(
+                    documentId = documentId,
+                    observedOn = dates.singleOrNull(),
+                    status = document.status,
+                    abstentions = repository.findExtractionAbstentions(principal.subjectId, documentId),
+                )
+            }
+        // The audit row says that an export happened. It carries no count, no value and no date.
+        audit(principal, "HEALTH_EVENTS_EXPORTED", "EXPORT", null, "SUCCESS")
+        val filename = "alm-health-events-${LocalDate.ofInstant(now, seoul).format(DateTimeFormatter.BASIC_ISO_DATE)}.json"
+        return HealthEventExportEnvelope(
+            filename = filename,
+            export = HealthEventExport(exportedAt = now, events = events, documents = documents),
+        )
+    }
+
     @Transactional
     fun correctRecord(
         principal: FoundationPrincipal,
@@ -534,17 +679,19 @@ class FoundationLifecycleService(
     }
 
     @Transactional
-    fun revokeConsent(principal: FoundationPrincipal, consentId: UUID): UUID {
-        if (!repository.consentBelongsToSubject(principal.subjectId, consentId)) {
+    fun revokeConsent(principal: FoundationPrincipal, consentId: UUID): ConsentReceipt {
+        val consent = repository.findConsent(principal.subjectId, consentId)
+        if (consent == null) {
             audit(principal, "CONSENT_ACCESS_DENIED", "CONSENT", consentId, "DENIED")
             throw FoundationNotFoundException("consent_not_found")
         }
         val now = Instant.now(clock)
         if (repository.revokeConsent(principal.subjectId, consentId, now)) {
+            // No document ever references a research or project consent, so this is a no-op for them.
             repository.terminateDocumentJobsForRevokedConsent(principal.subjectId, consentId, now)
-            audit(principal, "CONSENT_REVOKED", "CONSENT", consentId, "SUCCESS")
+            audit(principal, "CONSENT_REVOKED", "CONSENT", consentId, "SUCCESS", consent.purposeCode)
         }
-        return consentId
+        return consentReceipt(checkNotNull(repository.findConsent(principal.subjectId, consentId)))
     }
 
     @Transactional
@@ -703,8 +850,9 @@ class FoundationLifecycleService(
         resourceType: String,
         resourceId: UUID?,
         outcome: String,
+        purposeCode: String? = null,
     ) {
-        audit(principal.subjectId, principal.sessionTokenHash, eventType, resourceType, resourceId, outcome)
+        audit(principal.subjectId, principal.sessionTokenHash, eventType, resourceType, resourceId, outcome, purposeCode)
     }
 
     private fun audit(
@@ -714,6 +862,7 @@ class FoundationLifecycleService(
         resourceType: String,
         resourceId: UUID?,
         outcome: String,
+        purposeCode: String? = null,
     ) {
         if (outcome == "DENIED") {
             repository.insertDeniedAudit(
@@ -733,6 +882,7 @@ class FoundationLifecycleService(
                 resourceId,
                 outcome,
                 Instant.now(clock),
+                purposeCode,
             )
         }
     }

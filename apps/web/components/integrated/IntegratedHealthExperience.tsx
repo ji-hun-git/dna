@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CandidateReview } from "@/components/integrated/CandidateReview";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
+import { RecentChanges } from "@/components/integrated/RecentChanges";
 import {
   createFoundationClient,
   FoundationClientError,
   sha256Blob,
+  type ChangeSummary,
   type FoundationCandidate,
   type FoundationConsent,
   type FoundationDocument,
@@ -84,6 +86,7 @@ export function IntegratedHealthExperience() {
   const [session, setSession] = useState<FoundationSession>();
   const [consent, setConsent] = useState<FoundationConsent>();
   const [records, setRecords] = useState<FoundationRecord[]>([]);
+  const [changes, setChanges] = useState<ChangeSummary>();
   const [view, setView] = useState<View>("home");
   const [processingState, setProcessingState] = useState<ProcessingState>("IDLE");
   const [documentReceipt, setDocumentReceipt] = useState<FoundationDocument>();
@@ -95,13 +98,19 @@ export function IntegratedHealthExperience() {
   const [pollingNonce, setPollingNonce] = useState(0);
 
   const loadProductTruth = useCallback(async () => {
-    const [loadedConsent, loadedRecords, activity] = await Promise.all([
+    // A failed or schema-rejected /changes read must not break the home
+    // screen: its own .catch() isolates it from the core loads below, so a
+    // rejected changes fetch still lets Promise.all resolve and simply hides
+    // the "최근 변화" section.
+    const [loadedConsent, loadedRecords, activity, loadedChanges] = await Promise.all([
       client.getDocumentConsent(),
       client.getRecords(),
       client.getActiveDocument(),
+      client.getChanges().catch(() => undefined),
     ]);
     setConsent(loadedConsent);
     setRecords(loadedRecords);
+    setChanges(loadedChanges);
     if (activity.document) {
       setDocumentReceipt(activity.document);
       setProcessingState(activity.document.status);
@@ -602,6 +611,7 @@ export function IntegratedHealthExperience() {
               </article>
             ) : <p className="gc-integrated-empty">허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다.</p>}
           </section>
+          {changes && <RecentChanges changes={changes} />}
           <section className="gc-health-home__privacy" aria-labelledby="integrated-boundary-title"><div><p>현재 허용 범위</p><h2 id="integrated-boundary-title">합성 데이터만 처리해요</h2><ul><li>실제 카카오·네이버·MyHealthWay 비활성화</li><li>OCR·의료 AI 비활성화</li><li>문서는 승인 전까지 적대적 입력으로 격리</li></ul></div><a className="gc-button gc-button--weak" href="/data-control">데이터 관리</a></section>
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
         </div>
