@@ -1,0 +1,29 @@
+# Wave 3 evidence — reference-range preservation, deterministic differences, export v2, MedGemma num_ctx, 내 데이터 minors (2026-09-17)
+
+Branch `codex/wave7-reference-range-delta` (stacked on PR #10). Synthetic only. Release remains NO_GO; no readiness gate or verdict changed. Gate document for items (a)(b): `governance/intended-use-decision-reference-range-and-delta-2026-09-17.md`, committed before any (a)(b) code.
+
+## What exists now
+- **(a) Reference-range text, stored and exported only.** The worker keeps the range body printed on a row (`ParsedCandidate.referenceRangeText`, ≤ 40 characters, digits/separators/comparison signs, label and brackets stripped); the boundary DTO validates the same shape; V10 stores it on `gc_candidate.reference_range_text` and copies it to `gc_health_record_version.reference_range_text` at confirmation; a correction inherits it and no request field can change it. It is returned by no API except `GET /api/foundation/health-events/export` and appears on no screen. PostgreSQL test: the candidate list, records, health-events and changes bodies contain no key matching `reference` (case-insensitive); the Playwright lifecycle asserts `120-199` is absent from the review, home, records and 내 데이터 screens and present once in the export. Value/unit parsing is unchanged: native-text gate F1 = 1, `referenceRangeAccuracy` = 1 on the same `corpusId`.
+- **(b) Deterministic differences.** `ChangeItem.delta = { absolute, percent }` from `ChangeDeltaCalculator` (BigDecimal subtraction at the larger input scale; percent of the previous value HALF_EVEN to one decimal; null when the previous value is zero, the unit differs or a value is not numeric). The home line reads `두 값의 차이: -6 mg/dL (-3.1%)`; no direction word, arrow, colour or threshold, and the copy scan now forbids 상승/하락/증가/감소 in every user-facing file.
+- **Export v2.** `schemaVersion: alm-health-events-export.v2`; `events[]` = HealthEvent + `referenceRangeText` + `originalValue`/`correctionReason`/`originalObservedOn`; `documents[]` = every COMPLETED document of the owner plus every document with events, sorted by id, each with `eventCount` (a fully excluded document lists with `eventCount 0`). Headers, filename and the count-free audit row are unchanged.
+- **내 데이터 minors.** The evidence drawer shows 수정 이력 (원래 값 · 이유 · 원래 검사일, or 수정 없음); `SourcePreview` states which page the value came from and that the image is the first page; jest-axe passes on the empty and the error state; a cell that arrives after a reload plays one fade/scale animation, none under `prefers-reduced-motion: reduce`.
+- **MedGemma Run 3.** Protocol option `num_ctx: 8192` (new digest `f50c1ba2d46ea9771335bf8be68d7238a7aabbb8eb6f14c35a9e8bce934f0528`); results recorded as observations in `docs/status/2026-09-17/medgemma-local-experiment.md` §Run 3 and the third pins block of the approval note. Observed: unreadable 7/25 (was 9), F1 61.3% (was 56.9%), hallucination 10.5% (was 17.1%), all 7 remaining unreadable cases show `done_reason=length` at `eval_count=4096`, 100% GPU; n=1, no cause claimed. The report renderer does not print `referenceRangeAccuracy` (a Run 3 evidence gap noted here, not fixed — it is outside Wave 3's committed scope of the native-text gate report and this task did not touch `native-text-report.ts`).
+
+## Evidence (local, 2026-09-17)
+| Gate | Result |
+|---|---|
+| runtime-policy | `runtime-policy: PASS node=24.20.0 pnpm=11.20.0 next=16.3.3` |
+| readiness validate | `release-readiness: NO_GO 12 blocking gate(s) are not PASS` (exit 0; verdict unchanged) |
+| github-actions-policy | `github-actions-policy: PASS` |
+| web:test | `Test Files  50 passed (50)` / `Tests  303 passed (303)` |
+| tsc --noEmit | no output (exit 0) |
+| web build | `Route (app)` table printed; `✓ Compiled successfully in 4.9s`, `Finished TypeScript in 7.4s`, `✓ Generating static pages using 11 workers (10/10)` — build succeeded, no errors |
+| auth-security gate | `auth-security-gate: PASS` |
+| gradlew cleanTest test (embedded PostgreSQL) | `BUILD SUCCESSFUL in 1m 12s` (23 actionable tasks: 8 executed, 15 up-to-date); core-api 127 tests, 0 failures, 0 errors, 2 skipped; document-worker 31 tests, 0 failures, 0 errors, 1 skipped; korean-checkup-benchmark 5 tests, 0 failures, 0 errors |
+| medical-ai:native-text-gate | `"corpusId": "synthetic-ko-checkup-r2-e6befc286ae6ce1d"`, `"fieldF1": 1`, `"referenceRangeAccuracy": 1`, `"passed": true` |
+| foundation:e2e | `3 passed (1.2m)` |
+
+Copy scan: `pnpm --dir apps/web exec vitest run tests/korean-ux-copy.test.ts` → `Test Files  1 passed (1)` / `Tests  35 passed (35)`. `git status --short` after all gates and after restoring `apps/web/next-env.d.ts` shows no output (clean). `git diff --quiet 6467ce7 -- release/readiness.json` confirms `release/readiness.json` is byte-identical to the base.
+
+## Limits
+No hosted run. The reference-range text is document text preserved for the person's own file; the product neither shows it nor relates any value to it, and the founder's regulatory judgement covers synthetic staging only — any display, comparison, trend or direction language needs a new decision and a regulatory review before real personal health information is processed. The difference is arithmetic on two stored values and carries no meaning. Known worker-level gaps, not exercised by this wave's tests: en-dash reference ranges (`–`) are not exercised at the parser level, a second range appearing on the same row is dropped rather than captured, and the 40-character truncation boundary itself is untested. The MedGemma run is evidence only (handoff conditions 2–7 open); its numbers are observations from n=1, not causes, and the native-text report renderer does not surface `referenceRangeAccuracy` in its printed output even though the gate JSON carries it. Readiness is unchanged.

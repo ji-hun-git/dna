@@ -12,7 +12,7 @@ This file is the short version. The authority is `PROJECT_GUIDE.md`; when they d
 ## Boundaries that end a task
 
 - Real health data, real documents, credentials, tokens, certificates, or PHI anywhere: stop.
-- Diagnosis, normal/abnormal, reference ranges, risk, treatment, medication, alerts, or autonomous clinical action in code or copy: stop.
+- Diagnosis, normal/abnormal, reference ranges in UI copy, comparisons or derived states, risk, treatment, medication, alerts, or autonomous clinical action in code or copy: stop. (Storing and exporting a document's own reference-range text verbatim is permitted by `governance/intended-use-decision-reference-range-and-delta-2026-09-17.md`; nothing else about ranges is.)
 - Next.js gaining an API route, provider token, or authorization rule: stop. Spring is the authority.
 - A hosted, registry, AWS, provider, deletion, or release action: stop and name the founder gate.
 - Converting a plan, workflow, IaC file, mock, or UI into a PASS claim: stop; only runtime evidence changes a gate.
