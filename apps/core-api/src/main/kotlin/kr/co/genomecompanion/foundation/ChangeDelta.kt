@@ -33,12 +33,12 @@ object ChangeDeltaCalculator {
         return ChangeDelta(absolute = signed(absolute), percent = percent?.let(::signed))
     }
 
-    private fun parse(raw: String): BigDecimal? {
+    internal fun parse(raw: String): BigDecimal? {
         val text = raw.replace(",", "").trim()
         if (!Regex("^-?\\d+(\\.\\d+)?$").matches(text)) return null
         return runCatching { BigDecimal(text) }.getOrNull()
     }
 
-    private fun signed(value: BigDecimal): String =
+    internal fun signed(value: BigDecimal): String =
         if (value.signum() > 0) "+" + value.toPlainString() else value.toPlainString()
 }
