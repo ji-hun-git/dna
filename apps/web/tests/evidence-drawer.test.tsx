@@ -21,12 +21,34 @@ it("shows source, page, digests and confirmation time for a verified event", () 
   expect(region).toHaveTextContent(shortDigest(event.source.sourceTextSha256));
 });
 
-it("explains a missing preview instead of hiding it, and names a corrected value", () => {
-  const event = syntheticHealthEvent({ verification: "uncertain", corrected: true, source: { ...syntheticHealthEvent().source, previewAvailable: false } });
+it("explains a missing preview instead of hiding it, and lists the correction history for a corrected value", () => {
+  const event = syntheticHealthEvent({
+    verification: "uncertain",
+    corrected: true,
+    value: "190",
+    originalValue: "188",
+    correctionReason: "원문 재확인",
+    observedOn: "2026-07-27",
+    originalObservedOn: "2026-07-28",
+    source: { ...syntheticHealthEvent().source, previewAvailable: false },
+  });
   render(<EvidenceDrawer event={event} onClose={() => {}} />);
   expect(screen.getByText("출처 미리보기를 지금은 볼 수 없어요. 값은 그대로 두고, 출처 상태만 표시해요.")).toBeVisible();
   expect(screen.getByText("직접 수정한 값")).toBeVisible();
   expect(screen.queryByRole("img")).toBeNull();
+  const history = screen.getByText("수정 이력").nextElementSibling;
+  expect(history).toHaveTextContent("원래 값 188 mg/dL · 이유: 원문 재확인 · 원래 검사일 2026. 7. 28.");
+  expect(document.body.textContent).not.toMatch(/증가|감소|상승|하락|정상|비정상/);
+});
+
+it("says 수정 없음 when nothing was corrected, and lists only the date when only the exam date changed", () => {
+  render(<EvidenceDrawer event={syntheticHealthEvent()} onClose={() => {}} />);
+  expect(screen.getByText("수정 이력").nextElementSibling).toHaveTextContent("수정 없음");
+  cleanup();
+  const dateOnly = syntheticHealthEvent({ corrected: true, observedOn: "2026-07-27", originalObservedOn: "2026-07-28" });
+  render(<EvidenceDrawer event={dateOnly} onClose={() => {}} />);
+  expect(screen.getByText("수정 이력").nextElementSibling).toHaveTextContent("원래 검사일 2026. 7. 28.");
+  expect(screen.getByText("수정 이력").nextElementSibling).not.toHaveTextContent("원래 값");
 });
 
 it("closes from the button", async () => {

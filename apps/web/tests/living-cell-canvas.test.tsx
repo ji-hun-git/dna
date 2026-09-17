@@ -66,3 +66,40 @@ it("draws one axis tick per month present in the data", () => {
   expect(screen.getByText("2026. 1.")).toBeInTheDocument();
   expect(screen.getByText("2026. 7.")).toBeInTheDocument();
 });
+
+function stubReducedMotion(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(prefers-reduced-motion: reduce)" ? matches : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
+it("plays the arrival animation once for a new cell and not under prefers-reduced-motion", () => {
+  stubReducedMotion(false);
+  const animated = render(<LivingCellCanvas events={[jan, jul]} matchedIds={null} newIds={new Set([jul.eventId])} onSelect={() => {}} />);
+  const newCell = screen.getByRole("button", { name: "총콜레스테롤 188 mg/dL, 2026. 7. 28." });
+  expect(newCell).toHaveAttribute("data-state", "new");
+  expect(newCell).toHaveAttribute("data-arrived", "true");
+  expect(newCell.getAttribute("class")).toMatch(/cellArrived/);
+  expect(screen.getByRole("button", { name: "총콜레스테롤 194 mg/dL, 2026. 1. 15." })).not.toHaveAttribute("data-arrived");
+  animated.unmount();
+
+  stubReducedMotion(true);
+  render(<LivingCellCanvas events={[jan, jul]} matchedIds={null} newIds={new Set([jul.eventId])} onSelect={() => {}} />);
+  const still = screen.getByRole("button", { name: "총콜레스테롤 188 mg/dL, 2026. 7. 28." });
+  expect(still).toHaveAttribute("data-state", "new");
+  expect(still).not.toHaveAttribute("data-arrived");
+  expect(still.getAttribute("class")).not.toMatch(/cellArrived/);
+  // @ts-expect-error jsdom has no matchMedia; remove the stub so other tests see the default.
+  delete window.matchMedia;
+});
