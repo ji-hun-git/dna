@@ -211,8 +211,15 @@ class FoundationLifecycleService(
         if (!ConsentPurpose.isValid(purposeCode)) throw FoundationBadRequestException("consent_purpose_invalid")
         idempotencyKey?.let(::requireIdempotencyKey)
         val subjectHash = subjectHash(principal.subjectId)
+        val operation = consentGrantOperation(purposeCode)
         if (idempotencyKey != null) {
-            repository.findIdempotentResource(subjectHash, "CONSENT_GRANT", idempotencyKey)?.let { existingId ->
+            // The key is unique per subject+operation, so a different purpose never collides in storage;
+            // but a client that reuses the same key across purposes is almost certainly a bug, so reject
+            // it explicitly instead of silently minting a second, unrelated consent under the same key.
+            repository.findConsentGrantOperationForKey(subjectHash, idempotencyKey)?.let { existingOperation ->
+                if (existingOperation != operation) throw FoundationConflictException("idempotency_key_reused")
+            }
+            repository.findIdempotentResource(subjectHash, operation, idempotencyKey)?.let { existingId ->
                 return consentReceipt(
                     repository.findConsent(principal.subjectId, existingId)
                         ?: throw FoundationConflictException("idempotency_resource_missing"),
@@ -225,9 +232,9 @@ class FoundationLifecycleService(
         val consentId = UUID.randomUUID()
         val now = Instant.now(clock)
         if (idempotencyKey != null &&
-            !repository.insertIdempotency(subjectHash, "CONSENT_GRANT", idempotencyKey, consentId, now)
+            !repository.insertIdempotency(subjectHash, operation, idempotencyKey, consentId, now)
         ) {
-            val concurrentId = repository.findIdempotentResource(subjectHash, "CONSENT_GRANT", idempotencyKey)
+            val concurrentId = repository.findIdempotentResource(subjectHash, operation, idempotencyKey)
                 ?: throw FoundationConflictException("idempotency_conflict")
             return consentReceipt(
                 repository.findConsent(principal.subjectId, concurrentId)
@@ -238,6 +245,9 @@ class FoundationLifecycleService(
         audit(principal, "CONSENT_GRANTED", "CONSENT", consentId, "SUCCESS", purposeCode)
         return consentReceipt(checkNotNull(repository.findConsent(principal.subjectId, consentId)))
     }
+
+    /** Idempotency operation scoped by purpose, so a replayed key for one purpose never returns another's receipt. */
+    private fun consentGrantOperation(purposeCode: String): String = "CONSENT_GRANT:$purposeCode"
 
     /** The three fixed purposes in fixed order (NOT_GRANTED when absent), then every PROJECT purpose that exists. */
     @Transactional(readOnly = true)

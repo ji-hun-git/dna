@@ -517,6 +517,23 @@ class FoundationRepository(
             idempotencyKey,
         ).firstOrNull()
 
+    /**
+     * The CONSENT_GRANT:<purpose> operation already stored under this subject+key, regardless of purpose.
+     * Used to detect a key reused across different consent purposes, since the operation is purpose-scoped
+     * and a plain equality lookup would otherwise miss the collision entirely.
+     */
+    fun findConsentGrantOperationForKey(subjectHash: String, idempotencyKey: String): String? =
+        jdbc.query(
+            """
+            SELECT operation
+            FROM gc_idempotency
+            WHERE subject_hash = ? AND idempotency_key = ? AND operation LIKE 'CONSENT_GRANT:%'
+            """.trimIndent(),
+            RowMapper { result, _ -> result.getString("operation") },
+            subjectHash,
+            idempotencyKey,
+        ).firstOrNull()
+
     fun createDocument(
         documentId: UUID,
         subjectId: String,

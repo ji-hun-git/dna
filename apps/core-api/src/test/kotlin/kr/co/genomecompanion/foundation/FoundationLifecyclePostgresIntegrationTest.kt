@@ -1147,6 +1147,36 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun consentIdempotencyKeysAreScopedPerPurposeAndRejectCrossPurposeReuse() {
+        val alice = login("synthetic-alice")
+
+        // Same key, same purpose: replay returns the same receipt, no second row.
+        val first = responseJson(
+            mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "shared-key-1"), alice)
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.purposeCode").value("RESEARCH_USE"))
+                .andReturn().response.contentAsByteArray,
+        )
+        val researchUseId = UUID.fromString(first["consentId"].asText())
+        mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "shared-key-1"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.consentId").value(researchUseId.toString()))
+            .andExpect(jsonPath("$.purposeCode").value("RESEARCH_USE"))
+
+        // Same key, different purpose: rejected rather than replaying the other purpose's receipt.
+        mutate(post("/api/foundation/consents/PROJECT:study1").header("Idempotency-Key", "shared-key-1"), alice)
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("idempotency_key_reused"))
+        assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isEqualTo(1)
+
+        // The project purpose can still be granted under its own key.
+        mutate(post("/api/foundation/consents/PROJECT:study1").header("Idempotency-Key", "shared-key-2"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.purposeCode").value("PROJECT:study1"))
+        assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isEqualTo(2)
+    }
+
+    @Test
     fun researchConsentsAreStoredPerPurposeAndNeverGateTheLifecycle() {
         val alice = login("synthetic-alice")
         val bob = login("synthetic-bob")
