@@ -6,7 +6,7 @@ import kotlin.system.exitProcess
 
 /**
  * CLI entry point.
- * `generate --out <dir> --font <path-to-ttf>` writes the 24-document synthetic corpus (PDFs +
+ * `generate --out <dir> --font <path-to-ttf>` writes the 31-document synthetic corpus (PDFs +
  * corpus.json) under `<dir>`. `run-native-text --corpus <dir> --out <runs.json>` runs the
  * document worker's PDFBox text-layer provider over that corpus and writes `medical-document-run.v1`
  * records. `render-pages --corpus <dir> --out <dir>` writes `<documentId>-p<N>.png` at 150 dpi.

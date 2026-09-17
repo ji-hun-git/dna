@@ -17,14 +17,14 @@ class CheckupCorpusGeneratorTest {
     private val font: Path = BenchmarkFont.path()
 
     @Test
-    fun `generates twenty-four documents whose gold the native-text parser reproduces exactly`(@TempDir out: Path) {
+    fun `generates thirty-one documents whose gold the native-text parser reproduces exactly`(@TempDir out: Path) {
         assumeTrue(Files.exists(font), "Pretendard font missing; run pnpm install first")
         val documents = CheckupCorpusGenerator(font).generateAll()
         val corpus = CorpusWriter.write(documents, out)
 
-        assertThat(documents).hasSize(25)
+        assertThat(documents).hasSize(31)
         assertThat(documents.map { it.documentId }).doesNotHaveDuplicates()
-        assertThat(Files.list(out).use { paths -> paths.filter { it.toString().endsWith(".pdf") }.count() }).isEqualTo(25L)
+        assertThat(Files.list(out).use { paths -> paths.filter { it.toString().endsWith(".pdf") }.count() }).isEqualTo(31L)
         assertThat(Files.exists(out.resolve("corpus.json"))).isTrue()
         assertThat(documents.count { it.imageOnly }).isEqualTo(1)
         assertThat(corpus.corpusId).matches("synthetic-ko-checkup-r2-[0-9a-f]{16}")
@@ -122,7 +122,7 @@ class CheckupCorpusGeneratorTest {
         val b = CorpusWriter.write(CheckupCorpusGenerator(font).generateAll(), second)
 
         val pdfs = Files.list(first).use { paths -> paths.filter { it.toString().endsWith(".pdf") }.toList() }
-        assertThat(pdfs).hasSize(25)
+        assertThat(pdfs).hasSize(31)
         pdfs.forEach { pdf ->
             val bytes = Files.readAllBytes(pdf)
             assertThat(bytes).describedAs(pdf.fileName.toString()).isEqualTo(Files.readAllBytes(second.resolve(pdf.fileName)))
@@ -131,6 +131,46 @@ class CheckupCorpusGeneratorTest {
         assertThat(Files.readAllBytes(first.resolve("corpus.json"))).isEqualTo(Files.readAllBytes(second.resolve("corpus.json")))
         assertThat(a.corpusId).isEqualTo(b.corpusId).matches("synthetic-ko-checkup-r2-[0-9a-f]{16}")
         assertThat(a.corpusId).endsWith(CorpusWriter.pdfDigest(CheckupCorpusGenerator(font).generateAll()).take(16))
+    }
+
+    @Test
+    fun `extended panel prints broad labels, new items and unit-mismatched rows with the concept the catalogue rule gives`() {
+        assumeTrue(Files.exists(font), "Pretendard font missing; run pnpm install first")
+        val generator = CheckupCorpusGenerator(font)
+        val english = generator.generate(Layout.EXTENDED_PANEL, CheckupCorpusGenerator.VARIANTS[1])
+        val korean = generator.generate(Layout.EXTENDED_PANEL, CheckupCorpusGenerator.VARIANTS[2])
+        assertThat(english.documentId).isEqualTo("synthetic-extended-panel-v1")
+        assertThat(english.rows.map { it.label }).contains("Glucose", "hs-CRP", "Bilirubin", "GFR", "UA", "Hb", "MCV", "CA19-9", "RF")
+        assertThat(korean.rows.map { it.label }).contains("혈당", "고감도 CRP", "빌리루빈", "사구체여과율", "요산", "혈색소", "인(P)", "혈청철")
+        assertThat(english.rows.filter { it.page == 1 }).hasSize(CheckupCorpusGenerator.BROAD_LABEL_ROWS.size)
+        assertThat(english.rows.filter { it.page == 2 }).hasSize(CheckupCorpusGenerator.EXTENDED_ROWS.size)
+
+        val gold = CorpusWriter.gold(korean).expectedMeasurements.associateBy { it.label }
+        assertThat(gold.getValue("혈당").expectedConceptCode).isEqualTo("glucose")
+        assertThat(gold.getValue("사구체여과율").expectedConceptCode).isEqualTo("gfr")
+        assertThat(gold.getValue("요산").expectedConceptCode).isNull()
+        assertThat(gold.getValue("요산").expectedNoConcept).isTrue()
+        assertThat(gold.getValue("혈당").expectedNoConcept).isNull()
+
+        // Every printed row's gold expectation, in every document, is exactly what the shared rule (alias
+        // match against the printed label + accepted unit) gives — never a value typed from memory. A
+        // deliberately unit-mismatched row (expectNoConcept) must resolve to no concept regardless of which
+        // language rendered it; a broad label like bare "Glucose" is free to disagree with its Korean
+        // sibling "혈당" since the catalogue, not the static flag, is authoritative.
+        generator.generateAll().forEach { document ->
+            if (document.observedOn == null) return@forEach
+            val gold = CorpusWriter.gold(document).expectedMeasurements
+            document.rows.zip(gold).forEach { (row, measurement) ->
+                val resolved = kr.co.genomecompanion.documentboundary.MedicalConceptCatalogue.resolve(row.label, row.unit)?.conceptCode
+                assertThat(measurement.expectedConceptCode).describedAs("${document.documentId} ${row.label} ${row.unit}").isEqualTo(resolved)
+                assertThat(measurement.expectedNoConcept).describedAs("${document.documentId} ${row.label} ${row.unit}")
+                    .isEqualTo(if (resolved == null) true else null)
+                if (row.spec.expectNoConcept) {
+                    assertThat(resolved).describedAs("${document.documentId} ${row.label} ${row.unit} designed as a unit mismatch").isNull()
+                }
+            }
+        }
+        assertThat(generator.generateAll().last().documentId).isEqualTo("synthetic-hospital-two-column-v6")
     }
 
     private fun iou(expected: Box, actual: TextBox): Double {
