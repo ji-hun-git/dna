@@ -14,11 +14,30 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
     await page.setViewportSize({ width, height });
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     await page.evaluate(() => window.scrollTo(0, 0));
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Name the offending elements when a viewport overflows, so a CI-only font
+    // metric difference is diagnosable from the failure message alone.
+    const overflow = await page.evaluate(() => new Promise<string[]>((resolve) => {
+      const started = Date.now();
+      const check = () => {
+        if (document.documentElement.scrollWidth <= window.innerWidth) return resolve([]);
+        if (Date.now() - started < 5_000) return void setTimeout(check, 100);
+        const offenders = [...document.querySelectorAll("body *")]
+          .filter((element) => element.getBoundingClientRect().right > window.innerWidth + 1)
+          .slice(0, 12)
+          .map((element) => {
+            const rect = element.getBoundingClientRect();
+            const name = typeof element.className === "string" ? element.className : element.getAttribute("class") ?? "";
+            return `${element.tagName.toLowerCase()}.${name.split(" ")[0]} right=${Math.round(rect.right)} width=${Math.round(rect.width)}`;
+          });
+        resolve([`scrollWidth=${document.documentElement.scrollWidth} innerWidth=${window.innerWidth}`, ...offenders]);
+      };
+      check();
+    }));
+    expect(overflow, `${state} at ${width}x${height} overflows horizontally`).toEqual([]);
     const nav = page.getByRole("navigation", { name: "주요 메뉴" });
     if (await nav.count()) {
-      await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
-      for (const label of ["홈", "기록", "진료 준비", "데이터"]) {
+      await expect(nav.locator('[aria-current="page"]')).toHaveCount(state === "home" || state === "entry" ? 0 : 1);
+      for (const label of ["나의 데이터", "데이터 관리"]) {
         const link = nav.getByRole("link", { name: label, exact: true });
         const target = await link.boundingBox();
         const icon = await link.locator("svg").boundingBox();
@@ -40,6 +59,23 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
       const button = await page.getByRole("button", {name: "체험 시작"}).boundingBox();
       expect(button!.height).toBeGreaterThanOrEqual(44);
       expect(button!.y + button!.height).toBeLessThanOrEqual(height);
+    }
+    if (state === "my-data") {
+      const search = await page.getByRole("searchbox", { name: "내 데이터에서 항목 찾기" }).boundingBox();
+      expect(search).not.toBeNull();
+      expect(search!.height).toBeGreaterThanOrEqual(44);
+      const closeButton = page.getByRole("button", { name: "근거 닫기" });
+      if (await closeButton.count()) {
+        const box = await closeButton.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+      }
+      const evidenceButton = page.getByRole("button", { name: "근거 보기" }).first();
+      if (await evidenceButton.count()) {
+        const box = await evidenceButton.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+      }
     }
     if (state === "review") {
       for (const name of ["확인: 원문과 같아요", "값 수정", "제외: 이 항목 빼기"]) {
@@ -116,7 +152,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await captureMatrix(page, info, "home");
 
   // Written labels stay keyboard-operable links, not icon-only controls.
-  for (const [label, path] of [["기록", "/records"], ["진료 준비", "/prepare"], ["데이터", "/data-control"], ["홈", "/"]]) {
+  for (const [label, path] of [["나의 데이터", "/my-data"], ["데이터 관리", "/data-control"]]) {
     const link = page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("link", { name: label, exact: true });
     await link.focus();
     await expect(link).toBeFocused();
@@ -124,6 +160,19 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
     await expect(page).toHaveURL(new URL(path, page.url()).href);
     await expect(page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("link", { name: label, exact: true }))
       .toHaveAttribute("aria-current", "page");
+  }
+
+  // These routes are still reachable, but no longer have their own top-level
+  // nav entry: 기록/진료 준비 live under 나의 데이터, and 홈 is the brand link.
+  for (const path of ["/records", "/prepare", "/"]) {
+    await page.goto(path);
+    if (path === "/records") {
+      await expect(page.getByRole("heading", { name: "내 기록" })).toBeVisible();
+    } else if (path === "/prepare") {
+      await expect(page.getByRole("heading", { name: "다음 진료에서 물어볼 것" })).toBeVisible();
+    } else {
+      await expect(page.getByRole("navigation", { name: "주요 메뉴" })).toBeVisible();
+    }
   }
 
   await page.getByRole("button", { name: "결과지 추가" }).click();
@@ -245,6 +294,22 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.getByRole("link", { name: "저장된 기록 보기" }).click();
   await expect(page).toHaveURL(/\/records$/);
   await expect(page.getByTestId("durable-record")).toHaveCount(5);
+
+  await page.goto("/my-data");
+  const figure = page.getByRole("figure", { name: "나의 데이터: 한 칸이 하나의 기록" });
+  await expect(figure).toBeVisible();
+  const cells = figure.getByRole("button");
+  await expect(cells).toHaveCount(5);
+  await expect(page.getByRole("table", { name: "기록 목록" }).getByRole("row")).toHaveCount(5 + 1);
+  await cells.first().click();
+  const drawer = page.getByRole("region", { name: /근거$/ });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByRole("img")).toBeVisible();
+  await page.getByRole("searchbox", { name: "내 데이터에서 항목 찾기" }).fill("총콜레스테롤");
+  await expect(page.getByRole("status", { name: "검색 결과" })).toContainText("총콜레스테롤 기록");
+  await captureMatrix(page, info, "my-data");
+
+  await page.goto("/records");
   const groupHeadings = page.locator(".gc-records-group h3");
   await expect(groupHeadings).toHaveCount(2);
   await expect(groupHeadings.nth(0)).toContainText("2026. 7. 28.");
@@ -280,7 +345,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await captureMatrix(page, info, "prepare");
   for (const route of ["/connections", "/providers", "/data-control"]) {
     await page.goto(route);
-    await expect(page.getByRole("navigation", {name:"주요 메뉴"}).getByRole("link")).toHaveCount(4);
+    await expect(page.getByRole("navigation", {name:"주요 메뉴"}).getByRole("link")).toHaveCount(2);
     await captureMatrix(page, info, route.slice(1));
   }
 

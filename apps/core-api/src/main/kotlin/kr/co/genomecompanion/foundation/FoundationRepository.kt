@@ -207,6 +207,16 @@ class FoundationRepository(
         JOIN gc_document d ON d.document_id = c.document_id AND d.subject_id = c.subject_id
         """.trimIndent()
 
+    /** A preview artifact counts as approved-and-current only while the document has reached
+     * REVIEW_REQUIRED/COMPLETED and both the preview's object key and source digest still match
+     * the document's current values. Both preview-lookup queries below must share this exact
+     * predicate so they cannot drift apart. */
+    private val approvedPreviewJoin =
+        """
+        d.status IN ('REVIEW_REQUIRED', 'COMPLETED')
+          AND d.preview_object_key = p.object_key AND d.sha256 = p.source_sha256
+        """.trimIndent()
+
     private val recordProjection =
         """
         SELECT r.record_id, v.version_id AS record_version_id, v.supersedes_version_id,
@@ -1049,8 +1059,7 @@ class FoundationRepository(
             FROM gc_preview_artifact p
             JOIN gc_document d ON d.document_id = p.document_id
             WHERE d.subject_id = ? AND d.document_id = ?
-              AND d.status IN ('REVIEW_REQUIRED', 'COMPLETED')
-              AND d.preview_object_key = p.object_key AND d.sha256 = p.source_sha256
+              AND $approvedPreviewJoin
             """.trimIndent(),
             RowMapper { result, _ ->
                 PreviewArtifactRow(
@@ -1063,6 +1072,20 @@ class FoundationRepository(
             subjectId,
             documentId,
         ).firstOrNull()
+
+    /** Documents of this owner whose approved preview is still bound to the stored digest. */
+    fun listDocumentIdsWithPreview(subjectId: String): Set<UUID> =
+        jdbc.query(
+            """
+            SELECT d.document_id
+            FROM gc_document d
+            JOIN gc_preview_artifact p ON p.document_id = d.document_id
+            WHERE d.subject_id = ?
+              AND $approvedPreviewJoin
+            """.trimIndent(),
+            RowMapper { result, _ -> result.getObject("document_id", UUID::class.java) },
+            subjectId,
+        ).toSet()
 
     fun excludeCandidate(subjectId: String, candidateId: UUID, now: Instant): Boolean {
         val updated = jdbc.update(

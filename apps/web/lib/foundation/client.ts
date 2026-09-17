@@ -109,6 +109,30 @@ const recordSchema = z.object({
   documentSha256: z.string().regex(/^[0-9a-f]{64}$/),
 }).strict();
 
+const healthEventSourceSchema = z.object({
+  documentId: uuidSchema,
+  page: z.number().int().positive(),
+  documentSha256: z.string().regex(/^[0-9a-f]{64}$/),
+  sourceTextSha256: z.string().regex(/^[0-9a-f]{64}$/),
+  previewAvailable: z.boolean(),
+}).strict();
+
+// A read-model over current records. `.strict()` is the boundary: a server
+// that starts sending a reference range or a direction fails validation here.
+const healthEventSchema = z.object({
+  eventId: uuidSchema,
+  recordId: uuidSchema,
+  domain: z.enum(["lab"]),
+  concept: z.string().min(1).max(80),
+  value: z.string().min(1).max(64),
+  unit: z.string().min(1).max(32),
+  observedOn: z.string().date(),
+  verification: z.enum(["verified", "uncertain"]),
+  corrected: z.boolean(),
+  confirmedAt: z.string().datetime({ offset: true }),
+  source: healthEventSourceSchema,
+}).strict();
+
 const deletionSchema = z.object({
   deletionId: uuidSchema,
   status: z.literal("COMPLETED"),
@@ -123,6 +147,7 @@ export type FoundationConsent = z.infer<typeof consentSchema>;
 export type FoundationDocument = z.infer<typeof documentSchema>;
 export type FoundationCandidate = z.infer<typeof candidateSchema>;
 export type FoundationRecord = z.infer<typeof recordSchema>;
+export type HealthEvent = z.infer<typeof healthEventSchema>;
 export type FoundationDeletion = z.infer<typeof deletionSchema>;
 
 export type FoundationErrorCode =
@@ -364,6 +389,7 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       true,
     ),
     getRecords: () => request("/api/foundation/records", z.array(recordSchema), { method: "GET" }),
+    getHealthEvents: () => request("/api/foundation/health-events", z.array(healthEventSchema), { method: "GET" }),
     getRecord: async (recordId: string) => request(
       `/api/foundation/records/${requireUuid(recordId)}`,
       recordSchema,

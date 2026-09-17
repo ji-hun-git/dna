@@ -1,4 +1,4 @@
-import type { FoundationCandidate, FoundationRecord } from "@/lib/foundation/client";
+import type { FoundationCandidate, FoundationRecord, HealthEvent } from "@/lib/foundation/client";
 
 const documentId = "e64ddaae-a326-4f23-88a9-05ac59a48625";
 const documentSha256 = "a".repeat(64);
@@ -81,3 +81,26 @@ export function syntheticRecord(overrides: Partial<FoundationRecord> = {}): Foun
 
 export const syntheticDocumentId = documentId;
 export const syntheticDocumentSha256 = documentSha256;
+
+export function syntheticHealthEvent(overrides: Partial<HealthEvent> = {}): HealthEvent {
+  return {
+    eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d50",
+    recordId: "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c40",
+    domain: "lab",
+    concept: "총콜레스테롤",
+    value: "188",
+    unit: "mg/dL",
+    observedOn: "2026-07-28",
+    verification: "verified",
+    corrected: false,
+    confirmedAt: "2026-07-28T09:10:00Z",
+    source: {
+      documentId,
+      page: 1,
+      documentSha256,
+      sourceTextSha256: "b".repeat(64),
+      previewAvailable: true,
+    },
+    ...overrides,
+  };
+}

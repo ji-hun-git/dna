@@ -22,6 +22,11 @@ const userFacingFiles = [
   "components/providers/PublicProviderExplorer.tsx",
   "components/records/EvidenceLens.tsx",
   "components/records/HealthTimeline.tsx",
+  "components/my-data/LivingCellCanvas.tsx",
+  "components/my-data/CellTooltip.tsx",
+  "components/my-data/EvidenceDrawer.tsx",
+  "components/my-data/MyData.tsx",
+  "components/my-data/HealthEventTable.tsx",
 ] as const;
 
 const forbiddenUserTerms = [
@@ -97,10 +102,13 @@ describe("Korean UX language boundary", () => {
     expect(source("components/integrated/VisitPreparation.tsx")).toContain(
       "이 값은 서버가 미리 정한 예시 값이에요. 실제 파일이나 기관에서 가져오지 않았어요.",
     );
+    expect(source("components/my-data/MyData.tsx")).toContain("값의 의미나 변화의 방향은 판단하지 않아요.");
   });
 
   it("labels every server enum in Korean instead of rendering it raw", () => {
-    const integratedFiles = userFacingFiles.filter((path) => path.startsWith("components/integrated/"));
+    const integratedFiles = userFacingFiles.filter(
+      (path) => path.startsWith("components/integrated/") || path.startsWith("components/my-data/"),
+    );
     expect(integratedFiles.length).toBeGreaterThan(0);
     for (const path of integratedFiles) {
       const content = source(path);

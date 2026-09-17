@@ -5,19 +5,22 @@ import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 
 afterEach(cleanup);
 
-it("offers the same four routes and marks the current one", () => {
+it("offers two destinations and marks the group the current screen belongs to", () => {
   render(<IntegratedShell current="prepare"><main>본문</main></IntegratedShell>);
-
   const nav = screen.getByRole("navigation", { name: "주요 메뉴" });
-  const links = within(nav).getAllByRole("link");
-  expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
-    ["홈", "/"],
-    ["기록", "/records"],
-    ["진료 준비", "/prepare"],
-    ["데이터", "/data-control"],
+  expect(within(nav).getAllByRole("link").map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+    ["나의 데이터", "/my-data"],
+    ["데이터 관리", "/data-control"],
   ]);
-  expect(within(nav).getByRole("link", { name: "진료 준비" })).toHaveAttribute("aria-current", "page");
+  expect(within(nav).getByRole("link", { name: "나의 데이터" })).toHaveAttribute("aria-current", "page");
+  expect(within(nav).getByRole("link", { name: "데이터 관리" })).not.toHaveAttribute("aria-current");
   expect(screen.getByRole("link", { name: "앎 건강 홈" })).toHaveAttribute("href", "/");
+});
+
+it("marks nothing current on the entry screen", () => {
+  render(<IntegratedShell current="home"><main>본문</main></IntegratedShell>);
+  const nav = screen.getByRole("navigation", { name: "주요 메뉴" });
+  expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
 });
 
 it("shows the server status pill only when the screen has one", () => {
@@ -34,7 +37,7 @@ it("pairs each written destination with a decorative, non-focusable line icon", 
   render(<IntegratedShell current="records"><main>본문</main></IntegratedShell>);
 
   const nav = screen.getByRole("navigation", { name: "주요 메뉴" });
-  for (const label of ["홈", "기록", "진료 준비", "데이터"]) {
+  for (const label of ["나의 데이터", "데이터 관리"]) {
     const link = within(nav).getByRole("link", { name: label });
     expect(within(link).getByText(label, { exact: true })).toBeVisible();
     const icon = link.querySelector("svg");

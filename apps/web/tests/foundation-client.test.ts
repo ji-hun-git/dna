@@ -3,6 +3,7 @@ import {
   createFoundationClient,
   FoundationClientError,
 } from "@/lib/foundation/client";
+import { syntheticHealthEvent } from "./fixtures/foundation";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -192,6 +193,31 @@ describe("foundation same-origin client", () => {
 
     await expect(client.getCandidateForDocument("e64ddaae-a326-4f23-88a9-05ac59a48625"))
       .resolves.toMatchObject({ ordinal: 2, totalCandidates: 3 });
+  });
+
+  it("reads health events and rejects interpretation fields", async () => {
+    const fetcher = vi.fn(async () => jsonResponse([syntheticHealthEvent()]));
+    const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
+
+    const events = await client.getHealthEvents();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].concept).toBe("총콜레스테롤");
+    expect(events[0].source.previewAvailable).toBe(true);
+
+    const rejectingFetcher = vi.fn(async () => jsonResponse([
+      { ...syntheticHealthEvent(), referenceRange: { high: 130 } },
+    ]));
+    const rejectingClient = createFoundationClient({ fetcher: rejectingFetcher, readCsrfToken: () => "csrf-value" });
+
+    await expect(rejectingClient.getHealthEvents()).rejects.toThrow();
+
+    const nestedRejectingFetcher = vi.fn(async () => jsonResponse([
+      { ...syntheticHealthEvent(), source: { ...syntheticHealthEvent().source, direction: "high" } },
+    ]));
+    const nestedRejectingClient = createFoundationClient({ fetcher: nestedRejectingFetcher, readCsrfToken: () => "csrf-value" });
+
+    await expect(nestedRejectingClient.getHealthEvents()).rejects.toThrow();
   });
 });
 
