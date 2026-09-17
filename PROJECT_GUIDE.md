@@ -55,7 +55,7 @@ remain outside the approved foundation.
 |---|---|
 | Product and program design | Founder-approved direction; public brand clearance remains separate |
 | Korean consumer web | The rebuild branch makes the four primary routes use Spring-backed state by default, adds opt-in bounded synthetic bootstrap and generated allowlisted examples, and derives at most three source-linked visit questions. `/my-data` renders one cell per CURRENT record with exact search and an evidence drawer. Local tests and browser evidence are tracked in `docs/revision/ASTRA_PRODUCT_REBUILD.md`; not yet a hosted service |
-| Core API | Spring/Kotlin authority for sessions, CSRF/origin checks, consent, lifecycle, provenance, audit, and deletion in the synthetic foundation. Since Wave 2C it also serves the judgement-free what-changed summary, per-purpose consent (research consent stored only, never a condition) and the person's own HealthEvent export (`docs/status/2026-09-17/wave2c.md`). Since Wave 3 it also keeps a row's printed reference-range text for the person's own export only and attaches a signed arithmetic difference to each what-changed item (`docs/status/2026-09-17/wave3.md`). |
+| Core API | Spring/Kotlin authority for sessions, CSRF/origin checks, consent, lifecycle, provenance, audit, and deletion in the synthetic foundation. Since Wave 2C it also serves the judgement-free what-changed summary, per-purpose consent (research consent stored only, never a condition) and the person's own HealthEvent export (`docs/status/2026-09-17/wave2c.md`). Since Wave 3 it also keeps a row's printed reference-range text for the person's own export only and attaches a signed arithmetic difference to each what-changed item (`docs/status/2026-09-17/wave3.md`). Since Wave 4 it also serves the person's measurement series with three computed numbers and a FHIR R4 Bundle export (`docs/status/2026-09-17/wave4.md`). |
 | Durable store | PostgreSQL/Flyway lifecycle verified in CI with synthetic data |
 | Hostile-document boundary | Digest-bound upload, quarantine/approval states, ClamAV contract, separate worker artifact, retry/DLQ behavior, and safe-preview boundary verified in CI |
 | Research app | Separate DataON/AIDA public-metadata runtime; hosted isolation is not deployed |
@@ -153,9 +153,11 @@ while the visibility stop-ship remains open.
 4. AI/OCR output remains a candidate until an explicit human decision; abstention and uncertainty
    must remain visible.
 5. Do not add diagnosis, normality, risk prediction, treatment, medication, or autonomous clinical
-   actions without a new intended-use decision and regulatory review (latest decision:
-   `governance/intended-use-decision-reference-range-and-delta-2026-09-17.md` — verbatim
-   reference-range preservation and arithmetic value differences only).
+   actions without a new intended-use decision and regulatory review
+   (latest decisions: `governance/intended-use-decision-reference-range-and-delta-2026-09-17.md`
+   with its FHIR addendum — verbatim reference-range preservation and arithmetic value
+   differences only — and `governance/intended-use-decision-measurement-history-2026-09-17.md` —
+   measurement history, three computed numbers and a plain graph of the person's own values only).
 6. Kakao/Naver login is identity only. It never substitutes for health-data provision consent,
    application processing consent, or MyHealthWay authorization.
 7. Keep the personal-health runtime and research/public-data runtime separate in credentials,
