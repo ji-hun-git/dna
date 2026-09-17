@@ -1,151 +1,185 @@
-# LOINC audit — Wave 5 (2026-09-17)
+# LOINC audit — Wave 5 (2026-09-17/18)
 
-Method: each code's public page `https://loinc.org/<code>/` was read (HTTP GET, no login, no download, no terms acceptance). The Long Common Name is copied exactly as the page showed it on the date given. Nothing in this table was filled from memory; a page that could not be read says "not fetched". Rules R0–R4 are defined in `docs/superpowers/plans/2026-09-17-wave5-concept-accuracy.md` Task 1. LOINC is informational metadata here: it is never used for matching and never implies a meaning.
+Method: the automated WebFetch tool was refused by loinc.org with `HTTP 403 Forbidden` on every attempt (verified across 7 distinct codes, including one explicit retry on `2093-3` that failed the same way — see the prior revision of this file for that log). The controller then opened `https://loinc.org/2093-3/` directly in the desktop app's built-in browser — a public page, no login, no cookie/consent banner accepted, nothing downloaded or submitted — and from there read every other candidate's public page at `https://loinc.org/<code>/` with a same-origin GET issued without credentials, sequentially with a pause between requests. Every request returned `HTTP 200`. The name recorded for each code is the page's `<title>`, which has the form "LOINC - LOINC `<code>` `<Long Common Name>`"; the Active/Deprecated status field on the rendered page was **not** captured for the batch reads, only for `2093-3` itself (seen as "Active"). Nothing in the tables below was filled from memory. Rules R0–R4 are defined in `docs/superpowers/plans/2026-09-17-wave5-concept-accuracy.md` Task 1. LOINC is informational metadata here: it is never used for matching and never implies a meaning.
 
-**Blocked-fetch note:** every attempt to read `https://loinc.org/<code>/` via the WebFetch tool returned `HTTP 403 Forbidden`, with no response body retrieved. This was verified on 7 distinct codes across the candidate list before concluding the block was systematic and not code-specific: `2093-3` (fetched twice, including one explicit retry — same 403 both times), `13457-7`, `2085-9`, `2571-8`, `1558-6`, `4548-4`, `718-7`. No other tool, curl invocation, cached copy, or memory recall was substituted for the blocked pages, per the binding instruction not to substitute another source silently. Consequently **no LOINC page in this candidate list was actually read**, and every row below is `R1` ("not fetched"), regardless of whether the code was tried individually. All 66 non-generic codes are treated as unverified; the 3 generic concepts are `R0` (never fetched by design, no code exists to fetch).
+Where a candidate code turned out to be over-specific but a method-free/site-free code for the same analyte was also read and confirmed to fit, the concept's `loinc_code` is replaced; the 사유 column names the old code and the exact name fetched for it. Every `TRUE` row below was checked against the concept's `display_ko` and alias list in V7 (`apps/core-api/src/main/resources/db/migration/V7__native_text_extraction.sql`) and the Task 2 Kotlin catalogue proposal in the plan; anything doubtful is called out under "Doubtful rows — not silently accepted" below the tables, and is decided here provisionally pending human confirmation.
 
 | concept_code | loinc_code | Long Common Name (as fetched) | URL | 확인일 | loinc_export | 사유 |
 |---|---|---|---|---|---|---|
-| glucose | NULL | not fetched | — | 2026-09-17 | FALSE | R0 |
-| bilirubin | NULL | not fetched | — | 2026-09-17 | FALSE | R0 |
-| gfr | NULL | not fetched | — | 2026-09-17 | FALSE | R0 |
-| total-cholesterol | 2093-3 | not fetched | https://loinc.org/2093-3/ | 2026-09-17 | FALSE | R1 |
-| ldl-cholesterol | 13457-7 | not fetched | https://loinc.org/13457-7/ | 2026-09-17 | FALSE | R1 |
-| hdl-cholesterol | 2085-9 | not fetched | https://loinc.org/2085-9/ | 2026-09-17 | FALSE | R1 |
-| triglycerides | 2571-8 | not fetched | https://loinc.org/2571-8/ | 2026-09-17 | FALSE | R1 |
-| fasting-glucose | 1558-6 | not fetched | https://loinc.org/1558-6/ | 2026-09-17 | FALSE | R1 |
-| hba1c | 4548-4 | not fetched | https://loinc.org/4548-4/ | 2026-09-17 | FALSE | R1 |
-| ast | 1920-8 | not fetched | https://loinc.org/1920-8/ | 2026-09-17 | FALSE | R1 |
-| alt | 1742-6 | not fetched | https://loinc.org/1742-6/ | 2026-09-17 | FALSE | R1 |
-| gamma-gtp | 2324-2 | not fetched | https://loinc.org/2324-2/ | 2026-09-17 | FALSE | R1 |
-| alp | 6768-6 | not fetched | https://loinc.org/6768-6/ | 2026-09-17 | FALSE | R1 |
-| total-bilirubin | 1975-2 | not fetched | https://loinc.org/1975-2/ | 2026-09-17 | FALSE | R1 |
-| albumin | 1751-7 | not fetched | https://loinc.org/1751-7/ | 2026-09-17 | FALSE | R1 |
-| bun | 3094-0 | not fetched | https://loinc.org/3094-0/ | 2026-09-17 | FALSE | R1 |
-| creatinine | 2160-0 | not fetched | https://loinc.org/2160-0/ | 2026-09-17 | FALSE | R1 |
-| egfr | 62238-1 | not fetched | https://loinc.org/62238-1/ | 2026-09-17 | FALSE | R1 |
-| uric-acid | 3084-1 | not fetched | https://loinc.org/3084-1/ | 2026-09-17 | FALSE | R1 |
-| hemoglobin | 718-7 | not fetched | https://loinc.org/718-7/ | 2026-09-17 | FALSE | R1 |
-| red-blood-cells | 789-8 | not fetched | https://loinc.org/789-8/ | 2026-09-17 | FALSE | R1 |
-| white-blood-cells | 6690-2 | not fetched | https://loinc.org/6690-2/ | 2026-09-17 | FALSE | R1 |
-| platelets | 777-3 | not fetched | https://loinc.org/777-3/ | 2026-09-17 | FALSE | R1 |
-| urine-protein | 5804-0 | not fetched | https://loinc.org/5804-0/ | 2026-09-17 | FALSE | R1 |
-| urine-glucose | 5792-7 | not fetched | https://loinc.org/5792-7/ | 2026-09-17 | FALSE | R1 |
-| systolic-blood-pressure | 8480-6 | not fetched | https://loinc.org/8480-6/ | 2026-09-17 | FALSE | R1 |
-| diastolic-blood-pressure | 8462-4 | not fetched | https://loinc.org/8462-4/ | 2026-09-17 | FALSE | R1 |
-| pulse | 8867-4 | not fetched | https://loinc.org/8867-4/ | 2026-09-17 | FALSE | R1 |
-| height | 8302-2 | not fetched | https://loinc.org/8302-2/ | 2026-09-17 | FALSE | R1 |
-| weight | 29463-7 | not fetched | https://loinc.org/29463-7/ | 2026-09-17 | FALSE | R1 |
-| bmi | 39156-5 | not fetched | https://loinc.org/39156-5/ | 2026-09-17 | FALSE | R1 |
-| waist-circumference | 8280-0 | not fetched | https://loinc.org/8280-0/ | 2026-09-17 | FALSE | R1 |
-| vitamin-d | 1989-3 | not fetched | https://loinc.org/1989-3/ | 2026-09-17 | FALSE | R1 |
-| tsh | 3016-3 | not fetched | https://loinc.org/3016-3/ | 2026-09-17 | FALSE | R1 |
-| free-t4 | 3024-7 | not fetched | https://loinc.org/3024-7/ | 2026-09-17 | FALSE | R1 |
-| crp | 1988-5 | not fetched | https://loinc.org/1988-5/ | 2026-09-17 | FALSE | R1 |
-| ferritin | 2276-4 | not fetched | https://loinc.org/2276-4/ | 2026-09-17 | FALSE | R1 |
-| sodium | 2951-2 | not fetched | https://loinc.org/2951-2/ | 2026-09-17 | FALSE | R1 |
-| potassium | 2823-3 | not fetched | https://loinc.org/2823-3/ | 2026-09-17 | FALSE | R1 |
-| calcium | 17861-6 | not fetched | https://loinc.org/17861-6/ | 2026-09-17 | FALSE | R1 |
-| total-protein | 2885-2 | not fetched | https://loinc.org/2885-2/ | 2026-09-17 | FALSE | R1 |
-| postprandial-glucose | NULL | not fetched | https://loinc.org/1521-4/ | 2026-09-17 | FALSE | R1 |
-| direct-bilirubin | NULL | not fetched | https://loinc.org/1968-7/ | 2026-09-17 | FALSE | R1 |
-| hs-crp | NULL | not fetched | https://loinc.org/30522-7/ | 2026-09-17 | FALSE | R1 |
-| hematocrit | NULL | not fetched | https://loinc.org/4544-3/ | 2026-09-17 | FALSE | R1 |
-| mcv | NULL | not fetched | https://loinc.org/787-2/ | 2026-09-17 | FALSE | R1 |
-| mch | NULL | not fetched | https://loinc.org/785-6/ | 2026-09-17 | FALSE | R1 |
-| mchc | NULL | not fetched | https://loinc.org/786-4/ | 2026-09-17 | FALSE | R1 |
-| chloride | NULL | not fetched | https://loinc.org/2075-0/ | 2026-09-17 | FALSE | R1 |
-| phosphorus | NULL | not fetched | https://loinc.org/2777-1/ | 2026-09-17 | FALSE | R1 |
-| magnesium | NULL | not fetched | https://loinc.org/19123-9/ | 2026-09-17 | FALSE | R1 |
-| iron | NULL | not fetched | https://loinc.org/2498-4/ | 2026-09-17 | FALSE | R1 |
-| tibc | NULL | not fetched | https://loinc.org/2500-7/ | 2026-09-17 | FALSE | R1 |
-| vitamin-b12 | NULL | not fetched | https://loinc.org/2132-9/ | 2026-09-17 | FALSE | R1 |
-| folate | NULL | not fetched | https://loinc.org/2284-8/ | 2026-09-17 | FALSE | R1 |
-| esr | NULL | not fetched | https://loinc.org/30341-2/ | 2026-09-17 | FALSE | R1 |
-| ldh | NULL | not fetched | https://loinc.org/2532-0/ | 2026-09-17 | FALSE | R1 |
-| amylase | NULL | not fetched | https://loinc.org/1798-8/ | 2026-09-17 | FALSE | R1 |
-| ck | NULL | not fetched | https://loinc.org/2157-6/ | 2026-09-17 | FALSE | R1 |
-| free-t3 | NULL | not fetched | https://loinc.org/3051-0/ | 2026-09-17 | FALSE | R1 |
-| t3 | NULL | not fetched | https://loinc.org/3053-6/ | 2026-09-17 | FALSE | R1 |
-| non-hdl-cholesterol | NULL | not fetched | https://loinc.org/43396-1/ | 2026-09-17 | FALSE | R1 |
-| insulin | NULL | not fetched | https://loinc.org/20448-7/ | 2026-09-17 | FALSE | R1 |
-| afp | NULL | not fetched | https://loinc.org/1834-1/ | 2026-09-17 | FALSE | R1 |
-| cea | NULL | not fetched | https://loinc.org/2039-6/ | 2026-09-17 | FALSE | R1 |
-| psa | NULL | not fetched | https://loinc.org/2857-1/ | 2026-09-17 | FALSE | R1 |
-| ca19-9 | NULL | not fetched | https://loinc.org/24108-3/ | 2026-09-17 | FALSE | R1 |
-| ca125 | NULL | not fetched | https://loinc.org/10334-1/ | 2026-09-17 | FALSE | R1 |
-| rf | NULL | not fetched | https://loinc.org/11572-5/ | 2026-09-17 | FALSE | R1 |
+| glucose | 2345-7 | Glucose [Mass/volume] in Serum or Plasma | https://loinc.org/2345-7/ | 2026-09-17/18 | TRUE | R4 per controller — **CONFLICT**: plan line 347–348 and spec §5 state generic concepts have no LOINC unconditionally (not "unless the audit says otherwise"); see Doubtful rows |
+| bilirubin | NULL | not fetched | — | 2026-09-17/18 | FALSE | R0, generic, no code by design |
+| gfr | NULL | not fetched | — | 2026-09-17/18 | FALSE | R0, generic, no code by design |
+| total-cholesterol | 2093-3 | Cholesterol [Mass/volume] in Serum or Plasma | https://loinc.org/2093-3/ | 2026-09-17 | TRUE | R4, fits 총콜레스테롤/Cholesterol, no method/specimen mismatch |
+| ldl-cholesterol | 2089-1 | Cholesterol in LDL [Mass/volume] in Serum or Plasma | https://loinc.org/2089-1/ | 2026-09-17/18 | TRUE | Replaced: old 13457-7 "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation" is R3 (calculated LDL); 2089-1 is method-free and fits (R4) |
+| hdl-cholesterol | 2085-9 | Cholesterol in HDL [Mass/volume] in Serum or Plasma | https://loinc.org/2085-9/ | 2026-09-17/18 | TRUE | R4, method-free, fits |
+| triglycerides | 2571-8 | Triglyceride [Mass/volume] in Serum or Plasma | https://loinc.org/2571-8/ | 2026-09-17/18 | TRUE | R4, fits |
+| fasting-glucose | 1558-6 | Fasting glucose [Mass/volume] in Serum or Plasma | https://loinc.org/1558-6/ | 2026-09-17/18 | TRUE | R4, fits once aliases narrowed to fasting-specific terms (FBS/FPG/식전혈당) |
+| hba1c | 4548-4 | Hemoglobin A1c/Hemoglobin.total in Blood | https://loinc.org/4548-4/ | 2026-09-17/18 | TRUE | R4, fits HbA1c/A1c |
+| ast | 1920-8 | Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma | https://loinc.org/1920-8/ | 2026-09-17/18 | TRUE | R4, fits |
+| alt | 1742-6 | Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma | https://loinc.org/1742-6/ | 2026-09-17/18 | TRUE | R4, fits |
+| gamma-gtp | 2324-2 | Gamma glutamyl transferase [Enzymatic activity/volume] in Serum or Plasma | https://loinc.org/2324-2/ | 2026-09-17/18 | TRUE | R4, fits |
+| alp | 6768-6 | Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma | https://loinc.org/6768-6/ | 2026-09-17/18 | TRUE | R4, fits |
+| total-bilirubin | 1975-2 | Bilirubin.total [Mass/volume] in Serum or Plasma | https://loinc.org/1975-2/ | 2026-09-17/18 | TRUE | R4, fits once aliases narrowed off the generic "Bilirubin" |
+| albumin | 1751-7 | Albumin [Mass/volume] in Serum or Plasma | https://loinc.org/1751-7/ | 2026-09-17/18 | TRUE | R4, fits |
+| bun | 3094-0 | Urea nitrogen [Mass/volume] in Serum or Plasma | https://loinc.org/3094-0/ | 2026-09-17/18 | TRUE | R4, fits 혈중요소질소/Blood Urea Nitrogen |
+| creatinine | 2160-0 | Creatinine [Mass/volume] in Serum or Plasma | https://loinc.org/2160-0/ | 2026-09-17/18 | TRUE | R4, fits |
+| egfr | 62238-1 | Glomerular filtration rate [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine-based formula (CKD-EPI)/1.73 sq M | https://loinc.org/62238-1/ | 2026-09-17/18 | FALSE | R3, named formula (CKD-EPI), keep code, no method-free replacement sought (spec pins this FALSE unconditionally) |
+| uric-acid | 3084-1 | Urate [Mass/volume] in Serum or Plasma | https://loinc.org/3084-1/ | 2026-09-17/18 | TRUE | R4; "Urate" is LOINC's standard component name for the 요산/Uric Acid assay, not a different analyte |
+| hemoglobin | 718-7 | Hemoglobin [Mass/volume] in Blood | https://loinc.org/718-7/ | 2026-09-17/18 | TRUE | R4, fits |
+| red-blood-cells | 26453-1 | Erythrocytes [#/volume] in Blood | https://loinc.org/26453-1/ | 2026-09-17/18 | TRUE | Replaced: old 789-8 "Erythrocytes [#/volume] in Blood by Automated count" is R3 (method); 26453-1 is method-free and fits (R4) |
+| white-blood-cells | 26464-8 | Leukocytes [#/volume] in Blood | https://loinc.org/26464-8/ | 2026-09-17/18 | TRUE | Replaced: old 6690-2 "Leukocytes [#/volume] in Blood by Automated count" is R3 (method); 26464-8 is method-free and fits (R4) |
+| platelets | 26515-7 | Platelets [#/volume] in Blood | https://loinc.org/26515-7/ | 2026-09-17/18 | TRUE | Replaced: old 777-3 "Platelets [#/volume] in Blood by Automated count" is R3 (method); 26515-7 is method-free and fits (R4) |
+| urine-protein | 2888-6 | Protein [Mass/volume] in Urine | https://loinc.org/2888-6/ | 2026-09-17/18 | TRUE | Replaced: old 5804-0 "Protein [Mass/volume] in Urine by Test strip" is R3 (method); 2888-6 is method-free and fits (R4). Qualitative strip results stay out of scope regardless |
+| urine-glucose | 2350-7 | Glucose [Mass/volume] in Urine | https://loinc.org/2350-7/ | 2026-09-17/18 | TRUE | Replaced: old 5792-7 "Glucose [Mass/volume] in Urine by Test strip" is R3 (method); 2350-7 is method-free and fits (R4). Qualitative strip results stay out of scope regardless |
+| systolic-blood-pressure | 8480-6 | Systolic blood pressure | https://loinc.org/8480-6/ | 2026-09-17/18 | TRUE | R4, fits |
+| diastolic-blood-pressure | 8462-4 | Diastolic blood pressure | https://loinc.org/8462-4/ | 2026-09-17/18 | TRUE | R4, fits |
+| pulse | 8867-4 | Heart rate | https://loinc.org/8867-4/ | 2026-09-17/18 | TRUE | R4; 맥박 lists 심박수/Heart Rate as aliases, fits |
+| height | 8302-2 | Body height | https://loinc.org/8302-2/ | 2026-09-17/18 | TRUE | R4; 키/Height alias fits |
+| weight | 29463-7 | Body weight | https://loinc.org/29463-7/ | 2026-09-17/18 | TRUE | R4, fits |
+| bmi | 39156-5 | Body mass index (BMI) [Ratio] | https://loinc.org/39156-5/ | 2026-09-17/18 | TRUE | R4, fits |
+| waist-circumference | 8280-0 | Waist Circumference at umbilicus by Tape measure | https://loinc.org/8280-0/ | 2026-09-17/18 | FALSE | R3, over-specific by site ("at umbilicus") and method ("by Tape measure"); keep code |
+| vitamin-d | 1989-3 | 25-hydroxyvitamin D3 [Mass/volume] in Serum or Plasma | https://loinc.org/1989-3/ | 2026-09-17/18 | FALSE | R3, D3 only; the only other readable candidate, 62292-8 "25-Hydroxyvitamin D3+25-Hydroxyvitamin D2 [Mass/volume] in Serum or Plasma", is a specific named sum and not usable either; keep 1989-3 (spec pins this FALSE unconditionally) |
+| tsh | 3016-3 | Thyrotropin [Units/volume] in Serum or Plasma | https://loinc.org/3016-3/ | 2026-09-17/18 | TRUE | R4; "Thyrotropin" is the standard LOINC synonym for TSH |
+| free-t4 | 3024-7 | Thyroxine (T4) free [Mass/volume] in Serum or Plasma | https://loinc.org/3024-7/ | 2026-09-17/18 | TRUE | R4, fits FT4 |
+| crp | 1988-5 | C reactive protein [Mass/volume] in Serum or Plasma | https://loinc.org/1988-5/ | 2026-09-17/18 | TRUE | R4, fits once aliases narrow off hs-CRP |
+| ferritin | 2276-4 | Ferritin [Mass/volume] in Serum or Plasma | https://loinc.org/2276-4/ | 2026-09-17/18 | TRUE | R4, fits |
+| sodium | 2951-2 | Sodium [Moles/volume] in Serum or Plasma | https://loinc.org/2951-2/ | 2026-09-17/18 | TRUE | R4, fits |
+| potassium | 2823-3 | Potassium [Moles/volume] in Serum or Plasma | https://loinc.org/2823-3/ | 2026-09-17/18 | TRUE | R4, fits |
+| calcium | 17861-6 | Calcium [Mass/volume] in Serum or Plasma | https://loinc.org/17861-6/ | 2026-09-17/18 | TRUE | R4, fits |
+| total-protein | 2885-2 | Protein [Mass/volume] in Serum or Plasma | https://loinc.org/2885-2/ | 2026-09-17/18 | TRUE | R4, fits |
+| postprandial-glucose | NULL | Glucose [Mass/volume] in Serum or Plasma --2 hours post meal | https://loinc.org/1521-4/ | 2026-09-17/18 | FALSE | R3 per controller (proposed code 1521-4 not adopted); see Doubtful rows — the concept's own aliases already say "2시간"/"2hr", so this call is not obviously correct |
+| direct-bilirubin | 1968-7 | Bilirubin.direct [Mass/volume] in Serum or Plasma | https://loinc.org/1968-7/ | 2026-09-17/18 | TRUE | R4, fits Direct Bilirubin/D-Bil |
+| hs-crp | 30522-7 | C reactive protein [Mass/volume] in Serum or Plasma by High sensitivity method | https://loinc.org/30522-7/ | 2026-09-17/18 | TRUE | R4; the concept itself (고감도 CRP / hs-CRP) is defined as the high-sensitivity method, so the method wording matches the concept, not more specific than its own label |
+| hematocrit | NULL | Hematocrit [Volume Fraction] of Blood by Automated count | https://loinc.org/4544-3/ | 2026-09-17/18 | FALSE | R3 (proposed code 4544-3 not adopted), method; the only other candidate read, 20570-8 "Hematocrit [Volume Fraction] of Blood by calculation", is also method-specific and not usable |
+| mcv | 30428-7 | MCV [Entitic mean volume] in Red Blood Cells | https://loinc.org/30428-7/ | 2026-09-17/18 | TRUE | Replaced: proposed 787-2 "MCV [Entitic mean volume] in Red Blood Cells by Automated count" is R3 (method); 30428-7 is method-free and fits (R4) |
+| mch | 28539-5 | MCH [Entitic mass] | https://loinc.org/28539-5/ | 2026-09-17/18 | TRUE | Replaced: proposed 785-6 "MCH [Entitic mass] by Automated count" is R3 (method); 28539-5 is method-free and fits (R4) |
+| mchc | 28540-3 | MCHC [Entitic Mass/volume] in Red Blood Cells | https://loinc.org/28540-3/ | 2026-09-17/18 | TRUE | Replaced: proposed 786-4 "MCHC [Entitic Mass/volume] in Red Blood Cells by Automated count" is R3 (method); 28540-3 is method-free and fits (R4) |
+| chloride | 2075-0 | Chloride [Moles/volume] in Serum or Plasma | https://loinc.org/2075-0/ | 2026-09-17/18 | TRUE | R4, fits |
+| phosphorus | 2777-1 | Phosphate [Mass/volume] in Serum or Plasma | https://loinc.org/2777-1/ | 2026-09-17/18 | TRUE | R4; "Phosphate" is the standard LOINC component name for the 인(P)/phosphorus assay, not a different analyte |
+| magnesium | 19123-9 | Magnesium [Mass/volume] in Serum or Plasma | https://loinc.org/19123-9/ | 2026-09-17/18 | TRUE | R4, fits |
+| iron | 2498-4 | Iron [Mass/volume] in Serum or Plasma | https://loinc.org/2498-4/ | 2026-09-17/18 | TRUE | R4, fits 혈청철/Serum Iron |
+| tibc | 2500-7 | Iron binding capacity [Mass/volume] in Serum or Plasma | https://loinc.org/2500-7/ | 2026-09-17/18 | TRUE | R4, fits Total Iron Binding Capacity |
+| vitamin-b12 | 2132-9 | Cobalamin (Vitamin B12) [Mass/volume] in Serum or Plasma | https://loinc.org/2132-9/ | 2026-09-17/18 | TRUE | R4, fits |
+| folate | 2284-8 | Folate [Mass/volume] in Serum or Plasma | https://loinc.org/2284-8/ | 2026-09-17/18 | TRUE | R4, fits |
+| esr | 30341-2 | Erythrocyte [Sedimentation Rate] in Blood | https://loinc.org/30341-2/ | 2026-09-17/18 | TRUE | R4, method-free (no "by Westergren" or similar), fits |
+| ldh | 2532-0 | Lactate dehydrogenase [Enzymatic activity/volume] in Serum or Plasma | https://loinc.org/2532-0/ | 2026-09-17/18 | TRUE | R4, fits |
+| amylase | 1798-8 | Amylase [Enzymatic activity/volume] in Serum or Plasma | https://loinc.org/1798-8/ | 2026-09-17/18 | TRUE | R4, fits |
+| ck | 2157-6 | Creatine kinase [Enzymatic activity/volume] in Serum or Plasma | https://loinc.org/2157-6/ | 2026-09-17/18 | TRUE | R4, fits |
+| free-t3 | 3051-0 | Triiodothyronine (T3) Free [Mass/volume] in Serum or Plasma | https://loinc.org/3051-0/ | 2026-09-17/18 | TRUE | R4, fits |
+| t3 | 3053-6 | Triiodothyronine (T3) [Mass/volume] in Serum or Plasma | https://loinc.org/3053-6/ | 2026-09-17/18 | TRUE | R4, fits |
+| non-hdl-cholesterol | 43396-1 | Cholesterol non HDL [Mass/volume] in Serum or Plasma | https://loinc.org/43396-1/ | 2026-09-17/18 | TRUE | R4, fits |
+| insulin | 20448-7 | Insulin [Units/volume] in Serum or Plasma | https://loinc.org/20448-7/ | 2026-09-17/18 | TRUE | R4, fits |
+| afp | 1834-1 | Alpha-1-Fetoprotein [Mass/volume] in Serum or Plasma | https://loinc.org/1834-1/ | 2026-09-17/18 | TRUE | R4, fits AFP |
+| cea | 2039-6 | Carcinoembryonic Ag [Mass/volume] in Serum or Plasma | https://loinc.org/2039-6/ | 2026-09-17/18 | TRUE | R4, fits |
+| psa | 2857-1 | Prostate specific Ag [Mass/volume] in Serum or Plasma | https://loinc.org/2857-1/ | 2026-09-17/18 | TRUE | R4, fits (generic/total PSA, not the free-PSA-specific code) |
+| ca19-9 | 24108-3 | Cancer Ag 19-9 [Units/volume] in Serum or Plasma | https://loinc.org/24108-3/ | 2026-09-17/18 | TRUE | R4, fits |
+| ca125 | 10334-1 | Cancer Ag 125 [Units/volume] in Serum or Plasma | https://loinc.org/10334-1/ | 2026-09-17/18 | TRUE | R4, fits |
+| rf | 11572-5 | Rheumatoid factor [Units/volume] in Serum or Plasma | https://loinc.org/11572-5/ | 2026-09-17/18 | TRUE | R4, fits |
+
+## Doubtful rows — not silently accepted
+
+- **`glucose` (generic) → `2345-7`, `TRUE`.** This is a controller decision, but it conflicts with an explicit, unconditional rule: the Task 1 brief's R0 ("generic concepts `glucose`, `bilirubin`, `gfr`: no code, `NULL`/`FALSE`, not fetched") and spec §5 ("Generic concepts (`glucose`, `bilirubin`, `gfr`) have no LOINC") — with no "unless the audit says otherwise" carve-out, unlike the ldl-cholesterol/vitamin-d/egfr sentence. The plan's own Task 2 Kotlin catalogue (line 347–348) hard-codes `concept("glucose", "혈당", null, false, ...)` right under the comment "generic concepts for labels that do not say which specific test they are. No LOINC." Assigning `2345-7`/`TRUE` here is not a case of "the audit found a better code than the plan guessed" — it overrides a rule that was never conditional on the audit. This row is written above only because the controller instruction said to apply it; it should not be copied into V11/the Kotlin catalogue without a human decision, since doing so would contradict the plan's own text and the boundary that generic (unspecific) labels never carry LOINC metadata. Recommend defaulting `glucose` back to `NULL`/`FALSE` unless a person overrules this note.
+- **`postprandial-glucose` → `NULL`, `FALSE`.** The controller's stated reason is that the fetched name says "--2 hours post meal" while "the concept's name does not." But per the plan's alias list (Global Constraints and Task 2 line 352), the concept's own aliases already include `식후 2시간 혈당` (literally "2-hour post-meal blood glucose") and `2hr PP` — i.e., some of the concept's own labels already carry the same 2-hour specificity as the code. Rule R3 disqualifies a code only when it is "more specific than **every** label of the concept," and that does not obviously hold here. This is left `NULL`/`FALSE` as the controller directed, but it is flagged as a plausible `TRUE` (with `loinc_code = 1521-4`) pending a human re-check against R3's exact wording.
+- **`phosphorus` → `2777-1`, `TRUE` (minor terminology note, not a blocking doubt).** The fetched Long Common Name uses the LOINC component "Phosphate", while the concept is named "phosphorus" (인, aliases include "Inorganic Phosphorus"). This is standard clinical-chemistry terminology — a serum "phosphorus" test measures inorganic phosphate and LOINC's component name for it is conventionally "Phosphate" — not a different analyte, so `TRUE` stands, but it is called out here since the wording does differ from the concept's own aliases.
+- **`uric-acid` → `3084-1`, `TRUE` (minor terminology note, not a blocking doubt).** The fetched name is "Urate", the concept's aliases say "Uric Acid"/"UA". "Urate" is LOINC's standard component name for this assay (uric acid is measured as urate); not flagged as a mismatch, but noted since the string differs from the concept's own aliases.
 
 ## Final values
 
 | concept_code | loinc_code | loinc_export |
 |---|---|---|
-| glucose | NULL | FALSE |
+| glucose | 2345-7 | TRUE |
 | bilirubin | NULL | FALSE |
 | gfr | NULL | FALSE |
-| total-cholesterol | 2093-3 | FALSE |
-| ldl-cholesterol | 13457-7 | FALSE |
-| hdl-cholesterol | 2085-9 | FALSE |
-| triglycerides | 2571-8 | FALSE |
-| fasting-glucose | 1558-6 | FALSE |
-| hba1c | 4548-4 | FALSE |
-| ast | 1920-8 | FALSE |
-| alt | 1742-6 | FALSE |
-| gamma-gtp | 2324-2 | FALSE |
-| alp | 6768-6 | FALSE |
-| total-bilirubin | 1975-2 | FALSE |
-| albumin | 1751-7 | FALSE |
-| bun | 3094-0 | FALSE |
-| creatinine | 2160-0 | FALSE |
+| total-cholesterol | 2093-3 | TRUE |
+| ldl-cholesterol | 2089-1 | TRUE |
+| hdl-cholesterol | 2085-9 | TRUE |
+| triglycerides | 2571-8 | TRUE |
+| fasting-glucose | 1558-6 | TRUE |
+| hba1c | 4548-4 | TRUE |
+| ast | 1920-8 | TRUE |
+| alt | 1742-6 | TRUE |
+| gamma-gtp | 2324-2 | TRUE |
+| alp | 6768-6 | TRUE |
+| total-bilirubin | 1975-2 | TRUE |
+| albumin | 1751-7 | TRUE |
+| bun | 3094-0 | TRUE |
+| creatinine | 2160-0 | TRUE |
 | egfr | 62238-1 | FALSE |
-| uric-acid | 3084-1 | FALSE |
-| hemoglobin | 718-7 | FALSE |
-| red-blood-cells | 789-8 | FALSE |
-| white-blood-cells | 6690-2 | FALSE |
-| platelets | 777-3 | FALSE |
-| urine-protein | 5804-0 | FALSE |
-| urine-glucose | 5792-7 | FALSE |
-| systolic-blood-pressure | 8480-6 | FALSE |
-| diastolic-blood-pressure | 8462-4 | FALSE |
-| pulse | 8867-4 | FALSE |
-| height | 8302-2 | FALSE |
-| weight | 29463-7 | FALSE |
-| bmi | 39156-5 | FALSE |
+| uric-acid | 3084-1 | TRUE |
+| hemoglobin | 718-7 | TRUE |
+| red-blood-cells | 26453-1 | TRUE |
+| white-blood-cells | 26464-8 | TRUE |
+| platelets | 26515-7 | TRUE |
+| urine-protein | 2888-6 | TRUE |
+| urine-glucose | 2350-7 | TRUE |
+| systolic-blood-pressure | 8480-6 | TRUE |
+| diastolic-blood-pressure | 8462-4 | TRUE |
+| pulse | 8867-4 | TRUE |
+| height | 8302-2 | TRUE |
+| weight | 29463-7 | TRUE |
+| bmi | 39156-5 | TRUE |
 | waist-circumference | 8280-0 | FALSE |
 | vitamin-d | 1989-3 | FALSE |
-| tsh | 3016-3 | FALSE |
-| free-t4 | 3024-7 | FALSE |
-| crp | 1988-5 | FALSE |
-| ferritin | 2276-4 | FALSE |
-| sodium | 2951-2 | FALSE |
-| potassium | 2823-3 | FALSE |
-| calcium | 17861-6 | FALSE |
-| total-protein | 2885-2 | FALSE |
+| tsh | 3016-3 | TRUE |
+| free-t4 | 3024-7 | TRUE |
+| crp | 1988-5 | TRUE |
+| ferritin | 2276-4 | TRUE |
+| sodium | 2951-2 | TRUE |
+| potassium | 2823-3 | TRUE |
+| calcium | 17861-6 | TRUE |
+| total-protein | 2885-2 | TRUE |
 | postprandial-glucose | NULL | FALSE |
-| direct-bilirubin | NULL | FALSE |
-| hs-crp | NULL | FALSE |
+| direct-bilirubin | 1968-7 | TRUE |
+| hs-crp | 30522-7 | TRUE |
 | hematocrit | NULL | FALSE |
-| mcv | NULL | FALSE |
-| mch | NULL | FALSE |
-| mchc | NULL | FALSE |
-| chloride | NULL | FALSE |
-| phosphorus | NULL | FALSE |
-| magnesium | NULL | FALSE |
-| iron | NULL | FALSE |
-| tibc | NULL | FALSE |
-| vitamin-b12 | NULL | FALSE |
-| folate | NULL | FALSE |
-| esr | NULL | FALSE |
-| ldh | NULL | FALSE |
-| amylase | NULL | FALSE |
-| ck | NULL | FALSE |
-| free-t3 | NULL | FALSE |
-| t3 | NULL | FALSE |
-| non-hdl-cholesterol | NULL | FALSE |
-| insulin | NULL | FALSE |
-| afp | NULL | FALSE |
-| cea | NULL | FALSE |
-| psa | NULL | FALSE |
-| ca19-9 | NULL | FALSE |
-| ca125 | NULL | FALSE |
-| rf | NULL | FALSE |
+| mcv | 30428-7 | TRUE |
+| mch | 28539-5 | TRUE |
+| mchc | 28540-3 | TRUE |
+| chloride | 2075-0 | TRUE |
+| phosphorus | 2777-1 | TRUE |
+| magnesium | 19123-9 | TRUE |
+| iron | 2498-4 | TRUE |
+| tibc | 2500-7 | TRUE |
+| vitamin-b12 | 2132-9 | TRUE |
+| folate | 2284-8 | TRUE |
+| esr | 30341-2 | TRUE |
+| ldh | 2532-0 | TRUE |
+| amylase | 1798-8 | TRUE |
+| ck | 2157-6 | TRUE |
+| free-t3 | 3051-0 | TRUE |
+| t3 | 3053-6 | TRUE |
+| non-hdl-cholesterol | 43396-1 | TRUE |
+| insulin | 20448-7 | TRUE |
+| afp | 1834-1 | TRUE |
+| cea | 2039-6 | TRUE |
+| psa | 2857-1 | TRUE |
+| ca19-9 | 24108-3 | TRUE |
+| ca125 | 10334-1 | TRUE |
+| rf | 11572-5 | TRUE |
+
+## Plan values superseded by the audit
+
+Task 2 (`docs/superpowers/plans/2026-09-17-wave5-concept-accuracy.md`, Kotlin `MedicalConceptCatalogue.entries` proposal) and Task 3 (same file, `V11__concept_accuracy.sql` proposal) both say explicitly that their `loinc`/`loinc_code`/`loinc_export` values are a proposal to be replaced with this file's `## Final values`. The lines below are the ones that differ from what the audit found; every other line in those proposals already matches this file.
+
+| Task | Line | Concept | Old (plan) | Audited (this file) |
+|---|---|---|---|---|
+| Task 2 | 310 | ldl-cholesterol | `"13457-7", false` | `"2089-1", TRUE` |
+| Task 2 | 326 | red-blood-cells | `"789-8", true` | `"26453-1", TRUE` |
+| Task 2 | 327 | white-blood-cells | `"6690-2", true` | `"26464-8", TRUE` |
+| Task 2 | 328 | platelets | `"777-3", true` | `"26515-7", TRUE` |
+| Task 2 | 329 | urine-protein | `"5804-0", true` | `"2888-6", TRUE` |
+| Task 2 | 330 | urine-glucose | `"5792-7", true` | `"2350-7", TRUE` |
+| Task 2 | 348 | glucose (generic) | `null, false` | `2345-7, TRUE` — **see Doubtful rows; this conflicts with the plan's own "no LOINC" comment on the same line and is not a clean supersession** |
+| Task 2 | 352 | postprandial-glucose | `"1521-4", true` | `NULL, FALSE` — see Doubtful rows |
+| Task 2 | 356 | hematocrit | `"4544-3", true` | `NULL, FALSE` |
+| Task 2 | 357 | mcv | `"787-2", true` | `"30428-7", TRUE` |
+| Task 2 | 358 | mch | `"785-6", true` | `"28539-5", TRUE` |
+| Task 2 | 359 | mchc | `"786-4", true` | `"28540-3", TRUE` |
+| Task 3 | 624 | ldl-cholesterol | `UPDATE ... loinc_export = FALSE WHERE concept_code IN ('ldl-cholesterol', 'vitamin-d', 'egfr')` | Drop `ldl-cholesterol` from this list (now `TRUE` with code `2089-1`); keep `vitamin-d` and `egfr` in the `FALSE` list unchanged |
+| Task 3 | 630 | postprandial-glucose | `'1521-4', ..., TRUE` | `NULL, FALSE` — see Doubtful rows |
+| Task 3 | 633 | hematocrit | `'4544-3', ..., TRUE` | `NULL, FALSE` |
+| Task 3 | 634 | mcv | `'787-2', ..., TRUE` | `'30428-7', TRUE` |
+| Task 3 | 635 | mch | `'785-6', ..., TRUE` | `'28539-5', TRUE` |
+| Task 3 | 636 | mchc | `'786-4', ..., TRUE` | `'28540-3', TRUE` |
+
+Later implementers (Tasks 2–4) should take this file's `## Final values` table as the source of truth over the plan's inline proposal values, per the plan's own instruction — with the one exception noted above (`glucose`) which needs a human decision before being copied anywhere, since it conflicts with an unconditional rule rather than a guessed value the audit merely corrected.
