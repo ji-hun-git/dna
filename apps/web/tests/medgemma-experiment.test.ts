@@ -45,6 +45,9 @@ describe("protocol", () => {
     expect(EXPERIMENT_PROTOCOL.model).toBe("medgemma1.5:latest");
     expect(EXPERIMENT_PROTOCOL.think).toBe(false);
     expect(EXPERIMENT_PROTOCOL.options.temperature).toBe(0);
+    expect(EXPERIMENT_PROTOCOL.options.num_predict).toBe(4096);
+    expect(EXPERIMENT_PROTOCOL.options.num_ctx).toBe(8192);
+    expect(Object.isFrozen(EXPERIMENT_PROTOCOL.options)).toBe(true);
     expect(EXPERIMENT_PROTOCOL.documentTimeoutMs).toBe(180_000);
     expect(EXPERIMENT_PROTOCOL.systemPrompt).toContain("판단하지");
     expect(EXPERIMENT_PROTOCOL.systemPrompt).not.toMatch(/진단해|정상인지|위험도를 평가/);

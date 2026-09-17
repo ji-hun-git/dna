@@ -72,7 +72,7 @@ export const EXPERIMENT_PROTOCOL = Object.freeze({
   format: MODEL_RESPONSE_JSON_SCHEMA,
   think: false,
   keepAlive: "10m",
-  options: Object.freeze({ temperature: 0, seed: 7, num_predict: 4096 }),
+  options: Object.freeze({ temperature: 0, seed: 7, num_predict: 4096, num_ctx: 8192 }),
   documentTimeoutMs: 180_000,
   dpi: 150,
 });
