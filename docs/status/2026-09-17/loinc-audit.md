@@ -2,11 +2,11 @@
 
 Method: the automated WebFetch tool was refused by loinc.org with `HTTP 403 Forbidden` on every attempt (verified across 7 distinct codes, including one explicit retry on `2093-3` that failed the same way — see the prior revision of this file for that log). The controller then opened `https://loinc.org/2093-3/` directly in the desktop app's built-in browser — a public page, no login, no cookie/consent banner accepted, nothing downloaded or submitted — and from there read every other candidate's public page at `https://loinc.org/<code>/` with a same-origin GET issued without credentials, sequentially with a pause between requests. Every request returned `HTTP 200`. The name recorded for each code is the page's `<title>`, which has the form "LOINC - LOINC `<code>` `<Long Common Name>`"; the Active/Deprecated status field on the rendered page was **not** captured for the batch reads, only for `2093-3` itself (seen as "Active"). Nothing in the tables below was filled from memory. Rules R0–R4 are defined in `docs/superpowers/plans/2026-09-17-wave5-concept-accuracy.md` Task 1. LOINC is informational metadata here: it is never used for matching and never implies a meaning.
 
-Where a candidate code turned out to be over-specific but a method-free/site-free code for the same analyte was also read and confirmed to fit, the concept's `loinc_code` is replaced; the 사유 column names the old code and the exact name fetched for it. Every `TRUE` row below was checked against the concept's `display_ko` and alias list in V7 (`apps/core-api/src/main/resources/db/migration/V7__native_text_extraction.sql`) and the Task 2 Kotlin catalogue proposal in the plan; anything doubtful is called out under "Doubtful rows — not silently accepted" below the tables, and is decided here provisionally pending human confirmation.
+Where a candidate code turned out to be over-specific but a method-free/site-free code for the same analyte was also read and confirmed to fit, the concept's `loinc_code` is replaced; the 사유 column names the old code and the exact name fetched for it. Every `TRUE` row below was checked against the concept's `display_ko` and alias list in V7 (`apps/core-api/src/main/resources/db/migration/V7__native_text_extraction.sql`) and the Task 2 Kotlin catalogue proposal in the plan. Two rows raised by that check (`glucose` generic, `postprandial-glucose`) have since been decided by the coordinator; those decisions are recorded in the table and in "Decided flags" below, kept for the record rather than left open.
 
 | concept_code | loinc_code | Long Common Name (as fetched) | URL | 확인일 | loinc_export | 사유 |
 |---|---|---|---|---|---|---|
-| glucose | 2345-7 | Glucose [Mass/volume] in Serum or Plasma | https://loinc.org/2345-7/ | 2026-09-17/18 | TRUE | R4 per controller — **CONFLICT**: plan line 347–348 and spec §5 state generic concepts have no LOINC unconditionally (not "unless the audit says otherwise"); see Doubtful rows |
+| glucose | NULL | Glucose [Mass/volume] in Serum or Plasma | https://loinc.org/2345-7/ | 2026-09-17/18 | FALSE | R0/R3 decided: a bare "혈당"/"Glucose" label does not state the specimen (the same word appears in urine sections), and 2345-7 as fetched says "in Serum or Plasma"; 2345-7 was considered and not used |
 | bilirubin | NULL | not fetched | — | 2026-09-17/18 | FALSE | R0, generic, no code by design |
 | gfr | NULL | not fetched | — | 2026-09-17/18 | FALSE | R0, generic, no code by design |
 | total-cholesterol | 2093-3 | Cholesterol [Mass/volume] in Serum or Plasma | https://loinc.org/2093-3/ | 2026-09-17 | TRUE | R4, fits 총콜레스테롤/Cholesterol, no method/specimen mismatch |
@@ -47,7 +47,7 @@ Where a candidate code turned out to be over-specific but a method-free/site-fre
 | potassium | 2823-3 | Potassium [Moles/volume] in Serum or Plasma | https://loinc.org/2823-3/ | 2026-09-17/18 | TRUE | R4, fits |
 | calcium | 17861-6 | Calcium [Mass/volume] in Serum or Plasma | https://loinc.org/17861-6/ | 2026-09-17/18 | TRUE | R4, fits |
 | total-protein | 2885-2 | Protein [Mass/volume] in Serum or Plasma | https://loinc.org/2885-2/ | 2026-09-17/18 | TRUE | R4, fits |
-| postprandial-glucose | NULL | Glucose [Mass/volume] in Serum or Plasma --2 hours post meal | https://loinc.org/1521-4/ | 2026-09-17/18 | FALSE | R3 per controller (proposed code 1521-4 not adopted); see Doubtful rows — the concept's own aliases already say "2시간"/"2hr", so this call is not obviously correct |
+| postprandial-glucose | NULL | Glucose [Mass/volume] in Serum or Plasma --2 hours post meal | https://loinc.org/1521-4/ | 2026-09-17/18 | FALSE | R3 decided: the concept also accepts labels with no time stated (its display name 식후혈당 and the alias "Postprandial Glucose"), and 1521-4 as fetched says "--2 hours post meal", so the code is more specific than some labels that map to the concept |
 | direct-bilirubin | 1968-7 | Bilirubin.direct [Mass/volume] in Serum or Plasma | https://loinc.org/1968-7/ | 2026-09-17/18 | TRUE | R4, fits Direct Bilirubin/D-Bil |
 | hs-crp | 30522-7 | C reactive protein [Mass/volume] in Serum or Plasma by High sensitivity method | https://loinc.org/30522-7/ | 2026-09-17/18 | TRUE | R4; the concept itself (고감도 CRP / hs-CRP) is defined as the high-sensitivity method, so the method wording matches the concept, not more specific than its own label |
 | hematocrit | NULL | Hematocrit [Volume Fraction] of Blood by Automated count | https://loinc.org/4544-3/ | 2026-09-17/18 | FALSE | R3 (proposed code 4544-3 not adopted), method; the only other candidate read, 20570-8 "Hematocrit [Volume Fraction] of Blood by calculation", is also method-specific and not usable |
@@ -76,10 +76,10 @@ Where a candidate code turned out to be over-specific but a method-free/site-fre
 | ca125 | 10334-1 | Cancer Ag 125 [Units/volume] in Serum or Plasma | https://loinc.org/10334-1/ | 2026-09-17/18 | TRUE | R4, fits |
 | rf | 11572-5 | Rheumatoid factor [Units/volume] in Serum or Plasma | https://loinc.org/11572-5/ | 2026-09-17/18 | TRUE | R4, fits |
 
-## Doubtful rows — not silently accepted
+## Decided flags (previously doubtful, now resolved)
 
-- **`glucose` (generic) → `2345-7`, `TRUE`.** This is a controller decision, but it conflicts with an explicit, unconditional rule: the Task 1 brief's R0 ("generic concepts `glucose`, `bilirubin`, `gfr`: no code, `NULL`/`FALSE`, not fetched") and spec §5 ("Generic concepts (`glucose`, `bilirubin`, `gfr`) have no LOINC") — with no "unless the audit says otherwise" carve-out, unlike the ldl-cholesterol/vitamin-d/egfr sentence. The plan's own Task 2 Kotlin catalogue (line 347–348) hard-codes `concept("glucose", "혈당", null, false, ...)` right under the comment "generic concepts for labels that do not say which specific test they are. No LOINC." Assigning `2345-7`/`TRUE` here is not a case of "the audit found a better code than the plan guessed" — it overrides a rule that was never conditional on the audit. This row is written above only because the controller instruction said to apply it; it should not be copied into V11/the Kotlin catalogue without a human decision, since doing so would contradict the plan's own text and the boundary that generic (unspecific) labels never carry LOINC metadata. Recommend defaulting `glucose` back to `NULL`/`FALSE` unless a person overrules this note.
-- **`postprandial-glucose` → `NULL`, `FALSE`.** The controller's stated reason is that the fetched name says "--2 hours post meal" while "the concept's name does not." But per the plan's alias list (Global Constraints and Task 2 line 352), the concept's own aliases already include `식후 2시간 혈당` (literally "2-hour post-meal blood glucose") and `2hr PP` — i.e., some of the concept's own labels already carry the same 2-hour specificity as the code. Rule R3 disqualifies a code only when it is "more specific than **every** label of the concept," and that does not obviously hold here. This is left `NULL`/`FALSE` as the controller directed, but it is flagged as a plausible `TRUE` (with `loinc_code = 1521-4`) pending a human re-check against R3's exact wording.
+- **`glucose` (generic) → `NULL`, `FALSE` (decided).** An earlier pass of this file flagged that assigning `2345-7`/`TRUE` here would conflict with the Task 1 brief's R0 and spec §5, which state generic concepts (`glucose`, `bilirubin`, `gfr`) have no LOINC unconditionally, and with the plan's own Task 2 line 347–348 comment ("generic concepts for labels that do not say which specific test they are. No LOINC"). The coordinator confirmed the flag was correct: a bare "혈당"/"Glucose" label does not state the specimen (the same word appears in urine sections of a result sheet), while `2345-7` as fetched says "in Serum or Plasma" — more specific than the generic label. Decided: `loinc_code = NULL`, `loinc_export = FALSE`; `2345-7` is recorded in the row as the code that was considered and not used.
+- **`postprandial-glucose` → `NULL`, `FALSE` (decided, stays as originally written).** An earlier pass flagged that the concept's own aliases (`식후 2시간 혈당`, `2hr PP`) already carry the same 2-hour specificity as the fetched code (`1521-4`, "--2 hours post meal"), so R3's "more specific than every label" test seemed not to obviously apply. The coordinator resolved this the other way: the concept *also* accepts labels with no time stated at all — its display name `식후혈당` and the alias `Postprandial Glucose` — so `1521-4` is more specific than *some* of the labels that map to this concept, which is enough to trigger R3. Decided: stays `NULL`/`FALSE`.
 - **`phosphorus` → `2777-1`, `TRUE` (minor terminology note, not a blocking doubt).** The fetched Long Common Name uses the LOINC component "Phosphate", while the concept is named "phosphorus" (인, aliases include "Inorganic Phosphorus"). This is standard clinical-chemistry terminology — a serum "phosphorus" test measures inorganic phosphate and LOINC's component name for it is conventionally "Phosphate" — not a different analyte, so `TRUE` stands, but it is called out here since the wording does differ from the concept's own aliases.
 - **`uric-acid` → `3084-1`, `TRUE` (minor terminology note, not a blocking doubt).** The fetched name is "Urate", the concept's aliases say "Uric Acid"/"UA". "Urate" is LOINC's standard component name for this assay (uric acid is measured as urate); not flagged as a mismatch, but noted since the string differs from the concept's own aliases.
 
@@ -87,7 +87,7 @@ Where a candidate code turned out to be over-specific but a method-free/site-fre
 
 | concept_code | loinc_code | loinc_export |
 |---|---|---|
-| glucose | 2345-7 | TRUE |
+| glucose | NULL | FALSE |
 | bilirubin | NULL | FALSE |
 | gfr | NULL | FALSE |
 | total-cholesterol | 2093-3 | TRUE |
@@ -169,17 +169,17 @@ Task 2 (`docs/superpowers/plans/2026-09-17-wave5-concept-accuracy.md`, Kotlin `M
 | Task 2 | 328 | platelets | `"777-3", true` | `"26515-7", TRUE` |
 | Task 2 | 329 | urine-protein | `"5804-0", true` | `"2888-6", TRUE` |
 | Task 2 | 330 | urine-glucose | `"5792-7", true` | `"2350-7", TRUE` |
-| Task 2 | 348 | glucose (generic) | `null, false` | `2345-7, TRUE` — **see Doubtful rows; this conflicts with the plan's own "no LOINC" comment on the same line and is not a clean supersession** |
-| Task 2 | 352 | postprandial-glucose | `"1521-4", true` | `NULL, FALSE` — see Doubtful rows |
+| Task 2 | 348 | glucose (generic) | `null, false` | `NULL, FALSE` — unchanged; the plan's proposal already matched the audited (decided) value, confirming R0/spec §5 |
+| Task 2 | 352 | postprandial-glucose | `"1521-4", true` | `NULL, FALSE` — decided, see "Decided flags" |
 | Task 2 | 356 | hematocrit | `"4544-3", true` | `NULL, FALSE` |
 | Task 2 | 357 | mcv | `"787-2", true` | `"30428-7", TRUE` |
 | Task 2 | 358 | mch | `"785-6", true` | `"28539-5", TRUE` |
 | Task 2 | 359 | mchc | `"786-4", true` | `"28540-3", TRUE` |
 | Task 3 | 624 | ldl-cholesterol | `UPDATE ... loinc_export = FALSE WHERE concept_code IN ('ldl-cholesterol', 'vitamin-d', 'egfr')` | Drop `ldl-cholesterol` from this list (now `TRUE` with code `2089-1`); keep `vitamin-d` and `egfr` in the `FALSE` list unchanged |
-| Task 3 | 630 | postprandial-glucose | `'1521-4', ..., TRUE` | `NULL, FALSE` — see Doubtful rows |
+| Task 3 | 630 | postprandial-glucose | `'1521-4', ..., TRUE` | `NULL, FALSE` — decided, see "Decided flags" |
 | Task 3 | 633 | hematocrit | `'4544-3', ..., TRUE` | `NULL, FALSE` |
 | Task 3 | 634 | mcv | `'787-2', ..., TRUE` | `'30428-7', TRUE` |
 | Task 3 | 635 | mch | `'785-6', ..., TRUE` | `'28539-5', TRUE` |
 | Task 3 | 636 | mchc | `'786-4', ..., TRUE` | `'28540-3', TRUE` |
 
-Later implementers (Tasks 2–4) should take this file's `## Final values` table as the source of truth over the plan's inline proposal values, per the plan's own instruction — with the one exception noted above (`glucose`) which needs a human decision before being copied anywhere, since it conflicts with an unconditional rule rather than a guessed value the audit merely corrected.
+Later implementers (Tasks 2–4) should take this file's `## Final values` table as the source of truth over the plan's inline proposal values, per the plan's own instruction. All flags raised during this audit are now decided (see "Decided flags"); none remain open.
