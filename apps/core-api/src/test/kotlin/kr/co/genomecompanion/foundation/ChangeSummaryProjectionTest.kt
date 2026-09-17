@@ -228,6 +228,50 @@ class ChangeSummaryProjectionTest {
     }
 
     @Test
+    fun countsATransitiveConceptChainAsOneUnchangedGroupRegardlessOfInputOrder() {
+        // A has no code, matches B by label. B and C share a code. A and C, taken alone, match
+        // neither by code (A has none) nor by label ("미확인 항목" != "다른 표기") — only the chain
+        // A~B~C (as connected components under conceptsMatch) makes them one group.
+        val latestDocument = UUID.fromString("55555555-5555-4555-8555-555555555555")
+        val recA = row("미확인 항목", "1", LocalDate.of(2026, 1, 15), januaryDocument, unit = "unit", conceptCode = null)
+        val recB = row("미확인 항목", "2", LocalDate.of(2026, 4, 10), aprilDocument, unit = "unit", conceptCode = "shared-code")
+        val recC = row("다른 표기", "3", LocalDate.of(2026, 7, 1), julyDocument, unit = "unit", conceptCode = "shared-code")
+        val unrelatedLatest = row("총콜레스테롤", "150", LocalDate.of(2026, 8, 1), latestDocument)
+        val documents = listOf(
+            completed(januaryDocument, "2026-02-01T00:00:00Z"),
+            completed(aprilDocument, "2026-04-11T00:00:00Z"),
+            completed(julyDocument, "2026-07-02T00:00:00Z"),
+            completed(latestDocument, "2026-08-01T10:00:00Z"),
+        )
+
+        val forwardOrder = ChangeSummaryProjection.project(listOf(recA, recB, recC, unrelatedLatest), documents)
+        val reverseOrder = ChangeSummaryProjection.project(listOf(unrelatedLatest, recC, recB, recA), documents)
+
+        assertThat(forwardOrder.unchangedCount).isEqualTo(1)
+        assertThat(reverseOrder.unchangedCount).isEqualTo(1)
+    }
+
+    @Test
+    fun excludesATransitiveConceptChainFromUnchangedWhenTheLatestDocumentMatchesAnyMemberOfIt() {
+        val latestDocument = UUID.fromString("55555555-5555-4555-8555-555555555555")
+        val recA = row("미확인 항목", "1", LocalDate.of(2026, 1, 15), januaryDocument, unit = "unit", conceptCode = null)
+        val recB = row("미확인 항목", "2", LocalDate.of(2026, 4, 10), aprilDocument, unit = "unit", conceptCode = "shared-code")
+        val recC = row("다른 표기", "3", LocalDate.of(2026, 7, 1), julyDocument, unit = "unit", conceptCode = "shared-code")
+        // Matches recA by label and recB/recC by code, so it links to the whole component.
+        val latest = row("미확인 항목", "4", LocalDate.of(2026, 8, 1), latestDocument, unit = "unit", conceptCode = "shared-code")
+        val documents = listOf(
+            completed(januaryDocument, "2026-02-01T00:00:00Z"),
+            completed(aprilDocument, "2026-04-11T00:00:00Z"),
+            completed(julyDocument, "2026-07-02T00:00:00Z"),
+            completed(latestDocument, "2026-08-01T10:00:00Z"),
+        )
+
+        val summary = ChangeSummaryProjection.project(listOf(recA, recB, recC, latest), documents)
+
+        assertThat(summary.unchangedCount).isZero()
+    }
+
+    @Test
     fun carriesNoInterpretationFields() {
         val itemFields = ChangeItem::class.java.declaredFields.map { it.name }
         val summaryFields = ChangeSummary::class.java.declaredFields.map { it.name }

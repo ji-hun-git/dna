@@ -87,16 +87,42 @@ object ChangeSummaryProjection {
                     previous = previous?.let { ChangeValue(it.recordVersionId, it.currentValue, it.observedOn.toString()) },
                 )
             }
-        // Concepts in other documents that don't match any latest-document concept, deduplicated
-        // by the same matcher (not a single key, since code/label matching isn't a fixed key).
-        val unmatchedOtherRecords = otherRecords.filter { other -> latestRecords.none { conceptsMatch(it, other) } }
-        val distinctUnmatchedConcepts = mutableListOf<FoundationRecordRow>()
-        for (candidate in unmatchedOtherRecords) {
-            if (distinctUnmatchedConcepts.none { conceptsMatch(it, candidate) }) {
-                distinctUnmatchedConcepts += candidate
+        // conceptsMatch is not transitive (a record can gain/lose its code between documents),
+        // so "unchanged" concepts among otherRecords are computed as connected components under
+        // conceptsMatch, not as a first-representative-wins grouping. Canonicalizing the input
+        // order before grouping, and using components instead of first-match, makes the result a
+        // pure function of the input set rather than of otherRecords' input order.
+        val canonicalOtherRecords = otherRecords.sortedWith(
+            compareBy<FoundationRecordRow> { it.documentId.toString() }.thenBy { it.recordId.toString() },
+        )
+        val componentOf = IntArray(canonicalOtherRecords.size) { it }
+        fun find(index: Int): Int {
+            var root = index
+            while (componentOf[root] != root) root = componentOf[root]
+            var current = index
+            while (componentOf[current] != root) {
+                val next = componentOf[current]
+                componentOf[current] = root
+                current = next
+            }
+            return root
+        }
+        fun union(a: Int, b: Int) {
+            val rootA = find(a)
+            val rootB = find(b)
+            if (rootA != rootB) componentOf[rootA] = rootB
+        }
+        for (i in canonicalOtherRecords.indices) {
+            for (j in i + 1 until canonicalOtherRecords.size) {
+                if (conceptsMatch(canonicalOtherRecords[i], canonicalOtherRecords[j])) {
+                    union(i, j)
+                }
             }
         }
-        val unchangedCount = distinctUnmatchedConcepts.size
+        val components = canonicalOtherRecords.indices.groupBy { find(it) }
+        val unchangedCount = components.values.count { memberIndices ->
+            memberIndices.none { index -> latestRecords.any { conceptsMatch(it, canonicalOtherRecords[index]) } }
+        }
 
         return ChangeSummary(
             latestDocument = ChangeDocument(
