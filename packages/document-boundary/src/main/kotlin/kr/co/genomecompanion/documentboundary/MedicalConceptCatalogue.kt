@@ -93,7 +93,10 @@ object MedicalConceptCatalogue {
         concept("calcium", "칼슘", "17861-6", true, mgDl, "Calcium", "Ca"),
         concept("total-protein", "총단백", "2885-2", true, listOf("g/dL"), "Total Protein", "TP"),
         // Wave 5: generic concepts for labels that do not say which specific test they are. No LOINC.
-        concept("glucose", "혈당", null, false, mgDlMmol, "Glucose", "Blood Glucose", "혈당(Glucose)"),
+        // "Glucose"/"GLU" alone does not state the specimen (the same word appears in urine sections
+        // of a result sheet), so it is deliberately not an alias here; a bare label like that resolves
+        // to no concept and the raw label is kept downstream. See coordinator review, Fix 1.
+        concept("glucose", "혈당", null, false, mgDlMmol, "Blood Glucose", "혈당(Glucose)", "Serum Glucose", "Plasma Glucose"),
         concept("bilirubin", "빌리루빈", null, false, mgDl, "Bilirubin"),
         concept("gfr", "사구체여과율", null, false, listOf("mL/min/1.73m²"), "GFR"),
         // Wave 5: specific siblings split out of the old broad aliases.

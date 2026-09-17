@@ -36,7 +36,16 @@ class MedicalConceptCatalogueTest {
     @Test
     fun `sends a broad label to the generic concept and a specific label to the specific one`() {
         fun code(label: String) = MedicalConceptCatalogue.find(label)?.conceptCode
-        assertThat(listOf("혈당", "Glucose", "Blood Glucose", "혈당(Glucose)").map(::code)).containsOnly("glucose")
+        assertThat(listOf("혈당", "Blood Glucose", "혈당(Glucose)", "Serum Glucose", "Plasma Glucose").map(::code)).containsOnly("glucose")
+        // A bare "Glucose"/"GLU" label does not state the specimen (the same word appears in urine
+        // sections of a result sheet), so it must resolve to no concept rather than the generic blood
+        // glucose concept; the raw label is kept downstream. See coordinator review, Fix 1.
+        assertThat(MedicalConceptCatalogue.find("Glucose")).isNull()
+        assertThat(MedicalConceptCatalogue.find("glucose:")).isNull()
+        assertThat(MedicalConceptCatalogue.find("GLU")).isNull()
+        assertThat(MedicalConceptCatalogue.find("Urine Glucose")?.conceptCode).isEqualTo("urine-glucose")
+        // A bare "Protein" label is equally specimen-ambiguous; no concept claims it either.
+        assertThat(MedicalConceptCatalogue.find("Protein")).isNull()
         assertThat(listOf("공복혈당", "공복 혈당", "Fasting Glucose", "FBS", "FPG", "식전혈당").map(::code)).containsOnly("fasting-glucose")
         assertThat(listOf("식후혈당", "식후 2시간 혈당", "PP2", "2hr PP").map(::code)).containsOnly("postprandial-glucose")
         assertThat(code("Bilirubin")).isEqualTo("bilirubin")
@@ -72,7 +81,9 @@ class MedicalConceptCatalogueTest {
         assertThat(MedicalConceptCatalogue.resolve("UA", "mg/dl")?.conceptCode).isEqualTo("uric-acid")
         assertThat(MedicalConceptCatalogue.resolve("UA", "g/dL")).isNull()
         assertThat(MedicalConceptCatalogue.resolve("UA", "foo")).isNull()
-        assertThat(MedicalConceptCatalogue.resolve("Glucose", "mmol/L")?.conceptCode).isEqualTo("glucose")
+        assertThat(MedicalConceptCatalogue.resolve("Blood Glucose", "mmol/L")?.conceptCode).isEqualTo("glucose")
+        // Bare "Glucose" resolves to no concept regardless of unit, per Fix 1 (specimen-ambiguous).
+        assertThat(MedicalConceptCatalogue.resolve("Glucose", "mmol/L")).isNull()
         assertThat(MedicalConceptCatalogue.resolve("WBC", "/uL")?.conceptCode).isEqualTo("white-blood-cells")
         assertThat(MedicalConceptCatalogue.resolve("Hb", "g/L")?.conceptCode).isEqualTo("hemoglobin")
         assertThat(MedicalConceptCatalogue.resolve("CK", "mg/dL")).isNull()
