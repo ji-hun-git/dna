@@ -1241,15 +1241,27 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(afterRevoke[0]["consentId"].asText()).isEqualTo(documentConsentId.toString())
         read(get("/api/foundation/documents/${candidates[0]["documentId"].asText()}/candidates"), alice)
             .andExpect(status().isOk)
+
+        // The lifecycle keeps working after the research revoke: importing and fully confirming a
+        // second document is unaffected, proving the revoked purpose never gated it.
+        val januaryAfterRevoke = importSyntheticDocument(
+            alice,
+            documentConsentId,
+            januaryFixturePdf,
+            januaryFixtureDigest,
+            "research-invariant-after-revoke",
+        )
+        confirmEveryCandidate(alice, januaryAfterRevoke, "research-invariant-after-revoke")
+
         read(get("/api/foundation/health-events"), alice)
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(3))
+            .andExpect(jsonPath("$.length()").value(6))
         read(get("/api/foundation/changes"), alice)
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.latestDocument.eventCount").value(3))
         read(get("/api/foundation/health-events/export"), alice)
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.events.length()").value(3))
+            .andExpect(jsonPath("$.events.length()").value(6))
 
         // PROJECT purposes: the prefix and shape are validated; a granted one is listed after the fixed three.
         mutate(post("/api/foundation/consents/STUDY-1").header("Idempotency-Key", "project-no-prefix"), alice)
