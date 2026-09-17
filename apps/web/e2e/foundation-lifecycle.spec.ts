@@ -423,6 +423,46 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   expect(seriesList[1].derived).toEqual({});
 
   // 측정 이력 screen assertions are added with the screen task (parked pending mockup approval).
+  await page.getByRole("link", { name: "측정 이력" }).click();
+  await expect(page).toHaveURL(/\/my-data\/history$/);
+  const historySections = page.getByTestId("history-series");
+  await expect(historySections).toHaveCount(3);
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText(["당화혈색소", "비타민 D", "총콜레스테롤"]);
+
+  const cholesterolHistory = historySections.nth(2);
+  await expect(cholesterolHistory.getByRole("heading", { level: 2 })).toHaveText("총콜레스테롤");
+  // Matches seriesList[2].derived above: -4 mg/dL (-2.1%); -4/194×30 = -0.6; only 2 points so no 3-point mean.
+  await expect(cholesterolHistory.getByTestId("derived-last-difference")).toHaveText("-4 mg/dL (-2.1%)");
+  await expect(cholesterolHistory.getByTestId("derived-per-30-days")).toHaveText("-0.6 mg/dL");
+  await expect(cholesterolHistory.getByTestId("derived-mean-of-last-3")).toHaveText("측정 3회부터 계산해요");
+  const cholesterolRows = cholesterolHistory.getByRole("table", { name: "총콜레스테롤 측정 이력" }).getByRole("row");
+  await expect(cholesterolRows).toHaveCount(3);
+  await expect(cholesterolRows.nth(1)).toContainText("2026. 1. 15.");
+  await expect(cholesterolRows.nth(2)).toContainText("2026. 7. 28.");
+  expect(await page.content()).not.toContain("120-199");
+
+  const cholesterolAnchor = cholesterolHistory.getByRole("button", { name: "총콜레스테롤 190 mg/dL, 2026. 7. 28." });
+  await expect(cholesterolAnchor).toBeVisible();
+  await cholesterolAnchor.click();
+  const annotationCard = cholesterolHistory.getByRole("group", { name: "선택한 측정값" });
+  await expect(annotationCard).toContainText("190 mg/dL");
+  await expect(annotationCard).toContainText("2026. 7. 28.");
+
+  // The card's 출처 보기 round-trips to 내 데이터's evidence drawer, which links back here.
+  // The real event id is server-assigned, so the round trip is checked against itself rather
+  // than a hard-coded uuid.
+  await annotationCard.getByRole("link", { name: "출처 보기" }).click();
+  await expect(page).toHaveURL(/\/my-data#event-([0-9a-f-]{36})$/);
+  const eventId = new URL(page.url()).hash.replace("#event-", "");
+  const historyDrawer = page.getByRole("region", { name: "총콜레스테롤 근거" });
+  await expect(historyDrawer).toBeVisible();
+  await expect(historyDrawer.getByRole("link", { name: "이 항목의 측정 이력 보기" })).toHaveAttribute("href", `/my-data/history#event-${eventId}`);
+  await historyDrawer.getByRole("link", { name: "이 항목의 측정 이력 보기" }).click();
+  await expect(page).toHaveURL(`/my-data/history#event-${eventId}`);
+  await expect(page.getByRole("heading", { level: 2, name: "총콜레스테롤" })).toBeFocused();
+  expect(await page.content()).not.toContain("120-199");
+
+  await captureMatrix(page, info, "history");
 
   await page.goto("/records");
   const groupHeadings = page.locator(".gc-records-group h3");
