@@ -5,6 +5,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, it } from "vitest";
 import { MeasurementHistory } from "@/components/my-data/history/MeasurementHistory";
+import { HISTORY_TIME_GRADIENT_STOPS } from "@/components/my-data/history/HistoryGraph";
 import { syntheticSeries } from "./fixtures/foundation";
 
 const session = { sessionId: "ca9d1f51-b0b6-4d12-a5c1-05938e2c1c9b", subjectId: "synthetic-jason", status: "AUTHENTICATED", expiresAt: "2026-08-30T08:30:00Z" };
@@ -64,6 +65,51 @@ it("draws one labelled image per series with two or more points, with focusable 
   expect(within(sections[1]).queryByRole("img")).toBeNull();
   expect(within(sections[1]).getByText("값이 하나라서 그래프 없이 표로만 보여드려요.")).toBeVisible();
   expect(within(sections[1]).getByRole("table", { name: "비타민 D 측정 이력" })).toBeVisible();
+});
+
+it("draws every series' ribbon with the same time gradient, never a per-series colour, and marks the fixed contrast in ink", async () => {
+  const { container } = render(<MeasurementHistory />);
+  const sections = await screen.findAllByTestId("history-series");
+
+  // No token, class or attribute may map a colour to a series.
+  expect(container.querySelector("[data-series-colour]")).toBeNull();
+  expect(container.innerHTML).not.toMatch(/hist-series-\d/);
+
+  for (const index of [0, 2]) { // both series with two or more points
+    const section = sections[index];
+    const gradients = [...section.querySelectorAll("linearGradient")];
+    expect(gradients.length).toBeGreaterThan(0);
+    const gradient = gradients[0];
+    expect(gradient.getAttribute("gradientUnits")).toBe("userSpaceOnUse");
+    const stops = [...gradient.querySelectorAll("stop")];
+    expect(stops.map((stop) => [stop.getAttribute("offset"), stop.getAttribute("stop-color")]))
+      .toEqual(HISTORY_TIME_GRADIENT_STOPS.map((stop) => [stop.offset, stop.color]));
+    const gradientId = gradient.getAttribute("id");
+    expect(gradientId).toBeTruthy();
+
+    const band = section.querySelector('path[data-ribbon="band"]');
+    const body = section.querySelector('path[data-ribbon="body"]');
+    expect(band?.getAttribute("stroke")).toBe(`url(#${gradientId})`);
+    expect(body?.getAttribute("stroke")).toBe(`url(#${gradientId})`);
+
+    // The centre line and the anchors carry the non-colour, ≥3:1 contrast: fixed ink, never the gradient.
+    const centre = section.querySelector('path[data-ribbon="centre"]');
+    expect(centre?.getAttribute("stroke")).toBe("var(--hist-ink)");
+    const anchorFills = [...section.querySelectorAll("rect[data-anchor]")].map((rect) => rect.getAttribute("fill"));
+    expect(anchorFills.length).toBeGreaterThan(0);
+    anchorFills.forEach((fill) => expect(fill).toBe("var(--hist-ink)"));
+  }
+
+  // Gradient ids are unique across series on the same page.
+  const ids = [...container.querySelectorAll("linearGradient")].map((gradient) => gradient.getAttribute("id"));
+  expect(new Set(ids).size).toBe(ids.length);
+
+  expect(screen.getByText("색은 시간의 위치만 나타내요.")).toBeVisible();
+  const timebar = screen.getByTestId("history-timebar");
+  expect(timebar).toHaveAttribute("aria-hidden", "true");
+  expect(timebar).toHaveTextContent("2026. 1. 15. 먼저");
+  expect(timebar).toHaveTextContent("나중 2026. 7. 28.");
+  expect(await axe(container)).toHaveNoViolations();
 });
 
 it("opens an annotation card for the chosen anchor by click and by keyboard, and closes it again", async () => {

@@ -25,7 +25,7 @@ export const HISTORY_LAYOUT_DEFAULTS: Omit<HistoryLayoutOptions, "width"> = {
   height: 180,
   paddingX: 28,
   paddingY: 24,
-  anchorSize: 12,
+  anchorSize: 9,
   hitSize: 24,
   minGap: 26,
   minLabelGap: 72,

@@ -1,10 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { MeasurementSeries } from "@/lib/foundation/client";
 import { formatKoreanDate } from "@/lib/format/korean-date";
 import { HISTORY_LAYOUT_DEFAULTS, layoutHistory } from "@/lib/my-data/history-layout";
 import styles from "@/components/my-data/history/History.module.css";
+
+/**
+ * The founder-approved time gradient (wave4-mockup-decision.md): the same four stops for every
+ * series, left (earlier) to right (later). This is the only colour rule in the graph — it marks a
+ * position in time, never a value, so every series draws it identically.
+ */
+export const HISTORY_TIME_GRADIENT_STOPS = [
+  { offset: "0", color: "#1f5bff" },
+  { offset: ".55", color: "#35c6b4" },
+  { offset: ".8", color: "#6fe06a" },
+  { offset: "1", color: "#c8f02a" },
+] as const;
 
 /** The drawing is laid out at the container's real width so anchors keep their size on a phone. */
 function useContainerWidth(ref: React.RefObject<HTMLElement | null>) {
@@ -27,29 +39,35 @@ function useContainerWidth(ref: React.RefObject<HTMLElement | null>) {
 
 type HistoryGraphProps = {
   series: MeasurementSeries;
-  /** Position of the series in the list. It picks the identifying colour and nothing else. */
+  /** Position of the series in the list. Used only to tell series apart in the DOM (heading,
+   * gradient id); it never selects a colour — every series draws the same time gradient. */
   seriesIndex: number;
 };
 
 /**
  * The person's own values: square anchors at the confirmed values, straight segments between
  * neighbours, y from this series' own minimum to its own maximum. The ribbon (outer band plus a
- * dashed centre line) is the same straight path stroked twice at fixed widths.
+ * solid body, both the same time gradient, plus a dashed ink centre line) is the same straight
+ * path stroked three times at fixed widths. Series are told apart by heading and position only —
+ * colour here means time, nothing else, and is identical for every series on the page.
  */
 export function HistoryGraph({ series, seriesIndex }: HistoryGraphProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const width = useContainerWidth(wrapRef);
   const [selectedId, setSelectedId] = useState<string>();
   const layout = useMemo(() => layoutHistory(series.points, { ...HISTORY_LAYOUT_DEFAULTS, width }), [series.points, width]);
-  const { height, anchorSize, hitSize } = HISTORY_LAYOUT_DEFAULTS;
+  const { height, anchorSize, hitSize, paddingX } = HISTORY_LAYOUT_DEFAULTS;
   const selected = layout.anchors.find((anchor) => anchor.eventId === selectedId);
   const first = series.points[0];
   const last = series.points[series.points.length - 1];
   const toggle = (eventId: string) => setSelectedId((current) => (current === eventId ? undefined : eventId));
   const graphLabel = `${series.concept} ${series.unit}, 측정 ${series.points.length}회, ${formatKoreanDate(first.observedOn)}부터 ${formatKoreanDate(last.observedOn)}까지. 같은 값이 아래 표에 있어요.`;
+  // Unique per series instance on the page, independent of `seriesIndex`.
+  const reactId = useId();
+  const gradientId = `history-time-${reactId}-${seriesIndex}`;
 
   return (
-    <div ref={wrapRef} className={styles.graphWrap} data-series-colour={(seriesIndex % 4) + 1}>
+    <div ref={wrapRef} className={styles.graphWrap}>
       {layout.drawable ? (
         <>
           {/* role="img" with focusable anchors inside fails jest-axe's nested-interactive rule
@@ -64,8 +82,16 @@ export function HistoryGraph({ series, seriesIndex }: HistoryGraphProps) {
             width={width}
             height={height + 24}
           >
-            <path data-ribbon="band" className={styles.ribbonBand} d={layout.path} />
-            <path data-ribbon="centre" className={styles.ribbonCentre} d={layout.path} />
+            <defs>
+              <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={paddingX} y1="0" x2={width - paddingX} y2="0">
+                {HISTORY_TIME_GRADIENT_STOPS.map((stop) => (
+                  <stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+                ))}
+              </linearGradient>
+            </defs>
+            <path data-ribbon="band" className={styles.ribbonBand} stroke={`url(#${gradientId})`} d={layout.path} />
+            <path data-ribbon="body" className={styles.ribbonBody} stroke={`url(#${gradientId})`} d={layout.path} />
+            <path data-ribbon="centre" className={styles.ribbonCentre} stroke="var(--hist-ink)" d={layout.path} />
             <g className={styles.ticks} aria-hidden="true">
               {layout.ticks.map((tick) => (
                 <g key={tick.observedOn}>
@@ -96,7 +122,14 @@ export function HistoryGraph({ series, seriesIndex }: HistoryGraphProps) {
                 }}
               >
                 <rect data-hit="" x={anchor.x - hitSize / 2} y={anchor.y - hitSize / 2} width={hitSize} height={hitSize} />
-                <rect data-anchor="" x={anchor.x - anchorSize / 2} y={anchor.y - anchorSize / 2} width={anchorSize} height={anchorSize} />
+                <rect
+                  data-anchor=""
+                  x={anchor.x - anchorSize / 2}
+                  y={anchor.y - anchorSize / 2}
+                  width={anchorSize}
+                  height={anchorSize}
+                  fill={anchor.eventId === selectedId ? "var(--hist-fill-accent)" : "var(--hist-ink)"}
+                />
               </g>
             ))}
           </svg>
@@ -109,7 +142,10 @@ export function HistoryGraph({ series, seriesIndex }: HistoryGraphProps) {
             </div>
           ) : null}
           {seriesIndex === 0 ? (
-            <p className={styles.note}>점은 확인한 값이고, 점 사이의 선은 값이 아니에요. 선의 모양이 건강 상태를 뜻하지 않아요.</p>
+            <>
+              <p className={styles.note}>점은 확인한 값이고, 점 사이의 선은 값이 아니에요. 선의 모양이 건강 상태를 뜻하지 않아요.</p>
+              <p className={styles.note}>색은 시간의 위치만 나타내요.</p>
+            </>
           ) : null}
           {layout.adjusted ? (
             <p className={styles.note} data-testid="history-adjusted-notice">점이 겹치지 않도록 위치를 조금 옮겼어요. 정확한 검사일은 아래 표에서 확인해 주세요.</p>

@@ -226,13 +226,16 @@ describe("Korean UX language boundary", () => {
     const history = source("components/my-data/history/MeasurementHistory.tsx");
     const graph = source("components/my-data/history/HistoryGraph.tsx");
     expect(graph).toContain("점은 확인한 값이고, 점 사이의 선은 값이 아니에요. 선의 모양이 건강 상태를 뜻하지 않아요.");
+    expect(graph).toContain("색은 시간의 위치만 나타내요.");
     expect(history).toContain("뺄셈과 나눗셈으로만 계산했어요. 의미는 판단하지 않아요.");
     for (const term of ["마지막 두 값의 차이", "30일로 환산한 차이", "최근 3회 평균"]) expect(history).toContain(term);
     for (const file of [history, graph]) {
       expect(file).not.toMatch(/[↑↓▲▼→]/);
       expect(file).not.toMatch(/referenceRange|참고치|기준치/);
     }
-    // Colour identifies a series by its position in the list, never by a value.
+    // Colour means position in time only and is identical for every series: no per-series
+    // colour token, class or data attribute may exist, and the graph never branches on a value.
     expect(graph).not.toMatch(/value\s*[<>]=?|delta|percent/);
+    expect(graph).not.toMatch(/hist-series-\d|data-series-colour|seriesColour/i);
   });
 });

@@ -89,6 +89,12 @@ export function MeasurementHistory() {
     return () => { active = false; };
   }, [client, loadAttempt]);
 
+  // Earliest and latest exam date across every series on the page, for the decorative time bar
+  // only — every number here also appears as text in a series' graph, table or heading.
+  const allDates = useMemo(() => series.flatMap((item) => item.points.map((point) => point.observedOn)), [series]);
+  const earliestDate = allDates.length > 0 ? allDates.reduce((a, b) => (a < b ? a : b)) : undefined;
+  const latestDate = allDates.length > 0 ? allDates.reduce((a, b) => (a > b ? a : b)) : undefined;
+
   // Arriving from an evidence drawer: move to the series that holds that event.
   useEffect(() => {
     if (series.length === 0 || typeof window === "undefined") return;
@@ -110,6 +116,15 @@ export function MeasurementHistory() {
             <h1 id="history-title">측정 이력</h1>
             <p>같은 항목의 확인한 값을 검사일 순서로 모았어요. 값의 의미나 변화의 방향은 판단하지 않아요.</p>
             <p>뺄셈과 나눗셈으로만 계산했어요. 의미는 판단하지 않아요.</p>
+            {earliestDate && latestDate ? (
+              <div className={styles.timebar} aria-hidden="true" data-testid="history-timebar">
+                <div className={styles.timebarEnds}>
+                  <span>{formatKoreanDate(earliestDate)} 먼저</span>
+                  <span>나중 {formatKoreanDate(latestDate)}</span>
+                </div>
+                <div className={styles.timebarBar} />
+              </div>
+            ) : null}
           </section>
 
           {loading && <p role="status" aria-live="polite">서버에서 측정 이력을 불러오고 있어요.</p>}
