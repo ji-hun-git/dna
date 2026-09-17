@@ -178,7 +178,7 @@ async function main() {
     ["Ollama", `${model.version} at ${OLLAMA_ORIGIN}`],
     ["Model", `${MODEL_TAG} · id ${model.modelDigest} · blob sha256:${model.blobSha256}`],
     ["Protocol digest (prompt, schema, options)", protocolDigest()],
-    ["Options", `think=${EXPERIMENT_PROTOCOL.think}, temperature=${EXPERIMENT_PROTOCOL.options.temperature}, seed=${EXPERIMENT_PROTOCOL.options.seed}, num_predict=${EXPERIMENT_PROTOCOL.options.num_predict}, keep_alive=${EXPERIMENT_PROTOCOL.keepAlive}, document timeout ${EXPERIMENT_PROTOCOL.documentTimeoutMs / 1000} s`],
+    ["Options", `think=${EXPERIMENT_PROTOCOL.think}, temperature=${EXPERIMENT_PROTOCOL.options.temperature}, seed=${EXPERIMENT_PROTOCOL.options.seed}, num_predict=${EXPERIMENT_PROTOCOL.options.num_predict}, num_ctx=${EXPERIMENT_PROTOCOL.options.num_ctx}, keep_alive=${EXPERIMENT_PROTOCOL.keepAlive}, document timeout ${EXPERIMENT_PROTOCOL.documentTimeoutMs / 1000} s`],
     ["Page rendering", `PDFBox 3.0.8 PDFRenderer ${EXPERIMENT_PROTOCOL.dpi} dpi PNG, one /api/chat call per page`],
     ["GPU / driver", output("nvidia-smi", ["--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"])],
     ["Node", process.version],

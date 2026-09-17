@@ -56,6 +56,11 @@ const forbiddenUserTerms = [
   "오케스트레이션",
   "삼성 건강검진",
   "강남세브란스",
+  // Direction words: the product states two values and their arithmetic difference, never a trend.
+  "상승",
+  "하락",
+  "증가",
+  "감소",
 ] as const;
 
 // The server enums must never reach the screen unlabelled. Each entry is the
@@ -131,6 +136,9 @@ describe("Korean UX language boundary", () => {
     expect(recent).toContain("최근 변화");
     expect(recent).toContain("새 결과지에서 확인한 값과 같은 항목의 이전 값이에요. 변화의 의미는 판단하지 않아요.");
     expect(recent).not.toContain("→");
+    expect(recent).toContain("두 값의 차이:");
+    expect(recent).not.toMatch(/[↑↓▲▼]/);
+    expect(recent).not.toContain("color");
     expect(source("components/integrated/IntegratedHealthExperience.tsx")).toContain("<RecentChanges changes={changes} />");
   });
 

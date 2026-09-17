@@ -484,8 +484,36 @@ Delta rows are read left to right; the model column is descriptive. Evidence loc
 | synthetic-hospital-two-column-v6 | uric-acid (요산) | 6.2 mg/dL @ 2026-01-20 | — | 누락 |
 
 
+## Run 3 (num_ctx 8192)
+
+같은 코퍼스, 같은 채점기, 같은 프롬프트·스키마·시드. 바뀐 것은 `num_ctx: 8192`(이전 실행은 Ollama 기본값) 하나이며, 프로토콜 digest가 그에 따라 바뀌었다. 증거 전용이며 게이트가 아니다.
+
+| Pin | Value |
+|---|---|
+| Run window | 2026-09-17T06:08:57.490Z → 2026-09-17T06:16:39.881Z |
+| Protocol digest (prompt, schema, options) | f50c1ba2d46ea9771335bf8be68d7238a7aabbb8eb6f14c35a9e8bce934f0528 |
+| Options | think=false, temperature=0, seed=7, num_predict=4096, num_ctx=8192, keep_alive=10m, document timeout 180 s |
+| Model | medgemma1.5:latest · id 433252621ab154668b5d8be6aff6c1b771bacba045e46e6193da8d6ad1630f2c · blob sha256:a051c2bd4ab8d5b7f4df8eec344f2fdd603efb2d098da799dc16c95e9e8bc838 |
+| Ollama | 0.34.1 at http://127.0.0.1:11434 |
+| GPU / driver / `ollama ps` PROCESSOR | NVIDIA GeForce RTX 3070, driver 610.74, 8192 MiB · `100% GPU` (`ollama ps` also reported CONTEXT 8192) |
+| Corpus | synthetic-ko-checkup-r2-e6befc286ae6ce1d (25 documents); corpus.json sha256 587b72d04cf35f8ae1d90be0e2101ade8ce84cd3f2bec9e333b7e7186bdcf241 (gold gained `expectedReferenceRangeText` this wave; PDF bytes unchanged; corpus digest sha256 of PDF digest + corpus.json sha256 changed to 7249f8c349d040c6ca83d6e1cf35b30e30a6d4765360a5c2df3bb7e98cfc40dc accordingly) |
+| Script commit | 1c28787a24abaa2e4979f6454b0941242ca253bf |
+| Unreadable documents | 7 |
+| done_reason on failed documents | length=7 |
+| Full report (not committed) | apps/web/build/medgemma/medgemma-local-experiment-run3.md |
+
+| Metric (model column) | Run 2 (num_predict 4096) | Run 3 (num_ctx 8192) |
+|---|---|---|
+| Field F1 | 56.9% | 61.3% |
+| Required abstention recall | 40.0% | 40.0% |
+| Hallucinated measurements | 21 (17.1%) | 14 (10.5%) |
+| Unreadable documents | 9 (done_reason length=9) | 7 (done_reason length=7) |
+
+관찰: 미해독 문서 수는 9에서 7로 바뀌었고 done_reason 분포는 두 실행 모두 전부 `length`였다. Field F1은 56.9%에서 61.3%로, 환각 측정치는 21건(17.1%)에서 14건(10.5%)으로 바뀌었고 required abstention recall은 40.0%로 동일했다. 실패한 문서들의 eval_count는 이번 실행에서도 상한(4096)에 도달했다 — num_ctx를 8192로 올린 뒤에도 num_predict 상한 자체는 동일하게 소진되었다는 뜻이며, 이 수치가 num_ctx 변경의 원인 효과를 증명하지는 않는다. `referenceRangeAccuracy`는 이 실행의 medgemma-experiment 보고서(나란히 표)에는 나타나지 않았다 — 채점기 내부에는 필드가 존재하지만 이 보고서 렌더러는 두 파이프라인 열 어디에도 그 값을 인쇄하지 않았으므로 관측치가 없다. 실행 중 `ollama ps`는 `100% GPU`를 보고했다.
+
 ## 한계
 
+- Run 3(num_ctx 8192)은 컨텍스트 길이 하나만 바꾼 1회 실행이다. 위 표의 수치 변화는 관찰일 뿐 원인을 증명하지 않으며, 세 실행 모두 evidence only이고 게이트가 아니다.
 - 합성 페이지 이미지 25장짜리 결과지 31쪽에 대한 1회 실행이다. 실제 결과지·실제 스캔·실 PHI는 사용하지 않았다. 결과는 "이 프로토콜(고정된 프롬프트·스키마·옵션) 아래의 MedGemma 1.5"를 측정한 것이지, 모델 일반의 성능 주장이 아니다.
 - 이전 실행(2026-09-16, num_predict=2048)의 미해독 문서 9개(문서별 표 기준)는 2048-토큰 상한과 시점이 맞아떨어질 뿐, 원인이 그것이라고 증명되지는 않았다. 이번 실행은 num_predict를 4096으로 올리고 "군더더기 공백·반복 없이 간결하게"라는 문장을 시스템 프롬프트에 추가했다. 그 결과 미해독 문서는 9개로, done_reason은 전부 `length`였고(관측된 eval_count는 대부분 3494 부근으로 4096에 못 미쳤다) — 즉 num_predict 자체보다 이미지 토큰을 포함한 컨텍스트 예산이 실질적인 병목이었을 가능성이 있다. 실패한 각 페이지의 원문 응답은 `apps/web/build/medgemma/raw/<documentId>-failed.json`에 보존했다(저장소에는 커밋하지 않음).
 - 런너 실패(타임아웃·HTTP 오류·JSON 파싱 실패)는 채점기에서 `fieldId: "runner-failure"`로만 기록되며, 골드의 문서 단위 필수 보류(`fieldId: "document"`)와 절대 일치하지 않는다 — required-abstention-recall 지표는 런너가 고장 났을 때를 모델이 옳게 인식한 것으로 절대 인정하지 않는다.

@@ -20,8 +20,15 @@
 .cell:focus-visible { outline: none; }
 .cell:focus-visible rect[data-cell] { stroke: var(--gc-color-focus-ring); stroke-width: 2.5; }
 
+@keyframes gc-cell-arrive {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+.cellArrived { animation: gc-cell-arrive 420ms ease-out 1 both; transform-box: fill-box; transform-origin: center; }
+
 .tooltip { position: absolute; transform: translate(-50%, -110%); display: grid; gap: 2px; padding: 6px 10px; border-radius: 6px; background: var(--gc-color-surface-inverse); color: var(--gc-color-text-inverse); font: 13px var(--gc-type-mono); pointer-events: none; white-space: normal; max-width: min(240px, calc(100vw - 32px)); }
 .caption { margin-top: var(--gc-space-2); color: var(--gc-color-text-tertiary); font-size: 13px; }
+.adjustedNotice { margin-top: var(--gc-space-1); color: var(--gc-color-text-tertiary); font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
 
 /* The search input's intrinsic width (20 characters of the platform font) exceeds a 320px
    phone on Linux; the grid column and the input must both yield to the container. */
@@ -64,4 +71,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .cell { transition: none; }
+  .cellArrived { animation: none; }
 }

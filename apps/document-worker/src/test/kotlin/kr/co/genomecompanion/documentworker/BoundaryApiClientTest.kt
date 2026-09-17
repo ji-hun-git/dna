@@ -69,7 +69,7 @@ class BoundaryApiClientTest {
         }.useClient { client, lease ->
             val outcome = ExtractionOutcome(
                 candidates = listOf(
-                    ParsedCandidate(1, "Cholesterol", "188", "mg/dL", LocalDate.of(2026, 7, 28), 1, TextBox(0.08, 0.1, 0.3, 0.02), "1".repeat(64)),
+                    ParsedCandidate(1, "Cholesterol", "188", "mg/dL", LocalDate.of(2026, 7, 28), 1, TextBox(0.08, 0.1, 0.3, 0.02), "1".repeat(64), "120-199"),
                 ),
                 abstentions = listOf(
                     ParsedAbstention("LDL", AbstentionReason.AMBIGUOUS_VALUE, 1),
@@ -96,6 +96,7 @@ class BoundaryApiClientTest {
             assertThat(candidate["evidenceBox"]["x"].asDouble()).isEqualTo(0.08)
             assertThat(candidate["evidenceBox"]["height"].asDouble()).isEqualTo(0.02)
             assertThat(candidate["sourceTextSha256"].asText()).isEqualTo("1".repeat(64))
+            assertThat(candidate["referenceRangeText"].asText()).isEqualTo("120-199")
             assertThat(candidate.fieldNames().asSequence().toList()).doesNotContain("referenceRange", "conceptCode")
             assertThat(body["abstentions"].map { it["reason"].asText() }).containsExactly("ambiguous_value", "unreadable")
             assertThat(body["abstentions"][0]["label"].asText()).isEqualTo("LDL")

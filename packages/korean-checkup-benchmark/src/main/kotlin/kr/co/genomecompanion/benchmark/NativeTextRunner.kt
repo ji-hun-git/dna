@@ -34,6 +34,7 @@ data class RunCandidate(
     val evidence: RunEvidence,
     val semanticRole: String = "measurement",
     val confidence: Double = 1.0,
+    val referenceRangeText: String? = null,
 )
 
 
@@ -112,6 +113,7 @@ object NativeTextRunner {
             box = Box(candidate.evidenceBox.x, candidate.evidenceBox.y, candidate.evidenceBox.width, candidate.evidenceBox.height),
             sourceTextSha256 = "sha256:" + candidate.sourceTextSha256,
         ),
+        referenceRangeText = candidate.referenceRangeText,
     )
 
     private fun toAbstention(abstention: ParsedAbstention, index: Int, used: MutableSet<String>) = RunAbstention(

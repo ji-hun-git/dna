@@ -11,6 +11,16 @@ import styles from "@/components/my-data/MyData.module.css";
  * Second-level detail for one cell. Every line here is a stored fact or a
  * stored status; the drawer never adds a comparison or a meaning.
  */
+/** Stored facts only: the parser's value, the person's stated reason, the parser's date. No comparison. */
+function correctionHistory(event: HealthEvent) {
+  if (!event.corrected) return "수정 없음";
+  const parts: string[] = [];
+  if (event.originalValue !== event.value) parts.push(`원래 값 ${event.originalValue} ${event.unit}`);
+  if (event.correctionReason) parts.push(`이유: ${event.correctionReason}`);
+  if (event.originalObservedOn) parts.push(`원래 검사일 ${formatKoreanDate(event.originalObservedOn)}`);
+  return parts.length > 0 ? parts.join(" · ") : "수정 없음";
+}
+
 export function EvidenceDrawer({
   event,
   onClose,
@@ -43,6 +53,7 @@ export function EvidenceDrawer({
         <dt>값</dt><dd>{event.value} {event.unit}</dd>
         <dt>검사일</dt><dd>{formatKoreanDate(event.observedOn)}</dd>
         <dt>확인</dt><dd><span>{event.corrected ? "직접 수정한 값" : "직접 확인한 값"}</span> · {formatKoreanDateTime(event.confirmedAt)}</dd>
+        <dt>수정 이력</dt><dd>{correctionHistory(event)}</dd>
         <dt>출처 위치</dt><dd>{event.source.page}쪽</dd>
         <dt>문서</dt><dd>{shortDigest(event.source.documentSha256)}</dd>
         <dt>원문</dt><dd>{shortDigest(event.source.sourceTextSha256)}</dd>

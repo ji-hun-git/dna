@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { HealthEvent } from "@/lib/foundation/client";
 import { layoutCells } from "@/lib/my-data/cell-layout";
 import { CellTooltip } from "@/components/my-data/CellTooltip";
+import { usePrefersReducedMotion } from "@/lib/my-data/reduced-motion";
 import styles from "@/components/my-data/MyData.module.css";
 
 type LivingCellCanvasProps = {
@@ -26,7 +27,8 @@ const PADDING = 24;
 export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSelect, width = 720 }: LivingCellCanvasProps) {
   const [hoveredId, setHoveredId] = useState<string>();
   const [focusedId, setFocusedId] = useState<string>();
-  const { cells, scale, height } = useMemo(
+  const reducedMotion = usePrefersReducedMotion();
+  const { cells, scale, height, adjusted } = useMemo(
     () => layoutCells(events, { width, cellSize: CELL, gap: GAP, padding: PADDING, selectedId, matchedIds, newIds }),
     [events, width, selectedId, matchedIds, newIds],
   );
@@ -58,6 +60,7 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
         </g>
         {cells.map((cell) => {
           const dim = dimmed && cell.state === "idle";
+          const arrived = cell.state === "new" && !reducedMotion;
           const label = cell.uncertain ? `${cell.ariaLabel} (출처 미리보기 없음)` : cell.ariaLabel;
           return (
             <g
@@ -71,7 +74,8 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
               data-uncertain={cell.uncertain ? "true" : undefined}
               data-corrected={cell.corrected ? "true" : undefined}
               data-dim={dim ? "true" : undefined}
-              className={styles.cell}
+              data-arrived={arrived ? "true" : undefined}
+              className={arrived ? `${styles.cell} ${styles.cellArrived}` : styles.cell}
               onClick={(mouse) => onSelect(cell.eventId, mouse.currentTarget)}
               onKeyDown={(keyboard) => {
                 if (keyboard.key === "Enter" || keyboard.key === " ") {
@@ -106,6 +110,11 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
         />
       ) : null}
       <figcaption className={styles.caption}>한 칸 = 확인한 기록 하나. 값의 의미나 변화의 방향은 판단하지 않아요.</figcaption>
+      {adjusted ? (
+        <p className={styles.adjustedNotice} data-testid="cell-adjusted-notice">
+          셀이 겹치지 않도록 위치를 조금 옮겼어요. 정확한 날짜는 셀을 선택해 확인해 주세요.
+        </p>
+      ) : null}
     </figure>
   );
 }

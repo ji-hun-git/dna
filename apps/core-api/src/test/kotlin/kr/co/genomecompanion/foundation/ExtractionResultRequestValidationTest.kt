@@ -77,7 +77,21 @@ class ExtractionResultRequestValidationTest {
         evidencePage: Int = 1,
         evidenceBox: EvidenceBox? = EvidenceBox(0.08, 0.1, 0.3, 0.02),
         sourceTextSha256: String = "1".repeat(64),
-    ) = ExtractedCandidate(ordinal, label, value, unit, observedOn, evidencePage, evidenceBox, sourceTextSha256)
+        referenceRangeText: String? = null,
+    ) = ExtractedCandidate(ordinal, label, value, unit, observedOn, evidencePage, evidenceBox, sourceTextSha256, referenceRangeText)
 
     private fun abstention(reason: String = "unreadable") = ExtractionAbstention("문서 전체", reason, null)
+
+    @Test
+    fun carriesReferenceRangeTextVerbatimWithinItsShapeAndNeverInterpretsIt() {
+        for (accepted in listOf(null, "70-99", "120 - 199", "<200", "≤5.6", "4.0~6.0", "70–99", "4,000-10,000")) {
+            assertThat(validator.validate(request(candidates = listOf(candidate(referenceRangeText = accepted)))))
+                .describedAs(accepted.toString()).isEmpty()
+        }
+        for (rejected in listOf("", "참고 70-99", "70-99 mg/dL", "1".repeat(41), "normal", "high")) {
+            assertThat(validator.validate(request(candidates = listOf(candidate(referenceRangeText = rejected)))))
+                .describedAs(rejected).isNotEmpty()
+        }
+        assertThat(candidate().referenceRangeText).isNull()
+    }
 }

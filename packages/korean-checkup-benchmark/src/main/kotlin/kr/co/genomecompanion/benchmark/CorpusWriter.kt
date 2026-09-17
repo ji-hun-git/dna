@@ -30,6 +30,8 @@ data class GoldMeasurement(
     val observedAt: String,
     val evidence: GoldEvidence,
     val semanticRole: String = "measurement",
+    /** The rendered 참고치 text the parser must carry verbatim; null when the variant prints none. Never a clinical range. */
+    val expectedReferenceRangeText: String? = null,
 )
 
 
@@ -56,7 +58,7 @@ data class Corpus(
 )
 
 
-/** Writes `<documentId>.pdf` files and `corpus.json` (medical-document-corpus.v1). No reference range is written. */
+/** Writes `<documentId>.pdf` files and `corpus.json` (medical-document-corpus.v1). The rendered 참고치 text is written as expectedReferenceRangeText (corpus text, never a clinical range). */
 object CorpusWriter {
     const val CORPUS_ID_PREFIX = "synthetic-ko-checkup-r2-"
 
@@ -97,6 +99,7 @@ object CorpusWriter {
                         box = row.box,
                         sourceTextSha256 = "sha256:" + BenchmarkJson.sha256(row.text),
                     ),
+                    expectedReferenceRangeText = row.referenceRangeText,
                 )
             }
         }

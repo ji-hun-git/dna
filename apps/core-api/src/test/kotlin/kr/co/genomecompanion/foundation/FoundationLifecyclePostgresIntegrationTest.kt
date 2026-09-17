@@ -1133,9 +1133,20 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(byConcept.getValue("총콜레스테롤")["previous"]["observedOn"].asText()).isEqualTo("2026-01-15")
         assertThat(byConcept.getValue("당화혈색소")["previous"]["value"].asText()).isEqualTo("5.4")
         assertThat(byConcept.getValue("비타민 D")["previous"]["value"].asText()).isEqualTo("45")
+        // Upload order here is chronological (January's exam date is before July's), so the delta
+        // is present for every item that has a previous value.
+        assertThat(byConcept.getValue("총콜레스테롤")["delta"]["absolute"].asText()).isEqualTo("-6")
+        assertThat(byConcept.getValue("총콜레스테롤")["delta"]["percent"].asText()).isEqualTo("-3.1")
+        // 당화혈색소 is a %-unit item (F4): the absolute difference is kept, the percent is omitted
+        // entirely so a "percent of a percent" number never appears.
+        assertThat(byConcept.getValue("당화혈색소")["delta"]["absolute"].asText()).isEqualTo("-0.2")
+        assertThat(byConcept.getValue("당화혈색소")["delta"].has("percent")).isFalse()
+        assertThat(byConcept.getValue("비타민 D")["delta"]["absolute"].asText()).isEqualTo("-3")
+        assertThat(byConcept.getValue("비타민 D")["delta"]["percent"].asText()).isEqualTo("-6.7")
+        assertThat(firstOnly["items"].map { it.has("delta") }).containsExactly(false, false, false)
         assertThat(summary["newConcepts"].size()).isZero()
         assertThat(summary["unchangedCount"].asInt()).isZero()
-        assertThat(summary.toString()).doesNotContain("referenceRange", "difference", "direction", "trend")
+        assertThat(summary.toString().lowercase()).doesNotContain("reference", "direction", "trend", "arrow")
 
         val bob = login("synthetic-bob")
         read(get("/api/foundation/changes"), bob)
@@ -1330,7 +1341,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
         val empty = read(get("/api/foundation/health-events/export"), alice)
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v1"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
             .andExpect(jsonPath("$.events.length()").value(0))
             .andExpect(jsonPath("$.documents.length()").value(0))
             .andReturn().response
@@ -1346,7 +1357,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(header().string("Cache-Control", "no-store"))
             .andExpect(header().string("X-Content-Type-Options", "nosniff"))
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v1"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
             .andExpect(jsonPath("$.subjectKind").value("synthetic"))
             .andExpect(jsonPath("$.exportedAt").isNotEmpty)
             .andExpect(jsonPath("$.events.length()").value(3))
@@ -1356,13 +1367,18 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.documents[0].observedOn").value("2026-07-28"))
             .andExpect(jsonPath("$.documents[0].status").value("COMPLETED"))
             .andExpect(jsonPath("$.documents[0].abstentions.length()").value(0))
+            .andExpect(jsonPath("$.documents[0].eventCount").value(3))
             .andReturn().response
         assertThat(response.contentType).startsWith("application/json")
         assertThat(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
             .matches("attachment; filename=\"alm-health-events-\\d{8}\\.json\"")
-        assertThat(response.contentAsString).doesNotContain("referenceRange", "trend", "direction", "normal", "risk")
-        assertThat(responseJson(response.contentAsByteArray)["events"].map { it["value"].asText() })
+        // The export is the one place referenceRangeText legitimately appears; none of these
+        // candidates printed a range, so the key is always present but always null.
+        assertThat(response.contentAsString).doesNotContain("trend", "direction", "normal", "risk")
+        val exportedEvents = responseJson(response.contentAsByteArray)["events"]
+        assertThat(exportedEvents.map { it["value"].asText() })
             .containsExactlyInAnyOrder("188", "5.2", "42")
+        assertThat(exportedEvents.all { it.has("referenceRangeText") && it["referenceRangeText"].isNull }).isTrue()
 
         read(get("/api/foundation/health-events/export"), bob)
             .andExpect(status().isOk)
@@ -1385,6 +1401,221 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 Long::class.java,
             ),
         ).isZero()
+    }
+
+    @Test
+    fun storesTheReferenceRangeTextCopiesItToTheRecordVersionAndKeepsItOutOfEveryResponse() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "reference-range-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64), "120-199"),
+                ExtractedCandidate(2, "HbA1c", "5.2", "%", "2026-07-28", 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64), null),
+            ),
+        )
+        assertThat(
+            jdbc.queryForList("SELECT reference_range_text FROM gc_candidate ORDER BY ordinal", String::class.java),
+        ).containsExactly("120-199", null)
+
+        val candidatesResponse = read(get("/api/foundation/documents/$documentId/candidates"), alice)
+            .andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(candidatesResponse.lowercase()).doesNotContain("reference")
+        val candidates = responseJson(candidatesResponse.toByteArray()).toList()
+
+        // A confirm-time correction of the value keeps the document's own range text unchanged.
+        mutate(
+            post("/api/foundation/candidates/${candidates[0]["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "reference-range-confirm-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "190"))),
+            alice,
+        ).andExpect(status().isCreated)
+        mutate(
+            post("/api/foundation/candidates/${candidates[1]["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "reference-range-confirm-2")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "5.2"))),
+            alice,
+        ).andExpect(status().isCreated)
+        assertThat(
+            jdbc.queryForList(
+                """
+                SELECT v.reference_range_text FROM gc_health_record_version v
+                JOIN gc_health_record r ON r.record_id = v.record_id
+                JOIN gc_candidate c ON c.candidate_id = r.candidate_id
+                WHERE v.status = 'CURRENT' ORDER BY c.ordinal
+                """.trimIndent(),
+                String::class.java,
+            ),
+        ).containsExactly("120-199", null)
+
+        val records = responseJson(
+            read(get("/api/foundation/records"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).toList()
+        val correctedRecordId = records.single { it["label"].asText() == "총콜레스테롤" }["recordId"].asText()
+
+        // A correction request carrying an unrecognized referenceRangeText field is rejected outright:
+        // the field is never client-writable, and the strict Jackson posture (fail-on-unknown-properties)
+        // rejects it rather than silently dropping it.
+        mutate(
+            post("/api/foundation/records/$correctedRecordId/corrections")
+                .header("Idempotency-Key", "reference-range-correction-rejected")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인", "referenceRangeText" to "1-2"))),
+            alice,
+        ).andExpect(status().isBadRequest)
+        assertThat(
+            jdbc.queryForList(
+                "SELECT reference_range_text FROM gc_health_record_version WHERE record_id = ?::uuid ORDER BY changed_at",
+                String::class.java,
+                correctedRecordId,
+            ),
+        ).containsExactly("120-199")
+
+        // Correction inherits the range text; a client cannot change it because no request field exists.
+        mutate(
+            post("/api/foundation/records/$correctedRecordId/corrections")
+                .header("Idempotency-Key", "reference-range-correction-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인"))),
+            alice,
+        ).andExpect(status().isOk)
+        assertThat(
+            jdbc.queryForList(
+                "SELECT reference_range_text FROM gc_health_record_version WHERE record_id = ?::uuid ORDER BY changed_at",
+                String::class.java,
+                correctedRecordId,
+            ),
+        ).containsExactly("120-199", "120-199")
+
+        for (path in listOf(
+            "/api/foundation/documents/$documentId/candidates",
+            "/api/foundation/records",
+            "/api/foundation/health-events",
+            "/api/foundation/changes",
+            "/api/foundation/records/$correctedRecordId",
+        )) {
+            val body = read(get(path), alice).andExpect(status().isOk).andReturn().response.contentAsString
+            assertThat(body.lowercase()).describedAs(path).doesNotContain("reference")
+            // The key check above can pass even if the range text leaked under a different field
+            // name; a value-based check catches that regardless of key.
+            assertThat(body).describedAs(path).doesNotContain("120-199")
+        }
+        // The original query here (`event_type LIKE '%120%' OR resource_type LIKE '%199%'`) can
+        // never match: those columns hold fixed enum-like strings (e.g. "CANDIDATE_CONFIRMED"),
+        // never a value or range digit. Check the audit row's own textual columns instead, for
+        // both the printed range and the confirmed correction value.
+        assertThat(
+            jdbc.queryForList(
+                """
+                SELECT event_type || ' ' || resource_type || ' ' || COALESCE(purpose_code, '') || ' ' || outcome
+                FROM gc_audit_event
+                """.trimIndent(),
+                String::class.java,
+            ),
+        ).noneMatch { it.contains("120-199") || it.contains("191") }
+    }
+
+    @Test
+    fun exportV2CarriesTheReferenceRangeTextTheCorrectionHistoryAndEveryCompletedDocument() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+
+        // Document 1: one candidate with a printed range; its value is corrected at confirmation.
+        val rangedDocument = requestDocument(alice, consentId, fixturePdf, "export-v2-ranged")
+        uploadDocument(alice, rangedDocument, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$rangedDocument/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            rangedDocument,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64), "120-199"),
+            ),
+        )
+        val ranged = responseJson(
+            read(get("/api/foundation/documents/$rangedDocument/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).single()
+        mutate(
+            post("/api/foundation/candidates/${ranged["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "export-v2-confirm-ranged")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "190", "observedOn" to "2026-07-27"))),
+            alice,
+        ).andExpect(status().isCreated)
+
+        // Document 2: every candidate excluded — COMPLETED with zero events.
+        val excludedDocument = requestDocument(alice, consentId, januaryFixturePdf, "export-v2-excluded")
+        uploadDocument(alice, excludedDocument, januaryFixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$excludedDocument/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(excludedDocument, sourceSha256 = januaryFixtureDigest, candidates = januaryCandidates)
+        responseJson(
+            read(get("/api/foundation/documents/$excludedDocument/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).forEach { candidate ->
+            mutate(
+                post("/api/foundation/candidates/${candidate["candidateId"].asText()}/exclusion")
+                    .header("Idempotency-Key", "export-v2-exclude-${candidate["ordinal"].asInt()}"),
+                alice,
+            ).andExpect(status().isOk)
+        }
+        assertThat(documentStatus(excludedDocument)).isEqualTo("COMPLETED")
+
+        // Document 3: one candidate with no printed range at all, confirmed as-is.
+        val noRangeDocument = requestDocument(alice, consentId, fixturePdf, "export-v2-no-range")
+        uploadDocument(alice, noRangeDocument, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$noRangeDocument/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            noRangeDocument,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "2".repeat(64)),
+            ),
+        )
+        val noRange = responseJson(
+            read(get("/api/foundation/documents/$noRangeDocument/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).single()
+        mutate(
+            post("/api/foundation/candidates/${noRange["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "export-v2-confirm-no-range")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isCreated)
+
+        val export = responseJson(
+            read(get("/api/foundation/health-events/export"), alice)
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+                .andExpect(jsonPath("$.events.length()").value(2))
+                .andExpect(jsonPath("$.documents.length()").value(3))
+                .andReturn().response.contentAsByteArray,
+        )
+        val event = export["events"].single { it["source"]["documentId"].asText() == rangedDocument.toString() }
+        assertThat(event["value"].asText()).isEqualTo("190")
+        assertThat(event["originalValue"].asText()).isEqualTo("188")
+        assertThat(event["observedOn"].asText()).isEqualTo("2026-07-27")
+        assertThat(event["originalObservedOn"].asText()).isEqualTo("2026-07-28")
+        assertThat(event["corrected"].asBoolean()).isTrue()
+        assertThat(event.has("correctionReason")).isFalse()
+        assertThat(event["referenceRangeText"].asText()).isEqualTo("120-199")
+        assertThat(event["source"]["documentId"].asText()).isEqualTo(rangedDocument.toString())
+        val noRangeEvent = export["events"].single { it["source"]["documentId"].asText() == noRangeDocument.toString() }
+        assertThat(noRangeEvent.has("referenceRangeText")).isTrue()
+        assertThat(noRangeEvent["referenceRangeText"].isNull).isTrue()
+        val documents = export["documents"].associateBy { it["documentId"].asText() }
+        assertThat(documents.keys).containsExactlyElementsOf(listOf(rangedDocument, excludedDocument, noRangeDocument).map { it.toString() }.sorted())
+        assertThat(export["documents"].map { it["documentId"].asText() }).isSorted()
+        assertThat(documents.getValue(rangedDocument.toString())["eventCount"].asInt()).isEqualTo(1)
+        assertThat(documents.getValue(rangedDocument.toString())["observedOn"].asText()).isEqualTo("2026-07-27")
+        assertThat(documents.getValue(excludedDocument.toString())["eventCount"].asInt()).isZero()
+        assertThat(documents.getValue(excludedDocument.toString())["status"].asText()).isEqualTo("COMPLETED")
+        assertThat(documents.getValue(excludedDocument.toString()).has("observedOn")).isFalse()
+
+        // The same record is served to the product without the range.
+        val healthEvents = read(get("/api/foundation/health-events"), alice).andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(healthEvents.lowercase()).doesNotContain("reference")
+        assertThat(responseJson(healthEvents.toByteArray()).map { it["originalValue"].asText() }).contains("188")
     }
 
     private fun importSyntheticDocument(

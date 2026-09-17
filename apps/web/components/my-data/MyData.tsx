@@ -26,6 +26,9 @@ export function MyData() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string>();
+  const [newIds, setNewIds] = useState<Set<string>>(NO_NEW_IDS);
+  // Ids seen in the previous successful load; null until the first load so nothing animates on arrival at the page.
+  const seenIdsRef = useRef<Set<string> | null>(null);
   const invokerRef = useRef<HTMLElement | SVGElement | null>(null);
   const toggleSelected = (eventId: string, invoker?: HTMLElement | SVGElement) => {
     setSelectedId((current) => {
@@ -51,7 +54,13 @@ export function MyData() {
       try {
         await client.getSession();
         const loaded = await client.getHealthEvents();
-        if (active) setEvents(loaded);
+        if (active) {
+          const ids = new Set(loaded.map((event) => event.eventId));
+          const seen = seenIdsRef.current;
+          setNewIds(seen ? new Set([...ids].filter((id) => !seen.has(id))) : NO_NEW_IDS);
+          seenIdsRef.current = ids;
+          setEvents(loaded);
+        }
       } catch (error) {
         if (active) {
           setErrorMessage(describeFoundationError(error));
@@ -95,7 +104,7 @@ export function MyData() {
                 events={events}
                 selectedId={selectedId}
                 matchedIds={search.matchedIds}
-                newIds={NO_NEW_IDS}
+                newIds={newIds}
                 onSelect={toggleSelected}
               />
 

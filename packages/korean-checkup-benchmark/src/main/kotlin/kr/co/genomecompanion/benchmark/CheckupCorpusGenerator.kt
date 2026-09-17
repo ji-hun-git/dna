@@ -78,6 +78,8 @@ data class PlacedRow(
     val page: Int,
     val text: String,
     val box: Box,
+    /** The 참고치 column text exactly as rendered, or null when the variant prints none. Corpus text only. */
+    val referenceRangeText: String?,
 )
 
 
@@ -195,7 +197,8 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
         val columns = mutableListOf(56f to label, 300f to value, 380f to unit)
         if (variant.rangeColumn) columns += 470f to rangeText(spec, variant)
         val box = canvas.line(columns)
-        return PlacedRow(spec, label, value, unit, canvas.pageNumber, columns.joinToString(" ") { it.second }, box)
+        val range = if (variant.rangeColumn) rangeText(spec, variant) else null
+        return PlacedRow(spec, label, value, unit, canvas.pageNumber, columns.joinToString(" ") { it.second }, box, range)
     }
 
     private fun twoColumnRow(canvas: Canvas, spec: RowSpec, variant: Variant, random: Random): PlacedRow {
@@ -204,7 +207,7 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
         val unit = unit(spec, variant)
         val result = if (variant.rangeColumn) "$value $unit (${rangeText(spec, variant)})" else "$value $unit"
         val box = canvas.line(listOf(56f to label, 320f to result))
-        return PlacedRow(spec, label, value, unit, canvas.pageNumber, "$label $result", box)
+        return PlacedRow(spec, label, value, unit, canvas.pageNumber, "$label $result", box, if (variant.rangeColumn) rangeText(spec, variant) else null)
     }
 
     private fun summaryRow(canvas: Canvas, spec: RowSpec, variant: Variant, random: Random): PlacedRow {
@@ -216,7 +219,7 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
             if (variant.rangeColumn) append(" (참고 ").append(rangeText(spec, variant)).append(')')
         }
         val box = canvas.line(listOf(56f to text))
-        return PlacedRow(spec, label, value, unit, canvas.pageNumber, text, box)
+        return PlacedRow(spec, label, value, unit, canvas.pageNumber, text, box, if (variant.rangeColumn) rangeText(spec, variant) else null)
     }
 
     private fun label(spec: RowSpec, variant: Variant) = if (variant.englishLabels) spec.englishLabel else spec.koreanLabel

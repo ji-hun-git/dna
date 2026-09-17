@@ -29,7 +29,7 @@ Recorded from the founder's answer in the 2026-09-16 planning session (Claude QA
 - GPU / driver: NVIDIA GeForce RTX 3070, driver `610.74`, 8192 MiB.
 - Protocol: `num_predict=2048`; kept here only for traceability against the re-run below.
 
-## Pins recorded (re-run of 2026-09-17, current)
+## Pins recorded (re-run of 2026-09-17, num_predict 4096)
 
 - Ollama: `0.34.1` at `http://127.0.0.1:11434`.
 - Model: `medgemma1.5:latest` · id `433252621ab154668b5d8be6aff6c1b771bacba045e46e6193da8d6ad1630f2c` · blob `sha256:a051c2bd4ab8d5b7f4df8eec344f2fdd603efb2d098da799dc16c95e9e8bc838`.
@@ -40,3 +40,16 @@ Recorded from the founder's answer in the 2026-09-16 planning session (Claude QA
 - Protocol digest (prompt, schema, options): `ef3941ccee441a2a6f2579bef6919728b041343136b9b48716ba9614f0672cff`; options `num_predict=4096` (raised from 2048), system prompt asks for compact JSON without extra whitespace or repetition.
 - GPU / driver: NVIDIA GeForce RTX 3070, driver `610.74`, 8192 MiB.
 - Full report: `docs/status/2026-09-17/medgemma-local-experiment.md`.
+
+## Pins recorded (run 3 of 2026-09-17, num_ctx 8192, current)
+
+- Ollama: `0.34.1` at `http://127.0.0.1:11434`.
+- Model: `medgemma1.5:latest` · id `433252621ab154668b5d8be6aff6c1b771bacba045e46e6193da8d6ad1630f2c` · blob `sha256:a051c2bd4ab8d5b7f4df8eec344f2fdd603efb2d098da799dc16c95e9e8bc838`.
+- Evaluation script commit: `1c28787a24abaa2e4979f6454b0941242ca253bf` (branch `codex/wave7-reference-range-delta`).
+- Corpus commit: same script commit (corpus is generated on the fly, not stored in git).
+- Corpus id / digest: `synthetic-ko-checkup-r2-e6befc286ae6ce1d` (25 documents); corpus digest `7249f8c349d040c6ca83d6e1cf35b30e30a6d4765360a5c2df3bb7e98cfc40dc`; corpus.json sha256 `587b72d04cf35f8ae1d90be0e2101ade8ce84cd3f2bec9e333b7e7186bdcf241` (gold gained `expectedReferenceRangeText`; PDF bytes unchanged).
+- Run window: `2026-09-17T06:08:57.490Z` → `2026-09-17T06:16:39.881Z` (UTC).
+- Protocol digest (prompt, schema, options): `f50c1ba2d46ea9771335bf8be68d7238a7aabbb8eb6f14c35a9e8bce934f0528`; options `num_predict=4096`, `num_ctx=8192` (added), prompt unchanged from run 2.
+- GPU / driver: NVIDIA GeForce RTX 3070, driver `610.74`, `8192 MiB`; `ollama ps` PROCESSOR `100% GPU` (CONTEXT column reported `8192`).
+- Observed: unreadable documents `7` (done_reason `length=7`), field F1 `61.3%`, hallucinated measurements `14 (10.5%)`. Observation only; no cause is claimed.
+- Full report: `docs/status/2026-09-17/medgemma-local-experiment.md` §Run 3.

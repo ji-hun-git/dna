@@ -25,9 +25,10 @@ export function renderNativeTextReport(report: MedicalDocumentSyntheticContractR
     `| Evidence localization (IoU ≥ 0.8) | ${percent(m.evidenceLocalizationRate)} |`,
     `| Required abstention recall | ${percent(m.requiredAbstentionRecall)} |`,
     `| Hallucinated measurements | ${m.hallucinatedMeasurementCount} (${percent(m.hallucinationRate)}) |`,
+    `| Reference-range text carried verbatim | ${percent(m.referenceRangeAccuracy)} |`,
     `| Gate | ${report.gate.passed ? "PASS" : `FAIL: ${report.gate.failures.join(", ")}`} |`,
     "",
-    "Thresholds: field F1 = 1, critical value exact = 1, evidence localization = 1, hallucination = 0, required abstention recall = 1.",
+    "Thresholds: field F1 = 1, critical value exact = 1, evidence localization = 1, hallucination = 0, required abstention recall = 1, reference-range text = 1.",
     "",
   ].join("\n");
 }

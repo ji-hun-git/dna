@@ -15,6 +15,7 @@ class HealthEventProjectionTest {
         value: String,
         original: String = value,
         observedOn: LocalDate,
+        originalObservedOn: LocalDate? = null,
         status: String = "CURRENT",
         documentId: UUID = docWithPreview,
         confirmedAt: Instant = Instant.parse("2026-07-28T09:10:00Z"),
@@ -32,6 +33,7 @@ class HealthEventProjectionTest {
         originalValue = original,
         unit = "mg/dL",
         observedOn = observedOn,
+        originalObservedOn = originalObservedOn,
         confirmedAt = confirmedAt,
         correctionReason = if (original == value) null else "원문 재확인",
         evidencePage = 1,
@@ -63,8 +65,31 @@ class HealthEventProjectionTest {
         assertThat(event.corrected).isTrue()
         assertThat(event.verification).isEqualTo("verified")
         assertThat(event.value).isEqualTo("5.3")
+        assertThat(event.originalValue).isEqualTo("5.2")
+        assertThat(event.correctionReason).isEqualTo("원문 재확인")
+        assertThat(event.originalObservedOn).isNull()
         assertThat(event.source.previewAvailable).isTrue()
         assertThat(event.source.page).isEqualTo(1)
+    }
+
+    @Test
+    fun carriesTheParserDateOnlyWhenTheExamDateWasCorrected() {
+        val dateCorrected = row("당화혈색소", "5.2", observedOn = LocalDate.of(2026, 7, 27), originalObservedOn = LocalDate.of(2026, 7, 28))
+        val untouched = row("총콜레스테롤", "188", observedOn = LocalDate.of(2026, 7, 28))
+
+        val events = HealthEventProjection.project(listOf(dateCorrected, untouched), setOf(docWithPreview))
+
+        val corrected = events.single { it.concept == "당화혈색소" }
+        assertThat(corrected.corrected).isTrue()
+        assertThat(corrected.originalObservedOn).isEqualTo("2026-07-28")
+        assertThat(corrected.originalValue).isEqualTo("5.2")
+        assertThat(corrected.correctionReason).isNull()
+        val plain = events.single { it.concept == "총콜레스테롤" }
+        assertThat(plain.corrected).isFalse()
+        assertThat(plain.originalValue).isEqualTo("188")
+        assertThat(plain.originalObservedOn).isNull()
+        assertThat(plain.correctionReason).isNull()
+        assertThat(HealthEvent::class.java.declaredFields.map { it.name }).doesNotContain("referenceRangeText", "referenceRange")
     }
 
     @Test

@@ -103,6 +103,7 @@ export function syntheticHealthEvent(overrides: Partial<HealthEvent> = {}): Heal
     verification: "verified",
     corrected: false,
     confirmedAt: "2026-07-28T09:10:00Z",
+    originalValue: "188",
     source: {
       documentId,
       page: 1,

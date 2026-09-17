@@ -18,6 +18,13 @@ function changeLine(item: ChangeSummary["items"][number]) {
   return item.previous ? `${latest} · 이전 ${datedValue(item.previous, item.unit)}` : `${latest} · 이전 값 없음`;
 }
 
+/** The subtraction result as the server computed it: a signed number, the unit, and the percent of the previous value. */
+function deltaLine(item: ChangeSummary["items"][number]) {
+  if (!item.delta) return null;
+  const percent = item.delta.percent == null ? "" : ` (${item.delta.percent}%)`;
+  return `두 값의 차이: ${item.delta.absolute} ${item.unit}${percent}`;
+}
+
 /** The latest 결과지's values beside the previous value of the same item. Hidden when there is nothing to list. */
 export function RecentChanges({ changes }: RecentChangesProps) {
   const latest = changes.latestDocument;
@@ -30,9 +37,15 @@ export function RecentChanges({ changes }: RecentChangesProps) {
       </div>
       <p className="gc-records-comparison__note">새 결과지에서 확인한 값과 같은 항목의 이전 값이에요. 변화의 의미는 판단하지 않아요.</p>
       <ul className="gc-review-saved" aria-label="항목별 이번 값과 이전 값">
-        {changes.items.map((item) => (
-          <li key={item.latest.eventId} data-testid="change-item">{changeLine(item)}</li>
-        ))}
+        {changes.items.map((item) => {
+          const delta = deltaLine(item);
+          return (
+            <li key={item.latest.eventId}>
+              <div data-testid="change-item">{changeLine(item)}</div>
+              {delta && <div data-testid="change-delta">{delta}</div>}
+            </li>
+          );
+        })}
       </ul>
       {changes.newConcepts.length > 0 && <p>{`이전 값이 없는 항목: ${changes.newConcepts.join(", ")}`}</p>}
     </section>

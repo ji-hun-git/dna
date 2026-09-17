@@ -58,15 +58,17 @@ it("filters by exact concept and says so, including zero results", async () => {
   expect(screen.getByRole("status", { name: "검색 결과" })).toHaveTextContent("total-cholesterol 기록 2개");
 });
 
-it("shows the empty state and the server error state honestly", async () => {
+it("shows the empty state and the server error state honestly, both without accessibility violations", async () => {
   server.use(http.get("/api/foundation/health-events", () => HttpResponse.json([])));
-  const { unmount } = render(<MyData />);
+  const empty = render(<MyData />);
   expect(await screen.findByText("아직 확인한 기록이 없어요. 데이터 관리에서 결과지를 추가하면 여기에 한 칸씩 쌓여요.")).toBeVisible();
-  unmount();
+  expect(await axe(empty.container)).toHaveNoViolations();
+  empty.unmount();
   server.use(http.get("/api/foundation/health-events", () => HttpResponse.json({ code: "INTERNAL" }, { status: 500 })));
-  render(<MyData />);
+  const failed = render(<MyData />);
   expect(await screen.findByRole("alert")).toBeVisible();
   expect(screen.getByRole("button", { name: "다시 불러오기" })).toBeVisible();
+  expect(await axe(failed.container)).toHaveNoViolations();
 });
 
 it("asks for sign-in instead of retrying when the session has expired", async () => {
