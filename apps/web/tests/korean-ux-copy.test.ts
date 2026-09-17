@@ -193,4 +193,13 @@ describe("Korean UX language boundary", () => {
     expect(control).not.toContain("{consent.status}");
     expect(control).not.toContain("{status}</strong>");
   });
+
+  it("explains the export as a browser download with no server copy", () => {
+    const control = source("components/integrated/IntegratedDataControl.tsx");
+    expect(control).toContain('href="/api/foundation/health-events/export"');
+    expect(control).toContain("내 기록 내보내기(JSON)");
+    expect(control).toContain("브라우저가 파일을 저장해요. 서버에 사본이 남지 않아요.");
+    expect(control).toContain("내보낼 기록이 없어요");
+    expect(control).not.toContain("/api/export");
+  });
 });

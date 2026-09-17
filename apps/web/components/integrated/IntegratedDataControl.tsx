@@ -6,6 +6,7 @@ import {
   type FoundationConsentPurpose,
   type FoundationDeletion,
   type FoundationSession,
+  type HealthEvent,
 } from "@/lib/foundation/client";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { describeFoundationError } from "@/lib/foundation/messages";
@@ -56,6 +57,7 @@ export function IntegratedDataControl() {
   const client = useMemo(() => createFoundationClient(), []);
   const [session, setSession] = useState<FoundationSession>();
   const [consents, setConsents] = useState<FoundationConsentPurpose[]>([]);
+  const [events, setEvents] = useState<HealthEvent[]>([]);
   const [deletion, setDeletion] = useState<FoundationDeletion>();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -69,13 +71,15 @@ export function IntegratedDataControl() {
     let active = true;
     void (async () => {
       try {
-        const [loadedSession, loadedConsents] = await Promise.all([
+        const [loadedSession, loadedConsents, loadedEvents] = await Promise.all([
           client.getSession(),
           client.getConsents(),
+          client.getHealthEvents(),
         ]);
         if (active) {
           setSession(loadedSession);
           setConsents(loadedConsents);
+          setEvents(loadedEvents);
         }
       } catch (error) {
         if (active) setErrorMessage(describeFoundationError(error));
@@ -134,6 +138,7 @@ export function IntegratedDataControl() {
       setDeletion(completed);
       setSession(undefined);
       setConsents([]);
+      setEvents([]);
       setReviewingDeletion(false);
     } catch (error) {
       setErrorMessage(describeFoundationError(error));
@@ -148,7 +153,7 @@ export function IntegratedDataControl() {
         <div className="gc-data-control__shell">
           <section className="gc-data-control__hero" aria-labelledby="integrated-data-title">
             <div><p>동의와 보관 상태</p><h1 id="integrated-data-title">내 데이터</h1></div>
-            <div className="gc-data-control__hero-copy"><p>목적별 동의를 확인하고, 체험 중 만든 기록을 삭제할 수 있어요.</p><strong>예시 데이터 전용 · 실제 개인정보 없음</strong></div>
+            <div className="gc-data-control__hero-copy"><p>목적별 동의를 확인하고, 내 기록을 파일로 내보내거나, 체험 중 만든 기록을 삭제할 수 있어요.</p><strong>예시 데이터 전용 · 실제 개인정보 없음</strong></div>
           </section>
           <div className="gc-integrated-actions"><a href="/connections">연결 상태 확인</a><a href="/providers">공공정보 실험실</a></div>
 
@@ -219,6 +224,18 @@ export function IntegratedDataControl() {
                     <span className="gc-data-control__purpose-lock">지금은 물어볼 프로젝트가 없어요</span>
                   </article>
                 </div>
+              </section>
+
+              <section className="gc-integrated-auth" aria-labelledby="server-export-title">
+                <p>내 기록</p>
+                <h2 id="server-export-title">내 기록 내보내기</h2>
+                <p>브라우저가 파일을 저장해요. 서버에 사본이 남지 않아요.</p>
+                <div className="gc-integrated-actions">
+                  {events.length > 0
+                    ? <a className="gc-button gc-button--weak" href="/api/foundation/health-events/export" download>내 기록 내보내기(JSON)</a>
+                    : <button type="button" disabled>내 기록 내보내기(JSON)</button>}
+                </div>
+                {events.length === 0 && <p className="gc-integrated-empty">내보낼 기록이 없어요</p>}
               </section>
 
               <section className="gc-data-control__danger" aria-labelledby="server-delete-title">

@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "vitest";
 import { IntegratedDataControl } from "@/components/integrated/IntegratedDataControl";
+import { syntheticHealthEvent } from "./fixtures/foundation";
 
 type PurposeCode = "DOCUMENT_EXTRACTION" | "RESEARCH_USE" | "RESEARCH_CONTACT";
 type ConsentState = { consentId?: string; status: "NOT_GRANTED" | "ACTIVE" | "REVOKED" };
@@ -20,6 +21,7 @@ let consents: Record<PurposeCode, ConsentState>;
 let projectConsent: ProjectConsentState | undefined;
 let grantHeaders: Array<string | null> = [];
 let revokedIds: string[] = [];
+let events: ReturnType<typeof syntheticHealthEvent>[] = [];
 
 function row(purposeCode: PurposeCode) {
   const state = consents[purposeCode];
@@ -70,7 +72,7 @@ const server = setupServer(
     consents[purposeCode] = { consentId, status: "REVOKED" };
     return HttpResponse.json({ consentId, purposeCode, status: "REVOKED" });
   }),
-  http.get("/api/foundation/health-events", () => HttpResponse.json([])),
+  http.get("/api/foundation/health-events", () => HttpResponse.json(events)),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -85,6 +87,7 @@ beforeEach(() => {
   projectConsent = undefined;
   grantHeaders = [];
   revokedIds = [];
+  events = [];
   document.cookie = "GC_CSRF=synthetic-data-control-csrf-value";
 });
 
@@ -207,4 +210,24 @@ it("shows a busy label only on the clicked row's button while a revocation is pe
   resolveRevocation?.();
 
   await waitFor(() => expect(purposeRow("DOCUMENT_EXTRACTION").getByText("철회함")).toBeVisible());
+});
+
+it("offers the export link that opens the core URL directly when there are events", async () => {
+  events = [syntheticHealthEvent(), syntheticHealthEvent({ eventId: "9c3e4f50-6172-4c8d-ae9f-1a2b3c4d5e60", concept: "비타민 D", value: "42", unit: "ng/mL" })];
+
+  render(<IntegratedDataControl />);
+
+  const link = await screen.findByRole("link", { name: "내 기록 내보내기(JSON)" });
+  expect(link).toHaveAttribute("href", "/api/foundation/health-events/export");
+  expect(link).toHaveAttribute("download");
+  expect(screen.getByText("브라우저가 파일을 저장해요. 서버에 사본이 남지 않아요.")).toBeVisible();
+  expect(screen.queryByText("내보낼 기록이 없어요")).toBeNull();
+});
+
+it("disables the export and says so when there is nothing to export", async () => {
+  render(<IntegratedDataControl />);
+
+  expect(await screen.findByRole("button", { name: "내 기록 내보내기(JSON)" })).toBeDisabled();
+  expect(screen.getByText("내보낼 기록이 없어요")).toBeVisible();
+  expect(screen.queryByRole("link", { name: "내 기록 내보내기(JSON)" })).toBeNull();
 });
