@@ -307,6 +307,33 @@ class ChangeSummaryProjectionTest {
         val itemFields = ChangeItem::class.java.declaredFields.map { it.name }
         val summaryFields = ChangeSummary::class.java.declaredFields.map { it.name }
         assertThat(itemFields + summaryFields)
-            .doesNotContain("difference", "delta", "direction", "trend", "referenceRange", "flag", "normal", "abnormal", "risk")
+            .doesNotContain("direction", "trend", "referenceRange", "referenceRangeText", "flag", "normal", "abnormal", "risk", "arrow", "colour")
+        assertThat(itemFields).contains("delta")
+    }
+
+    @Test
+    fun attachesTheSignedDifferenceOnlyWhenAPreviousValueExists() {
+        val january = row("총콜레스테롤", "194", LocalDate.of(2026, 1, 15), januaryDocument)
+        val july = row("총콜레스테롤", "188", LocalDate.of(2026, 7, 28), julyDocument)
+        val vitaminD = row("비타민 D", "42", LocalDate.of(2026, 7, 28), julyDocument, unit = "ng/mL", conceptCode = "vitamin-d")
+        val documents = listOf(completed(januaryDocument, "2026-01-16T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
+
+        val items = ChangeSummaryProjection.project(listOf(january, july, vitaminD), documents).items.associateBy { it.concept }
+
+        assertThat(items.getValue("총콜레스테롤").delta).isEqualTo(ChangeDelta("-6", "-3.1"))
+        assertThat(items.getValue("비타민 D").previous).isNull()
+        assertThat(items.getValue("비타민 D").delta).isNull()
+    }
+
+    @Test
+    fun leavesTheDeltaNullWhenTheUnitDiffersOrAValueIsNotNumeric() {
+        val januaryOtherUnit = row("총콜레스테롤", "5.0", LocalDate.of(2026, 1, 15), januaryDocument, unit = "mmol/L")
+        val julyText = row("총콜레스테롤", "188", LocalDate.of(2026, 7, 28), julyDocument)
+        val documents = listOf(completed(januaryDocument, "2026-01-16T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
+
+        val item = ChangeSummaryProjection.project(listOf(januaryOtherUnit, julyText), documents).items.single()
+
+        assertThat(item.previous).isNull()
+        assertThat(item.delta).isNull()
     }
 }

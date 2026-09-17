@@ -26,8 +26,8 @@ data class ChangeValue(
 )
 
 /**
- * This time's value beside the previous value of the same item. Two values and
- * nothing else: no difference, no direction, no range, no judgement.
+ * This time's value beside the previous value of the same item, plus — when both parse as numbers —
+ * their arithmetic difference. No direction, no range, no judgement.
  */
 data class ChangeItem(
     val conceptCode: String?,
@@ -35,6 +35,8 @@ data class ChangeItem(
     val unit: String,
     val latest: ChangeValue,
     val previous: ChangeValue?,
+    /** Null when there is no previous value in the same unit or a value is not numeric. */
+    val delta: ChangeDelta? = null,
 )
 
 data class ChangeSummary(
@@ -85,6 +87,7 @@ object ChangeSummaryProjection {
                     unit = record.unit,
                     latest = ChangeValue(record.recordVersionId, record.currentValue, record.observedOn.toString()),
                     previous = previous?.let { ChangeValue(it.recordVersionId, it.currentValue, it.observedOn.toString()) },
+                    delta = previous?.let { ChangeDeltaCalculator.compute(record.currentValue, it.currentValue) },
                 )
             }
         // conceptsMatch is not transitive (a record can gain/lose its code between documents),
