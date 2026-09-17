@@ -84,12 +84,35 @@ export function layoutCells(events: HealthEvent[], options: LayoutOptions) {
   }
   const height = options.padding * 2 + tallest * step;
   const baseline = height - options.padding - options.cellSize;
+  // Dates close together (e.g. one day apart on a months-wide axis) would otherwise map to
+  // x positions closer than one cell width, so their rects overlap and steal pointer/click
+  // events from each other. Keep the day order and spread any that are too close, then pull
+  // the right edge back inside the padded width without re-introducing overlap.
+  const days = [...byDay.keys()];
+  const orderedDays = [...days].sort((left, right) => scale.x(left) - scale.x(right));
+  const resolvedX = new Map<string, number>();
+  let previousX: number | undefined;
+  for (const day of orderedDays) {
+    let x = scale.x(day);
+    if (previousX !== undefined && x - previousX < step) x = previousX + step;
+    resolvedX.set(day, x);
+    previousX = x;
+  }
+  const maxX = options.width - options.padding - options.cellSize / 2;
+  let nextX: number | undefined;
+  for (const day of [...orderedDays].reverse()) {
+    let x = resolvedX.get(day)!;
+    if (x > maxX) x = maxX;
+    if (nextX !== undefined && nextX - x < step) x = nextX - step;
+    resolvedX.set(day, x);
+    nextX = x;
+  }
   const cells: CellLayout[] = [];
   for (const [observedOn, stack] of byDay) {
     stack.forEach((event, index) => {
       cells.push({
         eventId: event.eventId,
-        x: scale.x(observedOn) - options.cellSize / 2,
+        x: resolvedX.get(observedOn)! - options.cellSize / 2,
         y: baseline - index * step,
         size: options.cellSize,
         state: stateFor(event.eventId, options),

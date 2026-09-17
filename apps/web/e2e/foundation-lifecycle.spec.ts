@@ -229,6 +229,9 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByText("값을 수정함", { exact: true })).toBeVisible();
   await expect(page.getByText("검사일을 수정함", { exact: true })).toBeVisible();
 
+  // Wave 3 (a): the printed range is stored, never shown. Not on the review screen, not on the summary.
+  await expect(page.getByText("120-199")).toHaveCount(0);
+
   // The first document alone must feed both destinations; no second/static set can mask a gap.
   // Keep the outage active until recovery: development StrictMode may issue
   // more than one initial read, so a one-shot failure can hit a discarded effect.
@@ -345,12 +348,23 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByTestId("change-item").filter({ hasText: "비타민 D" }))
     .toHaveText("비타민 D · 이번 2026. 1. 15. 45 ng/mL · 이전 값 없음");
   await expect(page.getByText("이전 값이 없는 항목: 비타민 D")).toBeVisible();
+  // Wave 3 (b): the arithmetic difference as a signed number; nothing else.
+  await expect(page.getByTestId("change-delta")).toHaveCount(2);
+  await expect(page.getByTestId("change-item").filter({ hasText: "총콜레스테롤" }).locator("..").getByTestId("change-delta"))
+    .toHaveText("두 값의 차이: +4 mg/dL (+2.1%)");
+  await expect(page.getByTestId("change-item").filter({ hasText: "당화혈색소" }).locator("..").getByTestId("change-delta"))
+    .toHaveText("두 값의 차이: +0.2 % (+3.8%)");
+  await expect(page.getByTestId("change-item").filter({ hasText: "비타민 D" }).locator("..").getByTestId("change-delta")).toHaveCount(0);
+  await expect(page.getByText("120-199")).toHaveCount(0);
+  expect(await page.locator("main").innerText()).not.toMatch(/→|↑|↓|증가|감소|상승|하락/);
   const changes = await browserApi(page, "/api/foundation/changes");
   expect(changes.status).toBe(200);
-  expect(JSON.stringify(changes.body)).not.toMatch(/referenceRange|difference|direction|trend/);
+  expect(JSON.stringify(changes.body).toLowerCase()).not.toMatch(/reference|direction|trend/);
+  expect(JSON.stringify(changes.body)).toContain('"delta":{"absolute":"+4","percent":"+2.1"}');
 
   await page.goto("/records");
   await expect(page.getByTestId("durable-record")).toHaveCount(5);
+  await expect(page.getByText("120-199")).toHaveCount(0);
 
   await page.goto("/my-data");
   const figure = page.getByRole("figure", { name: "나의 데이터: 한 칸이 하나의 기록" });
@@ -362,6 +376,23 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   const drawer = page.getByRole("region", { name: /근거$/ });
   await expect(drawer).toBeVisible();
   await expect(drawer.getByRole("img")).toBeVisible();
+  await expect(page.getByText("120-199")).toHaveCount(0);
+  // The July 총콜레스테롤 was corrected at review (188 → 190): the drawer lists the original value only.
+  await page.getByRole("button", { name: "근거 닫기" }).click();
+  await figure.getByRole("button", { name: "총콜레스테롤 190 mg/dL, 2026. 7. 28." }).click();
+  const correctedDrawer = page.getByRole("region", { name: "총콜레스테롤 근거" });
+  await expect(correctedDrawer).toContainText("수정 이력");
+  await expect(correctedDrawer).toContainText("원래 값 188 mg/dL");
+  await expect(correctedDrawer).not.toContainText("120-199");
+  await page.getByRole("button", { name: "근거 닫기" }).click();
+  // The date-corrected 당화혈색소 lists the parser's date only.
+  await figure.getByRole("button", { name: "당화혈색소 5.2 %, 2026. 7. 27." }).click();
+  await expect(page.getByRole("region", { name: "당화혈색소 근거" })).toContainText("원래 검사일 2026. 7. 28.");
+  await page.getByRole("button", { name: "근거 닫기" }).click();
+  // An untouched record says so.
+  await figure.getByRole("button", { name: "비타민 D 45 ng/mL, 2026. 1. 15." }).click();
+  await expect(page.getByRole("region", { name: "비타민 D 근거" })).toContainText("수정 없음");
+  await page.getByRole("button", { name: "근거 닫기" }).click();
   await page.getByRole("searchbox", { name: "내 데이터에서 항목 찾기" }).fill("총콜레스테롤");
   await expect(page.getByRole("status", { name: "검색 결과" })).toContainText("총콜레스테롤 기록");
   await captureMatrix(page, info, "my-data");
@@ -426,12 +457,24 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   expect(exportResponse.headers()["content-type"]).toMatch(/^application\/json/);
   expect(exportResponse.headers()["content-disposition"]).toMatch(/^attachment; filename="alm-health-events-\d{8}\.json"$/);
   expect(exportResponse.headers()["cache-control"]).toBe("no-store");
-  const exported = await exportResponse.json() as { schemaVersion: string; subjectKind: string; events: unknown[]; documents: unknown[] };
-  expect(exported.schemaVersion).toBe("alm-health-events-export.v1");
+  const exported = await exportResponse.json() as {
+    schemaVersion: string;
+    subjectKind: string;
+    events: Array<{ value: string; originalValue: string; referenceRangeText?: string; originalObservedOn?: string }>;
+    documents: Array<{ documentId: string; status: string; eventCount: number }>;
+  };
+  expect(exported.schemaVersion).toBe("alm-health-events-export.v2");
   expect(exported.subjectKind).toBe("synthetic");
   expect(exported.events).toHaveLength(5);
   expect(exported.documents).toHaveLength(2);
-  expect(JSON.stringify(exported)).not.toContain("referenceRange");
+  expect(exported.documents.map((document) => document.eventCount).sort()).toEqual([2, 3]);
+  expect(exported.documents.map((document) => document.documentId)).toEqual([...exported.documents.map((document) => document.documentId)].sort());
+  // Wave 3 (a): the export — and only the export — carries the document's own range text verbatim.
+  const ranged = exported.events.filter((event) => event.referenceRangeText);
+  expect(ranged).toHaveLength(1);
+  expect(ranged[0]).toMatchObject({ value: "190", originalValue: "188", referenceRangeText: "120-199" });
+  expect(exported.events.filter((event) => event.originalObservedOn)).toHaveLength(1);
+  expect(JSON.stringify(eventsAfterBothDocuments.body).toLowerCase()).not.toContain("reference");
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("link", { name: "내 기록 내보내기(JSON)" }).click(),

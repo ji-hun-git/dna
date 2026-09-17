@@ -4,7 +4,7 @@
  */
 export function buildSyntheticResultPdf(period: "2026-07" | "2026-01"): Uint8Array<ArrayBuffer> {
   const lines = period === "2026-07"
-    ? ["GC SYNTHETIC EXAMPLE - NO REAL HEALTH DATA", "Date: 2026-07-28", "Cholesterol: 188 mg/dL", "HbA1c: 5.2 %", "Vitamin D: 42 ng/mL"]
+    ? ["GC SYNTHETIC EXAMPLE - NO REAL HEALTH DATA", "Date: 2026-07-28", "Cholesterol: 188 mg/dL 120-199", "HbA1c: 5.2 %", "Vitamin D: 42 ng/mL"]
     : ["GC SYNTHETIC EXAMPLE - NO REAL HEALTH DATA", "Date: 2026-01-15", "Cholesterol: 194 mg/dL", "HbA1c: 5.4 %", "Vitamin D: 45 ng/mL"];
   const content = `BT /F1 16 Tf 48 740 Td 28 TL ${lines.map((line, i) => `${i ? "T* " : ""}(${line}) Tj`).join("\n")} ET`;
   const objects = [
