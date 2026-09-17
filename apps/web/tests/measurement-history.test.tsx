@@ -25,7 +25,7 @@ it("lists every series with its three computed numbers as text and the same numb
   const cholesterol = within(sections[2]);
   expect(cholesterol.getByTestId("derived-last-difference")).toHaveTextContent(/^-4 mg\/dL \(-2\.1%\)$/);
   expect(cholesterol.getByTestId("derived-per-30-days")).toHaveTextContent(/^-0\.6 mg\/dL$/);
-  expect(cholesterol.getByTestId("derived-mean-of-last-3")).toHaveTextContent(/^계산할 수 없어요$/);
+  expect(cholesterol.getByTestId("derived-mean-of-last-3")).toHaveTextContent(/^측정 3회부터 계산해요$/);
   const rows = within(cholesterol.getByRole("table", { name: "총콜레스테롤 측정 이력" })).getAllByRole("row");
   expect(rows.map((row) => row.textContent)).toEqual([
     "검사일값단위출처",
@@ -85,6 +85,39 @@ it("opens an annotation card for the chosen anchor by click and by keyboard, and
   expect(section.getByRole("group", { name: "선택한 측정값" })).toBeVisible();
   await userEvent.keyboard(" ");
   expect(section.queryByRole("group", { name: "선택한 측정값" })).toBeNull();
+});
+
+it("names the specific reason a number is missing, decided from the points themselves", async () => {
+  server.use(http.get("/api/foundation/series", () => HttpResponse.json({
+    series: [
+      {
+        conceptCode: "same-day",
+        concept: "같은날검사",
+        unit: "mg/dL",
+        points: [
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4e01", value: "10", observedOn: "2026-07-28", documentId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f01" },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4e02", value: "12", observedOn: "2026-07-28", documentId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f01" },
+        ],
+        derived: {},
+      },
+      {
+        conceptCode: "short-gap",
+        concept: "짧은간격검사",
+        unit: "mg/dL",
+        points: [
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4e03", value: "10", observedOn: "2026-07-01", documentId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f01" },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4e04", value: "12", observedOn: "2026-07-10", documentId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4f01" },
+        ],
+        derived: { lastDifference: { absolute: "2" } },
+      },
+    ],
+  })));
+  render(<MeasurementHistory />);
+  const sections = await screen.findAllByTestId("history-series");
+  expect(within(sections[0]).getByTestId("derived-last-difference")).toHaveTextContent("같은 날 측정이라 계산하지 않아요");
+  expect(within(sections[0]).getByTestId("derived-per-30-days")).toHaveTextContent("측정 간격이 30일보다 짧아 계산하지 않아요");
+  expect(within(sections[1]).getByTestId("derived-per-30-days")).toHaveTextContent("측정 간격이 30일보다 짧아 계산하지 않아요");
+  expect(within(sections[1]).getByTestId("derived-mean-of-last-3")).toHaveTextContent("측정 3회부터 계산해요");
 });
 
 it("focuses the series that holds the event named in the hash", async () => {

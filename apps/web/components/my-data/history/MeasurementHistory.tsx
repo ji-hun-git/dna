@@ -9,21 +9,53 @@ import { HistoryGraph } from "@/components/my-data/history/HistoryGraph";
 import styles from "@/components/my-data/history/History.module.css";
 
 const NOT_COMPUTABLE = "계산할 수 없어요";
+const NEEDS_TWO = "측정 2회부터 계산해요";
+const NEEDS_THREE = "측정 3회부터 계산해요";
+const SAME_DAY = "같은 날 측정이라 계산하지 않아요";
+const GAP_TOO_SHORT = "측정 간격이 30일보다 짧아 계산하지 않아요";
 
 function needsSignIn(error: unknown) {
   const state = foundationShellState(error);
   return state === "UNAUTHENTICATED" || state === "SESSION_EXPIRED";
 }
 
-/** The server's strings with the unit appended. Nothing is recomputed, rounded or coloured here. */
-function lastDifferenceText(series: MeasurementSeries) {
-  const difference = series.derived.lastDifference;
-  if (!difference) return NOT_COMPUTABLE;
-  return `${difference.absolute} ${series.unit}${difference.percent == null ? "" : ` (${difference.percent}%)`}`;
+function daysBetween(earlier: string, later: string) {
+  const asDayNumber = (date: string) => {
+    const [year, month, day] = date.split("-").map(Number);
+    return Date.UTC(year, month - 1, day) / 86_400_000;
+  };
+  return Math.round(asDayNumber(later) - asDayNumber(earlier));
 }
 
-function withUnit(text: string | undefined, unit: string) {
-  return text === undefined ? NOT_COMPUTABLE : `${text} ${unit}`;
+/**
+ * The server's strings with the unit appended. Nothing is recomputed, rounded or coloured here.
+ * When the server omits a derived number it is always for one of a small set of plain-text
+ * reasons; that reason is worked out from `points` (never guessed) so the person is told exactly
+ * why, not just that a number is missing.
+ */
+function lastDifferenceText(series: MeasurementSeries) {
+  const difference = series.derived.lastDifference;
+  if (difference) return `${difference.absolute} ${series.unit}${difference.percent == null ? "" : ` (${difference.percent}%)`}`;
+  if (series.points.length < 2) return NEEDS_TWO;
+  const [previous, last] = series.points.slice(-2);
+  if (last.observedOn === previous.observedOn) return SAME_DAY;
+  return NOT_COMPUTABLE;
+}
+
+function per30DaysText(series: MeasurementSeries) {
+  const value = series.derived.per30Days;
+  if (value !== undefined) return `${value} ${series.unit}`;
+  if (series.points.length < 2) return NEEDS_TWO;
+  const [previous, last] = series.points.slice(-2);
+  if (daysBetween(previous.observedOn, last.observedOn) < 30) return GAP_TOO_SHORT;
+  return NOT_COMPUTABLE;
+}
+
+function meanOfLast3Text(series: MeasurementSeries) {
+  const value = series.derived.meanOfLast3;
+  if (value !== undefined) return `${value} ${series.unit}`;
+  if (series.points.length < 3) return NEEDS_THREE;
+  return NOT_COMPUTABLE;
 }
 
 export function MeasurementHistory() {
@@ -100,8 +132,8 @@ export function MeasurementHistory() {
 
               <dl className={styles.derived}>
                 <div><dt>마지막 두 값의 차이</dt><dd data-testid="derived-last-difference">{lastDifferenceText(item)}</dd></div>
-                <div><dt>30일로 환산한 차이</dt><dd data-testid="derived-per-30-days">{withUnit(item.derived.per30Days, item.unit)}</dd></div>
-                <div><dt>최근 3회 평균</dt><dd data-testid="derived-mean-of-last-3">{withUnit(item.derived.meanOfLast3, item.unit)}</dd></div>
+                <div><dt>30일로 환산한 차이</dt><dd data-testid="derived-per-30-days">{per30DaysText(item)}</dd></div>
+                <div><dt>최근 3회 평균</dt><dd data-testid="derived-mean-of-last-3">{meanOfLast3Text(item)}</dd></div>
               </dl>
 
               <div className={styles.tableWrap}>
