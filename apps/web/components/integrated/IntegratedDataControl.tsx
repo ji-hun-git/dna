@@ -59,6 +59,7 @@ export function IntegratedDataControl() {
   const [deletion, setDeletion] = useState<FoundationDeletion>();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [busyPurpose, setBusyPurpose] = useState<string | undefined>(undefined);
   const [reviewingDeletion, setReviewingDeletion] = useState(false);
   const [confirmedDeletion, setConfirmedDeletion] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -92,6 +93,7 @@ export function IntegratedDataControl() {
   // Every consent change re-reads the server list, so the four rows always show what the server holds.
   const grantConsent = async (purposeCode: string, short: string) => {
     setBusy(true);
+    setBusyPurpose(purposeCode);
     setErrorMessage("");
     setActionMessage("");
     try {
@@ -102,11 +104,13 @@ export function IntegratedDataControl() {
       setErrorMessage(describeFoundationError(error));
     } finally {
       setBusy(false);
+      setBusyPurpose(undefined);
     }
   };
 
-  const revokeConsent = async (consentId: string, short: string) => {
+  const revokeConsent = async (consentId: string, short: string, purposeCode: string) => {
     setBusy(true);
+    setBusyPurpose(purposeCode);
     setErrorMessage("");
     setActionMessage("");
     try {
@@ -117,6 +121,7 @@ export function IntegratedDataControl() {
       setErrorMessage(describeFoundationError(error));
     } finally {
       setBusy(false);
+      setBusyPurpose(undefined);
     }
   };
 
@@ -177,8 +182,8 @@ export function IntegratedDataControl() {
                           <dl><div><dt>사용 목적</dt><dd>{row.purpose}</dd></div><div><dt>실제 외부 제공</dt><dd>없음</dd></div></dl>
                         </div>
                         {status === "ACTIVE" && consent?.consentId
-                          ? <button type="button" onClick={() => void revokeConsent(consent.consentId!, row.short)} disabled={busy}>{`${row.short} 동의 철회`}</button>
-                          : <button type="button" onClick={() => void grantConsent(row.purposeCode, row.short)} disabled={busy}>{`${row.short} 동의`}</button>}
+                          ? <button type="button" onClick={() => void revokeConsent(consent.consentId!, row.short, row.purposeCode)} disabled={busy}>{busyPurpose === row.purposeCode ? "철회 반영 중" : `${row.short} 동의 철회`}</button>
+                          : <button type="button" onClick={() => void grantConsent(row.purposeCode, row.short)} disabled={busy}>{busyPurpose === row.purposeCode ? "동의 반영 중" : `${row.short} 동의`}</button>}
                       </article>
                     );
                   })}
@@ -196,7 +201,14 @@ export function IntegratedDataControl() {
                                 <strong>{name}</strong>
                                 <span>{labelConsentStatus(item.status)}</span>
                                 {item.status === "ACTIVE" && item.consentId && (
-                                  <button type="button" onClick={() => void revokeConsent(item.consentId!, name)} disabled={busy}>{`${name} 동의 철회`}</button>
+                                  <button
+                                    type="button"
+                                    className="gc-data-control__project-revoke"
+                                    onClick={() => void revokeConsent(item.consentId!, name, item.purposeCode)}
+                                    disabled={busy}
+                                  >
+                                    {busyPurpose === item.purposeCode ? "철회 반영 중" : `${name} 동의 철회`}
+                                  </button>
                                 )}
                               </li>
                             );

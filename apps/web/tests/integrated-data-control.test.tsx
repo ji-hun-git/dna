@@ -14,7 +14,10 @@ const policyVersions: Record<PurposeCode, string> = {
   RESEARCH_USE: "research-consent-policy.v1",
   RESEARCH_CONTACT: "research-contact-policy.v1",
 };
+type ProjectConsentState = { purposeCode: string; consentId: string; status: "ACTIVE" | "REVOKED" };
+
 let consents: Record<PurposeCode, ConsentState>;
+let projectConsent: ProjectConsentState | undefined;
 let grantHeaders: Array<string | null> = [];
 let revokedIds: string[] = [];
 
@@ -37,9 +40,19 @@ const server = setupServer(
     status: "AUTHENTICATED",
     expiresAt: "2026-07-28T23:00:00Z",
   })),
-  http.get("/api/foundation/consents", () => HttpResponse.json(
-    (["DOCUMENT_EXTRACTION", "RESEARCH_USE", "RESEARCH_CONTACT"] as const).map(row),
-  )),
+  http.get("/api/foundation/consents", () => HttpResponse.json([
+    ...(["DOCUMENT_EXTRACTION", "RESEARCH_USE", "RESEARCH_CONTACT"] as const).map(row),
+    ...(projectConsent
+      ? [{
+          purposeCode: projectConsent.purposeCode,
+          status: projectConsent.status,
+          consentId: projectConsent.consentId,
+          grantedAt: "2026-07-28T09:00:00Z",
+          revokedAt: projectConsent.status === "REVOKED" ? "2026-07-28T10:00:00Z" : null,
+          policyVersion: "project-consent-policy.v1",
+        }]
+      : []),
+  ])),
   http.post("/api/foundation/consents/:purposeCode", ({ params, request }) => {
     const purposeCode = decodeURIComponent(String(params.purposeCode)) as PurposeCode;
     grantHeaders.push(request.headers.get("Idempotency-Key"));
@@ -49,6 +62,10 @@ const server = setupServer(
   http.post("/api/foundation/consents/:consentId/revocation", ({ params }) => {
     const consentId = String(params.consentId);
     revokedIds.push(consentId);
+    if (projectConsent && projectConsent.consentId === consentId) {
+      projectConsent = { ...projectConsent, status: "REVOKED" };
+      return HttpResponse.json({ consentId, purposeCode: projectConsent.purposeCode, status: "REVOKED" });
+    }
     const purposeCode = (Object.keys(consents) as PurposeCode[]).find((code) => consents[code].consentId === consentId)!;
     consents[purposeCode] = { consentId, status: "REVOKED" };
     return HttpResponse.json({ consentId, purposeCode, status: "REVOKED" });
@@ -65,6 +82,7 @@ beforeEach(() => {
     RESEARCH_USE: { status: "NOT_GRANTED" },
     RESEARCH_CONTACT: { status: "NOT_GRANTED" },
   };
+  projectConsent = undefined;
   grantHeaders = [];
   revokedIds = [];
   document.cookie = "GC_CSRF=synthetic-data-control-csrf-value";
@@ -145,4 +163,48 @@ it("names a consent the server has never granted in Korean", async () => {
   await waitFor(() => expect(screen.getAllByText("동의 전")).toHaveLength(4));
   expect(screen.queryByText("NOT_GRANTED")).toBeNull();
   expect(document.querySelector("article[data-purpose='DOCUMENT_EXTRACTION']")).toHaveAttribute("data-status", "revoked");
+});
+
+it("renders a project consent with a name, a same-sized revoke button, and revokes it through the server", async () => {
+  projectConsent = { purposeCode: "PROJECT:demo-study", consentId: crypto.randomUUID(), status: "ACTIVE" };
+  const projectId = projectConsent.consentId;
+
+  render(<IntegratedDataControl />);
+
+  const projectItem = (await screen.findByText("demo-study")).closest("li") as HTMLElement;
+  expect(within(projectItem).getByText("동의함")).toBeVisible();
+  const revokeButton = within(projectItem).getByRole("button", { name: "demo-study 동의 철회" });
+  expect(revokeButton).toHaveClass("gc-data-control__project-revoke");
+
+  await userEvent.click(revokeButton);
+
+  await waitFor(() => expect(within(projectItem).getByText("철회함")).toBeVisible());
+  expect(revokedIds).toEqual([projectId]);
+});
+
+it("shows a busy label only on the clicked row's button while a revocation is pending", async () => {
+  let resolveRevocation: (() => void) | undefined;
+  server.use(
+    http.post("/api/foundation/consents/:consentId/revocation", async ({ params }) => {
+      await new Promise<void>((resolve) => { resolveRevocation = resolve; });
+      const consentId = String(params.consentId);
+      revokedIds.push(consentId);
+      consents.DOCUMENT_EXTRACTION = { consentId, status: "REVOKED" };
+      return HttpResponse.json({ consentId, purposeCode: "DOCUMENT_EXTRACTION", status: "REVOKED" });
+    }),
+  );
+
+  render(<IntegratedDataControl />);
+  const revokeButton = await screen.findByRole("button", { name: "결과지 처리 동의 철회" });
+  const researchButton = screen.getByRole("button", { name: "연구 활용 동의" });
+
+  await userEvent.click(revokeButton);
+
+  await waitFor(() => expect(revokeButton).toHaveTextContent("철회 반영 중"));
+  expect(researchButton).toHaveTextContent("연구 활용 동의");
+  expect(screen.queryByText("동의 반영 중")).toBeNull();
+
+  resolveRevocation?.();
+
+  await waitFor(() => expect(purposeRow("DOCUMENT_EXTRACTION").getByText("철회함")).toBeVisible());
 });
