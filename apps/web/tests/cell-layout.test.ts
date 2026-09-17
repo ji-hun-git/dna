@@ -58,6 +58,13 @@ describe("layoutCells", () => {
     const { height } = layoutCells([jul, julB], { width: 400, cellSize: 10, gap: 2, padding: 20 });
     expect(height).toBe(20 + 2 * 12 + 20);
   });
+
+  it("reports adjusted: false when declumping never moves a cell off its raw time-scale position", () => {
+    // A single distinct date centres at width/2, comfortably inside [minX, maxX], so both
+    // same-day cells keep the raw time-scale x exactly (only y differs, for the stack).
+    const { adjusted } = layoutCells([jul, julB], { width: 400, cellSize: 10, gap: 2, padding: 20 });
+    expect(adjusted).toBe(false);
+  });
 });
 
 function addDays(isoDate: string, days: number): string {
@@ -99,6 +106,11 @@ describe("layoutCells keeps close-but-distinct dates from overlapping", () => {
     const byId = new Map(cells.map((cell) => [cell.eventId, cell]));
     expect(byId.get(january.eventId)!.x).toBeLessThan(byId.get(julB.eventId)!.x);
     expect(byId.get(julB.eventId)!.x).toBeLessThan(byId.get(julA.eventId)!.x);
+  });
+
+  it("reports adjusted: true when declumping moves a cell off its raw time-scale position", () => {
+    const { adjusted } = layoutCells([julA, julB, january], options);
+    expect(adjusted).toBe(true);
   });
 
   it("leaves same-day stacking behaviour unchanged", () => {

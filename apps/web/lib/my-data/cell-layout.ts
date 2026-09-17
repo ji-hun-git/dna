@@ -126,8 +126,13 @@ export function layoutCells(events: HealthEvent[], options: LayoutOptions) {
   const orderedDays = [...byDay.keys()].sort((left, right) => scale.x(left) - scale.x(right));
   const minX = options.padding + options.cellSize / 2;
   const maxX = options.width - options.padding - options.cellSize / 2;
-  const declumped = declumpPositions(orderedDays.map((day) => scale.x(day)), step, minX, maxX);
+  const rawX = orderedDays.map((day) => scale.x(day));
+  const declumped = declumpPositions(rawX, step, minX, maxX);
   const resolvedX = new Map<string, number>(orderedDays.map((day, index) => [day, declumped[index]]));
+  // True when declumping moved any cell more than half a pixel away from its raw time-scale
+  // position: the month ticks stay on the raw scale, so a moved cell can then sit under a
+  // neighbouring tick rather than its own. Surfaced so the UI can disclose it (F7).
+  const adjusted = declumped.some((x, index) => Math.abs(x - rawX[index]) > 0.5);
   const cells: CellLayout[] = [];
   for (const [observedOn, stack] of byDay) {
     stack.forEach((event, index) => {
@@ -143,5 +148,5 @@ export function layoutCells(events: HealthEvent[], options: LayoutOptions) {
       });
     });
   }
-  return { cells, scale, height };
+  return { cells, scale, height, adjusted };
 }

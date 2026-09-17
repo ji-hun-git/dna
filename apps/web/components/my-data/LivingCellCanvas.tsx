@@ -28,7 +28,7 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
   const [hoveredId, setHoveredId] = useState<string>();
   const [focusedId, setFocusedId] = useState<string>();
   const reducedMotion = usePrefersReducedMotion();
-  const { cells, scale, height } = useMemo(
+  const { cells, scale, height, adjusted } = useMemo(
     () => layoutCells(events, { width, cellSize: CELL, gap: GAP, padding: PADDING, selectedId, matchedIds, newIds }),
     [events, width, selectedId, matchedIds, newIds],
   );
@@ -110,6 +110,11 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
         />
       ) : null}
       <figcaption className={styles.caption}>한 칸 = 확인한 기록 하나. 값의 의미나 변화의 방향은 판단하지 않아요.</figcaption>
+      {adjusted ? (
+        <p className={styles.adjustedNotice} data-testid="cell-adjusted-notice">
+          셀이 겹치지 않도록 위치를 조금 옮겼어요. 정확한 날짜는 셀을 선택해 확인해 주세요.
+        </p>
+      ) : null}
     </figure>
   );
 }
