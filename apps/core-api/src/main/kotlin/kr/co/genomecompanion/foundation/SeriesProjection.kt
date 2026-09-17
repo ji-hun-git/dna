@@ -95,8 +95,15 @@ object SeriesProjection {
         if (rows.size < 2) return SeriesDerived()
         val last = rows[rows.size - 1]
         val previous = rows[rows.size - 2]
-        val lastDifference = ChangeDeltaCalculator.compute(last.currentValue, previous.currentValue)
-            ?.let { delta -> if (last.unit.trim() == "%") delta.copy(percent = null) else delta }
+        // Same-day points have no defined order: which is "last" depends on click order, so the
+        // difference (and, transitively, per30Days) is omitted rather than sign-flipping.
+        val sameDay = last.observedOn == previous.observedOn
+        val lastDifference = if (sameDay) {
+            null
+        } else {
+            ChangeDeltaCalculator.compute(last.currentValue, previous.currentValue)
+                ?.let { delta -> if (last.unit.trim() == "%") delta.copy(percent = null) else delta }
+        }
         return SeriesDerived(
             lastDifference = lastDifference,
             per30Days = per30Days(last, previous),
@@ -108,7 +115,9 @@ object SeriesProjection {
         val lastNumber = ChangeDeltaCalculator.parse(last.currentValue) ?: return null
         val previousNumber = ChangeDeltaCalculator.parse(previous.currentValue) ?: return null
         val days = ChronoUnit.DAYS.between(previous.observedOn, last.observedOn)
-        if (days <= 0L) return null
+        // Under 30 days, "per 30 days" would extrapolate a figure nobody measured; only ever
+        // interpolate between two points that already span at least that gap.
+        if (days < 30L) return null
         val scale = maxOf(lastNumber.scale(), previousNumber.scale()) + 1
         return ChangeDeltaCalculator.signed(
             lastNumber.subtract(previousNumber).multiply(thirty).divide(BigDecimal(days), scale, RoundingMode.HALF_EVEN),

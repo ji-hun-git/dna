@@ -46,7 +46,12 @@ data class FhirObservation(
     val resourceType: String = "Observation",
     val id: String,
     val status: String = "final",
-    val category: List<FhirCodeableConcept>,
+    val meta: FhirMeta,
+    /** Omitted (never an empty array — FHIR does not allow one) for concepts this catalogue cannot
+     * substantiate as laboratory results (vitals such as blood pressure, pulse, height, weight, BMI,
+     * waist circumference) and for events with no concept code at all. Never `vital-signs`: that would
+     * claim a profile this export does not satisfy. */
+    val category: List<FhirCodeableConcept>?,
     val code: FhirCodeableConcept,
     val effectiveDateTime: String,
     val valueQuantity: FhirQuantity?,
@@ -77,6 +82,32 @@ object FhirObservationMapper {
 
     private val laboratory = listOf(FhirCodeableConcept(listOf(FhirCoding(CATEGORY_SYSTEM, "laboratory")), null))
 
+    /** Vital-sign concepts in the catalogue: not laboratory results, and this export does not
+     * satisfy the `vital-signs` profile, so `category` is omitted for them entirely. */
+    private val nonLaboratoryConceptCodes = setOf(
+        "systolic-blood-pressure",
+        "diastolic-blood-pressure",
+        "pulse",
+        "height",
+        "weight",
+        "bmi",
+        "waist-circumference",
+    )
+
+    /** Concepts whose alias merges a loosely worded label ("혈당", "hs-CRP", "Bilirubin", "GFR") onto
+     * a specific LOINC code (fasting glucose, CRP, total bilirubin, eGFR). Emitting that code would
+     * assert the specific reading for a row that never said so, so these get `code.text` only. */
+    private val aliasOverspecifiedConceptCodes = setOf(
+        "fasting-glucose",
+        "crp",
+        "total-bilirubin",
+        "egfr",
+    )
+
+    private val synthetic = FhirCoding(TAG_SYSTEM, "synthetic")
+    private val personConfirmedFromDocument = FhirCoding(TAG_SYSTEM, "person-confirmed-from-document")
+    private val observationTags = FhirMeta(listOf(synthetic, personConfirmedFromDocument))
+
     fun bundle(records: List<FoundationRecordRow>, loincByConceptCode: Map<String, String>, now: Instant): FhirBundle {
         val entries = records
             .filter { it.status == "CURRENT" }
@@ -89,17 +120,25 @@ object FhirObservationMapper {
             .map { FhirBundleEntry(observation(it, loincByConceptCode)) }
         return FhirBundle(
             timestamp = now.truncatedTo(ChronoUnit.MILLIS),
-            meta = FhirMeta(listOf(FhirCoding(TAG_SYSTEM, "synthetic"))),
+            meta = FhirMeta(listOf(synthetic)),
             entry = entries.ifEmpty { null },
         )
     }
 
     private fun observation(record: FoundationRecordRow, loincByConceptCode: Map<String, String>): FhirObservation {
-        val loinc = record.conceptCode?.let(loincByConceptCode::get)
+        val conceptCode = record.conceptCode
+        val loinc = conceptCode
+            ?.takeUnless { it in aliasOverspecifiedConceptCodes }
+            ?.let(loincByConceptCode::get)
         val number = ChangeDeltaCalculator.parse(record.currentValue)
+        val category = when {
+            conceptCode == null || conceptCode in nonLaboratoryConceptCodes -> null
+            else -> laboratory
+        }
         return FhirObservation(
             id = record.recordVersionId.toString(),
-            category = laboratory,
+            meta = observationTags,
+            category = category,
             code = FhirCodeableConcept(loinc?.let { listOf(FhirCoding(LOINC_SYSTEM, it)) }, record.label),
             effectiveDateTime = record.observedOn.toString(),
             valueQuantity = number?.let { FhirQuantity(it, record.unit) },

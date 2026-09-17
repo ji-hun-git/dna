@@ -72,6 +72,55 @@ class FhirObservationMapperTest {
         assertThat(observation.valueString).isNull()
         assertThat(observation.referenceRange).containsExactly(FhirReferenceRange("120-199"))
         assertThat(observation.note).containsExactly(FhirAnnotation("본인이 값을 수정함"))
+        assertThat(observation.meta.tag).containsExactly(
+            FhirCoding("https://alm.example/fhir/tag", "synthetic"),
+            FhirCoding("https://alm.example/fhir/tag", "person-confirmed-from-document"),
+        )
+    }
+
+    @Test
+    fun omitsCategoryForVitalSignConceptsAndForUncodedEventsButKeepsLaboratoryForLabConcepts() {
+        val bloodPressure = row(label = "수축기 혈압", value = "120", unit = "mmHg", conceptCode = "systolic-blood-pressure")
+        val pulse = row(label = "맥박", value = "70", unit = "회/분", conceptCode = "pulse")
+        val weight = row(label = "체중", value = "65", unit = "kg", conceptCode = "weight")
+        val uncoded = row(label = "요단백", value = "1", unit = "mg/dL", conceptCode = null)
+        val lab = row(label = "총콜레스테롤", value = "190")
+        val byLabel = FhirObservationMapper.bundle(listOf(bloodPressure, pulse, weight, uncoded, lab), loinc, now)
+            .entry!!.map { it.resource }.associateBy { it.code.text }
+
+        assertThat(byLabel.getValue("수축기 혈압").category).isNull()
+        assertThat(byLabel.getValue("맥박").category).isNull()
+        assertThat(byLabel.getValue("체중").category).isNull()
+        assertThat(byLabel.getValue("요단백").category).isNull()
+        assertThat(byLabel.getValue("총콜레스테롤").category).containsExactly(
+            FhirCodeableConcept(listOf(FhirCoding("http://terminology.hl7.org/CodeSystem/observation-category", "laboratory")), null),
+        )
+        val json = ObjectMapper().findAndRegisterModules().writeValueAsString(byLabel.getValue("수축기 혈압"))
+        assertThat(json).doesNotContain("\"category\":[]", "vital-signs")
+    }
+
+    @Test
+    fun omitsLoincCodingForAliasOverspecifiedConceptsButKeepsTextAndKeepsCodingElsewhere() {
+        val overspecified = mapOf(
+            "fasting-glucose" to "1558-6",
+            "crp" to "1988-5",
+            "total-bilirubin" to "1975-2",
+            "egfr" to "62238-1",
+            "total-cholesterol" to "2093-3",
+        )
+        val glucose = row(label = "혈당", value = "95", unit = "mg/dL", conceptCode = "fasting-glucose")
+        val crp = row(label = "hs-CRP", value = "0.1", unit = "mg/L", conceptCode = "crp")
+        val bilirubin = row(label = "Bilirubin", value = "0.8", unit = "mg/dL", conceptCode = "total-bilirubin")
+        val gfr = row(label = "GFR", value = "90", unit = "mL/min/1.73m²", conceptCode = "egfr")
+        val cholesterol = row(label = "총콜레스테롤", value = "190")
+        val bundle = FhirObservationMapper.bundle(listOf(glucose, crp, bilirubin, gfr, cholesterol), overspecified, now)
+        val byLabel = bundle.entry!!.map { it.resource }.associateBy { it.code.text }
+
+        assertThat(byLabel.getValue("혈당").code.coding).isNull()
+        assertThat(byLabel.getValue("hs-CRP").code.coding).isNull()
+        assertThat(byLabel.getValue("Bilirubin").code.coding).isNull()
+        assertThat(byLabel.getValue("GFR").code.coding).isNull()
+        assertThat(byLabel.getValue("총콜레스테롤").code.coding).containsExactly(FhirCoding("http://loinc.org", "2093-3"))
     }
 
     @Test

@@ -72,10 +72,44 @@ class SeriesProjectionTest {
         val series = SeriesProjection.project(listOf(late, tieB, tieA)).series.single()
 
         assertThat(series.points.map { it.value }).containsExactly("1", "2", "3")
-        // Same date: the difference is still arithmetic on the last two, but nothing is scaled to 30 days.
-        assertThat(series.derived.lastDifference).isEqualTo(ChangeDelta("+1", "+50.0"))
+        // Same date: which point is "last" depends on confirmation order, so no difference is printed.
+        assertThat(series.derived.lastDifference).isNull()
         assertThat(series.derived.per30Days).isNull()
         assertThat(series.derived.meanOfLast3).isEqualTo("2.0")
+    }
+
+    @Test
+    fun aSameDayDifferenceIsOmittedRegardlessOfWhichConfirmationCameSecond() {
+        val idA = UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+        val idB = UUID.fromString("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
+        val first = row("총콜레스테롤", "1", "2026-07-28", confirmedAt = "2026-08-01T00:00:00Z", recordId = idA)
+        val second = row("총콜레스테롤", "2", "2026-07-28", confirmedAt = "2026-08-02T00:00:00Z", recordId = idB)
+
+        val orderA = SeriesProjection.project(listOf(first, second)).series.single().derived
+        val orderB = SeriesProjection.project(listOf(second, first)).series.single().derived
+
+        assertThat(orderA).isEqualTo(orderB)
+        assertThat(orderA.lastDifference).isNull()
+        assertThat(orderA.per30Days).isNull()
+    }
+
+    @Test
+    fun per30DaysIsOmittedUnderThirtyDaysAndComputedAtExactlyThirty() {
+        val oneDay = SeriesProjection.project(
+            listOf(row("총콜레스테롤", "10", "2026-01-01"), row("총콜레스테롤", "11", "2026-01-02")),
+        ).series.single()
+        assertThat(oneDay.derived.per30Days).isNull()
+
+        val twentyNineDays = SeriesProjection.project(
+            listOf(row("총콜레스테롤", "10", "2026-01-01"), row("총콜레스테롤", "11", "2026-01-30")),
+        ).series.single()
+        assertThat(twentyNineDays.derived.per30Days).isNull()
+
+        // 30 days: +1 / 30 × 30 = +1.0.
+        val thirtyDays = SeriesProjection.project(
+            listOf(row("총콜레스테롤", "10", "2026-01-01"), row("총콜레스테롤", "11", "2026-01-31")),
+        ).series.single()
+        assertThat(thirtyDays.derived.per30Days).isEqualTo("+1.0")
     }
 
     @Test
