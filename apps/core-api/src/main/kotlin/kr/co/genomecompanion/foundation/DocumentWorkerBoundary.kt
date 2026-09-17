@@ -116,7 +116,10 @@ data class EvidenceBox(
 }
 
 
-/** One row the worker read from the text layer. Raw label and unit; core normalizes. No reference range. */
+/**
+ * One row the worker read from the text layer. Raw label and unit; core normalizes. The
+ * reference-range text is carried verbatim and never interpreted: it is stored and exported only.
+ */
 data class ExtractedCandidate(
     @field:Min(1) @field:Max(100)
     val ordinal: Int,
@@ -134,6 +137,8 @@ data class ExtractedCandidate(
     val evidenceBox: EvidenceBox?,
     @field:Pattern(regexp = "^[0-9a-f]{64}$")
     val sourceTextSha256: String,
+    @field:Size(max = 40) @field:Pattern(regexp = "^[0-9.,\\s\\-~–<>≤≥]{1,40}$")
+    val referenceRangeText: String? = null,
 )
 
 

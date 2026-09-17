@@ -155,7 +155,32 @@ class NativeTextExtractionProviderTest {
         val candidate = outcome.candidates.single()
         assertThat(candidate.value).isEqualTo("96")
         assertThat(candidate.unit).isEqualTo("mg/dL")
+        assertThat(candidate.referenceRangeText).isEqualTo("70-99")
         assertThat(candidate.sourceTextSha256).isEqualTo(sha256("Fasting Glucose 96 mg/dL 70-99 mg/dL"))
+    }
+
+    @Test
+    fun `preserves the reference range body without label brackets or unit and leaves it null when absent`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines(
+                "검사일 2026-07-28",
+                "총콜레스테롤 188 mg/dl 120-199",
+                "백혈구 6,200 /uL (참고 4,000-10,000)",
+                "· 당화혈색소 5.2 % (참고 4.0~5.6)",
+                "요산 5.1 mg/dL 참고치: ≤7.0",
+                "AST 22 U/L (15 - 35)",
+                "LDL 콜레스테롤 110 mg/dL <130",
+                "크레아티닌 0.9 mg/dL",
+            ),
+        )
+
+        assertThat(outcome.abstentions).isEmpty()
+        assertThat(outcome.candidates.map { it.value }).containsExactly("188", "6,200", "5.2", "5.1", "22", "110", "0.9")
+        assertThat(outcome.candidates.map { it.unit }).containsExactly("mg/dl", "/uL", "%", "mg/dL", "U/L", "mg/dL", "mg/dL")
+        assertThat(outcome.candidates.map { it.referenceRangeText })
+            .containsExactly("120-199", "4,000-10,000", "4.0~5.6", "≤7.0", "15 - 35", "<130", null)
+        assertThat(outcome.candidates.mapNotNull { it.referenceRangeText })
+            .allMatch { Regex("^[0-9.,\\s\\-~–<>≤≥]{1,40}$").matches(it) }
     }
 
     @Test

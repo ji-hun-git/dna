@@ -204,6 +204,7 @@ class BoundaryApiClient(
                             "height" to candidate.evidenceBox.height,
                         ),
                         "sourceTextSha256" to candidate.sourceTextSha256,
+                        "referenceRangeText" to candidate.referenceRangeText,
                     )
                 },
                 "abstentions" to outcome.abstentions.map { abstention ->

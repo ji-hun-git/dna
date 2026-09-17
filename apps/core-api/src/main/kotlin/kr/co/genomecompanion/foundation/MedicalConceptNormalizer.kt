@@ -22,6 +22,8 @@ data class NormalizedCandidate(
     val evidenceBox: EvidenceBox?,
     val sourceTextSha256: String,
     val conceptCode: String?,
+    /** Verbatim from the worker; stored on the candidate and copied to the record version, never shown or compared. */
+    val referenceRangeText: String? = null,
 )
 
 
@@ -80,6 +82,7 @@ class MedicalConceptNormalizer(private val source: MedicalConceptSource) {
             evidenceBox = candidate.evidenceBox,
             sourceTextSha256 = candidate.sourceTextSha256,
             conceptCode = concept?.conceptCode,
+            referenceRangeText = candidate.referenceRangeText,
         )
     }
 }

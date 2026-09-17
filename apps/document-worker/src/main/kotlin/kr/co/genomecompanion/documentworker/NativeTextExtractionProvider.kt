@@ -33,6 +33,8 @@ data class ParsedCandidate(
     val evidencePage: Int,
     val evidenceBox: TextBox,
     val sourceTextSha256: String,
+    /** The range body printed on the same row (`70-99`, `<200`, `≤5.6`), verbatim, or null. Never interpreted. */
+    val referenceRangeText: String? = null,
 )
 
 
@@ -51,7 +53,9 @@ data class ExtractionOutcome(
  * a row grammar yields `label value unit`, and the document date comes only from a labelled date
  * (검사일/검진일/채취일/Date…, label anywhere in the line, first date after the label). A bare date is
  * never used; two different labelled dates make the whole document ambiguous.
- * Labels stay raw (core normalizes); reference-range text on a row is only excluded from the value.
+ * Labels stay raw (core normalizes). Reference-range text on a row is excluded from the value and
+ * carried verbatim as `referenceRangeText` (range body only, at most 40 characters) so the person's
+ * own export can keep it; the worker never compares a value against it.
  */
 object NativeTextExtractionProvider {
     const val METHOD = "native-text"
@@ -62,12 +66,15 @@ object NativeTextExtractionProvider {
     private const val MAX_LABEL = 80
     private const val MAX_VALUE = 64
     private const val MAX_UNIT = 32
+    private const val MAX_REFERENCE_RANGE = 40
 
     private val valueToken = Regex("^-?(\\d{1,3}(,\\d{3})+|\\d+)(\\.\\d+)?$")
     private val rangeText = Regex(
         "^\\(?\\s*(?:참고치?|기준치?|정상\\s*범위|reference|ref\\.?)?\\s*[:：]?\\s*[<>≤≥]?\\s*" +
             "\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-–~]\\s*\\d[\\d,]*(?:\\.\\d+)?)?\\s*[^\\s()]*\\s*\\)?$",
     )
+    /** The range body inside a matched [rangeText]: optional comparison sign, number, optional separator and second number. */
+    private val rangeBody = Regex("[<>≤≥]?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-–~]\\s*\\d[\\d,]*(?:\\.\\d+)?)?")
     private val separators = Regex("[:：\\t]")
     private val leadingBullets = Regex("^[·•\\-*]+\\s*")
     private val dateLabel = Regex(
@@ -123,6 +130,7 @@ object NativeTextExtractionProvider {
                         evidencePage = line.page,
                         evidenceBox = line.box,
                         sourceTextSha256 = sha256(line.text.trim()),
+                        referenceRangeText = row.referenceRangeText,
                     )
                 }
             }
@@ -141,7 +149,7 @@ object NativeTextExtractionProvider {
     }
 
     internal sealed interface RowParse {
-        data class Measurement(val label: String, val value: String, val unit: String) : RowParse
+        data class Measurement(val label: String, val value: String, val unit: String, val referenceRangeText: String?) : RowParse
         data class Ambiguous(val label: String, val reason: AbstentionReason) : RowParse
     }
 
@@ -163,10 +171,13 @@ object NativeTextExtractionProvider {
             else -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
         }
         val rest = tokens.drop(valueIndex + 2)
-        if (rest.isNotEmpty() && !rangeText.matches(rest.joinToString(" ")) && rest.any { valueToken.matches(it) }) {
+        val restText = rest.joinToString(" ")
+        val restIsRange = rest.isNotEmpty() && rangeText.matches(restText)
+        if (rest.isNotEmpty() && !restIsRange && rest.any { valueToken.matches(it) }) {
             return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
         }
-        return RowParse.Measurement(label, value, unit)
+        val referenceRangeText = if (restIsRange) rangeBody.find(restText)?.value?.trim()?.take(MAX_REFERENCE_RANGE) else null
+        return RowParse.Measurement(label, value, unit, referenceRangeText)
     }
 
     internal sealed interface DateResolution {
