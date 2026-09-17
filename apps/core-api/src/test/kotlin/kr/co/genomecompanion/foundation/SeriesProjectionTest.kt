@@ -18,6 +18,7 @@ class SeriesProjectionTest {
         status: String = "CURRENT",
         confirmedAt: String = "2026-08-01T00:00:00Z",
         recordId: UUID = UUID.randomUUID(),
+        originalLabel: String? = null,
     ) = FoundationRecordRow(
         recordId = recordId,
         recordVersionId = UUID.randomUUID(),
@@ -38,7 +39,17 @@ class SeriesProjectionTest {
         documentSha256 = "a".repeat(64),
         conceptCode = conceptCode,
         referenceRangeText = "120-199",
+        originalLabel = originalLabel,
     )
+
+    @Test
+    fun keepsEachPointsOwnResultSheetLabelInsideOneSeries() {
+        val january = row("총콜레스테롤", "194", "2026-01-15", originalLabel = "T-Chol")
+        val july = row("총콜레스테롤", "190", "2026-07-28", originalLabel = "Cholesterol")
+        val series = SeriesProjection.project(listOf(july, january)).series.single()
+        assertThat(series.concept).isEqualTo("총콜레스테롤")
+        assertThat(series.points.map { it.originalLabel }).containsExactly("T-Chol", "Cholesterol")
+    }
 
     @Test
     fun groupsByConceptAndUnitSortsSeriesByLabelThenUnitAndPointsInTimeOrder() {

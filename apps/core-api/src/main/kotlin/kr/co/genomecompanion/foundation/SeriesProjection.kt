@@ -11,6 +11,8 @@ data class SeriesPoint(
     val value: String,
     val observedOn: String,
     val documentId: UUID,
+    /** The item name this point's result sheet printed; lets the person see that one series was written differently. */
+    val originalLabel: String? = null,
 )
 
 /**
@@ -86,7 +88,7 @@ object SeriesProjection {
             conceptCode = rows.lastOrNull { it.conceptCode != null }?.conceptCode,
             concept = last.label,
             unit = last.unit,
-            points = rows.map { SeriesPoint(it.recordVersionId, it.currentValue, it.observedOn.toString(), it.documentId) },
+            points = rows.map { SeriesPoint(it.recordVersionId, it.currentValue, it.observedOn.toString(), it.documentId, it.originalLabel) },
             derived = derive(rows),
         )
     }

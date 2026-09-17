@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import kr.co.genomecompanion.documentboundary.MedicalConcept
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -94,21 +95,11 @@ object FhirObservationMapper {
         "waist-circumference",
     )
 
-    /** Concepts whose alias merges a loosely worded label ("혈당", "hs-CRP", "Bilirubin", "GFR") onto
-     * a specific LOINC code (fasting glucose, CRP, total bilirubin, eGFR). Emitting that code would
-     * assert the specific reading for a row that never said so, so these get `code.text` only. */
-    private val aliasOverspecifiedConceptCodes = setOf(
-        "fasting-glucose",
-        "crp",
-        "total-bilirubin",
-        "egfr",
-    )
-
     private val synthetic = FhirCoding(TAG_SYSTEM, "synthetic")
     private val personConfirmedFromDocument = FhirCoding(TAG_SYSTEM, "person-confirmed-from-document")
     private val observationTags = FhirMeta(listOf(synthetic, personConfirmedFromDocument))
 
-    fun bundle(records: List<FoundationRecordRow>, loincByConceptCode: Map<String, String>, now: Instant): FhirBundle {
+    fun bundle(records: List<FoundationRecordRow>, concepts: Map<String, MedicalConcept>, now: Instant): FhirBundle {
         val entries = records
             .filter { it.status == "CURRENT" }
             .sortedWith(
@@ -117,7 +108,7 @@ object FhirObservationMapper {
                     .thenBy { it.confirmedAt }
                     .thenBy { it.recordId.toString() },
             )
-            .map { FhirBundleEntry(observation(it, loincByConceptCode)) }
+            .map { FhirBundleEntry(observation(it, concepts)) }
         return FhirBundle(
             timestamp = now.truncatedTo(ChronoUnit.MILLIS),
             meta = FhirMeta(listOf(synthetic)),
@@ -125,11 +116,14 @@ object FhirObservationMapper {
         )
     }
 
-    private fun observation(record: FoundationRecordRow, loincByConceptCode: Map<String, String>): FhirObservation {
+    private fun observation(record: FoundationRecordRow, concepts: Map<String, MedicalConcept>): FhirObservation {
         val conceptCode = record.conceptCode
-        val loinc = conceptCode
-            ?.takeUnless { it in aliasOverspecifiedConceptCodes }
-            ?.let(loincByConceptCode::get)
+        // Data-driven (gc_medical_concept.loinc_export, docs/status/2026-09-17/loinc-audit.md): a code is emitted
+        // only when the audit found it no more specific than the labels, and only for a value in the concept's
+        // canonical unit — the seeded codes are tied to that unit's property (mass/volume, not moles/volume).
+        val loinc = conceptCode?.let(concepts::get)
+            ?.takeIf { it.loincExport && record.unit == it.canonicalUnit }
+            ?.loincCode
         val number = ChangeDeltaCalculator.parse(record.currentValue)
         val category = when {
             conceptCode == null || conceptCode in nonLaboratoryConceptCodes -> null
@@ -139,7 +133,7 @@ object FhirObservationMapper {
             id = record.recordVersionId.toString(),
             meta = observationTags,
             category = category,
-            code = FhirCodeableConcept(loinc?.let { listOf(FhirCoding(LOINC_SYSTEM, it)) }, record.label),
+            code = FhirCodeableConcept(loinc?.let { listOf(FhirCoding(LOINC_SYSTEM, it)) }, record.originalLabel ?: record.label),
             effectiveDateTime = record.observedOn.toString(),
             valueQuantity = number?.let { FhirQuantity(it, record.unit) },
             valueString = if (number == null) record.currentValue else null,

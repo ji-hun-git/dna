@@ -826,6 +826,8 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(listed[0]["extractionMethod"].asText()).isEqualTo("native-text")
         assertThat(listed[0]["sourceTextSha256"].asText()).isEqualTo("1".repeat(64))
         assertThat(listed[1]["label"].asText()).isEqualTo("알 수 없는 항목")
+        assertThat(listed[0]["originalLabel"].asText()).isEqualTo("Cholesterol")
+        assertThat(listed[1]["originalLabel"].asText()).isEqualTo("알 수 없는 항목")
         assertThat(listed[1].hasNonNull("conceptCode")).isFalse()
         assertThat(listed[1].hasNonNull("evidenceBox")).isFalse()
         assertThat(listed[1]["evidencePage"].asInt()).isEqualTo(2)
@@ -848,6 +850,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).andExpect(status().isCreated)
             .andExpect(jsonPath("$.conceptCode").value("total-cholesterol"))
             .andExpect(jsonPath("$.label").value("총콜레스테롤"))
+            .andExpect(jsonPath("$.originalLabel").value("Cholesterol"))
         assertThat(
             jdbc.queryForObject("SELECT concept_code FROM gc_health_record_version WHERE status = 'CURRENT'", String::class.java),
         ).isEqualTo("total-cholesterol")
@@ -969,6 +972,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(events).hasSize(1)
         val event = events[0]
         assertThat(event["concept"].asText()).isEqualTo("총콜레스테롤")
+        assertThat(event["originalLabel"].asText()).isEqualTo("Cholesterol")
         assertThat(event["value"].asText()).isEqualTo("188")
         assertThat(event["unit"].asText()).isEqualTo("mg/dL")
         assertThat(event["observedOn"].asText()).isEqualTo("2026-07-28")
@@ -1195,6 +1199,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(series.map { it["concept"].asText() }).containsExactly("당화혈색소", "비타민 D", "총콜레스테롤")
         assertThat(series.map { it["unit"].asText() }).containsExactly("%", "ng/mL", "mg/dL")
         assertThat(series.map { it["conceptCode"].asText() }).containsExactly("hba1c", "vitamin-d", "total-cholesterol")
+        assertThat(series.flatMap { it["points"] }.map { it["originalLabel"].asText() }).containsOnly("Cholesterol", "HbA1c", "Vitamin D")
 
         val cholesterol = series[2]
         // CURRENT only: the superseded 188 is gone, the corrected 190 is the point.
@@ -1203,7 +1208,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(cholesterol["points"][0]["documentId"].asText()).isEqualTo(january[0]["documentId"].asText())
         assertThat(cholesterol["points"][1]["documentId"].asText()).isEqualTo(july[0]["documentId"].asText())
         assertThat(cholesterol["points"][0].fieldNames().asSequence().toList())
-            .containsExactlyInAnyOrder("eventId", "value", "observedOn", "documentId")
+            .containsExactlyInAnyOrder("eventId", "value", "observedOn", "documentId", "originalLabel")
         // 194 days apart: -4, -4/194 = -2.1 %, -4/194×30 = -0.6.
         assertThat(cholesterol["derived"]["lastDifference"]["absolute"].asText()).isEqualTo("-4")
         assertThat(cholesterol["derived"]["lastDifference"]["percent"].asText()).isEqualTo("-2.1")
@@ -1421,7 +1426,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
         val empty = read(get("/api/foundation/health-events/export"), alice)
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v3"))
             .andExpect(jsonPath("$.events.length()").value(0))
             .andExpect(jsonPath("$.documents.length()").value(0))
             .andReturn().response
@@ -1437,7 +1442,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(header().string("Cache-Control", "no-store"))
             .andExpect(header().string("X-Content-Type-Options", "nosniff"))
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v3"))
             .andExpect(jsonPath("$.subjectKind").value("synthetic"))
             .andExpect(jsonPath("$.exportedAt").isNotEmpty)
             .andExpect(jsonPath("$.events.length()").value(3))
@@ -1660,6 +1665,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 recordId,
             ),
         ).containsExactly("Cholesterol", "Cholesterol")
+        val fhir = responseJson(
+            read(get("/api/foundation/health-events/export/fhir"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )["entry"].map { it["resource"] }.associateBy { it["code"]["text"].asText() }
+        assertThat(fhir.keys).containsExactlyInAnyOrder("Cholesterol", "혈당", "UA")
+        assertThat(fhir.getValue("혈당")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("UA")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("UA").has("category")).isFalse()
         // Audit rows never carry the label.
         assertThat(
             jdbc.queryForList(
@@ -1683,7 +1695,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
-    fun exportV2CarriesTheReferenceRangeTextTheCorrectionHistoryAndEveryCompletedDocument() {
+    fun exportV3CarriesTheReferenceRangeTextTheCorrectionHistoryAndEveryCompletedDocument() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
 
@@ -1748,11 +1760,12 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val export = responseJson(
             read(get("/api/foundation/health-events/export"), alice)
                 .andExpect(status().isOk)
-                .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+                .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v3"))
                 .andExpect(jsonPath("$.events.length()").value(2))
                 .andExpect(jsonPath("$.documents.length()").value(3))
                 .andReturn().response.contentAsByteArray,
         )
+        assertThat(export["events"].map { it["originalLabel"].asText() }).contains("Cholesterol")
         val event = export["events"].single { it["source"]["documentId"].asText() == rangedDocument.toString() }
         assertThat(event["value"].asText()).isEqualTo("190")
         assertThat(event["originalValue"].asText()).isEqualTo("188")
@@ -1825,13 +1838,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(bundle["meta"]["tag"].single()["code"].asText()).isEqualTo("synthetic")
 
         val observations = bundle["entry"].map { it["resource"] }.associateBy { it["code"]["text"].asText() }
-        assertThat(observations.keys).containsExactlyInAnyOrder("총콜레스테롤", "당화혈색소", "비타민 D")
+        assertThat(observations.keys).containsExactlyInAnyOrder("Cholesterol", "HbA1c", "Vitamin D")
         val eventIds = responseJson(
             read(get("/api/foundation/health-events"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
         ).map { it["eventId"].asText() }
         assertThat(observations.values.map { it["id"].asText() }).containsExactlyInAnyOrderElementsOf(eventIds)
 
-        val cholesterol = observations.getValue("총콜레스테롤")
+        val cholesterol = observations.getValue("Cholesterol")
         assertThat(cholesterol["resourceType"].asText()).isEqualTo("Observation")
         assertThat(cholesterol["status"].asText()).isEqualTo("final")
         assertThat(cholesterol["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
@@ -1845,11 +1858,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(cholesterol["referenceRange"].single()["text"].asText()).isEqualTo("120-199")
         assertThat(cholesterol["note"].single()["text"].asText()).isEqualTo("본인이 값을 수정함")
 
-        val hba1c = observations.getValue("당화혈색소")
+        val hba1c = observations.getValue("HbA1c")
         assertThat(hba1c["code"]["coding"].single()["code"].asText()).isEqualTo("4548-4")
         assertThat(hba1c["valueQuantity"]["value"].decimalValue()).isEqualByComparingTo("5.2")
         assertThat(hba1c.has("referenceRange")).isFalse()
         assertThat(hba1c.has("note")).isFalse()
+        // vitamin-d's code names D3 specifically: the concept data keeps it out of the export.
+        assertThat(observations.getValue("Vitamin D")["code"].has("coding")).isFalse()
         assertThat(response.contentAsString).doesNotContain("interpretation", "subject", "performer", "\"low\"", "\"high\"", "valueString")
         // Every valueQuantity is a plain JSON number, never exponent notation.
         assertThat(response.contentAsString).doesNotContainPattern("\"value\":[0-9.]*[eE][+-]?[0-9]")
@@ -1862,7 +1877,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         // The JSON export is untouched: same schema, same filename shape, its own audit resource type.
         val jsonExport = read(get("/api/foundation/health-events/export"), alice)
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v3"))
             .andReturn().response
         assertThat(jsonExport.contentType).startsWith("application/json")
         assertThat(jsonExport.getHeader(HttpHeaders.CONTENT_DISPOSITION))

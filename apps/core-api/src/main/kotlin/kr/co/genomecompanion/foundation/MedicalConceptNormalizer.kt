@@ -75,7 +75,14 @@ class MedicalConceptNormalizer(private val source: MedicalConceptSource) {
     private val index: Map<String, MedicalConcept> by lazy {
         buildMap {
             source.concepts().forEach { concept ->
-                (listOf(concept.displayKo) + concept.aliases).forEach { alias -> put(MedicalConceptCatalogue.aliasKey(alias), concept) }
+                (listOf(concept.displayKo) + concept.aliases).forEach { alias ->
+                    val key = MedicalConceptCatalogue.aliasKey(alias)
+                    val existing = get(key)
+                    check(existing == null || existing.conceptCode == concept.conceptCode) {
+                        "alias key collides across concepts: key='$key' concepts='${existing?.conceptCode}','${concept.conceptCode}'"
+                    }
+                    put(key, concept)
+                }
             }
         }
     }

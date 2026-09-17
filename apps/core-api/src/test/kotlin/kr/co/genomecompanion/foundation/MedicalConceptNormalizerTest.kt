@@ -1,5 +1,6 @@
 package kr.co.genomecompanion.foundation
 
+import kr.co.genomecompanion.documentboundary.MedicalConcept
 import kr.co.genomecompanion.documentboundary.MedicalConceptCatalogue
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -86,6 +87,24 @@ class MedicalConceptNormalizerTest {
         assertThat(normalizer.normalize(candidate(label = "Bilirubin", value = "0.8")).conceptCode).isEqualTo("bilirubin")
         assertThat(normalizer.normalize(candidate(label = "GFR", value = "90", unit = "mL/min/1.73m2")).conceptCode).isEqualTo("gfr")
         assertThat(normalizer.normalize(candidate(label = "공복혈당", value = "95")).conceptCode).isEqualTo("fasting-glucose")
+    }
+
+    @Test
+    fun failsLoudlyAtIndexBuildWhenTwoConceptsCollideOnTheSameAliasKey() {
+        val colliding = MedicalConceptNormalizer(
+            MedicalConceptSource {
+                listOf(
+                    MedicalConcept("concept-a", "표시 A", null, "mg/dL", listOf("Shared")),
+                    MedicalConcept("concept-b", "표시 B", null, "mg/dL", listOf("Shared")),
+                )
+            },
+        )
+
+        assertThatThrownBy { colliding.normalize(candidate(label = "Shared")) }
+            .isInstanceOf(IllegalStateException::class.java)
+            .hasMessageContaining("concept-a")
+            .hasMessageContaining("concept-b")
+            .hasMessageContaining(MedicalConceptCatalogue.aliasKey("Shared"))
     }
 
     private fun candidate(

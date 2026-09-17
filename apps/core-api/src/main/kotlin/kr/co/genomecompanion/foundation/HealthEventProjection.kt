@@ -17,6 +17,7 @@ data class HealthEventSource(
  * versions: no reference range, no direction, no judgement; `conceptCode` is
  * a dictionary key, not a meaning. `originalValue`/`correctionReason`/`originalObservedOn`
  * are the person's own correction history (the parser's value and date), nothing derived.
+ * `originalLabel` is document text, not a meaning.
  */
 data class HealthEvent(
     val eventId: UUID,
@@ -35,6 +36,8 @@ data class HealthEvent(
     /** The parser's exam date when the person corrected it on review (V8); null when unchanged. */
     val originalObservedOn: String?,
     val source: HealthEventSource,
+    /** The item name as the result sheet printed it (V11); null — omitted — for rows stored before it was kept. */
+    val originalLabel: String? = null,
 )
 
 object HealthEventProjection {
@@ -69,6 +72,7 @@ object HealthEventProjection {
                         sourceTextSha256 = record.sourceTextSha256,
                         previewAvailable = previewAvailable,
                     ),
+                    originalLabel = record.originalLabel,
                 )
             }
             .sortedWith(compareBy<HealthEvent> { it.observedOn }.thenBy { it.concept }.thenBy { it.confirmedAt })
