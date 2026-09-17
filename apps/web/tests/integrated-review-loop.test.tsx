@@ -4,11 +4,12 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { IntegratedHealthExperience } from "@/components/integrated/IntegratedHealthExperience";
-import type { FoundationCandidate, FoundationRecord } from "@/lib/foundation/client";
+import type { ChangeSummary, FoundationCandidate, FoundationRecord } from "@/lib/foundation/client";
 import { syntheticCandidates, syntheticDocumentId } from "./fixtures/foundation";
 
 let candidates: FoundationCandidate[] = [];
 let records: FoundationRecord[] = [];
+let changes: ChangeSummary = { items: [], newConcepts: [], unchangedCount: 0 };
 
 const server = setupServer(
   http.get("/api/foundation/session", () => HttpResponse.json({
@@ -23,6 +24,7 @@ const server = setupServer(
     status: "ACTIVE",
   })),
   http.get("/api/foundation/records", () => HttpResponse.json(records)),
+  http.get("/api/foundation/changes", () => HttpResponse.json(changes)),
   http.get("/api/foundation/documents/active", () => HttpResponse.json({
     document: {
       documentId: syntheticDocumentId,
@@ -76,6 +78,7 @@ afterAll(() => server.close());
 beforeEach(() => {
   candidates = syntheticCandidates.map((candidate) => ({ ...candidate }));
   records = [];
+  changes = { items: [], newConcepts: [], unchangedCount: 0 };
   document.cookie = "GC_CSRF=synthetic-review-csrf-value";
 });
 
@@ -436,4 +439,35 @@ it("reaches the zero-candidate screen when the active document is already comple
   expect(await screen.findByText("이 결과지에서 읽을 수 있는 항목이 없었어요")).toBeVisible();
   expect(screen.getByText("글자 정보를 읽을 수 없음")).toBeVisible();
   expect(screen.queryByRole("heading", { name: "서버가 알려준 상태를 그대로 보여드려요" })).toBeNull();
+});
+
+it("shows 최근 변화 on the home screen only when the server reports items", async () => {
+  server.use(http.get("/api/foundation/documents/active", () => HttpResponse.json({})));
+  render(<IntegratedHealthExperience />);
+  expect(await screen.findByRole("heading", { name: "아직 저장된 기록이 없어요" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "최근 변화" })).toBeNull();
+  cleanup();
+
+  changes = {
+    latestDocument: {
+      documentId: syntheticDocumentId,
+      observedOn: "2026-07-28",
+      completedAt: "2026-07-28T09:20:00Z",
+      eventCount: 1,
+    },
+    items: [{
+      conceptCode: "total-cholesterol",
+      concept: "총콜레스테롤",
+      unit: "mg/dL",
+      latest: { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d50", value: "188", observedOn: "2026-07-28" },
+      previous: { eventId: "9c3e4f50-6172-4c8d-ae9f-1a2b3c4d5e60", value: "194", observedOn: "2026-01-15" },
+    }],
+    newConcepts: [],
+    unchangedCount: 0,
+  };
+  render(<IntegratedHealthExperience />);
+  expect(await screen.findByRole("heading", { name: "최근 변화" })).toBeVisible();
+  expect(screen.getByTestId("change-item")).toHaveTextContent(
+    "총콜레스테롤 · 이번 2026. 7. 28. 188 mg/dL · 이전 2026. 1. 15. 194 mg/dL",
+  );
 });

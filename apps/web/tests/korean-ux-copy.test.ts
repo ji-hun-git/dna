@@ -11,6 +11,7 @@ const userFacingFiles = [
   "components/integrated/IntegratedRecords.tsx",
   "components/integrated/IntegratedShell.tsx",
   "components/integrated/RecordComparison.tsx",
+  "components/integrated/RecentChanges.tsx",
   "components/integrated/PrepareConceptNotice.tsx",
   "components/integrated/VisitPreparation.tsx",
   "components/integrated/SourcePreview.tsx",
@@ -123,6 +124,14 @@ describe("Korean UX language boundary", () => {
     expect(source("lib/format/status-labels.ts")).toContain("검사일이 둘 이상이라 확실하지 않음");
     expect(source("components/integrated/IntegratedHealthExperience.tsx")).toContain("describeAbstention(item)");
     expect(source("components/integrated/IntegratedHealthExperience.tsx")).not.toContain("labelAbstentionReason(item.reason)");
+  });
+
+  it("describes the recent changes as two values without a judgement", () => {
+    const recent = source("components/integrated/RecentChanges.tsx");
+    expect(recent).toContain("최근 변화");
+    expect(recent).toContain("새 결과지에서 확인한 값과 같은 항목의 이전 값이에요. 변화의 의미는 판단하지 않아요.");
+    expect(recent).not.toContain("→");
+    expect(source("components/integrated/IntegratedHealthExperience.tsx")).toContain("<RecentChanges changes={changes} />");
   });
 
   it("labels every server enum in Korean instead of rendering it raw", () => {

@@ -158,6 +158,36 @@ const healthEventSchema = z.object({
   source: healthEventSourceSchema,
 }).strict();
 
+const changeValueSchema = z.object({
+  eventId: uuidSchema,
+  value: z.string().min(1).max(64),
+  observedOn: z.string().date(),
+}).strict();
+
+// This time's value beside the previous value of the same item. `.strict()` is
+// the boundary: a server that starts sending a difference, a direction or a
+// range fails validation here. `previous` is omitted when the server has none.
+const changeItemSchema = z.object({
+  conceptCode: conceptCodeSchema.nullable().optional(),
+  concept: z.string().min(1).max(80),
+  unit: z.string().min(1).max(32),
+  latest: changeValueSchema,
+  previous: changeValueSchema.nullable().optional(),
+}).strict();
+
+const changeSummarySchema = z.object({
+  // Omitted while the person has no completed document with current records.
+  latestDocument: z.object({
+    documentId: uuidSchema,
+    observedOn: z.string().date(),
+    completedAt: z.string().datetime({ offset: true }),
+    eventCount: z.number().int().nonnegative(),
+  }).strict().nullable().optional(),
+  items: z.array(changeItemSchema).max(500),
+  newConcepts: z.array(z.string().min(1).max(80)).max(500),
+  unchangedCount: z.number().int().nonnegative(),
+}).strict();
+
 const deletionSchema = z.object({
   deletionId: uuidSchema,
   status: z.literal("COMPLETED"),
@@ -176,6 +206,8 @@ export type FoundationAbstention = z.infer<typeof extractionAbstentionSchema>;
 export type FoundationEvidenceBox = z.infer<typeof evidenceBoxSchema>;
 export type HealthEvent = z.infer<typeof healthEventSchema>;
 export type FoundationDeletion = z.infer<typeof deletionSchema>;
+export type ChangeSummary = z.infer<typeof changeSummarySchema>;
+export type ChangeItem = z.infer<typeof changeItemSchema>;
 
 export type FoundationErrorCode =
   | "authentication_required"
@@ -417,6 +449,7 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     ),
     getRecords: () => request("/api/foundation/records", z.array(recordSchema), { method: "GET" }),
     getHealthEvents: () => request("/api/foundation/health-events", z.array(healthEventSchema), { method: "GET" }),
+    getChanges: () => request("/api/foundation/changes", changeSummarySchema, { method: "GET" }),
     getRecord: async (recordId: string) => request(
       `/api/foundation/records/${requireUuid(recordId)}`,
       recordSchema,

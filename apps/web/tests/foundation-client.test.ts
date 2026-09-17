@@ -256,5 +256,32 @@ describe("foundation same-origin client", () => {
     const bad = vi.fn(async () => jsonResponse({ ...(await (await fetcher()).json()), abstentions: [{ label: "x", reason: "low_confidence" }] }));
     await expect(createFoundationClient({ fetcher: bad, readCsrfToken: () => "csrf-value" }).getDocument("e64ddaae-a326-4f23-88a9-05ac59a48625")).rejects.toThrow();
   });
+
+  it("accepts a change summary whose null members are omitted and refuses a judgement field", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ items: [], newConcepts: [], unchangedCount: 0 }));
+    const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });
+
+    await expect(client.getChanges()).resolves.toEqual({ items: [], newConcepts: [], unchangedCount: 0 });
+    expect(fetcher).toHaveBeenCalledWith("/api/foundation/changes", expect.objectContaining({
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    }));
+
+    const judging = createFoundationClient({
+      fetcher: vi.fn(async () => jsonResponse({
+        items: [{
+          concept: "총콜레스테롤",
+          unit: "mg/dL",
+          latest: { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d50", value: "188", observedOn: "2026-07-28" },
+          direction: "down",
+        }],
+        newConcepts: [],
+        unchangedCount: 0,
+      })),
+      readCsrfToken: () => "csrf-value",
+    });
+    await expect(judging.getChanges()).rejects.toMatchObject({ code: "invalid_server_response" });
+  });
 });
 
