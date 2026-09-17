@@ -162,6 +162,24 @@ class SeriesProjectionTest {
     }
 
     @Test
+    fun aNonTransitiveChainOfMatchesStillFormsOneSeriesRegardlessOfInputOrder() {
+        // A and B match by label (both uncoded); B and C match by concept code; A and C match
+        // neither way (A is uncoded, C's code makes conceptsMatch compare labels, and "Chol" != "TC").
+        // conceptsMatch is therefore not transitive, so the grouping must be connected components,
+        // not "does it match the first row of an existing group".
+        val a = row("Chol", "1", "2026-01-01", conceptCode = null)
+        val b = row("Chol", "2", "2026-02-01", conceptCode = "total-cholesterol")
+        val c = row("TC", "3", "2026-03-01", conceptCode = "total-cholesterol")
+
+        val forward = SeriesProjection.project(listOf(a, b, c))
+        val shuffled = SeriesProjection.project(listOf(c, a, b))
+
+        assertThat(forward.series).hasSize(1)
+        assertThat(forward.series.single().points.map { it.value }).containsExactly("1", "2", "3")
+        assertThat(forward).isEqualTo(shuffled)
+    }
+
+    @Test
     fun theResultDoesNotDependOnInputOrder() {
         val rows = listOf(
             row("총콜레스테롤", "194", "2026-01-15"),
