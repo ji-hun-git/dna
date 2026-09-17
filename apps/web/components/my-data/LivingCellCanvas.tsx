@@ -27,6 +27,8 @@ const PADDING = 24;
 export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSelect, width = 720 }: LivingCellCanvasProps) {
   const [hoveredId, setHoveredId] = useState<string>();
   const [focusedId, setFocusedId] = useState<string>();
+  // Cells whose one arrival animation already finished in this mount; they never get the class again.
+  const [settledIds, setSettledIds] = useState<ReadonlySet<string>>(() => new Set());
   const reducedMotion = usePrefersReducedMotion();
   const { cells, scale, height, adjusted } = useMemo(
     () => layoutCells(events, { width, cellSize: CELL, gap: GAP, padding: PADDING, selectedId, matchedIds, newIds }),
@@ -60,7 +62,7 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
         </g>
         {cells.map((cell) => {
           const dim = dimmed && cell.state === "idle";
-          const arrived = cell.state === "new" && !reducedMotion;
+          const arrived = cell.state === "new" && !reducedMotion && !settledIds.has(cell.eventId);
           const label = cell.uncertain ? `${cell.ariaLabel} (출처 미리보기 없음)` : cell.ariaLabel;
           return (
             <g
@@ -87,6 +89,7 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
               onMouseLeave={() => setHoveredId(undefined)}
               onFocus={() => setFocusedId(cell.eventId)}
               onBlur={() => setFocusedId(undefined)}
+              onAnimationEnd={arrived ? () => setSettledIds((current) => new Set(current).add(cell.eventId)) : undefined}
             >
               <rect data-cell="" x={cell.x} y={cell.y} width={cell.size} height={cell.size} rx="1.5" />
               {cell.state === "query-related" ? (

@@ -99,6 +99,7 @@ export function renderMedgemmaExperimentReport(input: ReportInput) {
     metricRow("Evidence localization (IoU ≥ 0.8)", reports, (entry) => entry.pipeline.evidenceMeasurable ? percent(entry.report.metrics.evidenceLocalizationRate) : "측정 불가 (페이지 전체 박스)"),
     metricRow("Required abstention recall", reports, (entry) => percent(entry.report.metrics.requiredAbstentionRecall)),
     metricRow("Hallucinated measurements", reports, (entry) => `${entry.report.metrics.hallucinatedMeasurementCount} (${percent(entry.report.metrics.hallucinationRate)})`),
+    metricRow("Reference-range text carried verbatim", reports, (entry) => percent(entry.report.metrics.referenceRangeAccuracy)),
     metricRow("Gate", reports, (entry) => entry.pipeline.gated ? (entry.report.gate.passed ? "PASS" : `FAIL: ${entry.report.gate.failures.join(", ")}`) : "게이트 아님 (evidence only)"),
     "",
     "Delta rows are read left to right; the model column is descriptive. Evidence localization cannot be measured for the model because it returns no box (every candidate cites the whole page).",
