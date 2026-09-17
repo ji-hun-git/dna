@@ -231,3 +231,22 @@ it("disables the export and says so when there is nothing to export", async () =
   expect(screen.getByText("내보낼 기록이 없어요")).toBeVisible();
   expect(screen.queryByRole("link", { name: "내 기록 내보내기(JSON)" })).toBeNull();
 });
+
+it("offers a second export link in FHIR form with its one-line explanation", async () => {
+  events = [syntheticHealthEvent()];
+
+  render(<IntegratedDataControl />);
+
+  const link = await screen.findByRole("link", { name: "내 기록 내보내기(FHIR)" });
+  expect(link).toHaveAttribute("href", "/api/foundation/health-events/export/fhir");
+  expect(link).toHaveAttribute("download");
+  expect(screen.getByText("다른 건강기록 도구가 읽을 수 있는 형식이에요.")).toBeVisible();
+  expect(screen.getByRole("link", { name: "내 기록 내보내기(JSON)" })).toHaveAttribute("href", "/api/foundation/health-events/export");
+});
+
+it("disables the FHIR export too when there is nothing to export", async () => {
+  render(<IntegratedDataControl />);
+
+  expect(await screen.findByRole("button", { name: "내 기록 내보내기(FHIR)" })).toBeDisabled();
+  expect(screen.queryByRole("link", { name: "내 기록 내보내기(FHIR)" })).toBeNull();
+});

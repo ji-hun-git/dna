@@ -234,7 +234,11 @@ export function IntegratedDataControl() {
                   {events.length > 0
                     ? <a className="gc-button gc-button--weak" href="/api/foundation/health-events/export" download>내 기록 내보내기(JSON)</a>
                     : <button type="button" disabled>내 기록 내보내기(JSON)</button>}
+                  {events.length > 0
+                    ? <a className="gc-button gc-button--weak" href="/api/foundation/health-events/export/fhir" download>내 기록 내보내기(FHIR)</a>
+                    : <button type="button" disabled>내 기록 내보내기(FHIR)</button>}
                 </div>
+                <p>다른 건강기록 도구가 읽을 수 있는 형식이에요.</p>
                 {events.length === 0 && <p className="gc-integrated-empty">내보낼 기록이 없어요</p>}
               </section>
 

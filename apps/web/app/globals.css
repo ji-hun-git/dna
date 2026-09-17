@@ -92,6 +92,7 @@ html {
 .gc-integrated-actions a {
   display: inline-flex;
   min-height: 46px;
+  min-width: 0;
   align-items: center;
   justify-content: center;
   padding: 0 18px;
@@ -102,6 +103,7 @@ html {
   font: inherit;
   font-weight: 700;
   text-decoration: none;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 

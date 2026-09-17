@@ -213,6 +213,33 @@ const changeSummarySchema = z.object({
   unchangedCount: z.number().int().nonnegative(),
 }).strict();
 
+// One confirmed value in a series. No recordId, no range, no judgement: `.strict()` is the boundary.
+const seriesPointSchema = z.object({
+  eventId: uuidSchema,
+  value: z.string().min(1).max(64),
+  observedOn: z.string().date(),
+  documentId: uuidSchema,
+}).strict();
+
+// Three numbers from subtraction and division, in time order. The server omits a key it cannot
+// compute (Jackson non_null), so every key is optional and none is nullable; a slope, direction
+// or forecast key fails validation here.
+const seriesDerivedSchema = z.object({
+  lastDifference: changeDeltaSchema.optional(),
+  per30Days: z.string().regex(/^[+-]?\d+\.\d+$/).optional(),
+  meanOfLast3: z.string().regex(/^-?\d+\.\d+$/).optional(),
+}).strict();
+
+const measurementSeriesSchema = z.object({
+  conceptCode: conceptCodeSchema.optional(),
+  concept: z.string().min(1).max(80),
+  unit: z.string().min(1).max(32),
+  points: z.array(seriesPointSchema).min(1).max(500),
+  derived: seriesDerivedSchema,
+}).strict();
+
+const seriesResponseSchema = z.object({ series: z.array(measurementSeriesSchema).max(500) }).strict();
+
 const deletionSchema = z.object({
   deletionId: uuidSchema,
   status: z.literal("COMPLETED"),
@@ -234,6 +261,8 @@ export type HealthEvent = z.infer<typeof healthEventSchema>;
 export type FoundationDeletion = z.infer<typeof deletionSchema>;
 export type ChangeSummary = z.infer<typeof changeSummarySchema>;
 export type ChangeItem = z.infer<typeof changeItemSchema>;
+export type SeriesResponse = z.infer<typeof seriesResponseSchema>;
+export type MeasurementSeries = z.infer<typeof measurementSeriesSchema>;
 
 export type FoundationErrorCode =
   | "authentication_required"
@@ -489,6 +518,7 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     getRecords: () => request("/api/foundation/records", z.array(recordSchema), { method: "GET" }),
     getHealthEvents: () => request("/api/foundation/health-events", z.array(healthEventSchema), { method: "GET" }),
     getChanges: () => request("/api/foundation/changes", changeSummarySchema, { method: "GET" }),
+    getSeries: () => request("/api/foundation/series", seriesResponseSchema, { method: "GET" }),
     getRecord: async (recordId: string) => request(
       `/api/foundation/records/${requireUuid(recordId)}`,
       recordSchema,

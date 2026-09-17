@@ -61,6 +61,12 @@ const forbiddenUserTerms = [
   "하락",
   "증가",
   "감소",
+  // Wave 4: no speed, no good/bad, no trend — the history screen shows values and arithmetic only.
+  "빨라",
+  "느려",
+  "좋아",
+  "나빠",
+  "추세",
 ] as const;
 
 // The server enums must never reach the screen unlabelled. Each entry is the
@@ -208,6 +214,9 @@ describe("Korean UX language boundary", () => {
     expect(control).toContain("내 기록 내보내기(JSON)");
     expect(control).toContain("브라우저가 파일을 저장해요. 서버에 사본이 남지 않아요.");
     expect(control).toContain("내보낼 기록이 없어요");
+    expect(control).toContain('href="/api/foundation/health-events/export/fhir"');
+    expect(control).toContain("내 기록 내보내기(FHIR)");
+    expect(control).toContain("다른 건강기록 도구가 읽을 수 있는 형식이에요.");
     expect(control).not.toContain("/api/export");
   });
 });
