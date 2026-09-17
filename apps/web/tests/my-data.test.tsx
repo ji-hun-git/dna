@@ -78,3 +78,12 @@ it("asks for sign-in instead of retrying when the session has expired", async ()
   expect(await screen.findByRole("link", { name: "홈에서 다시 로그인" })).toHaveAttribute("href", "/");
   expect(screen.queryByRole("button", { name: "다시 불러오기" })).toBeNull();
 });
+
+it("links to the measurement history and opens the evidence drawer named in the hash", async () => {
+  window.location.hash = "#event-8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d53";
+  render(<MyData />);
+  await screen.findByRole("figure", { name: "나의 데이터: 한 칸이 하나의 기록" });
+  expect(screen.getByRole("link", { name: "측정 이력" })).toHaveAttribute("href", "/my-data/history");
+  expect(await screen.findByRole("region", { name: "당화혈색소 근거" })).toBeVisible();
+  window.location.hash = "";
+});

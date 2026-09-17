@@ -28,6 +28,8 @@ const userFacingFiles = [
   "components/my-data/EvidenceDrawer.tsx",
   "components/my-data/MyData.tsx",
   "components/my-data/HealthEventTable.tsx",
+  "components/my-data/history/MeasurementHistory.tsx",
+  "components/my-data/history/HistoryGraph.tsx",
 ] as const;
 
 const forbiddenUserTerms = [
@@ -218,5 +220,19 @@ describe("Korean UX language boundary", () => {
     expect(control).toContain("내 기록 내보내기(FHIR)");
     expect(control).toContain("다른 건강기록 도구가 읽을 수 있는 형식이에요.");
     expect(control).not.toContain("/api/export");
+  });
+
+  it("states on the history screen that the line is not data and that nothing is judged", () => {
+    const history = source("components/my-data/history/MeasurementHistory.tsx");
+    const graph = source("components/my-data/history/HistoryGraph.tsx");
+    expect(graph).toContain("점은 확인한 값이고, 점 사이의 선은 값이 아니에요. 선의 모양이 건강 상태를 뜻하지 않아요.");
+    expect(history).toContain("뺄셈과 나눗셈으로만 계산했어요. 의미는 판단하지 않아요.");
+    for (const term of ["마지막 두 값의 차이", "30일로 환산한 차이", "최근 3회 평균"]) expect(history).toContain(term);
+    for (const file of [history, graph]) {
+      expect(file).not.toMatch(/[↑↓▲▼→]/);
+      expect(file).not.toMatch(/referenceRange|참고치|기준치/);
+    }
+    // Colour identifies a series by its position in the list, never by a value.
+    expect(graph).not.toMatch(/value\s*[<>]=?|delta|percent/);
   });
 });

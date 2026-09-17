@@ -1,0 +1,78 @@
+/* Visual-language pilot, this screen only. Tokens are scoped to .page so nothing leaks into the app. */
+.page {
+  --hist-bg: #f4f4f1;                 /* wave4-mockup-decision.md: ground */
+  --hist-grid-dot: #cfcfca;           /* wave4-mockup-decision.md: dot grid */
+  --hist-ink: var(--gc-color-text-primary);
+  --hist-ink-soft: var(--gc-color-text-secondary);
+  --hist-card: var(--gc-color-surface-raised);
+  --hist-line: var(--gc-color-line-strong);
+  /* Series identity colours only (never a value): the mockup's time gradient stops, used in
+     list order as a fixed per-series palette because the geometry/rendering in this pilot draws
+     one solid stroke colour per series, not a live per-x gradient. See task-7-report.md. */
+  --hist-series-1: #1f5bff;
+  --hist-series-2: #35c6b4;
+  --hist-series-3: #6fe06a;
+  --hist-series-4: #c8f02a;
+  --hist-fill-accent: #c8f02a;        /* lime: fills only, never text */
+  --hist-ribbon-band: 26px;           /* fixed thickness: carries no meaning */
+  --hist-ribbon-centre: 1px;
+  --hist-font-title: Georgia, "Noto Serif KR", serif;
+  --hist-font-number: var(--gc-type-mono);
+
+  min-height: 100vh;
+  color: var(--hist-ink);
+  background-color: var(--hist-bg);
+  background-image: radial-gradient(var(--hist-grid-dot) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.shell { max-width: 1120px; margin: 0 auto; padding: var(--gc-space-6) var(--gc-space-4) var(--gc-space-10); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gc-space-6); min-width: 0; }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gc-space-2); min-width: 0; overflow-wrap: anywhere; }
+.hero h1 { margin: 0; font: 400 32px/1.2 var(--hist-font-title); }
+.hero p { margin: 0; color: var(--hist-ink-soft); }
+.hero a { color: inherit; min-height: 44px; display: inline-flex; align-items: center; }
+
+.series { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gc-space-3); min-width: 0; padding: var(--gc-space-4); border: 1px solid var(--hist-line); border-radius: 8px; background: var(--hist-card); overflow-wrap: anywhere; }
+.seriesHeader { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gc-space-2); min-width: 0; }
+.seriesHeader h2 { margin: 0; font: 400 22px/1.3 var(--hist-font-title); }
+.seriesHeader h2:focus-visible { outline: 3px solid var(--gc-color-focus-ring); outline-offset: 2px; }
+.unit { color: var(--hist-ink-soft); font-family: var(--hist-font-number); }
+
+.graphWrap { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; color: var(--hist-series-1); }
+.graphWrap[data-series-colour="2"] { color: var(--hist-series-2); }
+.graphWrap[data-series-colour="3"] { color: var(--hist-series-3); }
+.graphWrap[data-series-colour="4"] { color: var(--hist-series-4); }
+.graph { display: block; max-width: 100%; height: auto; }
+.ribbonBand { fill: none; stroke: currentColor; stroke-opacity: 0.28; stroke-width: var(--hist-ribbon-band); stroke-linecap: round; stroke-linejoin: round; }
+.ribbonCentre { fill: none; stroke: currentColor; stroke-width: var(--hist-ribbon-centre); stroke-dasharray: 7 5; stroke-linecap: round; stroke-linejoin: round; }
+.ticks line { stroke: var(--hist-line); stroke-width: 1; }
+.ticks text { fill: var(--hist-ink-soft); font: 12px var(--hist-font-number); }
+.leader { stroke: var(--hist-ink); stroke-width: 1; stroke-dasharray: 2 2; }
+.anchor { cursor: pointer; }
+.anchor rect[data-hit] { fill: transparent; }
+.anchor rect[data-anchor] { fill: var(--hist-card); stroke: currentColor; stroke-width: 2; }
+.anchor[aria-pressed="true"] rect[data-anchor] { fill: var(--hist-fill-accent); stroke: var(--hist-ink); }
+.anchor:focus-visible { outline: none; }
+.anchor:focus-visible rect[data-anchor] { stroke: var(--gc-color-focus-ring); stroke-width: 3; }
+
+.card { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gc-space-2) var(--gc-space-4); min-width: 0; margin-top: var(--gc-space-1); padding: var(--gc-space-3); border: 1px solid var(--hist-ink); border-radius: 7px; background: var(--hist-card); color: var(--hist-ink); overflow-wrap: anywhere; }
+.cardNumber { font: 700 22px/1.2 var(--hist-font-number); }
+.card a, .table a { color: var(--hist-ink); min-height: 44px; display: inline-flex; align-items: center; }
+.note { margin: var(--gc-space-2) 0 0; color: var(--hist-ink-soft); font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
+
+.derived { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--gc-space-3); margin: 0; min-width: 0; }
+.derived div { min-width: 0; }
+.derived dt { color: var(--hist-ink-soft); font-size: 13px; }
+.derived dd { margin: 0; font: 700 20px/1.3 var(--hist-font-number); color: var(--hist-ink); overflow-wrap: anywhere; }
+
+/* Four columns may not fit a 320px phone under Linux fonts; the wrapper scrolls so the document never does. */
+.tableWrap { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.table th, .table td { text-align: left; padding: var(--gc-space-2) var(--gc-space-3); border-bottom: 1px solid var(--hist-line); font-weight: 400; }
+.table .number { font-family: var(--hist-font-number); text-align: right; }
+
+.visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* The pilot has no animation. Any transition the mockup notes ask for goes inside this query only. */
+@media (prefers-reduced-motion: no-preference) {
+  .anchor rect[data-anchor] { transition: none; }
+}
