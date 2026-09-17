@@ -58,6 +58,15 @@ class NativeTextRunnerTest {
         assertThat(birthDateFirst.candidates.map { it.observedAt }).containsOnly("2026-01-20")
         assertThat(birthDateFirst.abstentions).isEmpty()
 
+        val ranged = runs.first { it.documentId == "synthetic-nhis-table-v1" }
+        assertThat(ranged.candidates.map { it.referenceRangeText }).containsExactly(
+            "150-199", "70-129", "45-70", "60-149", "80-99", "4.8-5.6", "12.5-15.5", "0.60-1.10",
+        )
+        assertThat(runs.first { it.documentId == "synthetic-center-summary-v5" }.candidates.map { it.referenceRangeText })
+            .contains("155.0~180.0")
+        assertThat(BenchmarkJson.mapper.writeValueAsString(ranged)).contains("\"referenceRangeText\":\"150-199\"")
+        assertThat(run.candidates.map { it.referenceRangeText }).containsOnlyNulls()
+
         val json = BenchmarkJson.mapper.writeValueAsString(run)
         assertThat(json).doesNotContain("referenceRange").doesNotContain("null")
     }

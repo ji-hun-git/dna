@@ -44,6 +44,9 @@ class CheckupCorpusGeneratorTest {
                 assertThat(iou(expected.evidence.box, actual.evidenceBox))
                     .describedAs("${gold.documentId} ${expected.label}")
                     .isGreaterThanOrEqualTo(0.8)
+                assertThat(actual.referenceRangeText)
+                    .describedAs("${gold.documentId} ${expected.label} reference range")
+                    .isEqualTo(expected.expectedReferenceRangeText)
             }
             gold.requiredAbstentions.forEach { required ->
                 assertThat(outcome.abstentions.map { it.label to it.reason.code })
@@ -51,6 +54,12 @@ class CheckupCorpusGeneratorTest {
                     .contains(required.label to required.acceptedReasons.first())
             }
         }
+
+        val rangedGold = corpus.documents.flatMap { it.expectedMeasurements }.filter { it.expectedReferenceRangeText != null }
+        assertThat(rangedGold).isNotEmpty()
+        assertThat(rangedGold.map { it.expectedReferenceRangeText!! }).allMatch { Regex("^[0-9.,\\s\\-~–<>≤≥]{1,40}$").matches(it) }
+        assertThat(corpus.documents.first { it.documentId == "synthetic-nhis-table-v0" }.expectedMeasurements.map { it.expectedReferenceRangeText })
+            .containsOnlyNulls()
     }
 
     @Test

@@ -11,6 +11,7 @@ export type MedicalDocumentGateThresholds = {
   evidenceLocalizationRate: number;
   hallucinationRate: number;
   requiredAbstentionRecall: number;
+  referenceRangeAccuracy: number;
 };
 
 export const candidateAdmissionThresholds: MedicalDocumentGateThresholds = {
@@ -19,6 +20,7 @@ export const candidateAdmissionThresholds: MedicalDocumentGateThresholds = {
   evidenceLocalizationRate: 1,
   hallucinationRate: 0,
   requiredAbstentionRecall: 1,
+  referenceRangeAccuracy: 1,
 };
 
 export type MedicalDocumentSyntheticContractRegression = {
@@ -40,6 +42,7 @@ export type MedicalDocumentSyntheticContractRegression = {
     evidenceLocalizationRate: number;
     requiredAbstentionRecall: number;
     hallucinationRate: number;
+    referenceRangeAccuracy: number;
   };
   gate: {
     passed: boolean;
@@ -105,6 +108,8 @@ export function evaluateMedicalDocumentPipeline(
   let hallucinatedMeasurementCount = 0;
   let requiredAbstentionCount = 0;
   let correctAbstentionCount = 0;
+  let matchedMeasurementCount = 0;
+  let referenceRangeMatchCount = 0;
 
   for (const document of corpus.documents) {
     const run = runByDocument.get(document.documentId);
@@ -124,6 +129,8 @@ export function evaluateMedicalDocumentPipeline(
         hallucinatedMeasurementCount += 1;
         continue;
       }
+      matchedMeasurementCount += 1;
+      if ((expected.expectedReferenceRangeText ?? null) === (candidate.referenceRangeText ?? null)) referenceRangeMatchCount += 1;
       if (exactField(expected, candidate)) exactMeasurementCount += 1;
       if (criticalValueExact(expected, candidate)) criticalValueExactCount += 1;
       if (
@@ -147,6 +154,7 @@ export function evaluateMedicalDocumentPipeline(
   const evidenceLocalizationRate = ratio(localizedEvidenceCount, expectedMeasurementCount);
   const requiredAbstentionRecall = ratio(correctAbstentionCount, requiredAbstentionCount);
   const hallucinationRate = returnedMeasurementCount === 0 ? 0 : hallucinatedMeasurementCount / returnedMeasurementCount;
+  const referenceRangeAccuracy = ratio(referenceRangeMatchCount, matchedMeasurementCount);
   const failures: string[] = [];
 
   if (fieldF1 < thresholds.fieldF1) failures.push("field_f1_below_threshold");
@@ -154,6 +162,7 @@ export function evaluateMedicalDocumentPipeline(
   if (evidenceLocalizationRate < thresholds.evidenceLocalizationRate) failures.push("evidence_localization_rate_below_threshold");
   if (requiredAbstentionRecall < thresholds.requiredAbstentionRecall) failures.push("required_abstention_recall_below_threshold");
   if (hallucinationRate > thresholds.hallucinationRate) failures.push("hallucination_rate_above_threshold");
+  if (referenceRangeAccuracy < thresholds.referenceRangeAccuracy) failures.push("reference_range_accuracy_below_threshold");
 
   return {
     schemaVersion: "medical-document-synthetic-contract-regression.v1",
@@ -174,6 +183,7 @@ export function evaluateMedicalDocumentPipeline(
       evidenceLocalizationRate,
       requiredAbstentionRecall,
       hallucinationRate,
+      referenceRangeAccuracy,
     },
     gate: { passed: failures.length === 0, failures, thresholds },
   };

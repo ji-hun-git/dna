@@ -79,3 +79,48 @@ it("accepts a gold document that only requires abstentions and rejects one that 
   expect(medicalDocumentGoldSchema.safeParse(scanOnly).success).toBe(true);
   expect(medicalDocumentGoldSchema.safeParse({ ...scanOnly, requiredAbstentions: [] }).success).toBe(false);
 });
+
+it("scores reference-range text carried verbatim and fails the gate when it drifts", () => {
+  const baseline = evaluateMedicalDocumentPipeline(corpus, referenceRuns);
+  expect(baseline.metrics.referenceRangeAccuracy).toBe(1);
+  expect(baseline.gate.thresholds.referenceRangeAccuracy).toBe(1);
+
+  const goldWithRange = structuredClone(corpus) as unknown as { documents: Array<{ documentId: string; expectedMeasurements: Array<Record<string, unknown>> }> };
+  const runsWithRange = structuredClone(referenceRuns) as unknown as Array<{ documentId: string; candidates: Array<Record<string, unknown>> }>;
+  const firstRun = runsWithRange[0];
+  const firstCandidate = firstRun.candidates[0];
+  const goldDocument = goldWithRange.documents.find((document) => document.documentId === firstRun.documentId)!;
+  const goldField = goldDocument.expectedMeasurements.find((field) => field.fieldId === firstCandidate.fieldId)!;
+  goldField.expectedReferenceRangeText = "70-99";
+  firstCandidate.referenceRangeText = "70-99";
+  const matching = evaluateMedicalDocumentPipeline(goldWithRange, runsWithRange);
+  expect(matching.metrics.referenceRangeAccuracy).toBe(1);
+  expect(matching.metrics.fieldF1).toBe(1);
+  expect(matching.gate.passed).toBe(true);
+
+  firstCandidate.referenceRangeText = "70-100";
+  const drifted = evaluateMedicalDocumentPipeline(goldWithRange, runsWithRange);
+  expect(drifted.metrics.referenceRangeAccuracy).toBeLessThan(1);
+  expect(drifted.metrics.fieldF1).toBe(1);
+  expect(drifted.gate.passed).toBe(false);
+  expect(drifted.gate.failures).toEqual(["reference_range_accuracy_below_threshold"]);
+
+  delete firstCandidate.referenceRangeText;
+  const missing = evaluateMedicalDocumentPipeline(goldWithRange, runsWithRange);
+  expect(missing.metrics.referenceRangeAccuracy).toBeLessThan(1);
+  expect(missing.gate.failures).toEqual(["reference_range_accuracy_below_threshold"]);
+});
+
+it("rejects reference-range text that is not a bare range body", () => {
+  const run = structuredClone(referenceRuns[0]) as unknown as { candidates: Array<Record<string, unknown>> };
+  run.candidates[0].referenceRangeText = "normal 70-99";
+  expect(medicalDocumentRunSchema.safeParse(run).success).toBe(false);
+  run.candidates[0].referenceRangeText = "≤5.6";
+  expect(medicalDocumentRunSchema.safeParse(run).success).toBe(true);
+  const gold = structuredClone(corpus.documents[0]) as unknown as { expectedMeasurements: Array<Record<string, unknown>> };
+  gold.expectedMeasurements[0].referenceRangeText = "70-99";
+  expect(medicalDocumentGoldSchema.safeParse(gold).success).toBe(false);
+  gold.expectedMeasurements[0] = { ...gold.expectedMeasurements[0], expectedReferenceRangeText: "70-99" };
+  delete gold.expectedMeasurements[0].referenceRangeText;
+  expect(medicalDocumentGoldSchema.safeParse(gold).success).toBe(true);
+});
