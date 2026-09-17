@@ -282,6 +282,38 @@ describe("foundation same-origin client", () => {
       readCsrfToken: () => "csrf-value",
     });
     await expect(judging.getChanges()).rejects.toMatchObject({ code: "invalid_server_response" });
+
+    const withDelta = createFoundationClient({
+      fetcher: vi.fn(async () => jsonResponse({
+        items: [{
+          concept: "총콜레스테롤",
+          unit: "mg/dL",
+          latest: { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d50", value: "188", observedOn: "2026-07-28" },
+          previous: { eventId: "9c3e4f50-6172-4c8d-ae9f-1a2b3c4d5e60", value: "194", observedOn: "2026-01-15" },
+          delta: { absolute: "-6", percent: "-3.1" },
+        }],
+        newConcepts: [],
+        unchangedCount: 0,
+      })),
+      readCsrfToken: () => "csrf-value",
+    });
+    await expect(withDelta.getChanges()).resolves.toMatchObject({ items: [{ delta: { absolute: "-6", percent: "-3.1" } }] });
+
+    const deltaWithDirection = createFoundationClient({
+      fetcher: vi.fn(async () => jsonResponse({
+        items: [{
+          concept: "총콜레스테롤",
+          unit: "mg/dL",
+          latest: { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d50", value: "188", observedOn: "2026-07-28" },
+          previous: { eventId: "9c3e4f50-6172-4c8d-ae9f-1a2b3c4d5e60", value: "194", observedOn: "2026-01-15" },
+          delta: { absolute: "-6", percent: "-3.1", direction: "down" },
+        }],
+        newConcepts: [],
+        unchangedCount: 0,
+      })),
+      readCsrfToken: () => "csrf-value",
+    });
+    await expect(deltaWithDirection.getChanges()).rejects.toMatchObject({ code: "invalid_server_response" });
   });
 
   it("reads the consent list, grants a purpose with an idempotency key and refuses an unknown purpose", async () => {

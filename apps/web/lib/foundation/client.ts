@@ -180,15 +180,24 @@ const changeValueSchema = z.object({
   observedOn: z.string().date(),
 }).strict();
 
-// This time's value beside the previous value of the same item. `.strict()` is
-// the boundary: a server that starts sending a difference, a direction or a
-// range fails validation here. `previous` is omitted when the server has none.
+// The arithmetic difference between the two values: signed numbers in text, nothing else.
+// `.strict()` is the boundary: a direction, colour or threshold key fails validation here.
+const changeDeltaSchema = z.object({
+  absolute: z.string().regex(/^[+-]?\d+(\.\d+)?$/),
+  percent: z.string().regex(/^[+-]?\d+\.\d$/).nullable().optional(),
+}).strict();
+
+// This time's value beside the previous value of the same item, plus their arithmetic
+// difference when both are numbers. `.strict()` is the boundary: a server that starts
+// sending a direction or a range fails validation here. `previous`/`delta` are omitted
+// when the server has none.
 const changeItemSchema = z.object({
   conceptCode: conceptCodeSchema.nullable().optional(),
   concept: z.string().min(1).max(80),
   unit: z.string().min(1).max(32),
   latest: changeValueSchema,
   previous: changeValueSchema.nullable().optional(),
+  delta: changeDeltaSchema.nullable().optional(),
 }).strict();
 
 const changeSummarySchema = z.object({
