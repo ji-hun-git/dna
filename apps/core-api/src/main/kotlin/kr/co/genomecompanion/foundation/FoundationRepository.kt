@@ -98,6 +98,8 @@ data class FoundationCandidateRow(
     val conceptCode: String?,
     val evidenceBox: EvidenceBox?,
     val createdAt: Instant,
+    /** Verbatim document text; never returned by an API other than the export. */
+    val referenceRangeText: String? = null,
 )
 
 
@@ -129,6 +131,8 @@ data class FoundationRecordRow(
     val sourceTextSha256: String,
     val documentSha256: String,
     val conceptCode: String?,
+    /** Copied from the candidate at confirmation, inherited by every correction. Export only. */
+    val referenceRangeText: String? = null,
 )
 
 
@@ -202,6 +206,7 @@ class FoundationRepository(
                 )
             },
             createdAt = result.getObject("candidate_created_at", OffsetDateTime::class.java).toInstant(),
+            referenceRangeText = result.getString("reference_range_text"),
         )
     }
 
@@ -226,6 +231,7 @@ class FoundationRepository(
             sourceTextSha256 = result.getString("source_text_sha256"),
             documentSha256 = result.getString("document_sha256"),
             conceptCode = result.getString("concept_code"),
+            referenceRangeText = result.getString("reference_range_text"),
         )
     }
 
@@ -236,7 +242,7 @@ class FoundationRepository(
         SELECT c.candidate_id, c.document_id, c.subject_id, c.status, c.ordinal,
                (SELECT COUNT(*) FROM gc_candidate t WHERE t.document_id = c.document_id AND t.subject_id = c.subject_id) AS total_candidates,
                c.label, c.candidate_value, c.unit,
-               c.observed_on, c.evidence_page, c.source_text_sha256, c.concept_code,
+               c.observed_on, c.evidence_page, c.source_text_sha256, c.concept_code, c.reference_range_text,
                c.evidence_box_x, c.evidence_box_y, c.evidence_box_w, c.evidence_box_h,
                d.sha256 AS document_sha256, c.created_at AS candidate_created_at
         FROM gc_candidate c
@@ -259,7 +265,7 @@ class FoundationRepository(
                r.candidate_id, r.document_id, r.subject_id, v.status AS version_status,
                r.label, v.value AS current_value, c.candidate_value AS original_value,
                r.unit, r.observed_on, r.original_observed_on, v.changed_at AS confirmed_at, v.correction_reason,
-               c.evidence_page, c.source_text_sha256, d.sha256 AS document_sha256, v.concept_code
+               c.evidence_page, c.source_text_sha256, d.sha256 AS document_sha256, v.concept_code, v.reference_range_text
         FROM gc_health_record r
         JOIN gc_health_record_version v ON v.record_id = r.record_id
         JOIN gc_candidate c ON c.candidate_id = r.candidate_id AND c.subject_id = r.subject_id
@@ -980,8 +986,8 @@ class FoundationRepository(
                 INSERT INTO gc_candidate(
                     candidate_id, job_id, document_id, subject_id, status, ordinal, label, candidate_value,
                     unit, observed_on, evidence_page, source_text_sha256, created_at, extraction_method,
-                    evidence_box_x, evidence_box_y, evidence_box_w, evidence_box_h, concept_code
-                ) VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, 'native-text', ?, ?, ?, ?, ?)
+                    evidence_box_x, evidence_box_y, evidence_box_w, evidence_box_h, concept_code, reference_range_text
+                ) VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, 'native-text', ?, ?, ?, ?, ?, ?)
                 """.trimIndent(),
                 UUID.randomUUID(),
                 extractionJobId,
@@ -1000,6 +1006,7 @@ class FoundationRepository(
                 candidate.evidenceBox?.width,
                 candidate.evidenceBox?.height,
                 candidate.conceptCode,
+                candidate.referenceRangeText,
             )
         }
         jdbc.update(
@@ -1270,8 +1277,8 @@ class FoundationRepository(
             """
             INSERT INTO gc_health_record_version(
                 version_id, record_id, subject_id, status, value,
-                supersedes_version_id, correction_reason, changed_at, concept_code
-            ) VALUES (?, ?, ?, 'CURRENT', ?, NULL, NULL, ?, ?)
+                supersedes_version_id, correction_reason, changed_at, concept_code, reference_range_text
+            ) VALUES (?, ?, ?, 'CURRENT', ?, NULL, NULL, ?, ?, ?)
             """.trimIndent(),
             versionId,
             recordId,
@@ -1279,6 +1286,7 @@ class FoundationRepository(
             confirmedValue,
             now.atOffset(ZoneOffset.UTC),
             candidate.conceptCode,
+            candidate.referenceRangeText,
         )
         jdbc.update(
             """
@@ -1353,9 +1361,10 @@ class FoundationRepository(
             """
             INSERT INTO gc_health_record_version(
                 version_id, record_id, subject_id, status, value,
-                supersedes_version_id, correction_reason, changed_at, concept_code
+                supersedes_version_id, correction_reason, changed_at, concept_code, reference_range_text
             ) VALUES (?, ?, ?, 'CURRENT', ?, ?, ?, ?,
-                (SELECT concept_code FROM gc_health_record_version WHERE version_id = ?))
+                (SELECT concept_code FROM gc_health_record_version WHERE version_id = ?),
+                (SELECT reference_range_text FROM gc_health_record_version WHERE version_id = ?))
             """.trimIndent(),
             newVersionId,
             recordId,
@@ -1364,6 +1373,7 @@ class FoundationRepository(
             previousVersionId,
             reason,
             now.atOffset(ZoneOffset.UTC),
+            previousVersionId,
             previousVersionId,
         )
         return true

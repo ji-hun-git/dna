@@ -1387,6 +1387,86 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).isZero()
     }
 
+    @Test
+    fun storesTheReferenceRangeTextCopiesItToTheRecordVersionAndKeepsItOutOfEveryResponse() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "reference-range-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64), "120-199"),
+                ExtractedCandidate(2, "HbA1c", "5.2", "%", "2026-07-28", 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64), null),
+            ),
+        )
+        assertThat(
+            jdbc.queryForList("SELECT reference_range_text FROM gc_candidate ORDER BY ordinal", String::class.java),
+        ).containsExactly("120-199", null)
+
+        val candidatesResponse = read(get("/api/foundation/documents/$documentId/candidates"), alice)
+            .andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(candidatesResponse.lowercase()).doesNotContain("reference")
+        val candidates = responseJson(candidatesResponse.toByteArray()).toList()
+
+        // A confirm-time correction of the value keeps the document's own range text unchanged.
+        mutate(
+            post("/api/foundation/candidates/${candidates[0]["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "reference-range-confirm-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "190"))),
+            alice,
+        ).andExpect(status().isCreated)
+        mutate(
+            post("/api/foundation/candidates/${candidates[1]["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "reference-range-confirm-2")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "5.2"))),
+            alice,
+        ).andExpect(status().isCreated)
+        assertThat(
+            jdbc.queryForList(
+                """
+                SELECT v.reference_range_text FROM gc_health_record_version v
+                JOIN gc_health_record r ON r.record_id = v.record_id
+                JOIN gc_candidate c ON c.candidate_id = r.candidate_id
+                WHERE v.status = 'CURRENT' ORDER BY c.ordinal
+                """.trimIndent(),
+                String::class.java,
+            ),
+        ).containsExactly("120-199", null)
+
+        val records = responseJson(
+            read(get("/api/foundation/records"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).toList()
+        val correctedRecordId = records.single { it["label"].asText() == "총콜레스테롤" }["recordId"].asText()
+
+        // Correction inherits the range text; a client cannot change it because no request field exists.
+        mutate(
+            post("/api/foundation/records/$correctedRecordId/corrections")
+                .header("Idempotency-Key", "reference-range-correction-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인", "referenceRangeText" to "1-2"))),
+            alice,
+        ).andExpect(status().isOk)
+        assertThat(
+            jdbc.queryForList(
+                "SELECT reference_range_text FROM gc_health_record_version WHERE record_id = ?::uuid ORDER BY changed_at",
+                String::class.java,
+                correctedRecordId,
+            ),
+        ).containsExactly("120-199", "120-199")
+
+        for (path in listOf("/api/foundation/records", "/api/foundation/health-events", "/api/foundation/changes", "/api/foundation/records/$correctedRecordId")) {
+            val body = read(get(path), alice).andExpect(status().isOk).andReturn().response.contentAsString
+            assertThat(body.lowercase()).describedAs(path).doesNotContain("reference")
+        }
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type LIKE '%120%' OR resource_type LIKE '%199%'", Long::class.java),
+        ).isZero()
+    }
+
     private fun importSyntheticDocument(
         client: TestClient,
         consentId: UUID,
