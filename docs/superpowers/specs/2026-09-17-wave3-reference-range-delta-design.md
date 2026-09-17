@@ -21,12 +21,14 @@
 - 저장소 행(`FoundationCandidateRow`, `FoundationRecordRow`)에 `referenceRangeText` 추가. 컨트롤러 DTO(후보 목록, 기록, health-events, changes)에는 **추가하지 않는다**. 통합 테스트: 네 응답의 JSON 문자열에 대소문자 무관 `reference`가 없음을 단언.
 - Export: `events[].referenceRangeText: String | null` 추가, `schemaVersion`을 `alm-health-events-export.v2`로. 통합 테스트: 참고치가 있는 후보를 확정하면 export에 원문 그대로 등장.
 - 벤치마크: `GoldMeasurement.expectedReferenceRangeText: String?`(참고치 컬럼 variant일 때 렌더된 문자열, 아니면 null). `NativeTextRunner` 출력에 `referenceRangeAccuracy`(매칭된 필드 중 참고치 텍스트 일치 비율)를 추가하고 `native-text-gate`가 `1`을 요구. `corpusId`는 PDF 바이트가 바뀌지 않으므로 유지되어야 하며, 바뀌면 evidence에 새 digest를 기록한다.
+- **(최종 리뷰 후 좁힌 규칙, 2026-09-17)** 범위 본문은 비교 부호(`<>≤≥`)가 있거나 두 숫자 사이에 구분자(`-`, `–`, `~`)가 있을 때만 `referenceRangeText`로 남는다. 이전-결과 컬럼처럼 구분자·부호 없는 순수 숫자 하나는 범위가 아니므로 `null`이다(값·단위 파싱과 후보 여부는 바뀌지 않는다). 40자를 넘는 범위 본문은 절대 잘라내지 않고 `null`로 남는다(방금 전 `.take(40)`이 하던 잘림 대신).
 
 ## 3. (b) 결정론적 차이
 
 - `ChangeItem.delta: ChangeDelta?` — `data class ChangeDelta(val absolute: String, val percent: String?)`. `previous`가 있고(이미 같은 단위) 두 값이 `BigDecimal`로 파싱될 때만 계산, 아니면 null. `absolute = latest − previous`를 두 입력 중 큰 scale로, 부호 명시(`"+12"`, `"-6"`, `"-0.3"`, `"0"`). `percent = absolute / previous × 100`을 `HALF_EVEN` 소수 1자리, `previous == 0`이면 null, 부호 명시(`"-3.1"`, `"+2.0"`, `"0.0"`). 천 단위 쉼표 값(`1,234`)은 쉼표 제거 후 파싱.
 - 단위 테스트: 정수·소수·음수·0 previous·쉼표·파싱 불가(null).
 - Web: `RecentChanges` 항목에 한 줄 `두 값의 차이: -6 mg/dL (-3.1%)`(percent null이면 괄호 생략, delta null이면 줄 없음). zod `.strict()`에 `delta` 추가. 색·아이콘 없음. 카피 스캔에 상승/하락/증가/감소 추가(기존 화면 카피에 이 단어가 있으면 그 카피를 바꾼다).
+- **(최종 리뷰 후 좁힌 규칙, 2026-09-17)** `percent`는 `previous > 0`이고 항목의 단위가 `%`가 아닐 때만 계산한다: previous가 0이거나 음수면 부호가 절대값과 모순될 수 있어 `null`(기존에는 `previous == 0`일 때만 null이었다); 단위가 `%`인 항목은 percent-of-percent 숫자를 절대 보여주지 않도록 `absolute`만 남기고 `percent`는 항상 생략한다. 또한 `delta`는 previous의 관측일이 latest의 관측일보다 늦지 않을 때만 계산한다(`previous.observedOn <= latest.observedOn`); 더 늦은 이전 값과 비교하면 부호가 시간 순서에 어긋나므로, 그 경우 `delta` 키 자체를 생략한다(두 값과 두 날짜는 그대로 남는다).
 
 ## 4. Export 문서 목록
 
