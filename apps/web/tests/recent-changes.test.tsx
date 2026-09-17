@@ -43,7 +43,7 @@ it("states this time's value and the previous value of each item side by side wi
     "총콜레스테롤 · 이번 2026. 7. 28. 188 mg/dL · 이전 2026. 1. 15. 194 mg/dL",
     "비타민 D · 이번 2026. 7. 28. 42 ng/mL · 이전 값 없음",
   ]);
-  expect(screen.getByText("새로 추가된 항목: 비타민 D")).toBeVisible();
+  expect(screen.getByText("이전 값이 없는 항목: 비타민 D")).toBeVisible();
   expect(document.body.textContent).not.toMatch(/→|↑|↓|증가|감소|상승|하락|정상|비정상|위험/);
 });
 

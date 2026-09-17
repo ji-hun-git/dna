@@ -34,7 +34,7 @@ export function RecentChanges({ changes }: RecentChangesProps) {
           <li key={item.latest.eventId} data-testid="change-item">{changeLine(item)}</li>
         ))}
       </ul>
-      {changes.newConcepts.length > 0 && <p>{`새로 추가된 항목: ${changes.newConcepts.join(", ")}`}</p>}
+      {changes.newConcepts.length > 0 && <p>{`이전 값이 없는 항목: ${changes.newConcepts.join(", ")}`}</p>}
     </section>
   );
 }
