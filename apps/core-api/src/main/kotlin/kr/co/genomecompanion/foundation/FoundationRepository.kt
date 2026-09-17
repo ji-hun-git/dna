@@ -31,7 +31,11 @@ data class FoundationSessionRow(
 
 data class FoundationConsentRow(
     val consentId: UUID,
+    val purposeCode: String,
     val status: String,
+    val policyVersion: String,
+    val grantedAt: Instant,
+    val revokedAt: Instant?,
 )
 
 
@@ -141,6 +145,17 @@ class FoundationRepository(
             tokenHash = result.getString("token_hash"),
             csrfHash = result.getString("csrf_hash"),
             expiresAt = result.getObject("expires_at", OffsetDateTime::class.java).toInstant(),
+        )
+    }
+
+    private val consentMapper = RowMapper { result, _ ->
+        FoundationConsentRow(
+            consentId = result.getObject("consent_id", UUID::class.java),
+            purposeCode = result.getString("purpose_code"),
+            status = result.getString("status"),
+            policyVersion = result.getString("policy_version"),
+            grantedAt = result.getObject("granted_at", OffsetDateTime::class.java).toInstant(),
+            revokedAt = result.getObject("revoked_at", OffsetDateTime::class.java)?.toInstant(),
         )
     }
 
@@ -323,52 +338,73 @@ class FoundationRepository(
             now.atOffset(ZoneOffset.UTC),
         ).firstOrNull()
 
-    fun grantConsent(consentId: UUID, subjectId: String, policyVersion: String, now: Instant) {
+    fun grantConsent(consentId: UUID, subjectId: String, purposeCode: String, policyVersion: String, now: Instant) {
         jdbc.update(
             """
             INSERT INTO gc_consent_grant(
                 consent_id, subject_id, purpose_code, status, policy_version, granted_at
-            ) VALUES (?, ?, 'DOCUMENT_EXTRACTION', 'ACTIVE', ?, ?)
+            ) VALUES (?, ?, ?, 'ACTIVE', ?, ?)
             """.trimIndent(),
             consentId,
             subjectId,
+            purposeCode,
             policyVersion,
             now.atOffset(ZoneOffset.UTC),
         )
     }
 
-    fun findActiveConsent(subjectId: String): UUID? =
+    fun findActiveConsent(subjectId: String, purposeCode: String): UUID? =
         jdbc.query(
             """
             SELECT consent_id
             FROM gc_consent_grant
-            WHERE subject_id = ?
-              AND purpose_code = 'DOCUMENT_EXTRACTION'
-              AND status = 'ACTIVE'
+            WHERE subject_id = ? AND purpose_code = ? AND status = 'ACTIVE'
             """.trimIndent(),
             RowMapper { result, _ -> result.getObject("consent_id", UUID::class.java) },
             subjectId,
+            purposeCode,
         ).firstOrNull()
 
-    fun findLatestConsent(subjectId: String): FoundationConsentRow? =
+    private val consentProjection =
+        "SELECT consent_id, purpose_code, status, policy_version, granted_at, revoked_at FROM gc_consent_grant"
+
+    fun findLatestConsent(subjectId: String, purposeCode: String): FoundationConsentRow? =
         jdbc.query(
             """
-            SELECT consent_id, status
-            FROM gc_consent_grant
-            WHERE subject_id = ?
-              AND purpose_code = 'DOCUMENT_EXTRACTION'
+            $consentProjection
+            WHERE subject_id = ? AND purpose_code = ?
             ORDER BY granted_at DESC, consent_id DESC
             LIMIT 1
             """.trimIndent(),
-            RowMapper { result, _ ->
-                FoundationConsentRow(
-                    consentId = result.getObject("consent_id", UUID::class.java),
-                    status = result.getString("status"),
-                )
-            },
+            consentMapper,
             subjectId,
+            purposeCode,
         ).firstOrNull()
 
+    /** The most recent row of every purpose this owner ever consented to. */
+    fun listLatestConsents(subjectId: String): List<FoundationConsentRow> =
+        jdbc.query(
+            """
+            SELECT DISTINCT ON (purpose_code)
+                   consent_id, purpose_code, status, policy_version, granted_at, revoked_at
+            FROM gc_consent_grant
+            WHERE subject_id = ?
+            ORDER BY purpose_code, granted_at DESC, consent_id DESC
+            """.trimIndent(),
+            consentMapper,
+            subjectId,
+        )
+
+    fun findConsent(subjectId: String, consentId: UUID): FoundationConsentRow? =
+        jdbc.query(
+            "$consentProjection WHERE subject_id = ? AND consent_id = ?",
+            consentMapper,
+            subjectId,
+            consentId,
+        ).firstOrNull()
+
+    /** Document intake and review read only the DOCUMENT_EXTRACTION purpose. A research or project
+     * consent id therefore resolves to null here and is refused as `active_consent_required`. */
     fun findConsentStatus(subjectId: String, consentId: UUID): String? =
         jdbc.query(
             """
@@ -391,14 +427,6 @@ class FoundationRepository(
               AND purpose_code = 'DOCUMENT_EXTRACTION'
               AND status = 'ACTIVE'
             """.trimIndent(),
-            Long::class.java,
-            consentId,
-            subjectId,
-        ) == 1L
-
-    fun consentBelongsToSubject(subjectId: String, consentId: UUID): Boolean =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM gc_consent_grant WHERE consent_id = ? AND subject_id = ?",
             Long::class.java,
             consentId,
             subjectId,
@@ -1372,8 +1400,9 @@ class FoundationRepository(
         resourceId: UUID?,
         outcome: String,
         now: Instant,
+        purposeCode: String? = null,
     ) {
-        doInsertAudit(subjectHash, actorSessionHash, eventType, resourceType, resourceId, outcome, now)
+        doInsertAudit(subjectHash, actorSessionHash, eventType, resourceType, resourceId, outcome, now, purposeCode)
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -1385,7 +1414,7 @@ class FoundationRepository(
         resourceId: UUID?,
         now: Instant,
     ) {
-        doInsertAudit(subjectHash, actorSessionHash, eventType, resourceType, resourceId, "DENIED", now)
+        doInsertAudit(subjectHash, actorSessionHash, eventType, resourceType, resourceId, "DENIED", now, null)
     }
 
     private fun doInsertAudit(
@@ -1396,13 +1425,14 @@ class FoundationRepository(
         resourceId: UUID?,
         outcome: String,
         now: Instant,
+        purposeCode: String?,
     ) {
         jdbc.update(
             """
             INSERT INTO gc_audit_event(
                 event_id, subject_hash, actor_session_hash, event_type, resource_type,
-                resource_id, outcome, occurred_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                resource_id, outcome, occurred_at, purpose_code
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
             UUID.randomUUID(),
             subjectHash,
@@ -1412,6 +1442,7 @@ class FoundationRepository(
             resourceId,
             outcome,
             now.atOffset(ZoneOffset.UTC),
+            purposeCode,
         )
     }
 

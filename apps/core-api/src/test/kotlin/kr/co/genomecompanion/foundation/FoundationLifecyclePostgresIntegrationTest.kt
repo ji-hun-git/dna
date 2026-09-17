@@ -1146,6 +1146,137 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         mockMvc.perform(get("/api/foundation/changes")).andExpect(status().isUnauthorized)
     }
 
+    @Test
+    fun researchConsentsAreStoredPerPurposeAndNeverGateTheLifecycle() {
+        val alice = login("synthetic-alice")
+        val bob = login("synthetic-bob")
+
+        val initial = responseJson(
+            read(get("/api/foundation/consents"), alice)
+                .andExpect(status().isOk)
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andReturn().response.contentAsByteArray,
+        )
+        assertThat(initial.map { it["purposeCode"].asText() }).containsExactly("DOCUMENT_EXTRACTION", "RESEARCH_USE", "RESEARCH_CONTACT")
+        assertThat(initial.map { it["status"].asText() }).containsExactly("NOT_GRANTED", "NOT_GRANTED", "NOT_GRANTED")
+        assertThat(initial.map { it["policyVersion"].asText() })
+            .containsExactly("foundation-v1", "research-consent-policy.v1", "research-contact-policy.v1")
+        assertThat(initial.map { it.has("consentId") }).containsExactly(false, false, false)
+
+        val researchUse = responseJson(
+            mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "research-use-grant-1"), alice)
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.purposeCode").value("RESEARCH_USE"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.policyVersion").value("research-consent-policy.v1"))
+                .andExpect(jsonPath("$.grantedAt").isNotEmpty)
+                .andExpect(jsonPath("$.revokedAt").doesNotExist())
+                .andReturn().response.contentAsByteArray,
+        )
+        val researchUseId = UUID.fromString(researchUse["consentId"].asText())
+        mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "research-use-grant-1"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.consentId").value(researchUseId.toString()))
+        mutate(post("/api/foundation/consents/RESEARCH_USE").header("Idempotency-Key", "research-use-grant-2"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.consentId").value(researchUseId.toString()))
+        assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isEqualTo(1)
+
+        // A research consent is not a document consent: it cannot open the lifecycle.
+        mutate(
+            post("/api/foundation/documents")
+                .header("Idempotency-Key", "doc-with-research-consent")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(documentRequest(researchUseId, fixturePdf)),
+            alice,
+        ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("active_consent_required"))
+
+        // The whole lifecycle runs while the other research purpose is absent and this one is later revoked.
+        val documentConsentId = grantConsent(alice)
+        val candidates = importSyntheticDocument(alice, documentConsentId, fixturePdf, fixtureDigest, "research-invariant")
+        confirmEveryCandidate(alice, candidates, "research-invariant")
+        read(get("/api/foundation/records"), alice).andExpect(status().isOk).andExpect(jsonPath("$.length()").value(3))
+
+        mutate(post("/api/foundation/consents/$researchUseId/revocation"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.purposeCode").value("RESEARCH_USE"))
+            .andExpect(jsonPath("$.status").value("REVOKED"))
+        val afterRevoke = responseJson(
+            read(get("/api/foundation/consents"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(afterRevoke.map { "${it["purposeCode"].asText()}=${it["status"].asText()}" })
+            .containsExactly("DOCUMENT_EXTRACTION=ACTIVE", "RESEARCH_USE=REVOKED", "RESEARCH_CONTACT=NOT_GRANTED")
+        assertThat(afterRevoke[1]["revokedAt"].asText()).isNotEmpty()
+        assertThat(afterRevoke[0]["consentId"].asText()).isEqualTo(documentConsentId.toString())
+        read(get("/api/foundation/documents/${candidates[0]["documentId"].asText()}/candidates"), alice)
+            .andExpect(status().isOk)
+        read(get("/api/foundation/health-events"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(3))
+        read(get("/api/foundation/changes"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.latestDocument.eventCount").value(3))
+
+        // PROJECT purposes: the prefix and shape are validated; a granted one is listed after the fixed three.
+        mutate(post("/api/foundation/consents/STUDY-1").header("Idempotency-Key", "project-no-prefix"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("consent_purpose_invalid"))
+        mutate(post("/api/foundation/consents/PROJECT:Demo_Study").header("Idempotency-Key", "project-bad-shape"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("consent_purpose_invalid"))
+        mutate(post("/api/foundation/consents/PROJECT:${"a".repeat(41)}").header("Idempotency-Key", "project-too-long"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("consent_purpose_invalid"))
+        mutate(post("/api/foundation/consents/PROJECT:demo-study-1").header("Idempotency-Key", "project-grant-1"), alice)
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.purposeCode").value("PROJECT:demo-study-1"))
+            .andExpect(jsonPath("$.policyVersion").value("project-consent-policy.v1"))
+        val withProject = responseJson(
+            read(get("/api/foundation/consents"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(withProject.map { it["purposeCode"].asText() })
+            .containsExactly("DOCUMENT_EXTRACTION", "RESEARCH_USE", "RESEARCH_CONTACT", "PROJECT:demo-study-1")
+
+        // Owner isolation: bob neither sees nor revokes alice's consents.
+        val bobList = responseJson(
+            read(get("/api/foundation/consents"), bob).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )
+        assertThat(bobList.map { it["status"].asText() }).containsExactly("NOT_GRANTED", "NOT_GRANTED", "NOT_GRANTED")
+        mutate(post("/api/foundation/consents/$researchUseId/revocation"), bob)
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("consent_not_found"))
+        mockMvc.perform(get("/api/foundation/consents")).andExpect(status().isUnauthorized)
+
+        // Audit rows name the purpose and nothing else.
+        assertThat(
+            jdbc.queryForList(
+                "SELECT purpose_code FROM gc_audit_event WHERE event_type = 'CONSENT_GRANTED' ORDER BY audit_sequence",
+                String::class.java,
+            ),
+        ).containsExactly("RESEARCH_USE", "DOCUMENT_EXTRACTION", "PROJECT:demo-study-1")
+        assertThat(
+            jdbc.queryForList("SELECT purpose_code FROM gc_audit_event WHERE event_type = 'CONSENT_REVOKED'", String::class.java),
+        ).containsExactly("RESEARCH_USE")
+        assertThat(
+            jdbc.queryForObject(
+                """
+                SELECT COUNT(*) FROM gc_audit_event
+                WHERE event_type LIKE '%policy%' OR resource_type LIKE '%policy%' OR purpose_code LIKE '%policy%'
+                   OR event_type LIKE '%188%' OR resource_type LIKE '%mg/dL%'
+                """.trimIndent(),
+                Long::class.java,
+            ),
+        ).isZero()
+
+        // Deletion removes every purpose row; nothing research-related was ever a condition.
+        mutate(delete("/api/foundation/profile"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andExpect(jsonPath("$.rawHealthValuesPresentInAudit").value(false))
+        assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isZero()
+    }
+
     private fun importSyntheticDocument(
         client: TestClient,
         consentId: UUID,
