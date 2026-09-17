@@ -62,6 +62,7 @@ export function EvidenceDrawer({
         ? <SourcePreview documentId={event.source.documentId} page={event.source.page} />
         : <p role="status">출처 미리보기를 지금은 볼 수 없어요. 값은 그대로 두고, 출처 상태만 표시해요.</p>}
       <p><a href={`/records#record-${event.recordId}`}>기록 목록에서 이 값 보기</a></p>
+      <p><a href={`/my-data/history#event-${event.eventId}`}>이 항목의 측정 이력 보기</a></p>
     </section>
   );
 }

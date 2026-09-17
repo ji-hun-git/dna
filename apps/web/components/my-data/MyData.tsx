@@ -73,6 +73,13 @@ export function MyData() {
     return () => { active = false; };
   }, [client, loadAttempt]);
 
+  // Arriving from 측정 이력 "출처 보기": open that event's evidence drawer.
+  useEffect(() => {
+    if (events.length === 0 || typeof window === "undefined") return;
+    const match = /^#event-([0-9a-f-]{36})$/.exec(window.location.hash);
+    if (match && events.some((event) => event.eventId === match[1])) setSelectedId(match[1]);
+  }, [events]);
+
   const search = useMemo(() => searchEvents(events, query), [events, query]);
   const selected = selectedId ? events.find((event) => event.eventId === selectedId) : undefined;
   const trimmed = query.trim();
@@ -87,6 +94,10 @@ export function MyData() {
             <h1 id="my-data-title">나의 데이터</h1>
             <p>한 칸이 확인한 기록 하나예요. 칸을 고르면 값과 출처를 볼 수 있어요. 값의 의미나 변화의 방향은 판단하지 않아요.</p>
           </section>
+
+          <nav className={styles.secondary} aria-label="나의 데이터 다른 보기">
+            <a href="/my-data/history">측정 이력</a>
+          </nav>
 
           {loading && <p role="status" aria-live="polite">서버에서 기록을 불러오고 있어요.</p>}
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}{" "}

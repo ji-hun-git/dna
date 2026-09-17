@@ -57,3 +57,9 @@ it("closes from the button", async () => {
   await userEvent.click(screen.getByRole("button", { name: "근거 닫기" }));
   expect(onClose).toHaveBeenCalled();
 });
+
+it("links to the measurement history of this item", () => {
+  render(<EvidenceDrawer event={syntheticHealthEvent()} onClose={() => {}} />);
+  expect(screen.getByRole("link", { name: "이 항목의 측정 이력 보기" }))
+    .toHaveAttribute("href", "/my-data/history#event-8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d50");
+});

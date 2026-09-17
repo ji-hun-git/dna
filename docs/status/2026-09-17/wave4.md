@@ -1,5 +1,7 @@
 # Wave 4 evidence — 측정 이력 (parked), FHIR export, PR #5 F-3, Wave 3 minors (2026-09-17)
 
+> Update 2026-09-17: the founder later approved the mockup and the screen was built on `codex/wave9-history-screen`; see `docs/status/2026-09-17/wave4-history-screen.md`. The statements below describe this branch as it was.
+
 Branch `codex/wave8-measurement-history-fhir` (stacked on PR #11). Synthetic only. Release remains NO_GO; no readiness gate or verdict changed. Gate documents, committed before any code of this wave: `governance/intended-use-decision-measurement-history-2026-09-17.md` (item (c), "숫자 + 단순 그래프") and `governance/intended-use-decision-reference-range-and-delta-addendum-2026-09-17.md` (FHIR `referenceRange.text`).
 
 ## Scope note
