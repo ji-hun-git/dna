@@ -167,6 +167,10 @@ const healthEventSchema = z.object({
   verification: z.enum(["verified", "uncertain"]),
   corrected: z.boolean(),
   confirmedAt: z.string().datetime({ offset: true }),
+  originalValue: z.string().min(1).max(64),
+  correctionReason: z.string().min(1).max(200).nullable().optional(),
+  // The parser's exam date when the person corrected it on review; omitted when unchanged.
+  originalObservedOn: z.string().date().nullable().optional(),
   source: healthEventSourceSchema,
 }).strict();
 
