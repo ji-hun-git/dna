@@ -1361,9 +1361,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(response.contentType).startsWith("application/json")
         assertThat(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
             .matches("attachment; filename=\"alm-health-events-\\d{8}\\.json\"")
-        assertThat(response.contentAsString).doesNotContain("referenceRange", "trend", "direction", "normal", "risk")
-        assertThat(responseJson(response.contentAsByteArray)["events"].map { it["value"].asText() })
+        // The export is the one place referenceRangeText legitimately appears; none of these
+        // candidates printed a range, so the key is always present but always null.
+        assertThat(response.contentAsString).doesNotContain("trend", "direction", "normal", "risk")
+        val exportedEvents = responseJson(response.contentAsByteArray)["events"]
+        assertThat(exportedEvents.map { it["value"].asText() })
             .containsExactlyInAnyOrder("188", "5.2", "42")
+        assertThat(exportedEvents.all { it.has("referenceRangeText") && it["referenceRangeText"].isNull }).isTrue()
 
         read(get("/api/foundation/health-events/export"), bob)
             .andExpect(status().isOk)
@@ -1528,15 +1532,36 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         }
         assertThat(documentStatus(excludedDocument)).isEqualTo("COMPLETED")
 
+        // Document 3: one candidate with no printed range at all, confirmed as-is.
+        val noRangeDocument = requestDocument(alice, consentId, fixturePdf, "export-v2-no-range")
+        uploadDocument(alice, noRangeDocument, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$noRangeDocument/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            noRangeDocument,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "2".repeat(64)),
+            ),
+        )
+        val noRange = responseJson(
+            read(get("/api/foundation/documents/$noRangeDocument/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).single()
+        mutate(
+            post("/api/foundation/candidates/${noRange["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", "export-v2-confirm-no-range")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isCreated)
+
         val export = responseJson(
             read(get("/api/foundation/health-events/export"), alice)
                 .andExpect(status().isOk)
                 .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
-                .andExpect(jsonPath("$.events.length()").value(1))
-                .andExpect(jsonPath("$.documents.length()").value(2))
+                .andExpect(jsonPath("$.events.length()").value(2))
+                .andExpect(jsonPath("$.documents.length()").value(3))
                 .andReturn().response.contentAsByteArray,
         )
-        val event = export["events"].single()
+        val event = export["events"].single { it["source"]["documentId"].asText() == rangedDocument.toString() }
         assertThat(event["value"].asText()).isEqualTo("190")
         assertThat(event["originalValue"].asText()).isEqualTo("188")
         assertThat(event["observedOn"].asText()).isEqualTo("2026-07-27")
@@ -1545,8 +1570,11 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(event.has("correctionReason")).isFalse()
         assertThat(event["referenceRangeText"].asText()).isEqualTo("120-199")
         assertThat(event["source"]["documentId"].asText()).isEqualTo(rangedDocument.toString())
+        val noRangeEvent = export["events"].single { it["source"]["documentId"].asText() == noRangeDocument.toString() }
+        assertThat(noRangeEvent.has("referenceRangeText")).isTrue()
+        assertThat(noRangeEvent["referenceRangeText"].isNull).isTrue()
         val documents = export["documents"].associateBy { it["documentId"].asText() }
-        assertThat(documents.keys).containsExactlyElementsOf(listOf(rangedDocument, excludedDocument).map { it.toString() }.sorted())
+        assertThat(documents.keys).containsExactlyElementsOf(listOf(rangedDocument, excludedDocument, noRangeDocument).map { it.toString() }.sorted())
         assertThat(export["documents"].map { it["documentId"].asText() }).isSorted()
         assertThat(documents.getValue(rangedDocument.toString())["eventCount"].asInt()).isEqualTo(1)
         assertThat(documents.getValue(rangedDocument.toString())["observedOn"].asText()).isEqualTo("2026-07-27")
@@ -1557,7 +1585,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         // The same record is served to the product without the range.
         val healthEvents = read(get("/api/foundation/health-events"), alice).andExpect(status().isOk).andReturn().response.contentAsString
         assertThat(healthEvents.lowercase()).doesNotContain("reference")
-        assertThat(responseJson(healthEvents.toByteArray()).single()["originalValue"].asText()).isEqualTo("188")
+        assertThat(responseJson(healthEvents.toByteArray()).map { it["originalValue"].asText() }).contains("188")
     }
 
     private fun importSyntheticDocument(

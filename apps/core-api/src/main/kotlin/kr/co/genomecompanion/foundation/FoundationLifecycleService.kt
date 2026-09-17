@@ -1,5 +1,6 @@
 package kr.co.genomecompanion.foundation
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonUnwrapped
 import kr.co.genomecompanion.documentboundary.BoundedUploadCapability
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
@@ -132,6 +133,7 @@ data class ExportedDocument(
  */
 data class ExportedHealthEvent(
     @get:JsonUnwrapped val event: HealthEvent,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS)
     val referenceRangeText: String?,
 )
 
