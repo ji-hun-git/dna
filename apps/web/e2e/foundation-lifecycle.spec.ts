@@ -304,8 +304,26 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("heading", { name: "이 결과지 확인을 마쳤어요" })).toBeVisible();
   await expect(page.getByText("저장 3개 · 제외 0개")).toBeVisible();
 
-  await page.getByRole("link", { name: "저장된 기록 보기" }).click();
-  await expect(page).toHaveURL(/\/records$/);
+  // Wave 2C: the home lists the latest 결과지's values beside the previous value of the same item.
+  // The January document completed last, so it is "이번"; July is "이전". No arrow, no judgement.
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "최근 변화" })).toBeVisible();
+  await expect(page.getByText("새 결과지 · 2026. 1. 15.")).toBeVisible();
+  await expect(page.getByText("새 기록 3개")).toBeVisible();
+  await expect(page.getByText("새 결과지에서 확인한 값과 같은 항목의 이전 값이에요. 변화의 의미는 판단하지 않아요.")).toBeVisible();
+  await expect(page.getByTestId("change-item")).toHaveCount(3);
+  await expect(page.getByTestId("change-item").filter({ hasText: "총콜레스테롤" }))
+    .toHaveText("총콜레스테롤 · 이번 2026. 1. 15. 194 mg/dL · 이전 2026. 7. 28. 190 mg/dL");
+  await expect(page.getByTestId("change-item").filter({ hasText: "당화혈색소" }))
+    .toHaveText("당화혈색소 · 이번 2026. 1. 15. 5.4 % · 이전 2026. 7. 27. 5.2 %");
+  await expect(page.getByTestId("change-item").filter({ hasText: "비타민 D" }))
+    .toHaveText("비타민 D · 이번 2026. 1. 15. 45 ng/mL · 이전 값 없음");
+  await expect(page.getByText("새로 추가된 항목: 비타민 D")).toBeVisible();
+  const changes = await browserApi(page, "/api/foundation/changes");
+  expect(changes.status).toBe(200);
+  expect(JSON.stringify(changes.body)).not.toMatch(/referenceRange|difference|direction|trend/);
+
+  await page.goto("/records");
   await expect(page.getByTestId("durable-record")).toHaveCount(5);
 
   await page.goto("/my-data");
@@ -364,13 +382,56 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   }
 
   await page.goto("/data-control");
-  await expect(page.getByText("동의함", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "서비스 제공(결과지 처리)" })).toBeVisible();
+  await expect(page.getByText("연구 동의 없이도 모든 기능을 쓸 수 있어요.", { exact: false })).toBeVisible();
+  const documentRow = page.locator("article[data-purpose='DOCUMENT_EXTRACTION']");
+  const researchRow = page.locator("article[data-purpose='RESEARCH_USE']");
+  await expect(documentRow).toContainText("동의함");
+  await expect(researchRow).toContainText("동의 전");
+
+  // Research consent is stored only: granting and revoking it changes nothing else.
+  await page.getByRole("button", { name: "연구 활용 동의", exact: true }).click();
+  await expect(researchRow).toContainText("동의함");
+  await expect(documentRow).toContainText("동의함");
+  const consentsAfterGrant = await browserApi(page, "/api/foundation/consents");
+  expect(consentsAfterGrant.status).toBe(200);
+  expect(consentsAfterGrant.body).toMatchObject([
+    { purposeCode: "DOCUMENT_EXTRACTION", status: "ACTIVE" },
+    { purposeCode: "RESEARCH_USE", status: "ACTIVE", policyVersion: "research-consent-policy.v1" },
+    { purposeCode: "RESEARCH_CONTACT", status: "NOT_GRANTED" },
+  ]);
+  await page.getByRole("button", { name: "연구 활용 동의 철회", exact: true }).click();
+  await expect(researchRow).toContainText("철회함");
+  await expect(documentRow).toContainText("동의함");
+  const eventsAfterResearchRevoke = await browserApi(page, "/api/foundation/health-events");
+  expect(eventsAfterResearchRevoke.status).toBe(200);
+  expect(eventsAfterResearchRevoke.body).toHaveLength(5);
+
+  // Export: the browser opens the core URL directly; the core's headers name the file.
+  await expect(page.getByText("브라우저가 파일을 저장해요. 서버에 사본이 남지 않아요.")).toBeVisible();
+  const exportResponse = await page.request.get("/api/foundation/health-events/export");
+  expect(exportResponse.status()).toBe(200);
+  expect(exportResponse.headers()["content-type"]).toMatch(/^application\/json/);
+  expect(exportResponse.headers()["content-disposition"]).toMatch(/^attachment; filename="alm-health-events-\d{8}\.json"$/);
+  expect(exportResponse.headers()["cache-control"]).toBe("no-store");
+  const exported = await exportResponse.json() as { schemaVersion: string; subjectKind: string; events: unknown[]; documents: unknown[] };
+  expect(exported.schemaVersion).toBe("alm-health-events-export.v1");
+  expect(exported.subjectKind).toBe("synthetic");
+  expect(exported.events).toHaveLength(5);
+  expect(exported.documents).toHaveLength(2);
+  expect(JSON.stringify(exported)).not.toContain("referenceRange");
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "내 기록 내보내기(JSON)" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^alm-health-events-\d{8}\.json$/);
+
   const consentId = await page.locator("body").evaluate(async () => {
     const response = await fetch("/api/foundation/consents/document-extraction", { credentials: "include", cache: "no-store" });
     return String((await response.json()).consentId);
   });
   await page.getByRole("button", { name: "결과지 처리 동의 철회", exact: true }).click();
-  await expect(page.getByText("철회함", { exact: true }).first()).toBeVisible();
+  await expect(documentRow).toContainText("철회함");
 
   const blockedAfterRevocation = await browserApi(page, "/api/foundation/documents", {
     method: "POST",
