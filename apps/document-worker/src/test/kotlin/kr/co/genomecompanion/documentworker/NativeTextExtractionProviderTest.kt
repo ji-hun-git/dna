@@ -184,6 +184,41 @@ class NativeTextExtractionProviderTest {
     }
 
     @Test
+    fun `a bare trailing number is not a reference range but the row still parses unchanged`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("검사일 2026-07-28", "혈당 95 mg/dL 101"),
+        )
+
+        val candidate = outcome.candidates.single()
+        assertThat(candidate.value).isEqualTo("95")
+        assertThat(candidate.unit).isEqualTo("mg/dL")
+        assertThat(candidate.referenceRangeText).isNull()
+    }
+
+    @Test
+    fun `keeps a range body with an en dash separator verbatim`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("검사일 2026-07-28", "백혈구 6,200 /uL 15–35"),
+        )
+
+        assertThat(outcome.candidates.single().referenceRangeText).isEqualTo("15–35")
+    }
+
+    @Test
+    fun `never truncates a reference range body, it is null instead when longer than forty characters`() {
+        val longRange = "1000000000-2000000000000000000000000000000000"
+        assertThat(longRange.length).isGreaterThan(40)
+        val outcome = NativeTextExtractionProvider.parse(
+            lines("검사일 2026-07-28", "혈당 95 mg/dL $longRange"),
+        )
+
+        val candidate = outcome.candidates.single()
+        assertThat(candidate.value).isEqualTo("95")
+        assertThat(candidate.unit).isEqualTo("mg/dL")
+        assertThat(candidate.referenceRangeText).isNull()
+    }
+
+    @Test
     fun `caps candidates at one hundred and marks over-long fields unreadable`() {
         val many = (1..105).map { "항목$it $it mg/dL" }
         val outcome = NativeTextExtractionProvider.parse(lines(listOf("검사일 2026-07-28") + many))

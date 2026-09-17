@@ -349,20 +349,22 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByTestId("change-item").filter({ hasText: "비타민 D" }))
     .toHaveText("비타민 D · 이번 2026. 1. 15. 45 ng/mL · 이전 값 없음");
   await expect(page.getByText("이전 값이 없는 항목: 비타민 D")).toBeVisible();
-  // Wave 3 (b): the arithmetic difference as a signed number; nothing else.
-  await expect(page.getByTestId("change-delta")).toHaveCount(2);
-  await expect(page.getByTestId("change-item").filter({ hasText: "총콜레스테롤" }).locator("..").getByTestId("change-delta"))
-    .toHaveText("두 값의 차이: +4 mg/dL (+2.1%)");
-  await expect(page.getByTestId("change-item").filter({ hasText: "당화혈색소" }).locator("..").getByTestId("change-delta"))
-    .toHaveText("두 값의 차이: +0.2 % (+3.8%)");
-  await expect(page.getByTestId("change-item").filter({ hasText: "비타민 D" }).locator("..").getByTestId("change-delta")).toHaveCount(0);
+  // Wave 3 (b): the arithmetic difference as a signed number; nothing else. But the January
+  // document here completed last while its own exam date (2026-01-15) is earlier than July's
+  // (previous), so a signed difference would run against chronology — F5 omits delta for both
+  // items with a previous value, leaving only the two values and their dates.
+  await expect(page.getByTestId("change-delta")).toHaveCount(0);
   await expect(page.getByText("120-199")).toHaveCount(0);
   expect(await page.content()).not.toContain("120-199");
   expect(await page.locator("main").innerText()).not.toMatch(/→|↑|↓|증가|감소|상승|하락/);
   const changes = await browserApi(page, "/api/foundation/changes");
   expect(changes.status).toBe(200);
   expect(JSON.stringify(changes.body).toLowerCase()).not.toMatch(/reference|direction|trend/);
-  expect(JSON.stringify(changes.body)).toContain('"delta":{"absolute":"+4","percent":"+2.1"}');
+  const changeItems = (changes.body as { items: Array<{ concept: string; delta?: unknown }> }).items;
+  expect(changeItems.map((item) => item.concept)).toEqual(
+    expect.arrayContaining(["총콜레스테롤", "당화혈색소", "비타민 D"]),
+  );
+  expect(changeItems.every((item) => !("delta" in item))).toBe(true);
 
   await page.goto("/records");
   await expect(page.getByTestId("durable-record")).toHaveCount(5);

@@ -329,11 +329,73 @@ class ChangeSummaryProjectionTest {
     fun leavesTheDeltaNullWhenTheUnitDiffersOrAValueIsNotNumeric() {
         val januaryOtherUnit = row("총콜레스테롤", "5.0", LocalDate.of(2026, 1, 15), januaryDocument, unit = "mmol/L")
         val julyText = row("총콜레스테롤", "188", LocalDate.of(2026, 7, 28), julyDocument)
+        val januaryNonNumeric = row(
+            "요산", "trace", LocalDate.of(2026, 1, 15), januaryDocument,
+            unit = "mg/dL", conceptCode = "uric-acid",
+        )
+        val julyNonNumericPair = row(
+            "요산", "5.1", LocalDate.of(2026, 7, 28), julyDocument,
+            unit = "mg/dL", conceptCode = "uric-acid",
+        )
         val documents = listOf(completed(januaryDocument, "2026-01-16T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
 
-        val item = ChangeSummaryProjection.project(listOf(januaryOtherUnit, julyText), documents).items.single()
+        val items = ChangeSummaryProjection.project(
+            listOf(januaryOtherUnit, julyText, januaryNonNumeric, julyNonNumericPair),
+            documents,
+        ).items.associateBy { it.concept }
 
-        assertThat(item.previous).isNull()
+        val unitDiffers = items.getValue("총콜레스테롤")
+        assertThat(unitDiffers.previous).isNull()
+        assertThat(unitDiffers.delta).isNull()
+
+        val nonNumericValue = items.getValue("요산")
+        assertThat(nonNumericValue.previous?.value).isEqualTo("trace")
+        assertThat(nonNumericValue.delta).isNull()
+    }
+
+    @Test
+    fun omitsThePercentButKeepsTheAbsoluteDeltaWhenTheItemsUnitIsAPercent() {
+        val january = row(
+            "당화혈색소", "5.6", LocalDate.of(2026, 1, 15), januaryDocument,
+            unit = "%", conceptCode = "hba1c",
+        )
+        val july = row(
+            "당화혈색소", "5.8", LocalDate.of(2026, 7, 28), julyDocument,
+            unit = "%", conceptCode = "hba1c",
+        )
+        val documents = listOf(completed(januaryDocument, "2026-01-16T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
+
+        val item = ChangeSummaryProjection.project(listOf(january, july), documents).items.single()
+
+        assertThat(item.delta).isEqualTo(ChangeDelta("+0.2", null))
+    }
+
+    @Test
+    fun omitsTheDeltaWhenThePreviousDateIsLaterThanTheLatestDateButKeepsBothValues() {
+        // Which document is "latest" is decided by completedAt, independently of each record's own
+        // observedOn: here the earlier-completed document's record carries a later exam date.
+        val laterDatedPrevious = row(
+            "총콜레스테롤", "194", LocalDate.of(2026, 8, 1), januaryDocument,
+        )
+        val earlierDatedLatest = row(
+            "총콜레스테롤", "188", LocalDate.of(2026, 7, 28), julyDocument,
+        )
+        val documents = listOf(completed(januaryDocument, "2026-01-16T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
+
+        val item = ChangeSummaryProjection.project(listOf(laterDatedPrevious, earlierDatedLatest), documents).items.single()
+
+        assertThat(item.previous).isNotNull()
         assertThat(item.delta).isNull()
+    }
+
+    @Test
+    fun keepsTheDeltaWhenThePreviousDateEqualsTheLatestDate() {
+        val previous = row("총콜레스테롤", "194", LocalDate.of(2026, 7, 28), januaryDocument)
+        val latest = row("총콜레스테롤", "188", LocalDate.of(2026, 7, 28), julyDocument)
+        val documents = listOf(completed(januaryDocument, "2026-01-16T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
+
+        val item = ChangeSummaryProjection.project(listOf(previous, latest), documents).items.single()
+
+        assertThat(item.delta).isEqualTo(ChangeDelta("-6", "-3.1"))
     }
 }

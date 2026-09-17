@@ -75,6 +75,8 @@ object NativeTextExtractionProvider {
     )
     /** The range body inside a matched [rangeText]: optional comparison sign, number, optional separator and second number. */
     private val rangeBody = Regex("[<>≤≥]?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-–~]\\s*\\d[\\d,]*(?:\\.\\d+)?)?")
+    /** A range body is only kept as text when it actually bounds a value: a comparison sign, or two numbers joined by a separator. A bare number (e.g. a previous-result column) is not a range. */
+    private val rangeBoundaryMarker = Regex("[<>≤≥]|\\d\\s*[-–~]\\s*\\d")
     private val separators = Regex("[:：\\t]")
     private val leadingBullets = Regex("^[·•\\-*]+\\s*")
     private val dateLabel = Regex(
@@ -176,7 +178,10 @@ object NativeTextExtractionProvider {
         if (rest.isNotEmpty() && !restIsRange && rest.any { valueToken.matches(it) }) {
             return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
         }
-        val referenceRangeText = if (restIsRange) rangeBody.find(restText)?.value?.trim()?.take(MAX_REFERENCE_RANGE) else null
+        val rangeBodyMatch = if (restIsRange) rangeBody.find(restText)?.value?.trim() else null
+        val referenceRangeText = rangeBodyMatch?.takeIf {
+            it.length <= MAX_REFERENCE_RANGE && rangeBoundaryMarker.containsMatchIn(it)
+        }
         return RowParse.Measurement(label, value, unit, referenceRangeText)
     }
 

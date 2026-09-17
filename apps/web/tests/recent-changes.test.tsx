@@ -73,6 +73,24 @@ it("omits the percentage when the previous value was zero and the whole line whe
   expect(screen.getAllByTestId("change-delta").map((line) => line.textContent)).toEqual(["두 값의 차이: +12 mg/dL"]);
 });
 
+it("renders the absolute difference alone for a percent-unit item, no parenthesis", () => {
+  const percentUnitItem: ChangeSummary = {
+    ...summary,
+    items: [
+      {
+        ...summary.items[0],
+        conceptCode: "hba1c",
+        concept: "당화혈색소",
+        unit: "%",
+        delta: { absolute: "+0.2", percent: null },
+      },
+      { ...summary.items[1] },
+    ],
+  };
+  render(<RecentChanges changes={percentUnitItem} />);
+  expect(screen.getAllByTestId("change-delta").map((line) => line.textContent)).toEqual(["두 값의 차이: +0.2 %"]);
+});
+
 it("renders nothing without a latest document or without items", () => {
   const empty = render(<RecentChanges changes={{ items: [], newConcepts: [], unchangedCount: 0 }} />);
   expect(empty.container).toBeEmptyDOMElement();

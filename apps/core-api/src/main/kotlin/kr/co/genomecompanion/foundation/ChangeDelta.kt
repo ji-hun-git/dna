@@ -12,7 +12,7 @@ import java.math.RoundingMode
 data class ChangeDelta(
     /** `latest − previous` at the larger scale of the two inputs, sign explicit (`"+12"`, `"-6"`, `"-0.3"`, `"0"`). */
     val absolute: String,
-    /** `absolute / previous × 100`, HALF_EVEN to one decimal, sign explicit; null when `previous` is zero. */
+    /** `absolute / previous × 100`, HALF_EVEN to one decimal, sign explicit; null when `previous` is zero or negative (a percent of a non-positive base could contradict the absolute sign). */
     val percent: String?,
 )
 
@@ -25,7 +25,7 @@ object ChangeDeltaCalculator {
         val previousNumber = parse(previous) ?: return null
         val absolute = latestNumber.subtract(previousNumber)
             .setScale(maxOf(latestNumber.scale(), previousNumber.scale()), RoundingMode.UNNECESSARY)
-        val percent = if (previousNumber.signum() == 0) {
+        val percent = if (previousNumber.signum() <= 0) {
             null
         } else {
             absolute.multiply(hundred).divide(previousNumber, 1, RoundingMode.HALF_EVEN)

@@ -28,14 +28,17 @@ class ChangeDeltaTest {
 
     @Test
     fun handlesNegativeValues() {
-        assertThat(ChangeDeltaCalculator.compute("-3", "-4")).isEqualTo(ChangeDelta("+1", "-25.0"))
+        // The previous value is negative, so a percent-of-previous would run against the sign of
+        // the absolute difference (+1 here); percent stays null whenever previous <= 0.
+        assertThat(ChangeDeltaCalculator.compute("-3", "-4")).isEqualTo(ChangeDelta("+1", null))
         assertThat(ChangeDeltaCalculator.compute("-5", "2")).isEqualTo(ChangeDelta("-7", "-350.0"))
     }
 
     @Test
-    fun leavesPercentNullWhenThePreviousValueIsZero() {
+    fun leavesPercentNullWhenThePreviousValueIsZeroOrNegative() {
         assertThat(ChangeDeltaCalculator.compute("12", "0")).isEqualTo(ChangeDelta("+12", null))
         assertThat(ChangeDeltaCalculator.compute("0.0", "0")).isEqualTo(ChangeDelta("0.0", null))
+        assertThat(ChangeDeltaCalculator.compute("-1", "-4")).isEqualTo(ChangeDelta("+3", null))
     }
 
     @Test
@@ -50,6 +53,8 @@ class ChangeDeltaTest {
         assertThat(ChangeDeltaCalculator.compute("1", "")).isNull()
         assertThat(ChangeDeltaCalculator.compute("1.2.3", "1")).isNull()
         assertThat(ChangeDeltaCalculator.compute("양성", "음성")).isNull()
+        // A lab result recorded as a qualitative reading rather than a number: no delta at all.
+        assertThat(ChangeDeltaCalculator.compute("trace", "0.1")).isNull()
     }
 
     @Test

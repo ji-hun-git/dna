@@ -1133,10 +1133,14 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(byConcept.getValue("총콜레스테롤")["previous"]["observedOn"].asText()).isEqualTo("2026-01-15")
         assertThat(byConcept.getValue("당화혈색소")["previous"]["value"].asText()).isEqualTo("5.4")
         assertThat(byConcept.getValue("비타민 D")["previous"]["value"].asText()).isEqualTo("45")
+        // Upload order here is chronological (January's exam date is before July's), so the delta
+        // is present for every item that has a previous value.
         assertThat(byConcept.getValue("총콜레스테롤")["delta"]["absolute"].asText()).isEqualTo("-6")
         assertThat(byConcept.getValue("총콜레스테롤")["delta"]["percent"].asText()).isEqualTo("-3.1")
+        // 당화혈색소 is a %-unit item (F4): the absolute difference is kept, the percent is omitted
+        // entirely so a "percent of a percent" number never appears.
         assertThat(byConcept.getValue("당화혈색소")["delta"]["absolute"].asText()).isEqualTo("-0.2")
-        assertThat(byConcept.getValue("당화혈색소")["delta"]["percent"].asText()).isEqualTo("-3.7")
+        assertThat(byConcept.getValue("당화혈색소")["delta"].has("percent")).isFalse()
         assertThat(byConcept.getValue("비타민 D")["delta"]["absolute"].asText()).isEqualTo("-3")
         assertThat(byConcept.getValue("비타민 D")["delta"]["percent"].asText()).isEqualTo("-6.7")
         assertThat(firstOnly["items"].map { it.has("delta") }).containsExactly(false, false, false)
@@ -1488,13 +1492,32 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             ),
         ).containsExactly("120-199", "120-199")
 
-        for (path in listOf("/api/foundation/records", "/api/foundation/health-events", "/api/foundation/changes", "/api/foundation/records/$correctedRecordId")) {
+        for (path in listOf(
+            "/api/foundation/documents/$documentId/candidates",
+            "/api/foundation/records",
+            "/api/foundation/health-events",
+            "/api/foundation/changes",
+            "/api/foundation/records/$correctedRecordId",
+        )) {
             val body = read(get(path), alice).andExpect(status().isOk).andReturn().response.contentAsString
             assertThat(body.lowercase()).describedAs(path).doesNotContain("reference")
+            // The key check above can pass even if the range text leaked under a different field
+            // name; a value-based check catches that regardless of key.
+            assertThat(body).describedAs(path).doesNotContain("120-199")
         }
+        // The original query here (`event_type LIKE '%120%' OR resource_type LIKE '%199%'`) can
+        // never match: those columns hold fixed enum-like strings (e.g. "CANDIDATE_CONFIRMED"),
+        // never a value or range digit. Check the audit row's own textual columns instead, for
+        // both the printed range and the confirmed correction value.
         assertThat(
-            jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type LIKE '%120%' OR resource_type LIKE '%199%'", Long::class.java),
-        ).isZero()
+            jdbc.queryForList(
+                """
+                SELECT event_type || ' ' || resource_type || ' ' || COALESCE(purpose_code, '') || ' ' || outcome
+                FROM gc_audit_event
+                """.trimIndent(),
+                String::class.java,
+            ),
+        ).noneMatch { it.contains("120-199") || it.contains("191") }
     }
 
     @Test
