@@ -1442,12 +1442,30 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).toList()
         val correctedRecordId = records.single { it["label"].asText() == "총콜레스테롤" }["recordId"].asText()
 
+        // A correction request carrying an unrecognized referenceRangeText field is rejected outright:
+        // the field is never client-writable, and the strict Jackson posture (fail-on-unknown-properties)
+        // rejects it rather than silently dropping it.
+        mutate(
+            post("/api/foundation/records/$correctedRecordId/corrections")
+                .header("Idempotency-Key", "reference-range-correction-rejected")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인", "referenceRangeText" to "1-2"))),
+            alice,
+        ).andExpect(status().isBadRequest)
+        assertThat(
+            jdbc.queryForList(
+                "SELECT reference_range_text FROM gc_health_record_version WHERE record_id = ?::uuid ORDER BY changed_at",
+                String::class.java,
+                correctedRecordId,
+            ),
+        ).containsExactly("120-199")
+
         // Correction inherits the range text; a client cannot change it because no request field exists.
         mutate(
             post("/api/foundation/records/$correctedRecordId/corrections")
                 .header("Idempotency-Key", "reference-range-correction-1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인", "referenceRangeText" to "1-2"))),
+                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인"))),
             alice,
         ).andExpect(status().isOk)
         assertThat(

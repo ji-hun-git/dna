@@ -1,6 +1,5 @@
 package kr.co.genomecompanion.foundation
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Pattern
@@ -82,13 +81,6 @@ data class CandidateConfirmationRequest(
 )
 
 
-/**
- * `ignoreUnknown` because the range text is never a client-writable field: a correction always
- * inherits the previous version's reference-range text from the repository, so a request that
- * includes `referenceRangeText` (or any other unrecognized property) is accepted and the extra
- * property is silently dropped rather than rejected.
- */
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class RecordCorrectionRequest(
     @field:Size(min = 1, max = 64)
     val value: String,
