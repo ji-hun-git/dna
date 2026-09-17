@@ -34,6 +34,10 @@
   - `meanOfLast3`: 마지막 세 값의 산술평균, `HALF_EVEN`, scale = 세 입력 중 큰 scale + 1, 부호 없음(음수면 `-`). 점이 3개 미만이거나 하나라도 파싱 불가면 생략.
 - 단위 테스트: 그룹·정렬·같은 날 두 점·단위 분리·각 계산의 경계. PostgreSQL 통합 테스트: owner 격리, 정정 후 CURRENT만, 응답에 `reference` 키·값 없음.
 
+**(최종 리뷰 후 좁힌 규칙, 2026-09-17)**
+- `per30Days`는 마지막 두 점의 날짜 차이가 30일 미만이면 생략한다(기존에는 0일일 때만 생략). 30일 미만 간격을 30일로 늘려 계산하면 아무도 측정하지 않은 숫자가 나오기 때문이다. 정확히 30일이면 계산한다.
+- `lastDifference`는 마지막 두 점의 `observedOn`이 같으면 생략한다(`per30Days`는 이미 생략됨). 같은 날짜에서 어느 점이 "마지막"인지는 어느 문서를 나중에 확인했는지에 따라 달라지므로, 확인 순서가 바뀌면 부호도 바뀔 수 있기 때문이다. `meanOfLast3`는 영향받지 않는다.
+
 ## 3. 화면 — 측정 이력 (`/my-data/history`)
 
 - 진입: 내 데이터 상단 링크 "측정 이력", 근거 drawer의 "이 항목의 측정 이력 보기"(해당 시리즈로 스크롤·포커스). 전역 내비게이션은 두 목적지 그대로.
@@ -49,6 +53,11 @@
 - 본문: `Bundle`(`type: "collection"`, `timestamp`, `meta.tag` = `{system: "https://alm.example/fhir/tag", code: "synthetic"}`), entry마다 `Observation`: `id` = eventId, `status: "final"`, `category` laboratory, `code` = `{coding: [{system: "http://loinc.org", code}] (개념표에 LOINC가 있을 때만), text: 라벨}`, `effectiveDateTime` = 검사일(`YYYY-MM-DD`), `valueQuantity` = `{value: 숫자, unit}`(값이 숫자로 파싱되지 않으면 `valueString`), `referenceRange: [{text}]`(원문이 있을 때만, low/high 없음), 정정된 기록은 `note: [{text: "본인이 값을 수정함"}]`. `interpretation`·`subject`·`performer` 없음.
 - 의존성 추가 없음(직접 만든 DTO). 테스트: 구조 규칙(필수 필드, LOINC 유무, `interpretation` 부재, 참고치 text만), owner 격리, 헤더, 감사 `HEALTH_EVENTS_EXPORTED`(형식 구분이 필요하면 값 없는 코드 컬럼만).
 - Web: 데이터 관리에 두 번째 링크 "내 기록 내보내기(FHIR)", 도움말 "다른 건강기록 도구가 읽을 수 있는 형식이에요." 0건이면 비활성.
+
+**(최종 리뷰 후 좁힌 규칙, 2026-09-17)**
+- `category`는 nullable이다. 개념표(V7 시드)의 혈압(수축기·이완기)·맥박·키·체중·BMI·허리둘레와 concept code가 없는 이벤트는 `category`를 생략한다(빈 배열 금지). `vital-signs`는 절대 쓰지 않는다 — 이 파일이 그 프로파일을 충족한다고 주장할 수 없기 때문이다. 나머지(검사실 수치)는 기존대로 `laboratory`를 유지한다.
+- 개념표의 별칭이 느슨한 표기를 더 구체적인 개념에 매핑하는 네 개념 — `fasting-glucose`(“혈당”), `crp`(“hs-CRP”), `total-bilirubin`(“Bilirubin”), `egfr`(“GFR”) — 은 `code.coding`을 생략한다(`code.text`는 유지). 그 라벨이 실제로 공복·hs·total·e 임을 문서가 말한 적이 없는데 LOINC 코드로 그렇게 주장하면 안 되기 때문이다.
+- 각 `Observation`은 자신의 `meta.tag`를 가진다: `https://alm.example/fhir/tag` 시스템의 `synthetic`과 `person-confirmed-from-document` 두 코딩. Bundle 레벨의 `synthetic` 태그만으로는 Observation 하나가 Bundle에서 추출됐을 때 출처 표시가 사라지기 때문이다. `status: "final"`은 그대로.
 
 ## 5. PR #5 F-3
 
