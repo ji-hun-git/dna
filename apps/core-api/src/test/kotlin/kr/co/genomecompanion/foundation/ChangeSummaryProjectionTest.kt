@@ -22,8 +22,9 @@ class ChangeSummaryProjectionTest {
         conceptCode: String? = "total-cholesterol",
         status: String = "CURRENT",
         confirmedAt: Instant = Instant.parse("2026-07-28T09:10:00Z"),
+        recordId: UUID = UUID.randomUUID(),
     ) = FoundationRecordRow(
-        recordId = UUID.randomUUID(),
+        recordId = recordId,
         recordVersionId = UUID.randomUUID(),
         supersedesVersionId = null,
         candidateId = UUID.randomUUID(),
@@ -269,6 +270,36 @@ class ChangeSummaryProjectionTest {
         val summary = ChangeSummaryProjection.project(listOf(recA, recB, recC, latest), documents)
 
         assertThat(summary.unchangedCount).isZero()
+    }
+
+    @Test
+    fun breaksAnItemsOrderTieOnLabelAndConfirmedAtByRecordIdTextRegardlessOfInputOrder() {
+        // Two CURRENT records of the latest document share both label and confirmedAt (e.g. two
+        // panel entries filed under the same display label), so compareBy { label }.thenBy {
+        // confirmedAt } alone cannot order them deterministically; recordId text must decide.
+        val latestDocument = UUID.fromString("66666666-6666-4666-8666-666666666666")
+        val tiedConfirmedAt = Instant.parse("2026-08-01T09:00:00Z")
+        val recordWithLowerId = row(
+            "총콜레스테롤", "150", LocalDate.of(2026, 8, 1), latestDocument,
+            conceptCode = "total-cholesterol-a",
+            confirmedAt = tiedConfirmedAt,
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000001"),
+        )
+        val recordWithHigherId = row(
+            "총콜레스테롤", "151", LocalDate.of(2026, 8, 1), latestDocument,
+            conceptCode = "total-cholesterol-b",
+            confirmedAt = tiedConfirmedAt,
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000002"),
+        )
+        val documents = listOf(completed(latestDocument, "2026-08-01T10:00:00Z"))
+
+        val forwardOrder = ChangeSummaryProjection.project(listOf(recordWithLowerId, recordWithHigherId), documents)
+        val reverseOrder = ChangeSummaryProjection.project(listOf(recordWithHigherId, recordWithLowerId), documents)
+
+        assertThat(forwardOrder.items.map { it.conceptCode })
+            .containsExactly("total-cholesterol-a", "total-cholesterol-b")
+        assertThat(reverseOrder.items.map { it.conceptCode })
+            .containsExactly("total-cholesterol-a", "total-cholesterol-b")
     }
 
     @Test
