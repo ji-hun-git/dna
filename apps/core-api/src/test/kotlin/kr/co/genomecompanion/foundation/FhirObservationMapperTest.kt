@@ -1,5 +1,6 @@
 package kr.co.genomecompanion.foundation
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
@@ -108,5 +109,22 @@ class FhirObservationMapperTest {
         val fields = FhirObservation::class.java.declaredFields.map { it.name }
         assertThat(fields).doesNotContain("interpretation", "subject", "performer")
         assertThat(FhirReferenceRange::class.java.declaredFields.map { it.name }).containsExactly("text")
+    }
+
+    @Test
+    fun keepsValueQuantityAsAPlainJsonNumberAtEveryScaleWhenSerialized() {
+        val mapper = ObjectMapper().findAndRegisterModules()
+        val tiny = row(label = "tiny", value = "0.00000012", unit = "mg/dL", conceptCode = null)
+        val scaled = row(label = "scaled", value = "5.20", unit = "%", conceptCode = null)
+        val commas = row(label = "commas", value = "1,234", unit = "ng/mL", conceptCode = null)
+        val whole = row(label = "whole", value = "1000", unit = "mg/dL", conceptCode = null)
+        val bundle = FhirObservationMapper.bundle(listOf(tiny, scaled, commas, whole), loinc, now)
+
+        val json = mapper.writeValueAsString(bundle)
+        assertThat(json).contains(""""value":0.00000012""")
+        assertThat(json).contains(""""value":5.20""")
+        assertThat(json).contains(""""value":1234""")
+        assertThat(json).contains(""""value":1000""")
+        assertThat(json).doesNotContainPattern("\"value\":[0-9.]*[eE][+-]?[0-9]")
     }
 }

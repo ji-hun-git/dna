@@ -1769,6 +1769,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(hba1c.has("referenceRange")).isFalse()
         assertThat(hba1c.has("note")).isFalse()
         assertThat(response.contentAsString).doesNotContain("interpretation", "subject", "performer", "\"low\"", "\"high\"", "valueString")
+        // Every valueQuantity is a plain JSON number, never exponent notation.
+        assertThat(response.contentAsString).doesNotContainPattern("\"value\":[0-9.]*[eE][+-]?[0-9]")
+        assertThat(hba1c["valueQuantity"]["value"].toString()).isEqualTo("5.2")
 
         read(get("/api/foundation/health-events/export/fhir"), bob)
             .andExpect(status().isOk)

@@ -1,5 +1,9 @@
 package kr.co.genomecompanion.foundation
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -15,7 +19,22 @@ data class FhirCoding(val system: String, val code: String)
 
 data class FhirCodeableConcept(val coding: List<FhirCoding>?, val text: String?)
 
-data class FhirQuantity(val value: BigDecimal, val unit: String)
+/**
+ * Serializes a `BigDecimal` as a plain JSON number, never exponent notation (e.g. `1.2E-6`) and
+ * never a stripped form (e.g. `1E+3`), while keeping its scale (`5.20` stays `5.20`). Scoped to this
+ * one field only — the global Jackson config is untouched, so no other response in the app changes.
+ */
+class PlainBigDecimalSerializer : JsonSerializer<BigDecimal>() {
+    override fun serialize(value: BigDecimal, gen: JsonGenerator, serializers: SerializerProvider) {
+        gen.writeNumber(value.toPlainString())
+    }
+}
+
+data class FhirQuantity(
+    @field:JsonSerialize(using = PlainBigDecimalSerializer::class)
+    val value: BigDecimal,
+    val unit: String,
+)
 
 data class FhirReferenceRange(val text: String)
 
