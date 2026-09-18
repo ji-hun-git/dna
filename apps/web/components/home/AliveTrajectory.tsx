@@ -9,6 +9,7 @@ import {
   PHASE_LABELS,
   PICKER,
   Spring,
+  T_END,
   addDrumVelocity,
   buildPath,
   createControlPoints,
@@ -30,7 +31,9 @@ import styles from "@/components/home/AliveTrajectory.module.css";
 
 const VIEW_W = 1200;
 const VIEW_H = 760;
-const T_END = 0.97;
+
+/** Shown under the SVG; unrelated to the boundary sentence, which never changes between modes. */
+const EXAMPLE_CAPTION = "예시 데이터 · 실제 사람의 기록이 아니에요";
 
 /** All white; the dash pattern only marks a time boundary, never a value. */
 const PHASE_DASH_PATTERNS: readonly string[] = ["", "16 8", "3 7", "1 6"];
@@ -75,24 +78,38 @@ function el<K extends keyof SVGElementTagNameMap>(
 
 export type AliveTrajectoryProps = {
   className?: string;
+  /** Time-period phase labels; defaults to the example checkup periods. */
+  phaseLabels?: readonly string[];
+  /** Rings of labelled nodes, one per completed phase; defaults to the example dataset. */
+  rings?: ReadonlyArray<ExampleRing>;
+  /** The mono caption under the SVG; the boundary sentence below it never changes. */
+  caption?: string;
 };
 
 /**
- * A full-viewport, pitch-black hero: a breathing arrow curving up and to the right, with energy
- * flowing along it, tall elliptical rings straddling the path carrying labelled example-item
- * nodes, and scroll-driven drum motion (momentum, then a detent snap). Everything here is
- * decorative: the SVG is a single `role="img"` with a Korean description, nothing inside it is
- * focusable, and no property of a node (colour, size, speed, direction) varies with the item's
- * value. Under `prefers-reduced-motion: reduce` it renders one still frame and runs no loop.
+ * A full-viewport, pitch-black hero: a breathing horizontal time axis (left to right, flat at
+ * mid-height — it never climbs), with energy flowing along it, tall elliptical rings straddling
+ * the path carrying labelled item nodes, and scroll-driven drum motion (momentum, then a detent
+ * snap). The axis has no arrowhead or gate at its end; it simply continues to the right edge.
+ * Everything here is decorative: the
+ * SVG is a single `role="img"` with a Korean description, nothing inside it is focusable, and no
+ * property of a node (colour, size, speed, direction) varies with the item's value. Under
+ * `prefers-reduced-motion: reduce` it renders one still frame and runs no loop. `phaseLabels` and
+ * `rings` default to the pre-login example dataset; the logged-in home screen passes the same
+ * shapes built from the person's own records (see `lib/home/alive-home-data.ts`).
  */
-export function AliveTrajectory({ className }: AliveTrajectoryProps) {
+export function AliveTrajectory({
+  className,
+  phaseLabels = PHASE_LABELS,
+  rings: ringSpecs = RINGS,
+  caption = EXAMPLE_CAPTION,
+}: AliveTrajectoryProps) {
   const reduced = usePrefersReducedMotion();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const phasesLayerRef = useRef<SVGGElement | null>(null);
   const haloRef = useRef<SVGPathElement | null>(null);
   const flowRef = useRef<SVGPathElement | null>(null);
-  const tipRef = useRef<SVGGElement | null>(null);
   const backLayerRef = useRef<SVGGElement | null>(null);
   const frontLayerRef = useRef<SVGGElement | null>(null);
 
@@ -101,11 +118,10 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
     const phasesLayer = phasesLayerRef.current;
     const halo = haloRef.current;
     const flow = flowRef.current;
-    const tip = tipRef.current;
     const backLayer = backLayerRef.current;
     const frontLayer = frontLayerRef.current;
     const root = rootRef.current;
-    if (!svg || !phasesLayer || !halo || !flow || !tip || !backLayer || !frontLayer || !root) return undefined;
+    if (!svg || !phasesLayer || !halo || !flow || !backLayer || !frontLayer || !root) return undefined;
 
     const controlPoints: ControlPoint[] = createControlPoints(BASE_CONTROL_POINTS);
     const drum = createDrum();
@@ -119,7 +135,7 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
     const haloFlourish = new Spring(reduced ? 1 : 0, DRAW);
     haloFlourish.set(1);
 
-    const ranges = phaseRanges(PHASE_LABELS, T_END);
+    const ranges = phaseRanges(phaseLabels, T_END);
     const phaseSegments: PhaseSegmentRefs[] = ranges.map((range, i) => {
       const path = el(phasesLayer, "path", {
         fill: "none",
@@ -131,18 +147,24 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
       // The path's own start (i = 0) needs no dividing tick, but every phase still gets a label.
       const tick =
         i === 0 ? undefined : el(phasesLayer, "line", { stroke: "#fff", "stroke-width": 1.5, opacity: 0.8 });
+      // Horizontal, 12px, with a black halo so it reads over the grid; never rotated, always
+      // placed above its tick so it can never overprint the path or a ring.
       const label = el(phasesLayer, "text", {
         fill: "#fff",
-        "font-size": 11,
+        "font-size": 12,
         "text-anchor": "middle",
-        "dominant-baseline": "middle",
+        "dominant-baseline": "auto",
+        "paint-order": "stroke",
+        stroke: "#000",
+        "stroke-width": 3,
+        "stroke-linejoin": "round",
         class: styles.mono,
       });
       label.textContent = range.label;
       return { range, path, tick, label };
     });
 
-    const rings: RingRefs[] = RINGS.map((spec) => {
+    const rings: RingRefs[] = ringSpecs.map((spec) => {
       const back = el(backLayer, "path", { fill: "none", stroke: "rgba(255,255,255,0.42)", "stroke-width": 1 });
       const front = el(frontLayer, "path", { fill: "none", stroke: "rgba(255,255,255,0.42)", "stroke-width": 1 });
       const nodes: NodeRefs[] = spec.nodes.map((nodeSpec) => {
@@ -232,10 +254,14 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
         segment.tick.style.opacity = String(opacity);
       }
       if (segment.label) {
-        segment.label.setAttribute(
-          "transform",
-          `translate(${marker.labelX} ${marker.labelY}) rotate(${marker.angleDeg})`,
-        );
+        // Always straight up from the tick's own point (never rotated with the tangent, never
+        // the tick's normal-offset endpoint, which could point down): the axis is horizontal, so
+        // "above" is simply a smaller y, clearing the tallest ring's stroke.
+        const pathPointAtTick = pathPoint(controlPoints, segment.range.t0);
+        segment.label.setAttribute("x", String(pathPointAtTick.x));
+        // Clears the tallest ring (ry up to 46) plus its node's own offset comfortably.
+        segment.label.setAttribute("y", String(pathPointAtTick.y - 100));
+        segment.label.removeAttribute("transform");
         segment.label.style.opacity = String(opacity);
       }
     }
@@ -249,9 +275,6 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
       halo!.style.opacity = "0.3";
       flow!.style.opacity = "0";
       for (const segment of phaseSegments) layoutPhaseSegment(segment, 1);
-      const head = pathPoint(controlPoints, 1);
-      tip!.setAttribute("transform", `translate(${head.x} ${head.y}) rotate(${(head.angle * 180) / Math.PI})`);
-      tip!.style.opacity = "1";
       for (const ring of rings) {
         const c = pathPoint(controlPoints, ring.spec.t);
         const rot = c.angle + Math.PI / 2;
@@ -296,9 +319,6 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
         flowOffset -= dt * 70;
         flow!.style.strokeDashoffset = String(flowOffset);
         flow!.style.opacity = String(drawn);
-        const head = pathPoint(controlPoints, 1);
-        tip!.setAttribute("transform", `translate(${head.x} ${head.y}) rotate(${(head.angle * 180) / Math.PI})`);
-        tip!.style.opacity = String(drawn);
 
         drift += dt * 0.012;
         const offset = drift + stepDrum(drum, dt);
@@ -357,8 +377,9 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
       document.removeEventListener("visibilitychange", onVisibility);
       backLayer.replaceChildren();
       frontLayer.replaceChildren();
+      phasesLayer.replaceChildren();
     };
-  }, [reduced]);
+  }, [reduced, phaseLabels, ringSpecs]);
 
   return (
     <div ref={rootRef} className={[styles.root, className].filter(Boolean).join(" ")} data-reduced-motion={reduced}>
@@ -368,7 +389,7 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label="개인 건강 기록이 2024 검진부터 다음 검진까지 시기별로 이어지며 위로 흘러가는 모습을 표현한 장식용 예시 애니메이션"
+        aria-label="날짜별 예시 건강 기록이 가로 시간선을 따라 나열된 모습을 표현한 장식용 애니메이션"
         focusable="false"
       >
         <defs>
@@ -385,14 +406,11 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
         <path ref={haloRef} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth={10} strokeLinecap="round" />
         <g ref={phasesLayerRef} />
         <path ref={flowRef} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={3} strokeLinecap="round" strokeDasharray="1 26" />
-        <g ref={tipRef}>
-          {/* An open gate into the next phase, not a solid arrowhead: two posts framing a chevron opening. */}
-          <line x1={-34} y1={-16} x2={-34} y2={16} stroke="#fff" strokeWidth={2} strokeLinecap="round" />
-          <path d="M -24 -10 L 0 0 L -24 10" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        </g>
+        {/* No tip marker, gate or arrowhead: the horizontal time axis simply continues to the
+            right edge, fading via the flow dash's own opacity. */}
         <g ref={frontLayerRef} />
       </svg>
-      <p className={styles.caption}>예시 데이터 · 실제 사람의 기록이 아니에요</p>
+      <p className={styles.caption}>{caption}</p>
       <p className={styles.boundary}>선의 모양과 움직임은 건강 상태를 뜻하지 않아요.</p>
     </div>
   );
