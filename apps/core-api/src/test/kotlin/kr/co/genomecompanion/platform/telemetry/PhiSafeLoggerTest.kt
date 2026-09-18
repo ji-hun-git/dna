@@ -35,6 +35,28 @@ class PhiSafeLoggerTest {
     }
 
     @Test
+    fun `emitFailure logs the exception class but never a request value`() {
+        val appender = ListAppender<ILoggingEvent>().also { it.start() }
+        testLogger.addAppender(appender)
+        try {
+            phiSafeLogger.emitFailure(
+                TelemetryEvent.INTERNAL_ERROR,
+                SafeTelemetryContext(
+                    UUID.fromString("00000000-0000-0000-0000-000000000099"),
+                    "/api/foundation/candidates/{candidateId}/confirmation", "5xx", null,
+                ),
+                "IllegalStateException",
+                severe = true,
+            )
+            val rendered = appender.list.joinToString("\n") { it.formattedMessage + it.mdcPropertyMap }
+            assertThat(rendered).contains("internal_error", "IllegalStateException", "5xx")
+            assertThat(rendered).doesNotContain("188 mg/dL SENTINEL", "SECRET-BODY-VALUE-7731", "subject-17")
+        } finally {
+            testLogger.detachAppender(appender)
+        }
+    }
+
+    @Test
     fun `correlation filter accepts only UUID and copies no other header to MDC`() {
         val request = MockHttpServletRequest().apply {
             addHeader("X-Correlation-ID", "not-a-uuid")

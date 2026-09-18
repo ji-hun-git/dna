@@ -28,8 +28,11 @@ class FhirObservationMapperTest {
         status: String = "CURRENT",
         originalObservedOn: LocalDate? = null,
         originalLabel: String? = null,
+        confirmedAt: String = "2026-08-01T00:00:00Z",
+        versionChangedAt: String = confirmedAt,
+        recordId: UUID = UUID.randomUUID(),
     ) = FoundationRecordRow(
-        recordId = UUID.randomUUID(),
+        recordId = recordId,
         recordVersionId = UUID.randomUUID(),
         supersedesVersionId = null,
         candidateId = UUID.randomUUID(),
@@ -42,7 +45,8 @@ class FhirObservationMapperTest {
         unit = unit,
         observedOn = LocalDate.parse(observedOn),
         originalObservedOn = originalObservedOn,
-        confirmedAt = Instant.parse("2026-08-01T00:00:00Z"),
+        versionChangedAt = Instant.parse(versionChangedAt),
+        confirmedAt = Instant.parse(confirmedAt),
         correctionReason = null,
         evidencePage = 1,
         sourceTextSha256 = "b".repeat(64),
@@ -186,6 +190,23 @@ class FhirObservationMapperTest {
         val fields = FhirObservation::class.java.declaredFields.map { it.name }
         assertThat(fields).doesNotContain("interpretation", "subject", "performer")
         assertThat(FhirReferenceRange::class.java.declaredFields.map { it.name }).containsExactly("text")
+    }
+
+    @Test
+    fun ordersOnTheImmutableConfirmedAtNotOnAVersionChangedAtBumpedByACorrection() {
+        val correctedButConfirmedFirst = row(
+            value = "195", observedOn = "2026-07-28",
+            confirmedAt = "2026-08-01T00:00:00Z", versionChangedAt = "2026-09-19T12:00:00Z",
+        )
+        val neverCorrectedButConfirmedSecond = row(
+            value = "196", observedOn = "2026-07-28",
+            confirmedAt = "2026-08-02T00:00:00Z", versionChangedAt = "2026-08-02T00:00:00Z",
+        )
+
+        val bundle = FhirObservationMapper.bundle(listOf(neverCorrectedButConfirmedSecond, correctedButConfirmedFirst), loinc, now)
+
+        assertThat(bundle.entry!!.map { it.resource.id })
+            .containsExactly(correctedButConfirmedFirst.recordVersionId.toString(), neverCorrectedButConfirmedSecond.recordVersionId.toString())
     }
 
     @Test

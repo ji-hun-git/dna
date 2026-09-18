@@ -1,4 +1,4 @@
-import type { FoundationCandidate, FoundationRecord, HealthEvent, SeriesResponse } from "@/lib/foundation/client";
+import type { FoundationAbstention, FoundationCandidate, FoundationRecord, HealthEvent, SeriesResponse } from "@/lib/foundation/client";
 
 const documentId = "e64ddaae-a326-4f23-88a9-05ac59a48625";
 const documentSha256 = "a".repeat(64);
@@ -65,6 +65,14 @@ export const syntheticCandidates: FoundationCandidate[] = [
     totalCandidates: 3,
     originalLabel: "Vitamin D",
   },
+];
+
+/** One abstention per new closed-set reason, plus one of the original four, for copy-mapping tests. */
+export const syntheticAbstentions: FoundationAbstention[] = [
+  { label: "hs-CRP (<0.3 mg/L)", reason: "qualified_value", evidencePage: 1 },
+  { label: "요단백", reason: "qualitative", evidencePage: 1 },
+  { label: "혈당", reason: "previous_column", evidencePage: 1 },
+  { label: "문서 전체", reason: "unreadable" },
 ];
 
 export function syntheticRecord(overrides: Partial<FoundationRecord> = {}): FoundationRecord {

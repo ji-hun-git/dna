@@ -100,7 +100,7 @@ class MedicalConceptNormalizer(private val source: MedicalConceptSource) {
             sourceTextSha256 = candidate.sourceTextSha256,
             conceptCode = concept?.conceptCode,
             referenceRangeText = candidate.referenceRangeText,
-            originalLabel = candidate.label,
+            originalLabel = candidate.originalLabel ?: candidate.label,
         )
     }
 }

@@ -17,6 +17,7 @@ class SeriesProjectionTest {
         conceptCode: String? = "total-cholesterol",
         status: String = "CURRENT",
         confirmedAt: String = "2026-08-01T00:00:00Z",
+        versionChangedAt: String = confirmedAt,
         recordId: UUID = UUID.randomUUID(),
         originalLabel: String? = null,
     ) = FoundationRecordRow(
@@ -32,6 +33,7 @@ class SeriesProjectionTest {
         originalValue = value,
         unit = unit,
         observedOn = LocalDate.parse(observedOn),
+        versionChangedAt = Instant.parse(versionChangedAt),
         confirmedAt = Instant.parse(confirmedAt),
         correctionReason = null,
         evidencePage = 1,
@@ -87,6 +89,25 @@ class SeriesProjectionTest {
         assertThat(series.derived.lastDifference).isNull()
         assertThat(series.derived.per30Days).isNull()
         assertThat(series.derived.meanOfLast3).isEqualTo("2.0")
+    }
+
+    @Test
+    fun ordersOnTheImmutableConfirmedAtEvenWhenACorrectionBumpsVersionChangedAtFarLater() {
+        // A correction on the earlier-confirmed point bumps its versionChangedAt to "now" — far
+        // after the other point's — but never touches confirmed_at. The series must stay in
+        // confirmedAt order (F4), not be reshuffled by the mutable timestamp.
+        val correctedButConfirmedFirst = row(
+            "총콜레스테롤", "1", "2026-07-28",
+            confirmedAt = "2026-08-01T00:00:00Z", versionChangedAt = "2026-09-19T12:00:00Z",
+        )
+        val neverCorrectedButConfirmedSecond = row(
+            "총콜레스테롤", "2", "2026-07-28",
+            confirmedAt = "2026-08-02T00:00:00Z", versionChangedAt = "2026-08-02T00:00:00Z",
+        )
+
+        val series = SeriesProjection.project(listOf(neverCorrectedButConfirmedSecond, correctedButConfirmedFirst)).series.single()
+
+        assertThat(series.points.map { it.value }).containsExactly("1", "2")
     }
 
     @Test

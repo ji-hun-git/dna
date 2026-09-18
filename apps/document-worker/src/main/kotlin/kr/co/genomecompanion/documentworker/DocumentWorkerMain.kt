@@ -205,6 +205,7 @@ class BoundaryApiClient(
                         ),
                         "sourceTextSha256" to candidate.sourceTextSha256,
                         "referenceRangeText" to candidate.referenceRangeText,
+                        "originalLabel" to candidate.originalLabel,
                     )
                 },
                 "abstentions" to outcome.abstentions.map { abstention ->

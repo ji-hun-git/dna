@@ -100,11 +100,12 @@ object FhirObservationMapper {
     private val observationTags = FhirMeta(listOf(synthetic, personConfirmedFromDocument))
 
     fun bundle(records: List<FoundationRecordRow>, concepts: Map<String, MedicalConcept>, now: Instant): FhirBundle {
+        // observedOn, confirmedAt, recordId — the same shape as /records, /health-events and the
+        // JSON export, not the concept label, so a correction can't reorder this file either.
         val entries = records
             .filter { it.status == "CURRENT" }
             .sortedWith(
                 compareBy<FoundationRecordRow> { it.observedOn }
-                    .thenBy { it.label }
                     .thenBy { it.confirmedAt }
                     .thenBy { it.recordId.toString() },
             )

@@ -33,6 +33,11 @@ application {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     systemProperty("user.timezone", "UTC")
+    systemProperty("gc.handLabelledRoot", projectDir.resolve("fixtures/hand-labelled").absolutePath)
+}
+
+tasks.named<JavaExec>("run") {
+    systemProperty("gc.handLabelledRoot", projectDir.resolve("fixtures/hand-labelled").absolutePath)
 }
 
 dependencyLocking { lockAllConfigurations() }

@@ -48,6 +48,26 @@ class ExtractionResultRequestValidationTest {
     }
 
     @Test
+    fun acceptsANullOrShortOriginalLabelButRejectsOneOverEightyCharactersOrBlank() {
+        assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = null))))).isEmpty()
+        assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = "혈압"))))).isEmpty()
+        assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = "가".repeat(81)))))).isNotEmpty()
+        // F8: a blank (but non-null) originalLabel must be rejected here (400) rather than reach
+        // the V11 `CHECK (original_label IS NULL OR char_length(...) BETWEEN 1 AND 80)` constraint
+        // as a raw, unmapped SQL failure.
+        assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = ""))))).isNotEmpty()
+        assertThat(candidate().originalLabel).isNull()
+    }
+
+    @Test
+    fun acceptsExactlyTheSevenClosedAbstentionReasons() {
+        for (reason in listOf("unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence", "qualified_value", "qualitative", "previous_column")) {
+            assertThat(validator.validate(request(abstentions = listOf(abstention(reason = reason))))).describedAs(reason).isEmpty()
+        }
+        assertThat(validator.validate(request(abstentions = listOf(abstention(reason = "render_error"))))).isNotEmpty()
+    }
+
+    @Test
     fun rejectsUnknownAbstentionReasonsAndOversizedLists() {
         assertThat(validator.validate(request(abstentions = listOf(abstention(reason = "low_confidence"))))).isNotEmpty()
         assertThat(validator.validate(request(candidates = (1..101).map { candidate(ordinal = it) }))).isNotEmpty()
@@ -78,7 +98,10 @@ class ExtractionResultRequestValidationTest {
         evidenceBox: EvidenceBox? = EvidenceBox(0.08, 0.1, 0.3, 0.02),
         sourceTextSha256: String = "1".repeat(64),
         referenceRangeText: String? = null,
-    ) = ExtractedCandidate(ordinal, label, value, unit, observedOn, evidencePage, evidenceBox, sourceTextSha256, referenceRangeText)
+        originalLabel: String? = null,
+    ) = ExtractedCandidate(
+        ordinal, label, value, unit, observedOn, evidencePage, evidenceBox, sourceTextSha256, referenceRangeText, originalLabel,
+    )
 
     private fun abstention(reason: String = "unreadable") = ExtractionAbstention("문서 전체", reason, null)
 

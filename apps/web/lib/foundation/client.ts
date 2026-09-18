@@ -23,7 +23,7 @@ const evidenceBoxSchema = z.object({
 // Why a row (or the whole file) produced no candidate. The reason list is closed.
 const extractionAbstentionSchema = z.object({
   label: z.string().min(1).max(80),
-  reason: z.enum(["unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence"]),
+  reason: z.enum(["unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence", "qualified_value", "qualitative", "previous_column"]),
   evidencePage: z.number().int().positive().nullable().optional(),
 }).strict();
 
@@ -69,6 +69,7 @@ const documentSchema = z.object({
     "DELETED",
     "FAILED_RETRYABLE",
     "FAILED_TERMINAL",
+    "TERMINATED_BY_REVOCATION",
   ]),
   sha256: z.string().regex(/^[0-9a-f]{64}$/).nullable().optional(),
   contentLength: z.number().int().nonnegative().nullable().optional(),
@@ -335,6 +336,7 @@ function mapProblem(code: string, status: number): FoundationErrorCode {
     return "invalid_state_transition";
   }
   if (code.includes("conflict") || code === "document_already_uploaded") return "conflict";
+  if (code === "idempotency_key_mismatch") return "conflict";
   if (code === "rate_limited") return "rate_limited";
   if (code === "processing_failed") return "processing_failed";
   if (code === "retryable_dependency_failure") return "retryable_dependency_failure";

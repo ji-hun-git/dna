@@ -139,6 +139,12 @@ data class ExtractedCandidate(
     val sourceTextSha256: String,
     @field:Size(max = 40) @field:Pattern(regexp = "^[0-9.,\\s\\-~–<>≤≥]{1,40}$")
     val referenceRangeText: String? = null,
+    /** The printed label before a worker-side split (blood pressure's `혈압`), verbatim; null when
+     * the row was not split. `min = 1`: a blank string is not a valid label and must be rejected
+     * here (400) rather than reach the V11 `CHECK (original_label IS NULL OR char_length(...)
+     * BETWEEN 1 AND 80)` constraint as a raw SQL failure (F8). */
+    @field:Size(min = 1, max = 80)
+    val originalLabel: String? = null,
 )
 
 
@@ -146,7 +152,7 @@ data class ExtractedCandidate(
 data class ExtractionAbstention(
     @field:Size(min = 1, max = 80)
     val label: String,
-    @field:Pattern(regexp = "^(unreadable|ambiguous_value|ambiguous_unit|missing_evidence)$")
+    @field:Pattern(regexp = "^(unreadable|ambiguous_value|ambiguous_unit|missing_evidence|qualified_value|qualitative|previous_column)$")
     val reason: String,
     @field:Min(1) @field:Max(20)
     val evidencePage: Int? = null,
@@ -521,11 +527,15 @@ class DocumentWorkerBoundaryController(
         FoundationBadRequestException::class,
         FoundationForbiddenException::class,
         FoundationConflictException::class,
+        FoundationUnprocessableException::class,
+        FoundationRateLimitedException::class,
     )
     fun problem(exception: RuntimeException): ResponseEntity<ApiProblem> {
         val status = when (exception) {
             is FoundationBadRequestException -> HttpStatus.BAD_REQUEST
             is FoundationForbiddenException -> HttpStatus.FORBIDDEN
+            is FoundationUnprocessableException -> HttpStatus.UNPROCESSABLE_ENTITY
+            is FoundationRateLimitedException -> HttpStatus.TOO_MANY_REQUESTS
             else -> HttpStatus.CONFLICT
         }
         return ResponseEntity.status(status)

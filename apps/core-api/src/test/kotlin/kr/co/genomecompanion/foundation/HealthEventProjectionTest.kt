@@ -18,11 +18,13 @@ class HealthEventProjectionTest {
         originalObservedOn: LocalDate? = null,
         status: String = "CURRENT",
         documentId: UUID = docWithPreview,
-        confirmedAt: Instant = Instant.parse("2026-07-28T09:10:00Z"),
+        versionChangedAt: Instant = Instant.parse("2026-07-28T09:10:00Z"),
+        confirmedAt: Instant = versionChangedAt,
         conceptCode: String? = "total-cholesterol",
         originalLabel: String? = null,
+        recordId: UUID = UUID.randomUUID(),
     ) = FoundationRecordRow(
-        recordId = UUID.randomUUID(),
+        recordId = recordId,
         recordVersionId = UUID.randomUUID(),
         supersedesVersionId = null,
         candidateId = UUID.randomUUID(),
@@ -35,6 +37,7 @@ class HealthEventProjectionTest {
         unit = "mg/dL",
         observedOn = observedOn,
         originalObservedOn = originalObservedOn,
+        versionChangedAt = versionChangedAt,
         confirmedAt = confirmedAt,
         correctionReason = if (original == value) null else "원문 재확인",
         evidencePage = 1,
@@ -54,7 +57,7 @@ class HealthEventProjectionTest {
     }
 
     @Test
-    fun projectsOnlyCurrentVersionsAsLabEventsOrderedByDateThenConcept() {
+    fun projectsOnlyCurrentVersionsAsLabEventsOrderedByDateThenConfirmedAt() {
         val later = row("총콜레스테롤", "194", observedOn = LocalDate.of(2026, 7, 28))
         val earlier = row("비타민 D", "45", observedOn = LocalDate.of(2026, 1, 15))
         val superseded = row("총콜레스테롤", "188", observedOn = LocalDate.of(2026, 7, 28), status = "SUPERSEDED")
@@ -65,6 +68,74 @@ class HealthEventProjectionTest {
         assertThat(events.map { it.eventId }).containsExactly(earlier.recordVersionId, later.recordVersionId)
         assertThat(events.all { it.domain == "lab" }).isTrue()
         assertThat(events[0].observedOn).isEqualTo("2026-01-15")
+    }
+
+    @Test
+    fun breaksASameDayTieOnConfirmedAtThenOnRecordIdTextNotOnTheConceptLabel() {
+        // Same observedOn: ties are broken by confirmedAt, then recordId text — never by the
+        // concept label (which used to decide this and would put "당화혈색소" before "총콜레스테롤").
+        val day = LocalDate.of(2026, 7, 28)
+        val confirmedFirst = row(
+            "총콜레스테롤", "188", observedOn = day,
+            versionChangedAt = Instant.parse("2026-07-28T09:00:00Z"),
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000002"),
+        )
+        val confirmedSecond = row(
+            "당화혈색소", "5.2", observedOn = day,
+            versionChangedAt = Instant.parse("2026-07-28T09:05:00Z"),
+            conceptCode = "hba1c",
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000001"),
+        )
+
+        val events = HealthEventProjection.project(listOf(confirmedSecond, confirmedFirst), setOf(docWithPreview))
+
+        assertThat(events.map { it.concept }).containsExactly("총콜레스테롤", "당화혈색소")
+    }
+
+    @Test
+    fun breaksATieOnConfirmedAtByRecordIdTextWhenTheConfirmationInstantIsAlsoEqual() {
+        val day = LocalDate.of(2026, 7, 28)
+        val sameInstant = Instant.parse("2026-07-28T09:00:00Z")
+        val lowerId = row(
+            "총콜레스테롤", "188", observedOn = day, versionChangedAt = sameInstant,
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000001"),
+        )
+        val higherId = row(
+            "당화혈색소", "5.2", observedOn = day, versionChangedAt = sameInstant, conceptCode = "hba1c",
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000002"),
+        )
+
+        val forwardOrder = HealthEventProjection.project(listOf(higherId, lowerId), setOf(docWithPreview))
+        val reverseOrder = HealthEventProjection.project(listOf(lowerId, higherId), setOf(docWithPreview))
+
+        assertThat(forwardOrder.map { it.concept }).containsExactly("총콜레스테롤", "당화혈색소")
+        assertThat(reverseOrder.map { it.concept }).containsExactly("총콜레스테롤", "당화혈색소")
+    }
+
+    @Test
+    fun ordersByTheImmutableConfirmedAtNotTheMutableVersionChangedAtACorrectionBumps() {
+        // Same observedOn day: a correction on the first record bumps its versionChangedAt far
+        // into the future (what the correction endpoint does), but confirmed_at never moves. The
+        // read model must keep ordering on confirmedAt, or a correction would silently reshuffle
+        // same-day records relative to /records (F4).
+        val day = LocalDate.of(2026, 7, 28)
+        val correctedButConfirmedFirst = row(
+            "총콜레스테롤", "194", observedOn = day,
+            confirmedAt = Instant.parse("2026-07-28T09:00:00Z"),
+            versionChangedAt = Instant.parse("2026-09-19T12:00:00Z"),
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000001"),
+        )
+        val neverCorrectedButConfirmedSecond = row(
+            "당화혈색소", "5.2", observedOn = day,
+            confirmedAt = Instant.parse("2026-07-28T09:05:00Z"),
+            versionChangedAt = Instant.parse("2026-07-28T09:05:00Z"),
+            conceptCode = "hba1c",
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000002"),
+        )
+
+        val events = HealthEventProjection.project(listOf(neverCorrectedButConfirmedSecond, correctedButConfirmedFirst), setOf(docWithPreview))
+
+        assertThat(events.map { it.concept }).containsExactly("총콜레스테롤", "당화혈색소")
     }
 
     @Test
@@ -104,6 +175,16 @@ class HealthEventProjectionTest {
     }
 
     @Test
+    fun staysCorrectedWhenACorrectionRestoresTheOriginalValue() {
+        val restored = row("총콜레스테롤", "188", original = "188", observedOn = LocalDate.of(2026, 7, 28))
+            .copy(supersedesVersionId = UUID.randomUUID())
+
+        val event = HealthEventProjection.project(listOf(restored), setOf(docWithPreview)).single()
+
+        assertThat(event.corrected).isTrue()
+    }
+
+    @Test
     fun marksUncertainWhenTheSourcePreviewIsMissing() {
         val orphan = row("비타민 D", "42", observedOn = LocalDate.of(2026, 7, 28), documentId = docWithoutPreview)
 
@@ -121,12 +202,16 @@ class HealthEventProjectionTest {
 
     @Test
     fun carriesTheConceptCodeOfTheCurrentVersionAndAllowsNull() {
-        val coded = row("총콜레스테롤", "188", observedOn = LocalDate.of(2026, 7, 28))
-        val uncoded = row("알 수 없는 항목", "7", observedOn = LocalDate.of(2026, 7, 28), conceptCode = null)
+        val day = LocalDate.of(2026, 7, 28)
+        val coded = row("총콜레스테롤", "188", observedOn = day, versionChangedAt = Instant.parse("2026-07-28T09:00:00Z"))
+        val uncoded = row(
+            "알 수 없는 항목", "7", observedOn = day, conceptCode = null,
+            versionChangedAt = Instant.parse("2026-07-28T09:05:00Z"),
+        )
 
         val events = HealthEventProjection.project(listOf(coded, uncoded), setOf(docWithPreview))
 
-        assertThat(events.map { it.conceptCode }).containsExactly(null, "total-cholesterol")
-        assertThat(events.map { it.concept }).containsExactly("알 수 없는 항목", "총콜레스테롤")
+        assertThat(events.map { it.conceptCode }).containsExactly("total-cholesterol", null)
+        assertThat(events.map { it.concept }).containsExactly("총콜레스테롤", "알 수 없는 항목")
     }
 }

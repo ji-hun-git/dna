@@ -156,8 +156,17 @@ describe("Korean UX language boundary", () => {
 
   it("describes a document whose labelled dates disagree without a raw reason code", () => {
     expect(source("lib/format/status-labels.ts")).toContain("검사일이 둘 이상이라 확실하지 않음");
+    expect(source("lib/format/status-labels.ts")).toContain("부등호가 붙은 값이라 숫자로 확정하지 않음");
+    expect(source("lib/format/status-labels.ts")).toContain("음성·양성 같은 판정 결과라 값으로 저장하지 않음");
+    expect(source("lib/format/status-labels.ts")).toContain("이전 결과 칸의 값이라 이번 결과지 값으로 쓰지 않음");
     expect(source("components/integrated/IntegratedHealthExperience.tsx")).toContain("describeAbstention(item)");
     expect(source("components/integrated/IntegratedHealthExperience.tsx")).not.toContain("labelAbstentionReason(item.reason)");
+  });
+
+  it("tells the person a revoked consent ended review and in-flight processing, not just a generic failure", () => {
+    const experience = source("components/integrated/IntegratedHealthExperience.tsx");
+    expect(experience).toContain("동의를 철회해서 결과지 처리를 종료했어요. 다시 동의한 뒤 새로 올려 주세요.");
+    expect(experience).toMatch(/processingState === "TERMINATED_BY_REVOCATION"/);
   });
 
   it("describes the recent changes as two values without a judgement", () => {
@@ -218,6 +227,10 @@ describe("Korean UX language boundary", () => {
     expect(review).toContain("결과지에 적힌 검사일과 다르면 고쳐 주세요. 값의 의미는 판단하지 않아요.");
     expect(source("lib/format/status-labels.ts")).toContain("사용자가 검사일을 수정함 · 원래 ");
     expect(source("components/integrated/IntegratedRecords.tsx")).toContain("describeReviewDecision(record)");
+  });
+
+  it("says a correction happened without claiming a difference once sticky CORRECTED reverts to the original value and date", () => {
+    expect(source("lib/format/status-labels.ts")).toContain("수정 이력이 있지만 지금 값은 원래 값과 같아요");
   });
 
   it("states that research consent is optional, stored only, and asked again per project", () => {

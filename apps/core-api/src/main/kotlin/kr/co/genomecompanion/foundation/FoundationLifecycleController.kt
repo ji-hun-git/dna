@@ -72,8 +72,12 @@ data class DocumentActivityResponse(
 )
 
 
+/** Founder decision 2026-09-18: the value a person confirms or corrects uses exactly the worker grammar. */
+const val CONFIRMED_VALUE_PATTERN = "^-?(\\d{1,3}(,\\d{3})+|\\d+)(\\.\\d+)?$"
+
 data class CandidateConfirmationRequest(
     @field:Size(min = 1, max = 64)
+    @field:Pattern(regexp = CONFIRMED_VALUE_PATTERN)
     val value: String,
     /** Optional ISO date the person confirms the document states; null keeps the candidate's date. */
     @field:Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$")
@@ -83,6 +87,7 @@ data class CandidateConfirmationRequest(
 
 data class RecordCorrectionRequest(
     @field:Size(min = 1, max = 64)
+    @field:Pattern(regexp = CONFIRMED_VALUE_PATTERN)
     val value: String,
     @field:Size(min = 1, max = 200)
     val reason: String,
@@ -447,6 +452,10 @@ class FoundationLifecycleController(
     @ExceptionHandler(FoundationConflictException::class)
     fun handleConflict(exception: FoundationConflictException): ResponseEntity<ApiProblem> =
         problem(HttpStatus.CONFLICT, exception.code)
+
+    @ExceptionHandler(FoundationUnprocessableException::class)
+    fun handleUnprocessable(exception: FoundationUnprocessableException): ResponseEntity<ApiProblem> =
+        problem(HttpStatus.UNPROCESSABLE_ENTITY, exception.code)
 
     @ExceptionHandler(FoundationRateLimitedException::class)
     fun handleRateLimited(): ResponseEntity<ApiProblem> =

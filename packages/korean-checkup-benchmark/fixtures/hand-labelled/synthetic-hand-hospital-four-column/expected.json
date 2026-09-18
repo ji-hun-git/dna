@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "hand-labelled-expectation.v1",
+  "documentId": "synthetic-hand-hospital-four-column",
+  "layout": "병원 종합검진 4단표 (항목·결과·단위·참고치, 페이지 넘김으로 이어지는 라벨, < 값, 붙은 단위)",
+  "observedOn": "2026-06-18",
+  "candidates": [
+    { "label": "AST", "value": "23", "unit": "U/L", "conceptCode": "ast" },
+    { "label": "ALT", "value": "19", "unit": "U/L", "conceptCode": "alt" },
+    { "label": "HbA1c", "value": "5.6", "unit": "%", "conceptCode": "hba1c" },
+    { "label": "총단백", "value": "7.1", "unit": "g/dL", "conceptCode": "total-protein" },
+    { "label": "총빌리루빈", "value": "0.8", "unit": "mg/dL", "conceptCode": "total-bilirubin" },
+    { "label": "요산", "value": "5.1", "unit": "mg/dL", "conceptCode": "uric-acid" }
+  ],
+  "abstentions": [
+    { "label": "hs-CRP", "reason": "qualified_value" }
+  ]
+}

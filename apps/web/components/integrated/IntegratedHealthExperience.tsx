@@ -66,6 +66,7 @@ const processingCopy: Record<ProcessingState, string> = {
   DELETED: "문서와 파생물을 삭제했어요",
   FAILED_RETRYABLE: "일시적인 문제로 서버가 안전하게 다시 시도할 준비를 하고 있어요",
   FAILED_TERMINAL: "안전하게 계속할 수 없어 처리를 중단했어요",
+  TERMINATED_BY_REVOCATION: "동의를 철회해서 결과지 처리를 종료했어요. 다시 동의한 뒤 새로 올려 주세요.",
 };
 
 const pollableStates = new Set<FoundationDocument["status"]>([
@@ -515,7 +516,7 @@ export function IntegratedHealthExperience() {
             <div className="gc-integrated-actions">
               {activeCandidate && <button type="button" onClick={() => setView("review")} disabled={busy}>이어서 확인</button>}
               {pollingPaused && <button type="button" onClick={() => { setErrorMessage(""); setPollingPaused(false); setPollingNonce((value) => value + 1); }}>상태 다시 확인</button>}
-              {(processingState === "SECURITY_REJECTED" || processingState === "FAILED_TERMINAL") && <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>}
+              {(processingState === "SECURITY_REJECTED" || processingState === "FAILED_TERMINAL" || processingState === "TERMINATED_BY_REVOCATION") && <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>}
             </div>
             {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
           </section>

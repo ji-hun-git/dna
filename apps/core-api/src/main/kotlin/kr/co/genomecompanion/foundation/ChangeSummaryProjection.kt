@@ -87,11 +87,12 @@ object ChangeSummaryProjection {
                     unit = record.unit,
                     latest = ChangeValue(record.recordVersionId, record.currentValue, record.observedOn.toString()),
                     previous = previous?.let { ChangeValue(it.recordVersionId, it.currentValue, it.observedOn.toString()) },
-                    // Only when the previous value is not later in time than the latest one: a
-                    // signed difference computed against an out-of-order previous document would
-                    // run against chronology. Both values and dates stay listed either way.
+                    // Only when the previous value is strictly earlier than the latest one (shared
+                    // SameDayRule): a signed difference computed against an out-of-order previous
+                    // document would run against chronology, and same-day points have no defined
+                    // order — series omits too. Both values and dates stay listed either way.
                     delta = previous
-                        ?.takeIf { it.observedOn <= record.observedOn }
+                        ?.takeIf { SameDayRule.hasDefinedOrder(it.observedOn, record.observedOn) }
                         ?.let { ChangeDeltaCalculator.compute(record.currentValue, it.currentValue) }
                         ?.let { delta -> if (record.unit.trim() == "%") delta.copy(percent = null) else delta },
                 )

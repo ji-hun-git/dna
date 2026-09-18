@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "hand-labelled-expectation.v1",
+  "documentId": "synthetic-hand-scan-with-invisible-text",
+  "layout": "스캔 이미지 + 보이지 않는 OCR 텍스트 레이어형 (렌더링 모드 3, 화면에 보이는 글자 없음)",
+  "observedOn": null,
+  "candidates": [],
+  "abstentions": [
+    { "label": "문서 전체", "reason": "unreadable" }
+  ]
+}

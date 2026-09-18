@@ -44,10 +44,24 @@ fun main(args: Array<String>) {
             BenchmarkJson.mapper.writerWithDefaultPrettyPrinter().writeValue(out.toFile(), concepts)
             println("wrote ${concepts.size} concepts to $out")
         }
+        "generate-hand-labelled" -> {
+            val out = Path.of(options.getValue("--out"))
+            val font = Path.of(options.getValue("--font"))
+            val corpus = HandLabelledFixtures.writeAll(out, font)
+            println("generated ${corpus.documents.size} hand-labelled synthetic documents into $out (corpusId ${corpus.corpusId})")
+        }
+        "run-hand-labelled" -> {
+            val corpusDir = Path.of(options.getValue("--corpus"))
+            val out = Path.of(options.getValue("--out"))
+            val runs = HandLabelledRunner.run(corpusDir)
+            BenchmarkJson.mapper.writerWithDefaultPrettyPrinter().writeValue(out.toFile(), runs)
+            println("wrote ${runs.size} hand-labelled native-text runs to $out")
+        }
         else -> {
             System.err.println(
                 "usage: generate --out <dir> --font <Pretendard-Regular.ttf> | run-native-text --corpus <dir> --out <runs.json>" +
-                    " | render-pages --corpus <dir> --out <dir> | export-concepts --out <concepts.json>",
+                    " | render-pages --corpus <dir> --out <dir> | export-concepts --out <concepts.json>" +
+                    " | generate-hand-labelled --out <dir> --font <Pretendard-Regular.ttf> | run-hand-labelled --corpus <dir> --out <runs.json>",
             )
             exitProcess(2)
         }

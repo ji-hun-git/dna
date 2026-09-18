@@ -26,4 +26,12 @@ class CorrelationFilter : OncePerRequestFilter() {
             MDC.remove("correlation_id")
         }
     }
+
+    companion object {
+        /** The current request's correlation id, if [CorrelationFilter] ran for it — kept here, inside
+         * `..platform.telemetry..`, so callers elsewhere never need their own `org.slf4j.MDC` import
+         * (`ModuleBoundaryTest.loggingIsAvailableOnlyBehindPhiSafeTelemetry` forbids that). */
+        fun currentCorrelationId(): UUID? =
+            MDC.get("correlation_id")?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+    }
 }

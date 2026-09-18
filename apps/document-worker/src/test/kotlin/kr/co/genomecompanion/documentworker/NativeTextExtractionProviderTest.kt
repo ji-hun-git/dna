@@ -385,6 +385,239 @@ class NativeTextExtractionProviderTest {
         assertThat(outcome.abstentions).containsExactly(ParsedAbstention("AST", AbstentionReason.MISSING_EVIDENCE, 1))
     }
 
+    @Test
+    fun `a Korean compound that ends with the exam-date label is not a date label`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("재검사일: 2026-08-30", "혈당 95 mg/dL")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("예약검진일 2026-08-30", "검사일 2026-07-28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Found(java.time.LocalDate.of(2026, 7, 28)))
+    }
+
+    @Test
+    fun `an English date preceded by report, print or issue is not the exam date`() {
+        for (prefix in listOf("Report Date", "Print Date", "Printed Date", "Issue Date", "Issued date")) {
+            assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("$prefix: 2026-08-30")))
+                .describedAs(prefix).isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+        }
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Report Date: 2026-08-30", "Exam Date: 2026-07-28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Found(java.time.LocalDate.of(2026, 7, 28)))
+    }
+
+    @Test
+    fun `an English date preceded by reported is not the exam date`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Reported Date: 2026-08-01")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Reported Date: 2026-08-01", "검사일: 2026-07-28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Found(java.time.LocalDate.of(2026, 7, 28)))
+    }
+
+    @Test
+    fun `English dates preceded by generated or received are not the exam date`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Generated Date: 2026-08-01")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Received Date: 2026-08-01")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+    }
+
+    @Test
+    fun `finds a labelled date with the 검사일자 spelling`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("검사일자 2026.07.28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Found(java.time.LocalDate.of(2026, 7, 28)))
+    }
+
+    @Test
+    fun `two-digit years are not dates`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("검사일: 26-07-28", "검사일 26.7.28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+    }
+
+    @Test
+    fun `the abstention reason set is exactly the seven closed codes`() {
+        assertThat(AbstentionReason.CODES).containsExactly(
+            "unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence",
+            "qualified_value", "qualitative", "previous_column",
+        )
+    }
+
+    @Test
+    fun `every row that shows a label and a numeric token either becomes a candidate or an abstention`() {
+        val rows = listOf(
+            "혈당 95 mg/dL",            // measurement
+            "혈당 95",                  // no unit → ambiguous_unit
+            "혈당 95 100",              // two numbers, no unit → ambiguous_value
+            "혈당 95 120-199",          // bare range right after the value → ambiguous_unit, never dropped
+            "혈당 95 mg/dL 100 mg/dL",  // two values → ambiguous_value
+        )
+        val outcome = NativeTextExtractionProvider.parse(lines(listOf("검사일: 2026-07-28") + rows))
+        assertThat(outcome.candidates).hasSize(1)
+        assertThat(outcome.abstentions.map { it.reason.code })
+            .containsExactly("ambiguous_unit", "ambiguous_value", "ambiguous_unit", "ambiguous_value")
+    }
+
+    @Test
+    fun `a spaced-dash range with a repeated trailing unit stays a measurement, not a second value`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines(
+                "검사일 2026-07-28",
+                "AST 22 U/L 15 - 35 U/L",
+                "혈당 95 mg/dL 70 - 99 mg/dL",
+            ),
+        )
+
+        assertThat(outcome.abstentions).isEmpty()
+        assertThat(outcome.candidates.map { it.value }).containsExactly("22", "95")
+        assertThat(outcome.candidates.map { it.unit }).containsExactly("U/L", "mg/dL")
+        assertThat(outcome.candidates.map { it.referenceRangeText }).containsExactly("15 - 35", "70 - 99")
+    }
+
+    @Test
+    fun `a row whose first numeric token has no label before it is skipped, not abstained`() {
+        assertThat(NativeTextExtractionProvider.parseRow("3")).isEqualTo(NativeTextExtractionProvider.RowParse.Skipped)
+        assertThat(NativeTextExtractionProvider.parseRow("- 2 -")).isEqualTo(NativeTextExtractionProvider.RowParse.Skipped)
+        assertThat(NativeTextExtractionProvider.parseRow("예시 검진센터")).isEqualTo(NativeTextExtractionProvider.RowParse.Skipped)
+    }
+
+    @Test
+    fun `a blood pressure row yields two ordered candidates that keep one hash and one box`() {
+        val outcome = NativeTextExtractionProvider.parse(lines("검사일: 2026-07-28", "혈압 120/80 mmHg", "맥박 64 회/분"))
+        assertThat(outcome.candidates.map { Triple(it.ordinal, it.label, it.value) }).containsExactly(
+            Triple(1, "혈압(수축기)", "120"), Triple(2, "혈압(이완기)", "80"), Triple(3, "맥박", "64"),
+        )
+        assertThat(outcome.candidates[0].sourceTextSha256).isEqualTo(outcome.candidates[1].sourceTextSha256)
+        assertThat(outcome.candidates[0].evidenceBox).isEqualTo(outcome.candidates[1].evidenceBox)
+        assertThat(outcome.abstentions).isEmpty()
+        assertThat(outcome.candidates.map { it.originalLabel }).containsExactly("혈압", "혈압", null)
+    }
+
+    @Test
+    fun `a label on its own line continues onto the next line of the same column`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("저밀도", y = 0.20),
+                positioned("콜레스테롤 110 mg/dL", y = 0.22),
+                positioned("HbA1c 5.4 %", y = 0.24),
+            ),
+        )
+        assertThat(outcome.candidates.map { it.label to it.value }).containsExactly("저밀도 콜레스테롤" to "110", "HbA1c" to "5.4")
+        assertThat(outcome.candidates[0].sourceTextSha256).isEqualTo(sha256Of("저밀도 콜레스테롤 110 mg/dL"))
+        assertThat(outcome.candidates[0].evidenceBox.y).isEqualTo(0.20)
+    }
+
+    @Test
+    fun `a table with a previous-result column yields this-time candidates and previous_column abstentions`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("항목", y = 0.10, column = 0), positioned("이번", y = 0.10, column = 1), positioned("이전", y = 0.10, column = 2),
+                positioned("혈당", y = 0.14, column = 0), positioned("95 mg/dL", y = 0.14, column = 1), positioned("101 mg/dL", y = 0.14, column = 2, previous = true),
+            ),
+        )
+        assertThat(outcome.candidates.map { it.label to it.value }).containsExactly("혈당" to "95")
+        assertThat(outcome.abstentions.map { it.label to it.reason }).containsExactly("혈당" to AbstentionReason.PREVIOUS_COLUMN)
+    }
+
+    @Test
+    fun `a blood-pressure row with a headered previous-result column splits into this-time candidates and previous_column abstentions, not a dropped pair`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("항목", y = 0.10, column = 0), positioned("이번", y = 0.10, column = 1), positioned("이전", y = 0.10, column = 2),
+                positioned("혈압", y = 0.14, column = 0), positioned("118/76 mmHg", y = 0.14, column = 1), positioned("121/79 mmHg", y = 0.14, column = 2, previous = true),
+            ),
+        )
+        assertThat(outcome.candidates.map { it.label to it.value }).containsExactly(
+            "혈압(수축기)" to "118", "혈압(이완기)" to "76",
+        )
+        assertThat(outcome.abstentions.map { it.label to it.reason }).containsExactly(
+            "혈압(수축기)" to AbstentionReason.PREVIOUS_COLUMN, "혈압(이완기)" to AbstentionReason.PREVIOUS_COLUMN,
+        )
+    }
+
+    @Test
+    fun `two value cells on one row with no recognized previous-column marking abstain as one ambiguous row, not two candidates`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("총콜레스테롤", y = 0.14, column = 0),
+                positioned("194 mg/dL", y = 0.14, column = 1),
+                positioned("201 mg/dL", y = 0.14, column = 2),
+            ),
+        )
+        assertThat(outcome.candidates).isEmpty()
+        assertThat(outcome.abstentions.map { it.label to it.reason }).containsExactly("총콜레스테롤" to AbstentionReason.AMBIGUOUS_VALUE)
+    }
+
+    @Test
+    fun `two value cells on one row where the second is marked previous-column split into a candidate and a previous_column abstention`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("총콜레스테롤", y = 0.14, column = 0),
+                positioned("194 mg/dL", y = 0.14, column = 1),
+                positioned("201 mg/dL", y = 0.14, column = 2, previous = true),
+            ),
+        )
+        assertThat(outcome.candidates.map { it.label to it.value }).containsExactly("총콜레스테롤" to "194")
+        assertThat(outcome.abstentions.map { it.label to it.reason }).containsExactly("총콜레스테롤" to AbstentionReason.PREVIOUS_COLUMN)
+    }
+
+    @Test
+    fun `two full result panels on one wide baseline become two candidates with distinct evidence, one row when the gap narrows`() {
+        fun tok(text: String, x: Double, y: Double) = PositionedToken(1, text, x, y, 0.02 * text.length, 0.012)
+        val wideLines = PositionalLineGrouper.group(
+            listOf(
+                tok("총콜레스테롤", 0.05, 0.20), tok("194", 0.19, 0.20), tok("mg/dL", 0.27, 0.20),
+                tok("공복혈당", 0.60, 0.20), tok("95", 0.70, 0.20), tok("mg/dL", 0.76, 0.20),
+            ),
+        )
+        val wideOutcome = NativeTextExtractionProvider.parse(listOf(positioned("검사일: 2026-07-28", y = 0.05)) + wideLines)
+        assertThat(wideOutcome.abstentions).isEmpty()
+        assertThat(wideOutcome.candidates.map { it.label to it.value }).containsExactly("총콜레스테롤" to "194", "공복혈당" to "95")
+        wideOutcome.candidates.forEach { candidate ->
+            assertThat(candidate.evidenceBox.x).isBetween(0.0, 1.0)
+            assertThat(candidate.evidenceBox.x + candidate.evidenceBox.width).isLessThanOrEqualTo(1.0)
+            assertThat(candidate.evidenceBox.y + candidate.evidenceBox.height).isLessThanOrEqualTo(1.0)
+        }
+        assertThat(wideOutcome.candidates[0].evidenceBox).isNotEqualTo(wideOutcome.candidates[1].evidenceBox)
+        assertThat(wideOutcome.candidates[0].sourceTextSha256).isNotEqualTo(wideOutcome.candidates[1].sourceTextSha256)
+
+        val narrowLines = PositionalLineGrouper.group(
+            listOf(
+                tok("총콜레스테롤", 0.05, 0.20), tok("194", 0.19, 0.20), tok("mg/dL", 0.27, 0.20),
+                tok("공복혈당", 0.40, 0.20), tok("95", 0.50, 0.20), tok("mg/dL", 0.56, 0.20),
+            ),
+        )
+        val narrowOutcome = NativeTextExtractionProvider.parse(listOf(positioned("검사일: 2026-07-28", y = 0.05)) + narrowLines)
+        assertThat(narrowOutcome.candidates).isEmpty()
+        assertThat(narrowOutcome.abstentions).hasSize(1)
+    }
+
+    @Test
+    fun `overflowing the candidate cap emits one overflow abstention instead of silently truncating`() {
+        val rows = (1..101).map { "항목$it 12$it mg/dL" }
+        val outcome = NativeTextExtractionProvider.parse(lines(listOf("검사일: 2026-07-28") + rows))
+        assertThat(outcome.candidates).hasSize(100)
+        assertThat(outcome.abstentions.filter { it.label == NativeTextExtractionProvider.UNREADABLE_ROWS_LABEL && it.reason == AbstentionReason.UNREADABLE })
+            .hasSize(1)
+    }
+
+    @Test
+    fun `overflowing the abstention cap truncates but keeps exactly one overflow marker inside the cap`() {
+        val rows = (1..150).map { "항목$it <0.$it mg/dL" }
+        val outcome = NativeTextExtractionProvider.parse(lines(listOf("검사일: 2026-07-28") + rows))
+        assertThat(outcome.abstentions).hasSize(100)
+        assertThat(outcome.abstentions.filter { it.label == NativeTextExtractionProvider.UNREADABLE_ROWS_LABEL && it.reason == AbstentionReason.UNREADABLE })
+            .hasSize(1)
+    }
+
+    private fun positioned(text: String, y: Double, column: Int = 0, previous: Boolean = false, page: Int = 1) =
+        TextLine(page, text, TextBox(0.05 + column * 0.3, y, 0.25, 0.012), column, previous)
+
+    private fun sha256Of(text: String) = java.util.HexFormat.of().formatHex(
+        java.security.MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)),
+    )
+
     private fun lines(vararg texts: String): List<TextLine> = lines(texts.toList())
 
     private fun lines(texts: List<String>): List<TextLine> =

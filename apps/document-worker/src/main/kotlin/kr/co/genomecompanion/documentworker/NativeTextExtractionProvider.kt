@@ -1,8 +1,8 @@
 package kr.co.genomecompanion.documentworker
 
-import kr.co.genomecompanion.documentboundary.MedicalUnitSpelling
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.pdmodel.PDPage
+import org.apache.pdfbox.pdmodel.graphics.state.RenderingMode
 import org.apache.pdfbox.text.PDFTextStripper
 import org.apache.pdfbox.text.TextPosition
 import java.security.MessageDigest
@@ -13,7 +13,7 @@ import java.util.HexFormat
 data class TextBox(val x: Double, val y: Double, val width: Double, val height: Double)
 
 
-data class TextLine(val page: Int, val text: String, val box: TextBox)
+data class TextLine(val page: Int, val text: String, val box: TextBox, val columnIndex: Int = 0, val previousColumn: Boolean = false)
 
 
 enum class AbstentionReason(val code: String) {
@@ -21,6 +21,16 @@ enum class AbstentionReason(val code: String) {
     AMBIGUOUS_VALUE("ambiguous_value"),
     AMBIGUOUS_UNIT("ambiguous_unit"),
     MISSING_EVIDENCE("missing_evidence"),
+    /** `<0.3`, `≤5.6`, `>60`: the printed number carries a comparison sign, so it is not stored as a value. */
+    QUALIFIED_VALUE("qualified_value"),
+    /** `음성`, `양성`, `정상`, `이상`: a printed judgement word, never a value; nothing is stored. */
+    QUALITATIVE("qualitative"),
+    /** A value that sits in a previous-result column (`이전`, `전회`, an earlier year header). */
+    PREVIOUS_COLUMN("previous_column");
+
+    companion object {
+        val CODES: List<String> = entries.map { it.code }
+    }
 }
 
 
@@ -35,6 +45,8 @@ data class ParsedCandidate(
     val sourceTextSha256: String,
     /** The range body printed on the same row (`70-99`, `<200`, `≤5.6`), verbatim, or null. Never interpreted. */
     val referenceRangeText: String? = null,
+    /** The printed label before a blood-pressure split (`혈압`), null for every other candidate. */
+    val originalLabel: String? = null,
 )
 
 
@@ -57,6 +69,8 @@ data class ExtractionOutcome(
  * carried verbatim as `referenceRangeText` (range body only — two bodies on one row joined by one
  * space — at most 40 characters, else null) so the person's
  * own export can keep it; the worker never compares a value against it.
+ * Two-digit years are not recognised; 재검사일, Report/Reported/Print/Printed/Issue/Issued/Generated/
+ * Received Date are not exam-date labels.
  */
 object NativeTextExtractionProvider {
     const val METHOD = "native-text"
@@ -67,23 +81,12 @@ object NativeTextExtractionProvider {
     private const val MAX_LABEL = 80
     private const val MAX_VALUE = 64
     private const val MAX_UNIT = 32
-    private const val MAX_REFERENCE_RANGE = 40
 
-    private val valueToken = Regex("^-?(\\d{1,3}(,\\d{3})+|\\d+)(\\.\\d+)?$")
-    private val rangeText = Regex(
-        "^\\(?\\s*(?:참고치?|기준치?|정상\\s*범위|reference|ref\\.?)?\\s*[:：]?\\s*[<>≤≥]?\\s*" +
-            "\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-–~]\\s*\\d[\\d,]*(?:\\.\\d+)?)?\\s*[^\\s()]*\\s*\\)?$",
-    )
-    /** The range body inside a matched [rangeText]: optional comparison sign, number, optional separator and second number. */
-    private val rangeBody = Regex("[<>≤≥]?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-–~]\\s*\\d[\\d,]*(?:\\.\\d+)?)?")
-    /** A range body is only kept as text when it actually bounds a value: a comparison sign, or two numbers joined by a separator. A bare number (e.g. a previous-result column) is not a range. */
-    private val rangeBoundaryMarker = Regex("[<>≤≥]|\\d\\s*[-–~]\\s*\\d")
-    private val separators = Regex("[:：\\t]")
-    private val leadingBullets = Regex("^[·•\\-*]+\\s*")
     private val dateLabel = Regex(
-        "(?:(?:검사\\s*일자|검진\\s*일자|채취\\s*일자|검사일|검진일|채취일)(?![가-힣])|" +
-            "(?<![A-Za-z])(?<!birth\\s{1,10})(?:exam\\s+|test\\s+|collection\\s+)?date(?![A-Za-z])" +
-            "(?!\\s{1,10}of\\s{1,10}birth))\\s*[:：]?",
+        "(?:(?<![가-힣])(?:검사\\s*일자|검진\\s*일자|채취\\s*일자|검사일|검진일|채취일)(?![가-힣])|" +
+            "(?<![A-Za-z])(?<!birth\\s{1,10})(?<!report\\s{1,10})(?<!reported\\s{1,10})(?<!print\\s{1,10})(?<!printed\\s{1,10})(?<!issue\\s{1,10})(?<!issued\\s{1,10})" +
+            "(?<!generated\\s{1,10})(?<!received\\s{1,10})" +
+            "(?:exam\\s+|test\\s+|collection\\s+)?date(?![A-Za-z])(?!\\s{1,10}of\\s{1,10}birth))\\s*[:：]?",
         RegexOption.IGNORE_CASE,
     )
     private val datePatterns = listOf(
@@ -97,9 +100,9 @@ object NativeTextExtractionProvider {
 
     fun extractLines(pdf: ByteArray): List<TextLine> = Loader.loadPDF(pdf).use { document ->
         require(document.numberOfPages in 1..20) { "page count out of bounds" }
-        val stripper = LineCollectingStripper()
+        val stripper = TokenCollectingStripper()
         stripper.getText(document)
-        stripper.lines.toList()
+        PositionalLineGrouper.group(stripper.tokens)
     }
 
     internal fun parse(lines: List<TextLine>): ExtractionOutcome {
@@ -111,30 +114,37 @@ object NativeTextExtractionProvider {
         }
         val candidates = mutableListOf<ParsedCandidate>()
         val abstentions = mutableListOf<ParsedAbstention>()
-        for (line in lines) {
-            when (val row = parseRow(line.text)) {
-                null -> continue
-                is RowParse.Ambiguous -> {
-                    val reason = if (observedOn == null) AbstentionReason.MISSING_EVIDENCE else row.reason
-                    abstentions += ParsedAbstention(row.label.take(MAX_LABEL), reason, line.page)
-                }
-                is RowParse.Measurement -> when {
-                    observedOn == null ->
-                        abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.MISSING_EVIDENCE, line.page)
-                    row.label.length > MAX_LABEL || row.value.length > MAX_VALUE || row.unit.length > MAX_UNIT ->
-                        abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.UNREADABLE, line.page)
-                    candidates.size >= MAX_CANDIDATES -> continue
-                    else -> candidates += ParsedCandidate(
-                        ordinal = candidates.size + 1,
-                        label = row.label,
-                        value = row.value,
-                        unit = row.unit,
-                        observedOn = observedOn,
-                        evidencePage = line.page,
-                        evidenceBox = line.box,
-                        sourceTextSha256 = sha256(line.text.trim()),
-                        referenceRangeText = row.referenceRangeText,
-                    )
+        var candidateOverflow = false
+        val prepared = joinValueColumns(mergeContinuedLabels(lines))
+        for (line in prepared) {
+            for (row in parseRowAll(line.text)) {
+                when (row) {
+                    RowParse.Skipped -> continue
+                    is RowParse.Ambiguous -> {
+                        val reason = if (observedOn == null) AbstentionReason.MISSING_EVIDENCE else row.reason
+                        abstentions += ParsedAbstention(row.label.take(MAX_LABEL), reason, line.page)
+                    }
+                    is RowParse.Measurement -> when {
+                        observedOn == null ->
+                            abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.MISSING_EVIDENCE, line.page)
+                        row.label.length > MAX_LABEL || row.value.length > MAX_VALUE || row.unit.length > MAX_UNIT ->
+                            abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.UNREADABLE, line.page)
+                        line.previousColumn ->
+                            abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.PREVIOUS_COLUMN, line.page)
+                        candidates.size >= MAX_CANDIDATES -> { candidateOverflow = true }
+                        else -> candidates += ParsedCandidate(
+                            ordinal = candidates.size + 1,
+                            label = row.label,
+                            value = row.value,
+                            unit = row.unit,
+                            observedOn = observedOn,
+                            evidencePage = line.page,
+                            evidenceBox = line.box,
+                            sourceTextSha256 = sha256(line.text.trim()),
+                            referenceRangeText = row.referenceRangeText,
+                            originalLabel = row.originalLabel,
+                        )
+                    }
                 }
             }
         }
@@ -148,50 +158,175 @@ object NativeTextExtractionProvider {
                 observedOn = observedOn,
             )
         }
-        return ExtractionOutcome(candidates.toList(), abstentions.take(MAX_ABSTENTIONS), observedOn)
+        return ExtractionOutcome(candidates.toList(), capAbstentions(abstentions, candidateOverflow), observedOn)
+    }
+
+    /**
+     * Never silently truncates: a row past [MAX_CANDIDATES] candidates or [MAX_ABSTENTIONS]
+     * abstentions is not dropped without a trace — one [AbstentionReason.UNREADABLE] abstention
+     * labelled [UNREADABLE_ROWS_LABEL] is emitted for the overflow (counted once, no matter how many
+     * rows overflowed either cap), itself kept within [MAX_ABSTENTIONS] by displacing the last real
+     * abstention when the list is already full.
+     */
+    private fun capAbstentions(abstentions: List<ParsedAbstention>, candidateOverflow: Boolean): List<ParsedAbstention> {
+        val overflowMarker = ParsedAbstention(UNREADABLE_ROWS_LABEL, AbstentionReason.UNREADABLE, null)
+        return when {
+            !candidateOverflow && abstentions.size <= MAX_ABSTENTIONS -> abstentions
+            abstentions.size >= MAX_ABSTENTIONS -> abstentions.take(MAX_ABSTENTIONS - 1) + overflowMarker
+            else -> abstentions + overflowMarker
+        }
     }
 
     internal sealed interface RowParse {
-        data class Measurement(val label: String, val value: String, val unit: String, val referenceRangeText: String?) : RowParse
+        /** [originalLabel] is the printed label before a blood-pressure split (`혈압`), null for every other row. */
+        data class Measurement(
+            val label: String,
+            val value: String,
+            val unit: String,
+            val referenceRangeText: String?,
+            val originalLabel: String? = null,
+        ) : RowParse
         data class Ambiguous(val label: String, val reason: AbstentionReason) : RowParse
+        /** No label precedes the first numeric token (page numbers, headers): not a measurement row at all. */
+        data object Skipped : RowParse
     }
 
-    internal fun parseRow(raw: String): RowParse? {
-        val text = raw.replace(separators, " ").trim().replace(leadingBullets, "").trim()
-        val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
-        val valueIndex = tokens.indexOfFirst { valueToken.matches(it) }
-        if (valueIndex < 1) return null
-        val label = tokens.subList(0, valueIndex).joinToString(" ")
-        val value = tokens[valueIndex]
-        val unitToken = tokens.getOrNull(valueIndex + 1)
-        val unit = when {
-            unitToken == null -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
-            MedicalUnitSpelling.canonical(unitToken) != null -> unitToken
-            valueToken.matches(unitToken) -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
-            // A bare range right after the value (e.g. "120-199") with no unit word at all is not a
-            // measurement row we can label ambiguous-unit about; leave it unrecognised, as before.
-            rangeText.matches(unitToken) -> return null
-            else -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
+    internal fun parseRow(raw: String): RowParse = parseRowAll(raw).single()
+    internal fun parseRowAll(raw: String): List<RowParse> = RowGrammar.parse(raw)
+
+    /**
+     * A run of one or more lines with no numeric token, each immediately followed (same page, same
+     * column, ≤ 0.03 below the previous) by another such line or finally by a measurement row: the
+     * whole run collapses into one row with every label fragment prefixed onto the measurement.
+     * A label wrapped across two (or more) label-only lines before the value line is handled by
+     * extending the run for as long as the run's own tail keeps being label-only.
+     */
+    internal fun mergeContinuedLabels(lines: List<TextLine>): List<TextLine> {
+        val merged = mutableListOf<TextLine>()
+        var index = 0
+        while (index < lines.size) {
+            var end = index
+            while (isLabelOnlyLine(lines[end]) && end + 1 < lines.size &&
+                lines[end + 1].page == lines[end].page && lines[end + 1].columnIndex == lines[end].columnIndex &&
+                lines[end + 1].box.y - lines[end].box.y in 0.0..0.03
+            ) {
+                end += 1
+            }
+            if (end > index && RowGrammar.parse(lines[end].text).any { it is RowParse.Measurement }) {
+                val chain = lines.subList(index, end + 1)
+                val last = chain.last()
+                merged += TextLine(
+                    page = chain.first().page,
+                    text = chain.joinToString(" ") { it.text },
+                    box = TextBox(
+                        chain.minOf { it.box.x },
+                        chain.first().box.y,
+                        chain.maxOf { it.box.width },
+                        last.box.y + last.box.height - chain.first().box.y,
+                    ),
+                    columnIndex = chain.first().columnIndex,
+                    previousColumn = last.previousColumn,
+                )
+                index = end + 1
+            } else {
+                merged += lines[index]
+                index += 1
+            }
         }
-        val rest = tokens.drop(valueIndex + 2)
-        val restText = rest.joinToString(" ")
-        val restIsRange = rest.isNotEmpty() && rangeText.matches(restText)
-        if (rest.isNotEmpty() && !restIsRange && rest.any { valueToken.matches(it) }) {
-            return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
-        }
-        // Two ranges on one row ("70-99 100-200") are both document text: keep them verbatim, joined
-        // by one space. Only when the row already parses as a measurement (restIsRange), only when
-        // both bodies really bound a value and nothing else is left over; otherwise the single rule.
-        val bodies = if (restIsRange) rangeBody.findAll(restText).map { it.value.trim() }.toList() else emptyList()
-        val twoRanges = bodies.size == 2 &&
-            bodies.all { rangeBoundaryMarker.containsMatchIn(it) } &&
-            bodies.fold(restText) { remaining, body -> remaining.replaceFirst(body, "") }.isBlank()
-        val rangeBodyMatch = if (twoRanges) bodies.joinToString(" ") else bodies.firstOrNull()
-        val referenceRangeText = rangeBodyMatch?.takeIf {
-            it.length <= MAX_REFERENCE_RANGE && rangeBoundaryMarker.containsMatchIn(it)
-        }
-        return RowParse.Measurement(label, value, unit, referenceRangeText)
+        return merged
     }
+
+    /** No numeric token anywhere, not a labelled or bare date line: a candidate label fragment for [mergeContinuedLabels]. */
+    private fun isLabelOnlyLine(line: TextLine): Boolean =
+        RowGrammar.tokenize(line.text).none { RowGrammar.valueToken.matches(it) } &&
+            RowGrammar.parse(line.text).singleOrNull() == RowParse.Skipped &&
+            !dateLabel.containsMatchIn(line.text) &&
+            datePatterns.none { it.containsMatchIn(line.text) }
+
+    private val leadingComparisonSign = Regex("^[<>≤≥].*")
+
+    /**
+     * A column-0 cell is a row's label; every cell to its right on the same baseline is either:
+     *  - self-sufficient: it already carries its own label before its own number
+     *    (`총콜레스테롤 188 mg/dL`, a second result panel on the same baseline) — left untouched,
+     *    parsed on its own without ever touching column 0;
+     *  - or a fragment of column 0's own row. When at least one trailing cell on this baseline was
+     *    actually marked [TextLine.previousColumn] by a recognized header (이전/전회/직전/an earlier
+     *    year), every numeric-or-signed-leading fragment starts its own joined row (so a this-time/
+     *    previous-time pair of value cells stays two rows) and a bare fragment with no numeric token
+     *    of its own (a unit or 참고치 cell: `mg/dL`, `70-199`) extends the row immediately to its
+     *    left — the unchanged legacy wide-table layout (label | 결과 | 단위 | 참고치 as four separate
+     *    columns) still joins back into one row.
+     *  - Without any such recognized previous-column marking, every non-self-sufficient trailing
+     *    fragment on the baseline joins into a single row (there is no header to tell two value cells
+     *    apart, so a second bare value next to the first is not silently promoted to its own
+     *    candidate — the row grammar's own duplicate-value guard then abstains it `ambiguous_value`,
+     *    the same outcome a single physical line with two values already produced before positional
+     *    column splitting existed).
+     */
+    internal fun joinValueColumns(lines: List<TextLine>): List<TextLine> {
+        val result = mutableListOf<TextLine>()
+        var index = 0
+        while (index < lines.size) {
+            val line = lines[index]
+            if (line.columnIndex != 0) {
+                result += line
+                index += 1
+                continue
+            }
+            var lookahead = index + 1
+            val trailing = mutableListOf<TextLine>()
+            while (lookahead < lines.size && lines[lookahead].page == line.page && lines[lookahead].columnIndex > 0 &&
+                kotlin.math.abs(lines[lookahead].box.y - line.box.y) <= 0.004
+            ) {
+                trailing += lines[lookahead]
+                lookahead += 1
+            }
+            if (trailing.isEmpty()) {
+                result += line
+                index += 1
+                continue
+            }
+            val hasRecognizedPreviousColumn = trailing.any { it.previousColumn }
+            val groups = mutableListOf<MutableList<TextLine>>()
+            val standalone = mutableListOf<TextLine>()
+            trailing.forEach { cell ->
+                val startsValue = startsNumericOrSigned(cell.text)
+                val hasOwnLabel = !startsValue && RowGrammar.parse(cell.text).any { it is RowParse.Measurement || it is RowParse.Ambiguous }
+                when {
+                    hasOwnLabel -> standalone += cell
+                    !hasRecognizedPreviousColumn -> if (groups.isEmpty()) groups += mutableListOf(cell) else groups[0] += cell
+                    startsValue || groups.isEmpty() -> groups += mutableListOf(cell)
+                    else -> groups.last() += cell
+                }
+            }
+            // Column 0 may already be a complete self-sufficient row on its own (a first result panel
+            // with its own label+value+unit, next to a second panel far enough away to be its own
+            // column): if nothing to its right needed to borrow its label, emit it untouched too.
+            if (groups.isEmpty()) result += line
+            groups.forEach { group ->
+                val anchor = group.first()
+                val left = minOf(line.box.x, group.minOf { it.box.x })
+                val right = group.maxOf { it.box.x + it.box.width }
+                result += TextLine(
+                    page = line.page,
+                    text = (listOf(line.text) + group.map { it.text }).joinToString(" "),
+                    box = TextBox(left, minOf(line.box.y, anchor.box.y), right - left, maxOf(line.box.height, group.maxOf { it.box.height })),
+                    columnIndex = anchor.columnIndex,
+                    previousColumn = anchor.previousColumn,
+                )
+            }
+            standalone.forEach { result += it }
+            index = lookahead
+        }
+        return result
+    }
+
+    private fun startsNumericOrSigned(text: String): Boolean =
+        // Includes pressurePair-shaped tokens (`121/79`) via RowGrammar.isNumericLike, so a second,
+        // headered pressure-pair cell starts its own group instead of being folded into the first
+        // value cell's group (which would silently drop the previous-time pair's abstention).
+        RowGrammar.tokenize(text).firstOrNull()?.let { RowGrammar.isNumericLike(it) || leadingComparisonSign.matches(it) } == true
 
     internal sealed interface DateResolution {
         data object Missing : DateResolution
@@ -237,16 +372,23 @@ object NativeTextExtractionProvider {
     private fun sha256(text: String): String =
         HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)))
 
-    /** Collects one [TextLine] per stripper line with a normalized (0..1, top-left origin) box. */
-    private class LineCollectingStripper : PDFTextStripper() {
-        val lines = mutableListOf<TextLine>()
-        private val buffer = StringBuilder()
-        private val positions = mutableListOf<TextPosition>()
+    /** Collects one [PositionedToken] per run of non-blank glyphs, with a normalized (0..1, top-left origin) box. */
+    private class TokenCollectingStripper : PDFTextStripper() {
+        val tokens = mutableListOf<PositionedToken>()
         private var pageWidth = 1f
         private var pageHeight = 1f
 
-        init {
-            sortByPosition = true
+        init { sortByPosition = true }
+
+        /**
+         * A glyph drawn in invisible rendering mode (Tr 3 — used by scanned-page OCR text layers so a
+         * screen reader/copy-paste sees text the eye never does) must never be trusted as document
+         * content: skip it before it reaches [writeString] so an invisible OCR layer contributes no
+         * tokens at all and the page falls back to `unreadable`.
+         */
+        override fun processTextPosition(text: TextPosition) {
+            if (graphicsState.textState.renderingMode == RenderingMode.NEITHER) return
+            super.processTextPosition(text)
         }
 
         override fun startPage(page: PDPage) {
@@ -255,43 +397,29 @@ object NativeTextExtractionProvider {
             pageHeight = page.cropBox.height
         }
 
+        /** One token per run of non-blank glyphs; PDFBox calls this once per word group it detects. */
         override fun writeString(text: String, textPositions: List<TextPosition>) {
-            buffer.append(text)
-            positions += textPositions
-        }
-
-        override fun writeWordSeparator() {
-            buffer.append(' ')
-        }
-
-        override fun writeLineSeparator() {
-            flush()
-        }
-
-        override fun endPage(page: PDPage) {
-            flush()
-            super.endPage(page)
-        }
-
-        private fun flush() {
-            val text = buffer.toString().trim()
-            if (text.isNotEmpty() && positions.isNotEmpty()) {
-                val left = positions.minOf { it.xDirAdj }
-                val right = positions.maxOf { it.xDirAdj + it.widthDirAdj }
-                val top = positions.minOf { it.yDirAdj - it.heightDir }
-                val bottom = positions.maxOf { it.yDirAdj }
-                val x = clamp(left / pageWidth)
-                val y = clamp(top / pageHeight)
-                lines += TextLine(
+            var run = mutableListOf<TextPosition>()
+            fun flush() {
+                if (run.isEmpty()) return
+                val left = run.minOf { it.xDirAdj }
+                val right = run.maxOf { it.xDirAdj + it.widthDirAdj }
+                val top = run.minOf { it.yDirAdj - it.heightDir }
+                val bottom = run.maxOf { it.yDirAdj }
+                val x = (left / pageWidth).toDouble().coerceIn(0.0, 1.0)
+                val y = (top / pageHeight).toDouble().coerceIn(0.0, 1.0)
+                tokens += PositionedToken(
                     page = currentPageNo,
-                    text = text,
-                    box = TextBox(x, y, clamp((right - left) / pageWidth, 1.0 - x), clamp((bottom - top) / pageHeight, 1.0 - y)),
+                    text = run.joinToString("") { it.unicode },
+                    x = x,
+                    y = y,
+                    width = ((right - left) / pageWidth).toDouble().coerceIn(0.0, 1.0 - x),
+                    height = ((bottom - top) / pageHeight).toDouble().coerceIn(0.0, 1.0 - y),
                 )
+                run = mutableListOf()
             }
-            buffer.clear()
-            positions.clear()
+            textPositions.forEach { position -> if (position.unicode.isBlank()) flush() else run += position }
+            flush()
         }
-
-        private fun clamp(value: Float, max: Double = 1.0): Double = value.toDouble().coerceIn(0.0, max)
     }
 }

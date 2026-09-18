@@ -1,5 +1,9 @@
 package kr.co.genomecompanion.foundation
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.Cookie
@@ -7,9 +11,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Primary
 import org.springframework.dao.DataAccessException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -50,10 +58,38 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     @Autowired
     private lateinit var conceptSource: JdbcMedicalConceptSource
 
+    @Autowired
+    private lateinit var repository: FoundationRepository
+
+    @Autowired
+    private lateinit var documentStorage: FoundationDocumentStorage
+
+    @Autowired
+    private lateinit var foundationProperties: FoundationProperties
+
+    @Autowired
+    private lateinit var clock: java.time.Clock
+
     private val uploadCapabilities = mutableMapOf<UUID, TestUploadCapability>()
+
+    private val faultyDocumentStorage: FaultInjectingFoundationDocumentStorage
+        get() = documentStorage as FaultInjectingFoundationDocumentStorage
+
+    @TestConfiguration
+    class PreviewDeleteFaultInjectionConfig {
+        // @Primary so this replaces the real FoundationDocumentStorage bean for every test in this class;
+        // see FaultInjectingFoundationDocumentStorage for why (a platform-independent, deterministic
+        // stand-in for the filesystem-permission fault injection that CI's root-executed Linux runner
+        // silently defeats).
+        @Bean
+        @Primary
+        fun documentStorage(properties: FoundationProperties): FoundationDocumentStorage =
+            FaultInjectingFoundationDocumentStorage(properties)
+    }
 
     @BeforeEach
     fun resetSyntheticDatabase() {
+        faultyDocumentStorage.reset()
         jdbc.execute("TRUNCATE TABLE security_audit_event")
         jdbc.execute(
             """
@@ -653,18 +689,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("document_not_found"))
 
-        val firstRecord = responseJson(
-            mutate(
-                post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
-                    .header("Idempotency-Key", "confirm-multi-ordinal-1")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json(mapOf("value" to "188"))),
-                alice,
-            ).andExpect(status().isCreated)
-                .andReturn()
-                .response
-                .contentAsByteArray,
-        )
+        mutate(
+            post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
+                .header("Idempotency-Key", "confirm-multi-ordinal-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isCreated)
         assertThat(documentStatus(documentId)).isEqualTo("REVIEW_REQUIRED")
 
         read(get("/api/foundation/documents/$documentId/candidate"), alice)
@@ -673,19 +704,18 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value("PENDING"))
             .andExpect(jsonPath("$.totalCandidates").value(3))
 
-        val replayedRecord = responseJson(
-            mutate(
-                post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
-                    .header("Idempotency-Key", "confirm-multi-ordinal-1-replay")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json(mapOf("value" to "188"))),
-                alice,
-            ).andExpect(status().isCreated)
-                .andReturn()
-                .response
-                .contentAsByteArray,
-        )
-        assertThat(replayedRecord["recordId"].asText()).isEqualTo(firstRecord["recordId"].asText())
+        // A different (non-matching) Idempotency-Key against an already-CONFIRMED candidate is not a
+        // replay: the row's locked state has genuinely changed under this request, so it is a 409, not a
+        // silent success. Only a matching key (the same-key replay case exercised elsewhere in this class)
+        // returns the original record.
+        mutate(
+            post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
+                .header("Idempotency-Key", "confirm-multi-ordinal-1-not-a-replay")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("candidate_state_changed"))
         assertThat(count("gc_health_record")).isEqualTo(1)
         assertThat(documentStatus(documentId)).isEqualTo("REVIEW_REQUIRED")
 
@@ -737,6 +767,283 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         read(get("/api/foundation/documents/$documentId/candidate"), alice)
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("consent_revoked"))
+    }
+
+    @Test
+    fun revokingDocumentExtractionTerminatesReviewAndInFlightDocumentsAndDeletesTheirFiles() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val reviewing = requestDocument(alice, consentId, fixturePdf, "revoke-review")
+        uploadDocument(alice, reviewing, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$reviewing/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(reviewing)
+        val confirmed = importSyntheticDocument(alice, consentId, januaryFixturePdf, januaryFixtureDigest, "revoke-done")
+        confirmEveryCandidate(alice, confirmed, "revoke-done")
+        val inFlight = requestDocument(alice, consentId, fixturePdf, "revoke-inflight")
+        uploadDocument(alice, inFlight, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$inFlight/finalization"), alice).andExpect(status().isAccepted)
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$reviewing.pdf"))).isTrue()
+
+        mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+
+        assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+        assertThat(documentStatus(inFlight)).isEqualTo("TERMINATED_BY_REVOCATION")
+        assertThat(documentStatus(confirmed.first()["documentId"].asText().let(UUID::fromString))).isEqualTo("COMPLETED")
+        assertThat(jdbc.queryForList("SELECT status FROM gc_document_job WHERE document_id IN (?, ?)", String::class.java, reviewing, inFlight)).allMatch { it in setOf("DEAD_LETTER", "COMPLETED") }
+        assertThat(jdbc.queryForObject("SELECT failure_code FROM gc_document WHERE document_id = ?", String::class.java, reviewing)).isEqualTo("consent_revoked")
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$reviewing.pdf"))).isFalse()
+        assertThat(Files.list(quarantineRoot.resolve("approved_source")).filter { it.fileName.toString().startsWith(reviewing.toString()) }.count()).isZero()
+        assertThat(Files.list(quarantineRoot.resolve("derived_safe_artifact")).filter { it.fileName.toString().startsWith(reviewing.toString()) }.count()).isZero()
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$inFlight.pdf"))).isFalse()
+        // The preview file delete succeeded (asserted above), so reviewing's gc_preview_artifact row is gone
+        // too — the row must never outlive a confirmed-deleted file (see deletePreviewArtifactIfExists's
+        // contract). The still-COMPLETED January document's own preview row is untouched by revocation.
+        assertThat(count("gc_preview_artifact")).isEqualTo(1)
+        // The person can still see the terminated document and its status; candidates are no longer reachable.
+        read(get("/api/foundation/documents/$reviewing"), alice).andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("TERMINATED_BY_REVOCATION")).andExpect(jsonPath("$.previewAvailable").value(false))
+        read(get("/api/foundation/documents/$reviewing/candidates"), alice).andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("consent_revoked"))
+        read(get("/api/foundation/records"), alice).andExpect(jsonPath("$.length()").value(3))
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'DOCUMENT_TERMINATED_BY_REVOCATION'", Long::class.java)).isEqualTo(2L)
+        // Re-consent: a new grant works, the terminated documents stay terminated, a new upload is required.
+        val newConsent = grantConsent(alice)
+        assertThat(newConsent).isNotEqualTo(consentId)
+        assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+    }
+
+    @Test
+    fun revocationRacingWorkerCompletionNeverDeadlocksAndAlwaysEndsTerminatedNotCompletedWithReadableCandidates() {
+        // Before F5, terminateDocumentsForRevokedConsent locked gc_document then gc_document_job,
+        // while every worker completion path (via requireLeasedJob's lockLeasedJob, `FOR UPDATE OF
+        // j`) locks gc_document_job then gc_document — a lock-order cycle that Postgres's deadlock
+        // detector could abort either side of. After F5 both paths lock jobs before documents, so
+        // this race must resolve without either thread ever seeing a deadlock, and — because this
+        // fixture's extraction always yields non-empty candidates (REVIEW_REQUIRED, itself still a
+        // terminable status) — revocation must always eventually re-catch and terminate the
+        // document, regardless of which thread's transaction commits first.
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "f5-race-document")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        val inspectionLease = checkNotNull(workerService.lease("a".repeat(64)))
+        workerService.completeInspection(inspectionLease.jobId, inspectionLease.leaseToken, approvedInspectionRequest())
+        val extractionLease = checkNotNull(workerService.lease("a".repeat(64)))
+        val resultRequest = ExtractionResultRequest(
+            sourceSha256 = fixtureDigest,
+            workerImageDigest = "b".repeat(64),
+            generatorVersion = "test-worker-v1",
+            previewPngBase64 = onePixelPngBase64,
+            candidates = julyCandidates,
+        )
+
+        val results = race(2) { index ->
+            if (index == 0) {
+                workerService.completeExtraction(extractionLease.jobId, extractionLease.leaseToken, resultRequest)
+            } else {
+                service.revokeConsent(FoundationPrincipal("synthetic-alice", UUID.randomUUID(), "a".repeat(64)), consentId)
+            }
+        }
+
+        // Neither side ever observes a Postgres deadlock/lock-timeout abort.
+        assertThat(results.mapNotNull { it.exceptionOrNull() }).noneMatch { it is DataAccessException }
+        // The worker either completed cleanly before revocation caught the document, or lost its
+        // lease to revocation's dead-letter (an ordinary domain exception, not a deadlock).
+        assertThat(results[0].exceptionOrNull()).matches { it == null || it is FoundationForbiddenException }
+        // Revocation itself never fails.
+        assertThat(results[1].isSuccess).isTrue()
+        assertThat(documentStatus(documentId)).isEqualTo("TERMINATED_BY_REVOCATION")
+        read(get("/api/foundation/documents/$documentId/candidates"), alice)
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("consent_revoked"))
+    }
+
+    @Test
+    fun deletingTheProfileRemovesAPreviewFileOrphanedByAFailedRevocationDelete() {
+        // Revocation nulls gc_document.preview_object_key but deliberately keeps the
+        // gc_preview_artifact row when the file delete itself fails (see the janitor-retry test
+        // above). Before F6, deleteProfile's listObjectKeys read only gc_document's own three
+        // columns, so once that column is null it never saw this key again — the file (and, after
+        // this same deletion cascades gc_preview_artifact away, even the row a janitor could have
+        // used to find it) would be orphaned forever. listObjectKeys must also see it via a
+        // gc_preview_artifact left join.
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val reviewing = requestDocument(alice, consentId, fixturePdf, "f6-orphan-preview")
+        uploadDocument(alice, reviewing, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$reviewing/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(reviewing)
+        val previewPath = Files.list(quarantineRoot.resolve("derived_safe_artifact"))
+            .filter { it.fileName.toString().startsWith(reviewing.toString()) }
+            .findFirst()
+            .orElseThrow()
+        // Fault injection through the storage seam (see FaultInjectingFoundationDocumentStorage), not a
+        // filesystem permission trick: a read-only bit is silently ignored by CI's root-executed Linux
+        // runner, so that trick would never actually fail here.
+        faultyDocumentStorage.failNextDeleteOf(previewPath.fileName.toString())
+        mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+        assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+        assertThat(
+            jdbc.queryForObject("SELECT preview_object_key FROM gc_document WHERE document_id = ?", String::class.java, reviewing),
+        ).isNull()
+        assertThat(count("gc_preview_artifact")).isEqualTo(1)
+        assertThat(Files.exists(previewPath)).isTrue()
+
+        mutate(delete("/api/foundation/profile"), alice).andExpect(status().isOk)
+
+        assertThat(Files.exists(previewPath)).isFalse()
+    }
+
+    @Test
+    fun revokeConsentAndDeleteProfileDeleteFilesImmediatelyWhenCalledOutsideATransaction() {
+        // Both revokeConsent and deleteProfile defer their file deletes to an afterCommit
+        // TransactionSynchronization, which throws IllegalStateException if no transaction
+        // synchronization is active. Bypass the @Transactional Spring proxy by constructing a raw
+        // instance of the service directly (reusing the real, autowired repository/storage/clock),
+        // so there genuinely is no active transaction — the guard must fall back to deleting the
+        // files immediately instead of throwing (F7).
+        val rawService = FoundationLifecycleService(repository, documentStorage, foundationProperties, clock, conceptSource)
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val untrusted = requestDocument(alice, consentId, fixturePdf, "f7-revoke-untrusted")
+        uploadDocument(alice, untrusted, fixturePdf).andExpect(status().isOk)
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$untrusted.pdf"))).isTrue()
+        val principal = FoundationPrincipal(subjectId = "synthetic-alice", sessionId = UUID.randomUUID(), sessionTokenHash = "a".repeat(64))
+
+        val receipt = rawService.revokeConsent(principal, consentId)
+
+        assertThat(receipt.status).isEqualTo("REVOKED")
+        assertThat(documentStatus(untrusted)).isEqualTo("TERMINATED_BY_REVOCATION")
+        // Deleted synchronously, inline — not deferred to a commit that will never come.
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$untrusted.pdf"))).isFalse()
+
+        val secondUntrusted = requestDocument(alice, grantConsent(alice), fixturePdf, "f7-delete-untrusted")
+        uploadDocument(alice, secondUntrusted, fixturePdf).andExpect(status().isOk)
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$secondUntrusted.pdf"))).isTrue()
+
+        val deletionReceipt = rawService.deleteProfile(principal)
+
+        assertThat(deletionReceipt.status).isEqualTo("COMPLETED")
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$secondUntrusted.pdf"))).isFalse()
+    }
+
+    @Test
+    fun aFailedPreviewFileDeleteLeavesItsRowForTheJanitorAndASuccessfulOneRemovesIt() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val reviewing = requestDocument(alice, consentId, fixturePdf, "revoke-preview-review")
+        uploadDocument(alice, reviewing, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$reviewing/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(reviewing)
+        assertThat(count("gc_preview_artifact")).isEqualTo(1)
+        val previewPath = Files.list(quarantineRoot.resolve("derived_safe_artifact"))
+            .filter { it.fileName.toString().startsWith(reviewing.toString()) }
+            .findFirst()
+            .orElseThrow()
+        // Fault injection through the storage seam (see FaultInjectingFoundationDocumentStorage), not a
+        // filesystem permission trick: a read-only bit is silently ignored by CI's root-executed Linux
+        // runner, so the after-commit hook's Files.deleteIfExists would never actually fail there. The
+        // fault-injecting storage throws a genuine IOException for this one object key on its next
+        // delete attempt instead, deterministically, on every platform.
+        faultyDocumentStorage.failNextDeleteOf(previewPath.fileName.toString())
+
+        mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+
+        assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+        // The file delete failed, so the row must still be here for the Task 22 janitor to retry against.
+        assertThat(Files.exists(previewPath)).isTrue()
+        assertThat(count("gc_preview_artifact")).isEqualTo(1)
+
+        // Simulating the janitor's later retry: once the file is actually gone, the row is safe to remove.
+        Files.delete(previewPath)
+        repository.deletePreviewArtifactIfExists(reviewing)
+        assertThat(count("gc_preview_artifact")).isZero()
+    }
+
+    @Test
+    fun reGrantingConsentAfterRevocationRequiresAFreshUploadAndTheNewDocumentReviewsNormally() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val terminated = requestDocument(alice, consentId, fixturePdf, "regrant-terminated")
+        uploadDocument(alice, terminated, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$terminated/finalization"), alice).andExpect(status().isAccepted)
+
+        mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+        assertThat(documentStatus(terminated)).isEqualTo("TERMINATED_BY_REVOCATION")
+
+        val newConsent = grantConsent(alice)
+        assertThat(newConsent).isNotEqualTo(consentId)
+        // findLatestActiveDocument excludes TERMINATED_BY_REVOCATION, so re-consent alone never resumes it.
+        read(get("/api/foundation/documents/active"), alice).andExpect(status().isOk)
+            .andExpect(jsonPath("$.document").doesNotExist())
+
+        val freshDocument = requestDocument(alice, newConsent, fixturePdf, "regrant-fresh")
+        assertThat(freshDocument).isNotEqualTo(terminated)
+        uploadDocument(alice, freshDocument, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$freshDocument/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(freshDocument)
+        val candidateId = UUID.fromString(
+            responseJson(
+                read(get("/api/foundation/documents/$freshDocument/candidate"), alice)
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andReturn()
+                    .response
+                    .contentAsByteArray,
+            )["candidateId"].asText(),
+        )
+        mutate(
+            post("/api/foundation/candidates/$candidateId/confirmation")
+                .header("Idempotency-Key", "regrant-fresh-confirm")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isCreated)
+        assertThat(documentStatus(terminated)).isEqualTo("TERMINATED_BY_REVOCATION")
+    }
+
+    @Test
+    fun deletionCommitsTheRowsBeforeTouchingFilesAndClearsIdempotencySessionAndCapabilityRows() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "delete-order")
+        mutate(post("/api/foundation/candidates/$candidateId/confirmation").header("Idempotency-Key", "delete-order-confirm")
+            .contentType(MediaType.APPLICATION_JSON).content(json(mapOf("value" to "188"))), alice).andExpect(status().isCreated)
+        val subjectHash = FoundationHashing.sha256("foundation-integration-test-pepper-64-characters-minimum-value:synthetic-alice")
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_idempotency WHERE subject_hash = ?", Long::class.java, subjectHash)).isGreaterThan(0L)
+        val keys = jdbc.queryForList("SELECT object_key FROM gc_document WHERE subject_id = 'synthetic-alice'", String::class.java)
+        // Make the file deletion impossible to perform inside the transaction: lock the file by making the untrusted directory read-only is not
+        // portable, so instead observe ordering through the audit sequence: PROFILE_DELETED is written in the same transaction
+        // and must exist even when a file is already gone.
+        keys.forEach { Files.deleteIfExists(quarantineRoot.resolve("untrusted").resolve(it)) }
+        mutate(delete("/api/foundation/profile"), alice).andExpect(status().isOk).andExpect(jsonPath("$.status").value("COMPLETED"))
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_idempotency WHERE subject_hash = ?", Long::class.java, subjectHash)).isZero()
+        assertThat(countForSubject("gc_session", "synthetic-alice")).isZero()
+        assertThat(count("gc_upload_capability")).isZero()
+        assertThat(countForSubject("gc_document", "synthetic-alice")).isZero()
+        assertThat(jdbc.queryForObject("SELECT deleted_at IS NOT NULL FROM gc_subject WHERE subject_id = 'synthetic-alice'", Boolean::class.java)).isTrue()
+    }
+
+    @Test
+    fun aFileDeletionFailureAfterCommitDoesNotUndoTheDeletion() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "delete-orphan-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(documentId)
+        // Filter by this test's own document id: the quarantine directory is not cleared between test
+        // methods (only the database is truncated in @BeforeEach), so other tests' approved files persist.
+        val approved = Files.list(quarantineRoot.resolve("approved_source"))
+            .filter { it.fileName.toString().startsWith(documentId.toString()) }
+            .findFirst()
+            .orElseThrow()
+        // Replace the approved file with a directory of the same name: deleteIfExists throws DirectoryNotEmptyException.
+        Files.delete(approved)
+        Files.createDirectories(approved.resolve("keep"))
+        mutate(delete("/api/foundation/profile"), alice).andExpect(status().isOk)
+        assertThat(countForSubject("gc_document", "synthetic-alice")).isZero()
+        assertThat(Files.isDirectory(approved)).isTrue() // orphan left for the janitor (Task 23)
+        Files.delete(approved.resolve("keep")); Files.delete(approved)
     }
 
     @Test
@@ -1022,6 +1329,52 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun confirmsAndCorrectsValuesInTheWorkerGrammarAndStoresThemVerbatim() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "value-grammar-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "혈소판", "250,000", "/µL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64)),
+                ExtractedCandidate(2, "Base Excess", "-2", "mmol/L", "2026-07-28", 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64)),
+                ExtractedCandidate(3, "TSH", "1.23", "µIU/mL", "2026-07-28", 1, EvidenceBox(0.08, 0.18, 0.25, 0.02), "3".repeat(64)),
+            ),
+        )
+        val candidates = responseJson(read(get("/api/foundation/documents/$documentId/candidates"), alice).andReturn().response.contentAsByteArray).toList()
+        fun confirm(index: Int, value: String, key: String) = mutate(
+            post("/api/foundation/candidates/${candidates[index]["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON).content(json(mapOf("value" to value))),
+            alice,
+        )
+        confirm(0, "250,000", "grammar-confirm-1").andExpect(status().isCreated)
+            .andExpect(jsonPath("$.value").value("250,000")).andExpect(jsonPath("$.reviewDecision").value("CONFIRMED"))
+        confirm(1, "-2", "grammar-confirm-2").andExpect(status().isCreated)
+            .andExpect(jsonPath("$.value").value("-2")).andExpect(jsonPath("$.unit").value("mmol/L"))
+        val tsh = responseJson(confirm(2, "1.23", "grammar-confirm-3").andExpect(status().isCreated).andReturn().response.contentAsByteArray)
+        mutate(
+            post("/api/foundation/records/${tsh["recordId"].asText()}/corrections")
+                .header("Idempotency-Key", "grammar-correct-3").contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "1.234", "reason" to "결과지에 소수 셋째 자리까지 적혀 있음"))),
+            alice,
+        ).andExpect(status().isOk).andExpect(jsonPath("$.value").value("1.234")).andExpect(jsonPath("$.reviewDecision").value("CORRECTED"))
+        mutate(
+            post("/api/foundation/records/${tsh["recordId"].asText()}/corrections")
+                .header("Idempotency-Key", "grammar-correct-long").contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "1." + "2".repeat(63), "reason" to "too long"))),
+            alice,
+        ).andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("request_invalid"))
+        for (bad in listOf("1,00", "abc", "1.", "+5", "1 000")) {
+            confirm(0, bad, "grammar-bad-$bad".replace(Regex("[^A-Za-z0-9._:-]"), "_")).andExpect(status().isBadRequest)
+        }
+        assertThat(jdbc.queryForObject("SELECT confirmed_value FROM gc_health_record WHERE label = '혈소판'", String::class.java)).isEqualTo("250,000")
+        // Arithmetic still removes commas: /series meanOfLast3 etc. are unaffected; the delta of 250,000 vs itself is 0.
+        assertThat(ChangeDeltaCalculator.compute("250,000", "249,000")?.absolute).isEqualTo("+1000")
+    }
+
+    @Test
     fun storesAConfirmedExamDateKeepsTheParserDateAndAuditsNoDateValue() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
@@ -1162,6 +1515,43 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun recordOrderFollowsExamDateThenConfirmationAndACorrectionBackToTheOriginalStaysCorrected() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val july = importSyntheticDocument(alice, consentId, fixturePdf, fixtureDigest, "order-july")
+        confirmEveryCandidate(alice, july, "order-july")
+        val january = importSyntheticDocument(alice, consentId, januaryFixturePdf, januaryFixtureDigest, "order-jan")
+        confirmEveryCandidate(alice, january, "order-jan")
+        val before = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray).map { it["observedOn"].asText() }
+        assertThat(before).isSorted()
+        assertThat(before.first()).isEqualTo("2026-01-15")
+        val recordId = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray).first()["recordId"].asText()
+        fun correct(value: String, key: String) = mutate(
+            post("/api/foundation/records/$recordId/corrections").header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to value, "reason" to "정정 $key"))),
+            alice,
+        ).andExpect(status().isOk)
+        correct("195", "order-correct-1")
+        correct("194", "order-correct-2")
+        read(get("/api/foundation/records/$recordId"), alice)
+            .andExpect(jsonPath("$.value").value("194"))
+            .andExpect(jsonPath("$.originalValue").value("194"))
+            .andExpect(jsonPath("$.reviewDecision").value("CORRECTED"))
+        val after = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray)
+        assertThat(after.map { it["observedOn"].asText() }).isEqualTo(before)
+        assertThat(after.first()["recordId"].asText()).isEqualTo(recordId)
+        // health-events, series and the FHIR export all order on the record's own immutable
+        // observedOn/confirmed_at/recordId, exactly like /records above — a correction bumps only
+        // the mutable version_changed_at (still surfaced as the API's own `confirmedAt` field on
+        // each event), so it can never reorder any of these five read models relative to one
+        // another or relative to /records.
+        val healthEvents = responseJson(read(get("/api/foundation/health-events"), alice).andReturn().response.contentAsByteArray)
+        assertThat(healthEvents.map { it["recordId"].asText() }).isEqualTo(after.map { it["recordId"].asText() })
+        val correctedEvent = healthEvents.single { it["recordId"].asText() == recordId }
+        assertThat(correctedEvent["corrected"].asBoolean()).isTrue()
+    }
+
+    @Test
     fun seriesListCurrentValuesInTimeOrderWithThreeComputedNumbersAndNoRangeText() {
         mockMvc.perform(get("/api/foundation/series")).andExpect(status().isUnauthorized)
         val alice = login("synthetic-alice")
@@ -1270,6 +1660,38 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.purposeCode").value("PROJECT:study1"))
         assertThat(countForSubject("gc_consent_grant", "synthetic-alice")).isEqualTo(2)
+    }
+
+    @Test
+    fun theSameIdempotencyKeyWithAnotherTargetOrBodyIsRejectedWith422AndExpiresAfter24Hours() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val first = createCandidate(alice, consentId, "idem-a")
+        val second = createCandidate(alice, consentId, "idem-b")
+        fun confirm(candidateId: UUID, value: String) = mutate(
+            post("/api/foundation/candidates/$candidateId/confirmation").header("Idempotency-Key", "shared-key-0001")
+                .contentType(MediaType.APPLICATION_JSON).content(json(mapOf("value" to value))),
+            alice,
+        )
+        val record = responseJson(confirm(first, "188").andExpect(status().isCreated).andReturn().response.contentAsByteArray)
+        confirm(first, "188").andExpect(status().isCreated).andExpect(jsonPath("$.recordId").value(record["recordId"].asText()))
+        confirm(first, "189").andExpect(status().isUnprocessableEntity).andExpect(jsonPath("$.code").value("idempotency_key_mismatch"))
+        confirm(second, "188").andExpect(status().isUnprocessableEntity).andExpect(jsonPath("$.code").value("idempotency_key_mismatch"))
+        assertThat(count("gc_health_record")).isEqualTo(1)
+        jdbc.update("UPDATE gc_idempotency SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 second'")
+        // Expired: the key is free again, and the second candidate can now be confirmed under it.
+        confirm(second, "188").andExpect(status().isCreated)
+        assertThat(count("gc_health_record")).isEqualTo(2)
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_idempotency WHERE request_sha256 IS NOT NULL AND expires_at > CURRENT_TIMESTAMP", Long::class.java)).isEqualTo(1L)
+    }
+
+    @Test
+    fun auditRowsAreAppendOnlyAtTheDatabase() {
+        val alice = login("synthetic-alice")
+        grantConsent(alice)
+        org.assertj.core.api.Assertions.assertThatThrownBy { jdbc.update("DELETE FROM gc_audit_event") }.isInstanceOf(DataAccessException::class.java)
+        org.assertj.core.api.Assertions.assertThatThrownBy { jdbc.update("UPDATE gc_audit_event SET outcome = 'DENIED'") }.isInstanceOf(DataAccessException::class.java)
+        assertThat(count("gc_audit_event")).isGreaterThanOrEqualTo(2)
     }
 
     @Test
@@ -1975,6 +2397,160 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         }
     }
 
+    @Test
+    fun twoThreadsConfirmingOneCandidateProduceExactlyOneRecordAndOneConflict() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "race-confirm")
+        val principal = FoundationPrincipal("synthetic-alice", UUID.randomUUID(), alice.cookie.value.let(FoundationHashing::sha256))
+        val results = race(2) { index ->
+            service.confirmCandidate(principal, candidateId, "188", "race-confirm-key-$index")
+        }
+        assertThat(results.count { it.isSuccess }).isEqualTo(1)
+        assertThat(results.mapNotNull { it.exceptionOrNull() }).singleElement().isInstanceOfSatisfying(FoundationConflictException::class.java) {
+            assertThat(it.code).isEqualTo("candidate_state_changed")
+        }
+        assertThat(count("gc_health_record")).isEqualTo(1)
+        assertThat(count("gc_health_record_version")).isEqualTo(1)
+        assertThat(jdbc.queryForObject("SELECT status FROM gc_candidate WHERE candidate_id = ?", String::class.java, candidateId)).isEqualTo("CONFIRMED")
+    }
+
+    @Test
+    fun confirmAndExcludeRacingOnOneCandidateLeaveExactlyOneOutcome() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "race-mixed")
+        val principal = FoundationPrincipal("synthetic-alice", UUID.randomUUID(), FoundationHashing.sha256(alice.cookie.value))
+        val results = race(2) { index ->
+            if (index == 0) service.confirmCandidate(principal, candidateId, "188", "race-mixed-confirm") else service.excludeCandidate(principal, candidateId, "race-mixed-exclude")
+        }
+        assertThat(results.count { it.isSuccess }).isEqualTo(1)
+        val status = jdbc.queryForObject("SELECT status FROM gc_candidate WHERE candidate_id = ?", String::class.java, candidateId)
+        assertThat(status).isIn("CONFIRMED", "EXCLUDED")
+        assertThat(count("gc_health_record")).isEqualTo(if (status == "CONFIRMED") 1L else 0L)
+        val failure = results.mapNotNull { it.exceptionOrNull() }.single() as FoundationConflictException
+        assertThat(failure.code).isIn("candidate_state_changed", "candidate_not_pending")
+    }
+
+    @Test
+    fun twoThreadsCorrectingOneRecordProduceExactlyOneNewVersion() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        // Warms the two worker threads' own connection-pool and JIT paths through this exact call shape on a
+        // throwaway record first, then removes every row it created: this test's timing window (two threads
+        // truly overlapping on one record) is tight enough that a cold pooled connection or a not-yet-JIT'ed
+        // correctRecord() path on either thread's first-ever call can by itself decide the race.
+        val warmupPrincipal = FoundationPrincipal("synthetic-alice", UUID.randomUUID(), FoundationHashing.sha256(alice.cookie.value))
+        val warmupCandidateId = createCandidate(alice, consentId, "race-correct-warmup")
+        val warmupRecordId = service.confirmCandidate(warmupPrincipal, warmupCandidateId, "1", "race-correct-warmup-confirm").recordId
+        race(2) { index -> service.correctRecord(warmupPrincipal, warmupRecordId, "2$index", "warmup $index", "race-correct-warmup-key-$index") }
+        jdbc.update("DELETE FROM gc_health_record_version WHERE record_id = ?", warmupRecordId)
+        jdbc.update("DELETE FROM gc_health_record WHERE record_id = ?", warmupRecordId)
+        jdbc.update("DELETE FROM gc_candidate WHERE candidate_id = ?", warmupCandidateId)
+
+        val candidateId = createCandidate(alice, consentId, "race-correct")
+        val principal = FoundationPrincipal("synthetic-alice", UUID.randomUUID(), FoundationHashing.sha256(alice.cookie.value))
+        val recordId = service.confirmCandidate(principal, candidateId, "188", "race-correct-confirm").recordId
+        val results = race(2) { index ->
+            service.correctRecord(principal, recordId, "19$index", "race $index", "race-correct-key-$index")
+        }
+        assertThat(results.count { it.isSuccess }).isEqualTo(1)
+        assertThat((results.mapNotNull { it.exceptionOrNull() }.single() as FoundationConflictException).code).isEqualTo("record_state_changed")
+        assertThat(count("gc_health_record_version")).isEqualTo(2)
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_health_record_version WHERE status = 'CURRENT'", Long::class.java)).isEqualTo(1L)
+    }
+
+    @Test
+    fun frameworkFailuresAreProblemJsonWithNoStoreAndNeverEchoTheRequest() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "problem-shape")
+        val secret = "SECRET-BODY-VALUE-7731"
+        fun expectProblem(builder: MockHttpServletRequestBuilder, status: Int, code: String) {
+            val response = mutate(builder, alice).andExpect(status().`is`(status))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(code))
+                .andReturn().response
+            assertThat(response.contentAsString).isEqualTo("""{"code":"$code"}""")
+            assertThat(response.contentAsString).doesNotContain(secret)
+        }
+        val confirmation = "/api/foundation/candidates/$candidateId/confirmation"
+        expectProblem(post(confirmation).header("Idempotency-Key", "problem-json-1").contentType(MediaType.APPLICATION_JSON).content("{\"value\": \"$secret"), 400, "request_body_invalid")
+        expectProblem(post(confirmation).header("Idempotency-Key", "problem-json-2").contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"188\",\"extra\":\"$secret\"}"), 400, "request_body_invalid")
+        expectProblem(post(confirmation).contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"188\"}"), 400, "request_header_missing")
+        expectProblem(post("/api/foundation/candidates/not-a-uuid-$secret/confirmation").header("Idempotency-Key", "problem-json-3").contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"188\"}"), 400, "request_path_invalid")
+        expectProblem(post(confirmation).header("Idempotency-Key", "problem-json-4").contentType(MediaType.TEXT_PLAIN).content(secret), 415, "media_type_unsupported")
+        expectProblem(put("/api/foundation/candidates/$candidateId/confirmation").contentType(MediaType.APPLICATION_JSON).content("{}"), 405, "method_not_allowed")
+        assertThat(count("gc_health_record")).isZero()
+    }
+
+    @Test
+    fun malformedJsonNeverEchoesTheSentinelInResponseOrLog() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "problem-log-shape")
+        val sentinel = "188 mg/dL SENTINEL"
+
+        val watchedLoggers = listOf(
+            "org.springframework.web",
+            "kr.co.genomecompanion.foundation",
+            "org.springframework.web.servlet.handler.HandlerExceptionResolver",
+        ).map { LoggerFactory.getLogger(it) as Logger }
+        val appender = ListAppender<ILoggingEvent>()
+        appender.start()
+        val previousLevels = watchedLoggers.map { it.level }
+        watchedLoggers.forEach {
+            it.addAppender(appender)
+            it.level = Level.TRACE
+        }
+        try {
+            val response = mutate(
+                post("/api/foundation/candidates/$candidateId/confirmation")
+                    .header("Idempotency-Key", "problem-log-json-1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"value\": \"$sentinel"),
+                alice,
+            ).andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("request_body_invalid"))
+                .andReturn().response
+            assertThat(response.contentAsString).doesNotContain(sentinel)
+            assertThat(response.contentAsString).doesNotContain("188")
+
+            val loggedMessages = appender.list.map { it.formattedMessage + it.throwableProxy?.message.orEmpty() }
+            assertThat(loggedMessages).noneMatch { it.contains(sentinel) || it.contains("188") }
+        } finally {
+            watchedLoggers.forEachIndexed { index, logger ->
+                logger.detachAppender(appender)
+                logger.level = previousLevels[index]
+            }
+            appender.stop()
+        }
+    }
+
+    /** Starts [threads] callables on one latch against the real database and returns their results in submission order. */
+    private fun <T> race(threads: Int, action: (Int) -> T): List<Result<T>> {
+        val executor = Executors.newFixedThreadPool(threads)
+        val ready = CountDownLatch(threads)
+        val start = CountDownLatch(1)
+        try {
+            val futures = (0 until threads).map { index ->
+                executor.submit<Result<T>> {
+                    ready.countDown()
+                    check(start.await(5, TimeUnit.SECONDS))
+                    runCatching { action(index) }
+                }
+            }
+            check(ready.await(5, TimeUnit.SECONDS))
+            start.countDown()
+            return futures.map { it.get(15, TimeUnit.SECONDS) }
+        } finally {
+            start.countDown()
+            executor.shutdownNow()
+            check(executor.awaitTermination(5, TimeUnit.SECONDS))
+        }
+    }
+
     /** The July document whose first row prints the range `120-199` (stored, exported only). */
     private fun importJulyWithRange(client: TestClient, consentId: UUID, keyPrefix: String): List<JsonNode> {
         val documentId = requestDocument(client, consentId, fixturePdf, "$keyPrefix-document-request")
@@ -2267,6 +2843,11 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             registry.add("spring.datasource.url") { checkNotNull(System.getenv("GC_TEST_POSTGRES_URL")) }
             registry.add("spring.datasource.username") { "postgres" }
             registry.add("spring.datasource.password") { "" }
+            // The concurrency (race) tests below genuinely need 2+ live connections at once; the pool
+            // otherwise grows lazily and a fresh second connection's one-time setup cost can itself decide
+            // an otherwise-tight two-thread race.
+            registry.add("spring.datasource.hikari.minimum-idle") { "4" }
+            registry.add("spring.datasource.hikari.maximum-pool-size") { "8" }
             registry.add("security.oidc.enabled") { "true" }
             registry.add("security.oidc.issuer") { "https://issuer.test.invalid" }
             registry.add("security.oidc.jwk-set-uri") { "https://issuer.test.invalid/.well-known/jwks.json" }

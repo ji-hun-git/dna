@@ -22,6 +22,7 @@ class ChangeSummaryProjectionTest {
         conceptCode: String? = "total-cholesterol",
         status: String = "CURRENT",
         confirmedAt: Instant = Instant.parse("2026-07-28T09:10:00Z"),
+        versionChangedAt: Instant = confirmedAt,
         recordId: UUID = UUID.randomUUID(),
     ) = FoundationRecordRow(
         recordId = recordId,
@@ -36,6 +37,7 @@ class ChangeSummaryProjectionTest {
         originalValue = value,
         unit = unit,
         observedOn = observedOn,
+        versionChangedAt = versionChangedAt,
         confirmedAt = confirmedAt,
         correctionReason = null,
         evidencePage = 1,
@@ -303,6 +305,33 @@ class ChangeSummaryProjectionTest {
     }
 
     @Test
+    fun ordersItemsAndPicksThePreviousValueByTheImmutableConfirmedAtNotByAVersionChangedAtACorrectionBumps() {
+        // A correction on one of two same-label items in the latest document bumps only its
+        // versionChangedAt far into the future; confirmed_at never moves. Both the items list and
+        // the "previous value" pick (which also breaks ties on this instant) must stay ordered by
+        // confirmedAt (F4), or a correction would silently reorder the change summary.
+        val latestDocument = UUID.fromString("77777777-7777-4777-8777-777777777777")
+        val correctedButConfirmedFirst = row(
+            "총콜레스테롤", "150", LocalDate.of(2026, 8, 1), latestDocument,
+            conceptCode = "total-cholesterol-a",
+            confirmedAt = Instant.parse("2026-08-01T09:00:00Z"),
+            versionChangedAt = Instant.parse("2026-09-19T12:00:00Z"),
+        )
+        val neverCorrectedButConfirmedSecond = row(
+            "총콜레스테롤", "151", LocalDate.of(2026, 8, 1), latestDocument,
+            conceptCode = "total-cholesterol-b",
+            confirmedAt = Instant.parse("2026-08-01T09:05:00Z"),
+            versionChangedAt = Instant.parse("2026-08-01T09:05:00Z"),
+        )
+        val documents = listOf(completed(latestDocument, "2026-08-01T10:00:00Z"))
+
+        val summary = ChangeSummaryProjection.project(listOf(neverCorrectedButConfirmedSecond, correctedButConfirmedFirst), documents)
+
+        assertThat(summary.items.map { it.conceptCode })
+            .containsExactly("total-cholesterol-a", "total-cholesterol-b")
+    }
+
+    @Test
     fun carriesNoInterpretationFields() {
         val itemFields = ChangeItem::class.java.declaredFields.map { it.name }
         val summaryFields = ChangeSummary::class.java.declaredFields.map { it.name }
@@ -389,13 +418,30 @@ class ChangeSummaryProjectionTest {
     }
 
     @Test
-    fun keepsTheDeltaWhenThePreviousDateEqualsTheLatestDate() {
+    fun omitsTheDeltaWhenThePreviousDateEqualsTheLatestDateLikeSeriesDoes() {
+        // Same-day points have no defined order (see SeriesProjection): /changes omits the delta
+        // here exactly as /series omits lastDifference, while both values stay listed.
         val previous = row("총콜레스테롤", "194", LocalDate.of(2026, 7, 28), januaryDocument)
         val latest = row("총콜레스테롤", "188", LocalDate.of(2026, 7, 28), julyDocument)
         val documents = listOf(completed(januaryDocument, "2026-01-16T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
 
         val item = ChangeSummaryProjection.project(listOf(previous, latest), documents).items.single()
 
-        assertThat(item.delta).isEqualTo(ChangeDelta("-6", "-3.1"))
+        assertThat(item.previous?.value).isEqualTo("194")
+        assertThat(item.delta).isNull()
+    }
+
+    @Test
+    fun `a previous value observed on the same day lists both values but omits the delta like series does`() {
+        val today = LocalDate.of(2026, 7, 28)
+        val previous = row("총콜레스테롤", "190", today, januaryDocument, confirmedAt = Instant.parse("2026-07-28T01:00:00Z"))
+        val latest = row("총콜레스테롤", "188", today, julyDocument, confirmedAt = Instant.parse("2026-07-28T02:00:00Z"))
+        val summary = ChangeSummaryProjection.project(
+            listOf(previous, latest),
+            listOf(completed(januaryDocument, "2026-07-28T01:00:00Z"), completed(julyDocument, "2026-07-28T02:00:00Z")),
+        )
+        val item = summary.items.single()
+        assertThat(item.previous?.value).isEqualTo("190")
+        assertThat(item.delta).isNull()
     }
 }

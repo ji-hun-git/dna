@@ -87,4 +87,13 @@ describe("review decision sentences", () => {
     expect(labelReviewOutcome(date)).toBe("검사일을 수정함");
     expect(labelReviewOutcome(both)).toBe("값과 검사일을 수정함");
   });
+
+  it("says a correction happened without claiming a difference once a correction reverts the value and date back to the original", () => {
+    // Sticky CORRECTED (server RecordReview.isCorrected): a supersedesVersionId trail exists
+    // (e.g. 188 -> 195 -> 188) so reviewDecision stays CORRECTED, but value === originalValue
+    // and observedOn === originalObservedOn here — neither "part" actually differs.
+    const reverted = syntheticRecord({ reviewDecision: "CORRECTED" });
+    expect(describeReviewDecision(reverted)).toBe("수정 이력이 있지만 지금 값은 원래 값과 같아요");
+    expect(labelReviewOutcome(reverted)).toBe("수정 이력이 있지만 지금 값은 원래 값과 같아요");
+  });
 });

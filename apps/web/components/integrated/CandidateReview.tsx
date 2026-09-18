@@ -158,7 +158,8 @@ export function CandidateReview({
                 inputMode="decimal"
                 autoFocus
                 disabled={busy}
-                pattern="[0-9]{1,4}([.][0-9]{1,2})?"
+                pattern="-?([0-9]{1,3}(,[0-9]{3})+|[0-9]+)([.][0-9]+)?"
+                maxLength={64}
                 required
               />
               <div className="gc-integrated-actions">

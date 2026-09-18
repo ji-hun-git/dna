@@ -48,6 +48,10 @@ object HealthEventProjection {
     fun project(records: List<FoundationRecordRow>, previewDocumentIds: Set<UUID>): List<HealthEvent> =
         records
             .filter { it.status == "CURRENT" }
+            // Ordered on the record's own immutable observedOn/confirmedAt/recordId — never on the
+            // mapped HealthEvent.confirmedAt below, which deliberately still carries the mutable
+            // versionChangedAt (a correction bumps it; that is what the API field means today).
+            .sortedWith(compareBy<FoundationRecordRow> { it.observedOn }.thenBy { it.confirmedAt }.thenBy { it.recordId.toString() })
             .map { record ->
                 val previewAvailable = record.documentId in previewDocumentIds
                 HealthEvent(
@@ -60,8 +64,8 @@ object HealthEventProjection {
                     unit = record.unit,
                     observedOn = record.observedOn.toString(),
                     verification = if (previewAvailable) VERIFIED else UNCERTAIN,
-                    corrected = record.currentValue != record.originalValue || record.originalObservedOn != null,
-                    confirmedAt = record.confirmedAt,
+                    corrected = RecordReview.isCorrected(record),
+                    confirmedAt = record.versionChangedAt,
                     originalValue = record.originalValue,
                     correctionReason = record.correctionReason,
                     originalObservedOn = record.originalObservedOn?.toString(),
@@ -75,5 +79,4 @@ object HealthEventProjection {
                     originalLabel = record.originalLabel,
                 )
             }
-            .sortedWith(compareBy<HealthEvent> { it.observedOn }.thenBy { it.concept }.thenBy { it.confirmedAt })
 }

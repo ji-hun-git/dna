@@ -1,4 +1,6 @@
+import { z } from "zod";
 import {
+  extractionAbstentionSchema,
   medicalDocumentCorpusSchema,
   medicalDocumentRunSchema,
   type MedicalDocumentCorpus,
@@ -199,6 +201,101 @@ export function evaluateMedicalDocumentPipeline(
       conceptAccuracy,
     },
     gate: { passed: failures.length === 0, failures, thresholds },
+  };
+}
+
+export const handLabelledExpectationSchema = z.strictObject({
+  schemaVersion: z.literal("hand-labelled-expectation.v1"),
+  documentId: z.string().regex(/^synthetic-hand-[a-z0-9-]+$/),
+  layout: z.string().min(1).max(240),
+  observedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  candidates: z.array(z.strictObject({
+    label: z.string().min(1).max(80),
+    value: z.string().min(1).max(64),
+    unit: z.string().min(1).max(32),
+    conceptCode: z.string().regex(/^[a-z0-9-]{1,64}$/).nullable().optional(),
+  })).max(100),
+  abstentions: z.array(z.strictObject({ label: z.string().min(1).max(80), reason: extractionAbstentionSchema.shape.reason })).max(100),
+});
+
+export const handLabelledCorpusSchema = z.strictObject({
+  corpusId: z.string().regex(/^synthetic-ko-hand-labelled-[0-9a-f]{16}$/),
+  documents: z.array(z.strictObject({
+    documentId: z.string(),
+    documentSha256: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+    expected: handLabelledExpectationSchema,
+  })).min(1),
+});
+
+export type HandLabelledReport = {
+  schemaVersion: "hand-labelled-report.v1";
+  corpusId: string;
+  expectedCandidates: number;
+  matchedCandidates: number;
+  expectedAbstentions: number;
+  matchedAbstentions: number;
+  hallucinatedCandidates: number;
+  candidateAccuracy: number;
+  abstentionAccuracy: number;
+  handLabelledAccuracy: number;
+  floor: number;
+  passed: boolean;
+};
+
+/**
+ * Regression floor: the measured value, from docs/status/2026-09-18/wave7.md
+ * (corpusId synthetic-ko-hand-labelled-4b20bf06922a7e0a, re-measured 2026-09-19 after PR 7a
+ * review fix 1 (F1) completed the nhis-notice gold set with the split `혈압(수축기)`/`혈압(이완기)`
+ * `previous_column` abstentions the fixed pressure-pair-in-a-previous-column parse now produces,
+ * replacing the single unsplit `혈압` abstention). Never rounded up — a future improvement in the
+ * parser can raise this constant, a regression must not silently pass.
+ */
+export const handLabelledFloor = 0.9166666666666666;
+
+export function evaluateHandLabelled(corpusInput: unknown, runsInput: readonly unknown[], floor = handLabelledFloor): HandLabelledReport {
+  const corpus = handLabelledCorpusSchema.parse(corpusInput);
+  const runs = runsInput.map((run) => medicalDocumentRunSchema.parse(run));
+  let expectedCandidates = 0;
+  let matchedCandidates = 0;
+  let expectedAbstentions = 0;
+  let matchedAbstentions = 0;
+  let hallucinated = 0;
+  for (const document of corpus.documents) {
+    const run = runs.find((candidate) => candidate.documentId === document.documentId);
+    if (!run) throw new Error(`missing run for ${document.documentId}`);
+    if (run.documentSha256 !== document.documentSha256) throw new Error(`document binding mismatch for ${document.documentId}`);
+    const expected = document.expected;
+    expectedCandidates += expected.candidates.length;
+    expectedAbstentions += expected.abstentions.length;
+    for (const candidate of expected.candidates) {
+      const hit = run.candidates.find((actual) => actual.label === candidate.label && actual.value === candidate.value && actual.unit === candidate.unit
+        && (expected.observedOn === null || actual.observedAt === expected.observedOn)
+        && (candidate.conceptCode === undefined || (actual.conceptCode ?? null) === candidate.conceptCode));
+      if (hit) matchedCandidates += 1;
+    }
+    for (const actual of run.candidates) {
+      if (!expected.candidates.some((candidate) => candidate.label === actual.label && candidate.value === actual.value && candidate.unit === actual.unit)) hallucinated += 1;
+    }
+    for (const abstention of expected.abstentions) {
+      if (run.abstentions.some((actual) => actual.label === abstention.label && actual.reason === abstention.reason)) matchedAbstentions += 1;
+    }
+  }
+  const candidateAccuracy = ratio(matchedCandidates, expectedCandidates);
+  const abstentionAccuracy = ratio(matchedAbstentions, expectedAbstentions);
+  const handLabelledAccuracy = ratio(matchedCandidates + matchedAbstentions, expectedCandidates + expectedAbstentions);
+  return {
+    schemaVersion: "hand-labelled-report.v1",
+    corpusId: corpus.corpusId,
+    expectedCandidates,
+    matchedCandidates,
+    expectedAbstentions,
+    matchedAbstentions,
+    hallucinatedCandidates: hallucinated,
+    candidateAccuracy,
+    abstentionAccuracy,
+    handLabelledAccuracy,
+    floor,
+    passed: handLabelledAccuracy >= floor && hallucinated === 0,
   };
 }
 
