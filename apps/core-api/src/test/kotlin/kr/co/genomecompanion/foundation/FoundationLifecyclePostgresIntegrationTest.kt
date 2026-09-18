@@ -15,6 +15,9 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Primary
 import org.springframework.dao.DataAccessException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -69,8 +72,24 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
     private val uploadCapabilities = mutableMapOf<UUID, TestUploadCapability>()
 
+    private val faultyDocumentStorage: FaultInjectingFoundationDocumentStorage
+        get() = documentStorage as FaultInjectingFoundationDocumentStorage
+
+    @TestConfiguration
+    class PreviewDeleteFaultInjectionConfig {
+        // @Primary so this replaces the real FoundationDocumentStorage bean for every test in this class;
+        // see FaultInjectingFoundationDocumentStorage for why (a platform-independent, deterministic
+        // stand-in for the filesystem-permission fault injection that CI's root-executed Linux runner
+        // silently defeats).
+        @Bean
+        @Primary
+        fun documentStorage(properties: FoundationProperties): FoundationDocumentStorage =
+            FaultInjectingFoundationDocumentStorage(properties)
+    }
+
     @BeforeEach
     fun resetSyntheticDatabase() {
+        faultyDocumentStorage.reset()
         jdbc.execute("TRUNCATE TABLE security_audit_event")
         jdbc.execute(
             """
@@ -857,18 +876,17 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .filter { it.fileName.toString().startsWith(reviewing.toString()) }
             .findFirst()
             .orElseThrow()
-        assertThat(previewPath.toFile().setReadOnly()).isTrue()
-        try {
-            mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
-            assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
-            assertThat(
-                jdbc.queryForObject("SELECT preview_object_key FROM gc_document WHERE document_id = ?", String::class.java, reviewing),
-            ).isNull()
-            assertThat(count("gc_preview_artifact")).isEqualTo(1)
-            assertThat(Files.exists(previewPath)).isTrue()
-        } finally {
-            previewPath.toFile().setWritable(true)
-        }
+        // Fault injection through the storage seam (see FaultInjectingFoundationDocumentStorage), not a
+        // filesystem permission trick: a read-only bit is silently ignored by CI's root-executed Linux
+        // runner, so that trick would never actually fail here.
+        faultyDocumentStorage.failNextDeleteOf(previewPath.fileName.toString())
+        mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+        assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+        assertThat(
+            jdbc.queryForObject("SELECT preview_object_key FROM gc_document WHERE document_id = ?", String::class.java, reviewing),
+        ).isNull()
+        assertThat(count("gc_preview_artifact")).isEqualTo(1)
+        assertThat(Files.exists(previewPath)).isTrue()
 
         mutate(delete("/api/foundation/profile"), alice).andExpect(status().isOk)
 
@@ -921,20 +939,19 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .filter { it.fileName.toString().startsWith(reviewing.toString()) }
             .findFirst()
             .orElseThrow()
-        // Fault injection without mocks: mark the real preview file read-only so the after-commit hook's own
-        // Files.deleteIfExists fails with a genuine AccessDeniedException, not a simulated one.
-        assertThat(previewPath.toFile().setReadOnly()).isTrue()
+        // Fault injection through the storage seam (see FaultInjectingFoundationDocumentStorage), not a
+        // filesystem permission trick: a read-only bit is silently ignored by CI's root-executed Linux
+        // runner, so the after-commit hook's Files.deleteIfExists would never actually fail there. The
+        // fault-injecting storage throws a genuine IOException for this one object key on its next
+        // delete attempt instead, deterministically, on every platform.
+        faultyDocumentStorage.failNextDeleteOf(previewPath.fileName.toString())
 
-        try {
-            mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+        mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
 
-            assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
-            // The file delete failed, so the row must still be here for the Task 22 janitor to retry against.
-            assertThat(Files.exists(previewPath)).isTrue()
-            assertThat(count("gc_preview_artifact")).isEqualTo(1)
-        } finally {
-            previewPath.toFile().setWritable(true)
-        }
+        assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+        // The file delete failed, so the row must still be here for the Task 22 janitor to retry against.
+        assertThat(Files.exists(previewPath)).isTrue()
+        assertThat(count("gc_preview_artifact")).isEqualTo(1)
 
         // Simulating the janitor's later retry: once the file is actually gone, the row is safe to remove.
         Files.delete(previewPath)

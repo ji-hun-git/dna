@@ -107,7 +107,7 @@ class FoundationDocumentStorage(
         for (entry in objectKeys) {
             val (zone, key) = entry
             try {
-                Files.deleteIfExists(resolve(zone, key))
+                deleteObject(zone, key)
             } catch (exception: Exception) {
                 failed.add(entry)
                 phiSafeLogger.emitResourceFailure(
@@ -119,6 +119,19 @@ class FoundationDocumentStorage(
             }
         }
         return failed
+    }
+
+    /**
+     * Deletes a single object. Extracted from [deleteAll]'s loop as its own function purely as a test
+     * seam: a test can subclass [FoundationDocumentStorage] and override this one method to inject a
+     * genuine [java.io.IOException] for a specific object key, instead of relying on filesystem
+     * permission tricks (a read-only bit, a same-named non-empty directory) that are not portable —
+     * e.g. a CI runner executing as root ignores read-only bits entirely, so such a "failure" would
+     * silently never happen there. Production behavior is unchanged: delegate straight to the real
+     * filesystem delete.
+     */
+    protected fun deleteObject(zone: StorageTrustZone, key: String) {
+        Files.deleteIfExists(resolve(zone, key))
     }
 
     private fun documentIdFromKey(key: String): UUID? =
