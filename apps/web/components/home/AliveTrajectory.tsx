@@ -6,6 +6,7 @@ import {
   BASE_CONTROL_POINTS,
   DRAW,
   DRIFT,
+  PHASE_LABELS,
   PICKER,
   Spring,
   addDrumVelocity,
@@ -15,10 +16,15 @@ import {
   fadeEdge,
   halfEllipsePath,
   pathPoint,
+  phaseRanges,
+  phaseSegmentPath,
+  phaseTick,
   stepControlPoints,
   stepDrum,
   type ControlPoint,
+  type PhaseRange,
 } from "@/lib/home/alive-trajectory";
+import { RINGS, nodeLabel, type ExampleNode, type ExampleRing } from "@/lib/home/alive-example-data";
 import { usePrefersReducedMotion } from "@/lib/my-data/reduced-motion";
 import styles from "@/components/home/AliveTrajectory.module.css";
 
@@ -26,65 +32,8 @@ const VIEW_W = 1200;
 const VIEW_H = 760;
 const T_END = 0.97;
 
-/**
- * Example items only — never a real person's record, and never a status word. Each label is
- * item, value and unit; the date goes through formatKoreanDate. Every node uses identical
- * strokes, size-per-item and identical motion, so nothing here can be read as encoding a value.
- */
-type ExampleNode = {
-  item: string;
-  value: string;
-  unit: string;
-  observedOn: string;
-  shape: "circle" | "squircle";
-  size: number;
-  phase: number;
-};
-
-type ExampleRing = { t: number; rx: number; ry: number; nodes: ExampleNode[] };
-
-const RINGS: ReadonlyArray<ExampleRing> = [
-  {
-    t: 0.1,
-    rx: 150,
-    ry: 34,
-    nodes: [
-      { item: "체질량지수", value: "23.4", unit: "", observedOn: "2025-01-20", shape: "squircle", size: 26, phase: 0.2 },
-      { item: "휴식 시 맥박", value: "58", unit: "회/분", observedOn: "2025-01-20", shape: "circle", size: 16, phase: 3.4 },
-    ],
-  },
-  {
-    t: 0.34,
-    rx: 210,
-    ry: 46,
-    nodes: [
-      { item: "혈압", value: "120/80", unit: "mmHg", observedOn: "2025-07-14", shape: "squircle", size: 30, phase: 1.1 },
-      { item: "수면", value: "7시간 12분", unit: "", observedOn: "2025-07-14", shape: "circle", size: 14, phase: 2.6 },
-      { item: "걸음", value: "8,900", unit: "", observedOn: "2025-07-15", shape: "squircle", size: 20, phase: 4.7 },
-    ],
-  },
-  {
-    t: 0.58,
-    rx: 120,
-    ry: 30,
-    nodes: [
-      { item: "총콜레스테롤", value: "194", unit: "mg/dL", observedOn: "2026-01-15", shape: "squircle", size: 34, phase: 0.6 },
-    ],
-  },
-  {
-    t: 0.8,
-    rx: 90,
-    ry: 24,
-    nodes: [
-      { item: "비타민 D", value: "31.2", unit: "ng/mL", observedOn: "2026-07-28", shape: "circle", size: 18, phase: 2.0 },
-      { item: "당화혈색소", value: "5.2", unit: "%", observedOn: "2026-07-28", shape: "squircle", size: 18, phase: 5.1 },
-    ],
-  },
-];
-
-function nodeLabel(node: ExampleNode) {
-  return node.unit ? `${node.item} ${node.value} ${node.unit}` : `${node.item} ${node.value}`;
-}
+/** All white; the dash pattern only marks a time boundary, never a value. */
+const PHASE_DASH_PATTERNS: readonly string[] = ["", "16 8", "3 7", "1 6"];
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -104,6 +53,13 @@ type RingRefs = {
   front: SVGPathElement;
   pos: Spring;
   nodes: NodeRefs[];
+};
+
+type PhaseSegmentRefs = {
+  range: PhaseRange;
+  path: SVGPathElement;
+  tick?: SVGLineElement;
+  label?: SVGTextElement;
 };
 
 function el<K extends keyof SVGElementTagNameMap>(
@@ -133,7 +89,7 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
   const reduced = usePrefersReducedMotion();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const arrowRef = useRef<SVGPathElement | null>(null);
+  const phasesLayerRef = useRef<SVGGElement | null>(null);
   const haloRef = useRef<SVGPathElement | null>(null);
   const flowRef = useRef<SVGPathElement | null>(null);
   const tipRef = useRef<SVGGElement | null>(null);
@@ -142,19 +98,42 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
 
   useEffect(() => {
     const svg = svgRef.current;
-    const arrow = arrowRef.current;
+    const phasesLayer = phasesLayerRef.current;
     const halo = haloRef.current;
     const flow = flowRef.current;
     const tip = tipRef.current;
     const backLayer = backLayerRef.current;
     const frontLayer = frontLayerRef.current;
     const root = rootRef.current;
-    if (!svg || !arrow || !halo || !flow || !tip || !backLayer || !frontLayer || !root) return undefined;
+    if (!svg || !phasesLayer || !halo || !flow || !tip || !backLayer || !frontLayer || !root) return undefined;
 
     const controlPoints: ControlPoint[] = createControlPoints(BASE_CONTROL_POINTS);
     const drum = createDrum();
     const draw = new Spring(reduced ? 1 : 0, DRAW);
     draw.set(1);
+
+    const ranges = phaseRanges(PHASE_LABELS, T_END);
+    const phaseSegments: PhaseSegmentRefs[] = ranges.map((range, i) => {
+      const path = el(phasesLayer, "path", {
+        fill: "none",
+        stroke: "#fff",
+        "stroke-width": 2,
+        "stroke-linecap": "round",
+        "stroke-dasharray": PHASE_DASH_PATTERNS[i % PHASE_DASH_PATTERNS.length],
+      });
+      // The path's own start (i = 0) needs no dividing tick, but every phase still gets a label.
+      const tick =
+        i === 0 ? undefined : el(phasesLayer, "line", { stroke: "#fff", "stroke-width": 1.5, opacity: 0.8 });
+      const label = el(phasesLayer, "text", {
+        fill: "#fff",
+        "font-size": 11,
+        "text-anchor": "middle",
+        "dominant-baseline": "middle",
+        class: styles.mono,
+      });
+      label.textContent = range.label;
+      return { range, path, tick, label };
+    });
 
     const rings: RingRefs[] = RINGS.map((spec) => {
       const back = el(backLayer, "path", { fill: "none", stroke: "rgba(255,255,255,0.42)", "stroke-width": 1 });
@@ -175,13 +154,26 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
                 stroke: "#fff",
                 "stroke-width": 2,
               });
-        const label = el(group, "text", { fill: "#fff", "font-size": 12, "dominant-baseline": "middle", y: -1 });
+        const label = el(group, "text", {
+          fill: "#fff",
+          "font-size": 12,
+          "dominant-baseline": "middle",
+          y: -1,
+          "paint-order": "stroke",
+          stroke: "#000",
+          "stroke-width": 3,
+          "stroke-linejoin": "round",
+        });
         label.textContent = nodeLabel(nodeSpec);
         const date = el(group, "text", {
-          fill: "rgba(255,255,255,0.6)",
+          fill: "rgba(255,255,255,0.7)",
           "font-size": 10,
           "dominant-baseline": "middle",
           y: 13,
+          "paint-order": "stroke",
+          stroke: "#000",
+          "stroke-width": 3,
+          "stroke-linejoin": "round",
           class: styles.mono,
         });
         date.textContent = formatKoreanDate(nodeSpec.observedOn);
@@ -220,17 +212,36 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
     let frameId = 0;
     let cancelled = false;
 
+    function layoutPhaseSegment(segment: PhaseSegmentRefs, opacity: number) {
+      segment.path.setAttribute("d", phaseSegmentPath(controlPoints, segment.range.t0, segment.range.t1, 24));
+      segment.path.style.opacity = String(opacity);
+      // The label sits at the start of its own segment (a mid-path label would overlap a ring).
+      const marker = phaseTick(controlPoints, segment.range.t0);
+      if (segment.tick) {
+        segment.tick.setAttribute("x1", String(marker.x1));
+        segment.tick.setAttribute("y1", String(marker.y1));
+        segment.tick.setAttribute("x2", String(marker.x2));
+        segment.tick.setAttribute("y2", String(marker.y2));
+        segment.tick.style.opacity = String(opacity);
+      }
+      if (segment.label) {
+        segment.label.setAttribute(
+          "transform",
+          `translate(${marker.labelX} ${marker.labelY}) rotate(${marker.angleDeg})`,
+        );
+        segment.label.style.opacity = String(opacity);
+      }
+    }
+
     function renderStill() {
       const d = buildPath(controlPoints, 0);
-      arrow!.setAttribute("d", d);
       halo!.setAttribute("d", d);
       flow!.setAttribute("d", d);
-      arrow!.style.strokeDasharray = "";
-      arrow!.style.strokeDashoffset = "0";
       halo!.style.strokeDasharray = "";
       halo!.style.strokeDashoffset = "0";
       halo!.style.opacity = "0.3";
       flow!.style.opacity = "0";
+      for (const segment of phaseSegments) layoutPhaseSegment(segment, 1);
       const head = pathPoint(controlPoints, 1);
       tip!.setAttribute("transform", `translate(${head.x} ${head.y}) rotate(${(head.angle * 180) / Math.PI})`);
       tip!.style.opacity = "1";
@@ -266,13 +277,11 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
         time += dt;
         const d = buildPath(controlPoints, time);
         stepControlPoints(controlPoints, dt);
-        arrow!.setAttribute("d", d);
         halo!.setAttribute("d", d);
         flow!.setAttribute("d", d);
-        const length = 3200; // stable approximate length; only used for the dash draw-in effect.
+        const length = 3200; // stable approximate length; only used for the halo dash draw-in effect.
         const drawn = draw.step(dt);
-        arrow!.style.strokeDasharray = String(length);
-        arrow!.style.strokeDashoffset = String(length * (1 - drawn));
+        for (const segment of phaseSegments) layoutPhaseSegment(segment, drawn);
         halo!.style.strokeDasharray = String(length);
         halo!.style.strokeDashoffset = String(length * (1 - drawn));
         halo!.style.opacity = String(0.25 + 0.15 * Math.sin(time * 1.3));
@@ -348,7 +357,7 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label="개인 건강 기록이 시간에 따라 위로 흘러가는 모습을 표현한 장식용 예시 애니메이션"
+        aria-label="개인 건강 기록이 2024 검진부터 다음 검진까지 시기별로 이어지며 위로 흘러가는 모습을 표현한 장식용 예시 애니메이션"
         focusable="false"
       >
         <defs>
@@ -363,9 +372,11 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
         <rect width={VIEW_W} height={VIEW_H} fill="url(#alive-grid-200)" />
         <g ref={backLayerRef} />
         <path ref={haloRef} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth={10} strokeLinecap="round" />
-        <path ref={arrowRef} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" />
+        <g ref={phasesLayerRef} />
         <path ref={flowRef} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={3} strokeLinecap="round" strokeDasharray="1 26" />
         <g ref={tipRef}>
+          {/* An open gate into the next phase, not a solid arrowhead: two posts framing a chevron opening. */}
+          <line x1={-34} y1={-16} x2={-34} y2={16} stroke="#fff" strokeWidth={2} strokeLinecap="round" />
           <path d="M -24 -10 L 0 0 L -24 10" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
         </g>
         <g ref={frontLayerRef} />

@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { afterEach, expect, it, vi } from "vitest";
 import { AliveTrajectory } from "@/components/home/AliveTrajectory";
+import { FORBIDDEN_JUDGEMENT_WORDS } from "./fixtures/forbidden-words";
 
 afterEach(cleanup);
 
@@ -27,19 +28,6 @@ function clearReducedMotionStub() {
   delete window.matchMedia;
 }
 
-const FORBIDDEN_JUDGEMENT_WORDS = [
-  "정상",
-  "비정상",
-  "높음",
-  "낮음",
-  "위험",
-  "상승",
-  "하락",
-  "좋아",
-  "나빠",
-  "추세",
-  "안정",
-];
 
 it("renders the example-data caption and the motion boundary sentence verbatim", () => {
   render(<AliveTrajectory />);
@@ -96,4 +84,34 @@ it("renders a still, non-looping frame under prefers-reduced-motion", async () =
 it("has no axe violations", async () => {
   const { container } = render(<AliveTrajectory />);
   expect(await axe(container)).toHaveNoViolations();
+});
+
+it("draws the arrow as separate phase segments, each with its own dash pattern, plus an open chevron gate at the tip", () => {
+  const { container } = render(<AliveTrajectory />);
+  const svg = container.querySelector("svg")!;
+  // The phases group sits between the halo and the flow-dash path; it holds one <path> per
+  // phase plus a tick <line> and mono <text> label at each internal boundary.
+  const phasePaths = Array.from(svg.querySelectorAll("g > path[stroke='#fff']")).filter(
+    (p) => p.getAttribute("stroke-width") === "2" && p.parentElement?.tagName === "g",
+  );
+  expect(phasePaths.length).toBeGreaterThanOrEqual(4);
+  const dashPatterns = new Set(phasePaths.map((p) => p.getAttribute("stroke-dasharray") ?? ""));
+  // Not every segment uses the same dash pattern (solid vs dashed), and none of them uses colour.
+  expect(dashPatterns.size).toBeGreaterThan(1);
+  for (const p of phasePaths) expect(p.getAttribute("stroke")).toBe("#fff");
+
+  const tickLines = svg.querySelectorAll("line");
+  expect(tickLines.length).toBeGreaterThanOrEqual(3);
+
+  // The tip is an open chevron (no fill), not a solid arrowhead.
+  const tipPaths = Array.from(svg.querySelectorAll("path")).filter((p) => (p.getAttribute("d") ?? "").includes("L 0 0"));
+  expect(tipPaths.length).toBeGreaterThan(0);
+  for (const p of tipPaths) expect(p.getAttribute("fill")).toBe("none");
+});
+
+it("labels each phase with a time period only, never a life-stage or health-stage word", () => {
+  render(<AliveTrajectory />);
+  for (const label of ["2024 검진", "2025 검진", "2026 검진", "다음 검진"]) {
+    expect(screen.getByText(label)).toBeInTheDocument();
+  }
 });

@@ -11,9 +11,8 @@
 
 .svg {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  /* 24px clearance from the caption/boundary text and from any panel beside the hero. */
+  inset: 24px;
   display: block;
   text-rendering: geometricPrecision;
   shape-rendering: geometricPrecision;
