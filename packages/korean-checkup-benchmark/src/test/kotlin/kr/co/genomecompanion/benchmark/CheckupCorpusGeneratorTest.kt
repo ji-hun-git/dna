@@ -13,6 +13,10 @@ import kotlin.math.max
 import kotlin.math.min
 
 
+/** One hand-typed row of [CheckupCorpusGeneratorTest.handWrittenConceptTable]. */
+private data class ConceptExpectation(val label: String, val unit: String, val expected: String?)
+
+
 class CheckupCorpusGeneratorTest {
     private val font: Path = BenchmarkFont.path()
 
@@ -152,25 +156,92 @@ class CheckupCorpusGeneratorTest {
         assertThat(gold.getValue("요산").expectedNoConcept).isTrue()
         assertThat(gold.getValue("혈당").expectedNoConcept).isNull()
 
-        // Every printed row's gold expectation, in every document, is exactly what the shared rule (alias
-        // match against the printed label + accepted unit) gives — never a value typed from memory. A
-        // deliberately unit-mismatched row (expectNoConcept) must resolve to no concept regardless of which
-        // language rendered it; a broad label like bare "Glucose" is free to disagree with its Korean
-        // sibling "혈당" since the catalogue, not the static flag, is authoritative.
-        generator.generateAll().forEach { document ->
-            if (document.observedOn == null) return@forEach
-            val gold = CorpusWriter.gold(document).expectedMeasurements
-            document.rows.zip(gold).forEach { (row, measurement) ->
-                val resolved = kr.co.genomecompanion.documentboundary.MedicalConceptCatalogue.resolve(row.label, row.unit)?.conceptCode
-                assertThat(measurement.expectedConceptCode).describedAs("${document.documentId} ${row.label} ${row.unit}").isEqualTo(resolved)
-                assertThat(measurement.expectedNoConcept).describedAs("${document.documentId} ${row.label} ${row.unit}")
-                    .isEqualTo(if (resolved == null) true else null)
-                if (row.spec.expectNoConcept) {
-                    assertThat(resolved).describedAs("${document.documentId} ${row.label} ${row.unit} designed as a unit mismatch").isNull()
-                }
+        // NOTE (review fix, Wave 5 Task 5 Fix 1): this test used to close with a loop asserting
+        // `measurement.expectedConceptCode == MedicalConceptCatalogue.resolve(row.label, row.unit)?.conceptCode`
+        // for every generated row. That is tautological: `CorpusWriter.gold()` computes
+        // `expectedConceptCode` by calling that exact same `resolve(row.label, row.unit)`, so the assertion
+        // was `f(x) == f(x)` — it could never fail, and reverting the catalogue's removal of the bare
+        // "Glucose" alias (fix 210eda6) would not have been caught by it. The hand-written concept table
+        // in `handWrittenConceptTable` (typed independently of any code path, never computed) below
+        // supersedes it: it anchors gold against literal, human-checked expectations instead of the
+        // pipeline's own rule.
+        assertThat(generator.generateAll().last().documentId).isEqualTo("synthetic-hospital-two-column-v6")
+    }
+
+    /**
+     * Hand-typed, never computed: printed label + unit → the concept code the catalogue must resolve to,
+     * or `null` for "no concept". Verified by hand against
+     * `packages/document-boundary/.../MedicalConceptCatalogue.kt` at the time this table was written.
+     * If a catalogue change makes an entry here wrong, the fix is to change the catalogue (or, with review,
+     * this table) — never to make the table agree by construction.
+     */
+    private val handWrittenConceptTable = listOf(
+        ConceptExpectation("혈당", "mg/dL", "glucose"),
+        ConceptExpectation("Glucose", "mg/dL", null),
+        ConceptExpectation("GLU", "mg/dL", null),
+        ConceptExpectation("Blood Glucose", "mg/dL", "glucose"),
+        ConceptExpectation("공복혈당", "mg/dL", "fasting-glucose"),
+        ConceptExpectation("FBS", "mg/dL", "fasting-glucose"),
+        ConceptExpectation("hs-CRP", "mg/L", "hs-crp"),
+        ConceptExpectation("CRP", "mg/L", "crp"),
+        ConceptExpectation("Bilirubin", "mg/dL", "bilirubin"),
+        ConceptExpectation("빌리루빈", "mg/dL", "bilirubin"),
+        ConceptExpectation("T-Bil", "mg/dL", "total-bilirubin"),
+        ConceptExpectation("GFR", "mL/min/1.73m²", "gfr"),
+        ConceptExpectation("사구체여과율", "mL/min/1.73m²", "gfr"),
+        ConceptExpectation("eGFR", "mL/min/1.73m²", "egfr"),
+        ConceptExpectation("Cholesterol", "mg/dL", "total-cholesterol"),
+        ConceptExpectation("Cholesterol", "mmol/L", "total-cholesterol"),
+        ConceptExpectation("UA", "g/dL", null),
+        ConceptExpectation("요산", "g/dL", null),
+        ConceptExpectation("Hb", "mg/dL", null),
+        ConceptExpectation("혈색소", "mg/dL", null),
+        ConceptExpectation("MCV", "fL", "mcv"),
+        ConceptExpectation("CA19-9", "U/mL", "ca19-9"),
+        ConceptExpectation("RF", "IU/mL", "rf"),
+    )
+
+    @Test
+    fun `hand-written concept table anchors gold against expectations no code path computed`() {
+        assumeTrue(Files.exists(font), "Pretendard font missing; run pnpm install first")
+
+        // The table itself, checked directly against the catalogue — independent of the generator entirely.
+        handWrittenConceptTable.forEach { row ->
+            assertThat(kr.co.genomecompanion.documentboundary.MedicalConceptCatalogue.resolve(row.label, row.unit)?.conceptCode)
+                .describedAs("${row.label} ${row.unit}")
+                .isEqualTo(row.expected)
+        }
+
+        val byLabel = handWrittenConceptTable.associateBy { it.label }
+        val generator = CheckupCorpusGenerator(font)
+        val extendedPanelDocuments = generator.generateAll().filter { it.layout == Layout.EXTENDED_PANEL && it.observedOn != null }
+        assertThat(extendedPanelDocuments).isNotEmpty()
+
+        // (a) Every extended-panel row whose printed label the table covers: gold agrees with the table.
+        extendedPanelDocuments.forEach { document ->
+            val gold = CorpusWriter.gold(document).expectedMeasurements.associateBy { it.label }
+            document.rows.forEach { row ->
+                val expectation = byLabel[row.label] ?: return@forEach
+                val measurement = gold.getValue(row.label)
+                assertThat(measurement.expectedConceptCode)
+                    .describedAs("${document.documentId} ${row.label} ${row.unit}")
+                    .isEqualTo(expectation.expected)
+                assertThat(measurement.expectedNoConcept)
+                    .describedAs("${document.documentId} ${row.label} ${row.unit}")
+                    .isEqualTo(if (expectation.expected == null) true else null)
             }
         }
-        assertThat(generator.generateAll().last().documentId).isEqualTo("synthetic-hospital-two-column-v6")
+
+        // (b) Every extended-panel row that is a broad concept (no LOINC, deliberately generic: glucose,
+        // bilirubin, gfr) or a deliberate unit mismatch (expectNoConcept), in whichever language it printed
+        // in, has its printed label in the table — nothing broad or mismatched is left unchecked.
+        val broadConceptCodes = setOf("glucose", "bilirubin", "gfr")
+        val printedBroadOrMismatchedLabels = extendedPanelDocuments.flatMap { it.rows }
+            .filter { it.spec.conceptCode in broadConceptCodes || it.spec.expectNoConcept }
+            .map { it.label }
+            .toSet()
+        assertThat(printedBroadOrMismatchedLabels).isNotEmpty()
+        assertThat(byLabel.keys).containsAll(printedBroadOrMismatchedLabels)
     }
 
     private fun iou(expected: Box, actual: TextBox): Double {
