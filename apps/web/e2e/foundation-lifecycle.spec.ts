@@ -190,6 +190,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect.poll(() => page.getByAltText("승인된 합성 결과지의 첫 페이지 PNG 미리보기")
     .evaluate((node) => (node as HTMLImageElement).complete && (node as HTMLImageElement).naturalWidth > 0)).toBe(true);
   await expect(page.getByLabel("검토 진행")).toHaveText("1 / 3");
+  await expect(page.getByTestId("original-label")).toHaveText("결과지 표기: Cholesterol");
   await expect(page.getByText("188", { exact: true })).toBeVisible();
   // Wave 2A: the value came from the PDF text layer, not from a server fixture and not from OCR.
   await expect(page.getByText("서버가 미리 정한 예시 값")).toHaveCount(0);
@@ -319,20 +320,29 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible({
     timeout: 10_000,
   });
-  await expect(page.getByLabel("검토 진행")).toHaveText("1 / 3");
+  await expect(page.getByLabel("검토 진행")).toHaveText("1 / 4");
   await expect(page.getByText("194", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "확인: 원문과 같아요" }).click();
 
-  await expect(page.getByLabel("검토 진행")).toHaveText("2 / 3");
+  await expect(page.getByLabel("검토 진행")).toHaveText("2 / 4");
   await expect(page.getByText("5.4", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "확인: 원문과 같아요" }).click();
 
-  await expect(page.getByLabel("검토 진행")).toHaveText("3 / 3");
+  await expect(page.getByLabel("검토 진행")).toHaveText("3 / 4");
   await expect(page.getByText("45", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "확인: 원문과 같아요" }).click();
 
+  // Wave 5: a broad label ("Bilirubin") goes to the generic concept, and the sheet's own
+  // word stays visible. This candidate is then excluded so every later count (records 5,
+  // cells 5, FHIR entries 5, changes 3, questions) stays unchanged from before this task.
+  await expect(page.getByLabel("검토 진행")).toHaveText("4 / 4");
+  await expect(page.getByRole("heading", { level: 2, name: "빌리루빈", exact: true })).toBeVisible();
+  await expect(page.getByTestId("original-label")).toHaveText("결과지 표기: Bilirubin");
+  await expect(page.getByRole("heading", { level: 2, name: "총빌리루빈" })).toHaveCount(0);
+  await page.getByRole("button", { name: "제외: 이 항목 빼기" }).click();
+
   await expect(page.getByRole("heading", { name: "이 결과지 확인을 마쳤어요" })).toBeVisible();
-  await expect(page.getByText("저장 3개 · 제외 0개")).toBeVisible();
+  await expect(page.getByText("저장 3개 · 제외 1개")).toBeVisible();
 
   // Wave 2C: the home lists the latest 결과지's values beside the previous value of the same item.
   // The January document completed last, so it is "이번"; July is "이전". No arrow, no judgement.
@@ -389,6 +399,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   const correctedDrawer = page.getByRole("region", { name: "총콜레스테롤 근거" });
   await expect(correctedDrawer).toContainText("수정 이력");
   await expect(correctedDrawer).toContainText("원래 값 188 mg/dL");
+  await expect(correctedDrawer.getByTestId("original-label")).toHaveText("결과지 표기: Cholesterol");
   await expect(correctedDrawer).not.toContainText("120-199");
   expect(await page.content()).not.toContain("120-199");
   await page.getByRole("button", { name: "근거 닫기" }).click();
@@ -435,7 +446,9 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(cholesterolHistory.getByTestId("derived-last-difference")).toHaveText("-4 mg/dL (-2.1%)");
   await expect(cholesterolHistory.getByTestId("derived-per-30-days")).toHaveText("-0.6 mg/dL");
   await expect(cholesterolHistory.getByTestId("derived-mean-of-last-3")).toHaveText("측정 3회부터 계산해요");
-  const cholesterolRows = cholesterolHistory.getByRole("table", { name: "총콜레스테롤 측정 이력" }).getByRole("row");
+  const cholesterolTable = cholesterolHistory.getByRole("table", { name: "총콜레스테롤 측정 이력" });
+  await expect(cholesterolTable.getByRole("columnheader", { name: "결과지 표기" })).toBeVisible();
+  const cholesterolRows = cholesterolTable.getByRole("row");
   await expect(cholesterolRows).toHaveCount(3);
   await expect(cholesterolRows.nth(1)).toContainText("2026. 1. 15.");
   await expect(cholesterolRows.nth(2)).toContainText("2026. 7. 28.");
@@ -485,6 +498,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   const julyGroup = page.locator(".gc-records-group").filter({ hasText: "2026. 7. 28." });
   const correctedRecord = julyGroup.getByTestId("durable-record").filter({ hasText: "총콜레스테롤" });
   await expect(correctedRecord).toBeVisible();
+  await expect(page.getByTestId("durable-record").filter({ hasText: "총콜레스테롤" }).first().getByTestId("original-label")).toHaveText("결과지 표기: Cholesterol");
   await page.reload();
   await expect(correctedRecord).toBeVisible();
   await correctedRecord.getByText("출처와 버전 보기").click();
@@ -530,10 +544,10 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   const exported = await exportResponse.json() as {
     schemaVersion: string;
     subjectKind: string;
-    events: Array<{ value: string; originalValue: string; referenceRangeText?: string; originalObservedOn?: string }>;
+    events: Array<{ value: string; originalValue: string; referenceRangeText?: string; originalObservedOn?: string; originalLabel?: string }>;
     documents: Array<{ documentId: string; status: string; eventCount: number }>;
   };
-  expect(exported.schemaVersion).toBe("alm-health-events-export.v2");
+  expect(exported.schemaVersion).toBe("alm-health-events-export.v3");
   expect(exported.subjectKind).toBe("synthetic");
   expect(exported.events).toHaveLength(5);
   expect(exported.documents).toHaveLength(2);
@@ -544,6 +558,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   expect(ranged).toHaveLength(1);
   expect(ranged[0]).toMatchObject({ value: "190", originalValue: "188", referenceRangeText: "120-199" });
   expect(exported.events.filter((event) => event.originalObservedOn)).toHaveLength(1);
+  expect(exported.events.map((event) => event.originalLabel).sort()).toEqual(["Cholesterol", "Cholesterol", "HbA1c", "HbA1c", "Vitamin D"]);
   expect(JSON.stringify(eventsAfterBothDocuments.body).toLowerCase()).not.toContain("reference");
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -577,7 +592,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   const fhirRanged = fhirBundle.entry.filter((entry) => entry.resource.referenceRange);
   expect(fhirRanged).toHaveLength(1);
   expect(fhirRanged[0].resource).toMatchObject({
-    code: { coding: [{ system: "http://loinc.org", code: "2093-3" }], text: "총콜레스테롤" },
+    code: { coding: [{ system: "http://loinc.org", code: "2093-3" }], text: "Cholesterol" },
     effectiveDateTime: "2026-07-28",
     valueQuantity: { value: 190, unit: "mg/dL" },
     referenceRange: [{ text: "120-199" }],
@@ -585,6 +600,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   });
   // The date-only correction (당화혈색소) carries no value note.
   expect(fhirBundle.entry.filter((entry) => entry.resource.note)).toHaveLength(1);
+  expect(fhirBundle.entry.map((entry) => entry.resource.code.text).sort()).toEqual(["Cholesterol", "Cholesterol", "HbA1c", "HbA1c", "Vitamin D"]);
   const [fhirDownload] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("link", { name: "내 기록 내보내기(FHIR)" }).click(),
