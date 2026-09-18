@@ -453,6 +453,10 @@ class FoundationLifecycleController(
     fun handleConflict(exception: FoundationConflictException): ResponseEntity<ApiProblem> =
         problem(HttpStatus.CONFLICT, exception.code)
 
+    @ExceptionHandler(FoundationUnprocessableException::class)
+    fun handleUnprocessable(exception: FoundationUnprocessableException): ResponseEntity<ApiProblem> =
+        problem(HttpStatus.UNPROCESSABLE_ENTITY, exception.code)
+
     @ExceptionHandler(FoundationRateLimitedException::class)
     fun handleRateLimited(): ResponseEntity<ApiProblem> =
         ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)

@@ -66,6 +66,7 @@ const processingCopy: Record<ProcessingState, string> = {
   DELETED: "문서와 파생물을 삭제했어요",
   FAILED_RETRYABLE: "일시적인 문제로 서버가 안전하게 다시 시도할 준비를 하고 있어요",
   FAILED_TERMINAL: "안전하게 계속할 수 없어 처리를 중단했어요",
+  TERMINATED_BY_REVOCATION: "동의를 철회해서 결과지 처리를 종료했어요. 다시 동의한 뒤 새로 올려 주세요.",
 };
 
 const pollableStates = new Set<FoundationDocument["status"]>([

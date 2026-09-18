@@ -18,6 +18,7 @@ enum class DocumentState {
     DELETED,
     FAILED_RETRYABLE,
     FAILED_TERMINAL,
+    TERMINATED_BY_REVOCATION,
 }
 
 

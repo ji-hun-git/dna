@@ -1319,6 +1319,38 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun theSameIdempotencyKeyWithAnotherTargetOrBodyIsRejectedWith422AndExpiresAfter24Hours() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val first = createCandidate(alice, consentId, "idem-a")
+        val second = createCandidate(alice, consentId, "idem-b")
+        fun confirm(candidateId: UUID, value: String) = mutate(
+            post("/api/foundation/candidates/$candidateId/confirmation").header("Idempotency-Key", "shared-key-0001")
+                .contentType(MediaType.APPLICATION_JSON).content(json(mapOf("value" to value))),
+            alice,
+        )
+        val record = responseJson(confirm(first, "188").andExpect(status().isCreated).andReturn().response.contentAsByteArray)
+        confirm(first, "188").andExpect(status().isCreated).andExpect(jsonPath("$.recordId").value(record["recordId"].asText()))
+        confirm(first, "189").andExpect(status().isUnprocessableEntity).andExpect(jsonPath("$.code").value("idempotency_key_mismatch"))
+        confirm(second, "188").andExpect(status().isUnprocessableEntity).andExpect(jsonPath("$.code").value("idempotency_key_mismatch"))
+        assertThat(count("gc_health_record")).isEqualTo(1)
+        jdbc.update("UPDATE gc_idempotency SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 second'")
+        // Expired: the key is free again, and the second candidate can now be confirmed under it.
+        confirm(second, "188").andExpect(status().isCreated)
+        assertThat(count("gc_health_record")).isEqualTo(2)
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_idempotency WHERE request_sha256 IS NOT NULL AND expires_at > CURRENT_TIMESTAMP", Long::class.java)).isEqualTo(1L)
+    }
+
+    @Test
+    fun auditRowsAreAppendOnlyAtTheDatabase() {
+        val alice = login("synthetic-alice")
+        grantConsent(alice)
+        org.assertj.core.api.Assertions.assertThatThrownBy { jdbc.update("DELETE FROM gc_audit_event") }.isInstanceOf(DataAccessException::class.java)
+        org.assertj.core.api.Assertions.assertThatThrownBy { jdbc.update("UPDATE gc_audit_event SET outcome = 'DENIED'") }.isInstanceOf(DataAccessException::class.java)
+        assertThat(count("gc_audit_event")).isGreaterThanOrEqualTo(2)
+    }
+
+    @Test
     fun researchConsentsAreStoredPerPurposeAndNeverGateTheLifecycle() {
         val alice = login("synthetic-alice")
         val bob = login("synthetic-bob")

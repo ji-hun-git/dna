@@ -20,6 +20,11 @@ import java.util.UUID
 
 enum class DemoBootstrapBudget { AVAILABLE, RATE_LIMITED, CAPACITY_EXHAUSTED }
 
+sealed interface IdempotencyClaim {
+    data object Inserted : IdempotencyClaim
+    data class Existing(val resourceId: UUID, val requestSha256: String?) : IdempotencyClaim
+}
+
 data class FoundationSessionRow(
     val sessionId: UUID,
     val subjectId: String,
@@ -496,38 +501,71 @@ class FoundationRepository(
         )
     }
 
-    fun insertIdempotency(
+    /** Insert-or-read in one statement so two racing requests see one winner. Expired rows are replaced. */
+    fun claimIdempotency(
         subjectHash: String,
         operation: String,
         idempotencyKey: String,
         resourceId: UUID,
+        requestSha256: String,
         now: Instant,
-    ): Boolean =
-        jdbc.update(
+        expiresAt: Instant,
+    ): IdempotencyClaim {
+        val row = jdbc.query(
             """
-            INSERT INTO gc_idempotency(subject_hash, operation, idempotency_key, resource_id, created_at)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT (subject_hash, operation, idempotency_key) DO NOTHING
+            INSERT INTO gc_idempotency(subject_hash, operation, idempotency_key, resource_id, request_sha256, created_at, expires_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (subject_hash, operation, idempotency_key) DO UPDATE
+                SET resource_id = EXCLUDED.resource_id, request_sha256 = EXCLUDED.request_sha256,
+                    created_at = EXCLUDED.created_at, expires_at = EXCLUDED.expires_at
+                WHERE gc_idempotency.expires_at <= EXCLUDED.created_at
+            RETURNING resource_id, request_sha256, (xmax = 0) AS inserted
             """.trimIndent(),
-            subjectHash,
-            operation,
-            idempotencyKey,
-            resourceId,
-            now.atOffset(ZoneOffset.UTC),
-        ) == 1
+            RowMapper { result, _ ->
+                Triple(result.getObject("resource_id", UUID::class.java), result.getString("request_sha256"), result.getBoolean("inserted"))
+            },
+            subjectHash, operation, idempotencyKey, resourceId, requestSha256,
+            now.atOffset(ZoneOffset.UTC), expiresAt.atOffset(ZoneOffset.UTC),
+        ).firstOrNull()
+        if (row != null && (row.third || row.first == resourceId)) return IdempotencyClaim.Inserted
+        val existing = row ?: jdbc.query(
+            "SELECT resource_id, request_sha256 FROM gc_idempotency WHERE subject_hash = ? AND operation = ? AND idempotency_key = ?",
+            RowMapper { result, _ -> Triple(result.getObject("resource_id", UUID::class.java), result.getString("request_sha256"), false) },
+            subjectHash, operation, idempotencyKey,
+        ).first()
+        return IdempotencyClaim.Existing(existing.first, existing.second)
+    }
 
-    fun findIdempotentResource(subjectHash: String, operation: String, idempotencyKey: String): UUID? =
+    /**
+     * Read-only lookup of a still-live claim for this key, without claiming anything. Used where a resource-level
+     * short-circuit (e.g. "this candidate already has a record") would otherwise bypass the mismatch check.
+     */
+    fun peekIdempotency(subjectHash: String, operation: String, idempotencyKey: String, now: Instant): IdempotencyClaim.Existing? =
+        jdbc.query(
+            "SELECT resource_id, request_sha256 FROM gc_idempotency WHERE subject_hash = ? AND operation = ? AND idempotency_key = ? AND expires_at > ?",
+            RowMapper { result, _ -> IdempotencyClaim.Existing(result.getObject("resource_id", UUID::class.java), result.getString("request_sha256")) },
+            subjectHash, operation, idempotencyKey, now.atOffset(ZoneOffset.UTC),
+        ).firstOrNull()
+
+    fun findIdempotentResource(subjectHash: String, operation: String, idempotencyKey: String, now: Instant): UUID? =
         jdbc.query(
             """
             SELECT resource_id
             FROM gc_idempotency
-            WHERE subject_hash = ? AND operation = ? AND idempotency_key = ?
+            WHERE subject_hash = ? AND operation = ? AND idempotency_key = ? AND expires_at > ?
             """.trimIndent(),
             RowMapper { result, _ -> result.getObject("resource_id", UUID::class.java) },
             subjectHash,
             operation,
             idempotencyKey,
+            now.atOffset(ZoneOffset.UTC),
         ).firstOrNull()
+
+    fun deleteExpiredIdempotency(now: Instant): Int =
+        jdbc.update("DELETE FROM gc_idempotency WHERE expires_at <= ?", now.atOffset(ZoneOffset.UTC))
+
+    fun deleteIdempotencyForSubject(subjectHash: String): Int =
+        jdbc.update("DELETE FROM gc_idempotency WHERE subject_hash = ?", subjectHash)
 
     /**
      * The CONSENT_GRANT:<purpose> operation already stored under this subject+key, regardless of purpose.
