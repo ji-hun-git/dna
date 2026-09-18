@@ -24,6 +24,17 @@ data class StoredObjectWrite(
     val createdNew: Boolean,
 )
 
+/**
+ * One object found on disk by [FoundationDocumentStorage.listObjectKeys], with the modification time
+ * the janitor needs to tell a settled file from one that was written moments ago and whose database row
+ * may not have committed yet.
+ */
+data class StoredObjectListing(
+    val zone: StorageTrustZone,
+    val objectKey: String,
+    val lastModifiedAt: Instant,
+)
+
 
 @Component
 @ConditionalOnProperty(prefix = "gc.foundation", name = ["enabled"], havingValue = "true")
@@ -171,24 +182,36 @@ class FoundationDocumentStorage(
     }
 
     /**
-     * Every object that exists on disk, by zone — the other half of the janitor's orphan comparison
-     * (the other half is `FoundationRepository.listKnownObjectKeys`). Only names that are valid object
-     * keys are returned: anything else in a zone directory was not written by this class, and a file
-     * this class cannot even address is not the janitor's to delete. A missing zone directory is
-     * simply empty, never an error.
+     * Every object that exists on disk, by zone, each with its last-modified time — the other half of
+     * the janitor's orphan comparison (the other half is `FoundationRepository.listKnownObjectKeys`).
+     * Only names that are valid object keys are returned: anything else in a zone directory was not
+     * written by this class, and a file this class cannot even address is not the janitor's to delete.
+     * A missing zone directory is simply empty, never an error.
+     *
+     * The modification time is what lets the janitor apply an age threshold to *every* candidate, not
+     * just to `.part` files: a file whose bytes landed seconds ago may belong to a write whose row has
+     * not committed yet (the worker copies an approved PDF and its preview into storage before the
+     * `markInspectionCompleted` transaction commits), and such a file must never be treated as an
+     * orphan. A file that vanishes between the listing and the `stat` is dropped from the result — it
+     * is already gone, so there is nothing for a sweep to do about it.
      */
-    fun listObjectKeys(): List<Pair<StorageTrustZone, String>> =
+    fun listObjectKeys(): List<StoredObjectListing> =
         StorageTrustZone.entries.flatMap { zone ->
             val zoneRoot = root.resolve(zone.name.lowercase())
             if (!Files.isDirectory(zoneRoot)) {
                 emptyList()
             } else {
                 Files.list(zoneRoot).use { entries ->
-                    entries.filter(Files::isRegularFile)
-                        .map { it.fileName.toString() }
-                        .filter { it.matches(objectKeyPattern) }
-                        .map { zone to it }
-                        .toList()
+                    entries.filter(Files::isRegularFile).toList()
+                }.mapNotNull { path ->
+                    val name = path.fileName.toString()
+                    if (!name.matches(objectKeyPattern)) {
+                        null
+                    } else {
+                        runCatching { Files.getLastModifiedTime(path).toInstant() }
+                            .getOrNull()
+                            ?.let { StoredObjectListing(zone, name, it) }
+                    }
                 }
             }
         }

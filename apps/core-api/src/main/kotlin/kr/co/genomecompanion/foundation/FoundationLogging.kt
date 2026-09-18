@@ -45,4 +45,32 @@ class FoundationLogging {
     fun failure(event: TelemetryEvent, routeTemplate: String?, reasonCode: String) {
         logger.emitLifecycleFailure(event, routeTemplate, reasonCode)
     }
+
+    /**
+     * One line per completed janitor sweep, carrying the six counts as integers and nothing else — no
+     * subject, no route, no key and no path. `.part` files are their own field, not part of
+     * `orphan_files`: they are a different failure (an upload that died mid-stream, not a row/file
+     * divergence) and an operator watching for one should not have it hidden inside the other.
+     */
+    fun janitorSweep(report: JanitorReport) {
+        logger.emitJanitorSweep(
+            TelemetryEvent.JANITOR_SWEEP,
+            sessions = report.sessions,
+            capabilities = report.capabilities,
+            idempotency = report.idempotencyKeys,
+            orphanFiles = report.orphanFiles,
+            partFiles = report.partFiles,
+            staleJobs = report.staleJobs,
+        )
+    }
+
+    /**
+     * One janitor category failed; the rest of that sweep still ran. [category] is one of
+     * [FoundationJanitor]'s own constants and [exceptionClass] the failing exception's simple class
+     * name — never its message, which for an I/O failure is a path and for a JDBC failure can be a
+     * bind parameter.
+     */
+    fun janitorCategoryFailed(category: String, exceptionClass: String) {
+        logger.emitCategoryFailure(TelemetryEvent.JANITOR_CATEGORY_FAILED, category, exceptionClass)
+    }
 }

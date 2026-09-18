@@ -69,6 +69,49 @@ class PhiSafeLogger(
         )
     }
 
+    /**
+     * The janitor's one line per sweep. Every field is an `Int` by signature, so there is no text here
+     * a caller could smuggle a value through and nothing to charset-check: a count cannot echo a label,
+     * a filename or an exam date. `.part` sweeps keep their own field rather than being folded into
+     * `orphan_files`, because the two mean different things to an operator — an orphan is a file no row
+     * points at (a delete that failed after commit), a part file is an upload that died mid-stream.
+     */
+    fun emitJanitorSweep(
+        event: TelemetryEvent,
+        sessions: Int,
+        capabilities: Int,
+        idempotency: Int,
+        orphanFiles: Int,
+        partFiles: Int,
+        staleJobs: Int,
+    ) {
+        logger.info(
+            "event={} sessions={} capabilities={} idempotency={} orphan_files={} part_files={} stale_jobs={}",
+            event.code,
+            sessions,
+            capabilities,
+            idempotency,
+            orphanFiles,
+            partFiles,
+            staleJobs,
+        )
+    }
+
+    /**
+     * One background category of a multi-category background task failed and was skipped. [category] is
+     * a compile-time constant naming the category and [exceptionClass] the failing exception's simple
+     * class name only — never its message, which for a filesystem or JDBC failure quotes a path or a
+     * bind parameter. Both are charset-checked, and a violation drops the line exactly as
+     * [emitLifecycle] does rather than throwing: a logging defect must not change what the sweep did.
+     */
+    fun emitCategoryFailure(event: TelemetryEvent, category: String, exceptionClass: String) {
+        if (!category.matches(REASON_CODE_PATTERN) || !exceptionClass.matches(EXCEPTION_CLASS_PATTERN)) {
+            emitContextRejected(event)
+            return
+        }
+        logger.warn("event={} category={} exception_class={}", event.code, category, exceptionClass)
+    }
+
     private fun isSafeRouteTemplate(routeTemplate: String?): Boolean =
         routeTemplate == null || routeTemplate.matches(ROUTE_TEMPLATE_PATTERN)
 
@@ -135,6 +178,7 @@ class PhiSafeLogger(
         private val ROUTE_TEMPLATE_PATTERN = Regex("^/[A-Za-z0-9_/{}-]{1,127}$")
         private val SUBJECT_HASH_PATTERN = Regex("^[0-9a-f]{1,12}$")
         private val REASON_CODE_PATTERN = Regex("^[a-z0-9_]{3,64}$")
+        private val EXCEPTION_CLASS_PATTERN = Regex("^[A-Za-z0-9_$]{1,96}$")
 
         /** A `PhiSafeLogger` writing under the named category, for the one caller that logs for a whole
          * package rather than for a single class. Kept here so that caller needs no `org.slf4j` import. */

@@ -3173,9 +3173,21 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
      * The janitor is the one place that removes what nothing else will: sessions past their expiry or
      * already revoked, upload capabilities past their expiry, idempotency claims past their 24h TTL,
      * quarantine files no database row points at any more (the retry path for a delete that failed
-     * after commit), and jobs that were queued and never leased. It is idempotent by construction —
-     * the second sweep in this test finds nothing — and it never runs on its own during the suite:
-     * `gc.foundation.janitor-interval` is `PT24H` under test, so the only sweep is the explicit one.
+     * after commit), and jobs that were queued and never leased.
+     *
+     * Every category is asserted in both directions. A second subject holds one live row of each kind —
+     * an unexpired session, an unexpired upload capability, an idempotency claim inside its TTL and a
+     * job queued a moment ago — and the counts after the sweep are exact, because a sweep that deleted
+     * far too much would satisfy a "the dead row is gone" assertion just as well as a correct one.
+     *
+     * Files are asserted in both directions too, and the age threshold is the second half of that: an
+     * unknown file that is *fresh* survives (its row may simply not have committed yet — the worker
+     * writes an approved PDF and its preview to storage before `markInspectionCompleted` commits),
+     * while the same file backdated past the in-flight window is swept.
+     *
+     * The sweep is idempotent by construction — the last sweep here finds nothing — and it never runs
+     * on its own during the suite: `gc.foundation.janitor-interval` is `PT24H` under test, so the only
+     * sweeps are the explicit ones.
      */
     @Test
     fun theJanitorSweepsExpiredRowsOrphanFilesAndStaleQueuedJobs() {
@@ -3184,40 +3196,68 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val documentId = requestDocument(alice, consentId, fixturePdf, "janitor-doc")
         uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
         mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        // The live half: a second subject with one row of every swept kind, none of them dead. Nothing
+        // below ages any of these, and the sweep must leave every one of them exactly where it is.
+        val bob = login("synthetic-bob")
+        val bobConsentId = grantConsent(bob)
+        val bobDocumentId = requestDocument(bob, bobConsentId, fixturePdf, "janitor-live-doc")
+        uploadDocument(bob, bobDocumentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$bobDocumentId/finalization"), bob).andExpect(status().isAccepted)
+
         // created_at moves with it: gc_session_expiry checks expires_at > created_at.
-        jdbc.update(
-            "UPDATE gc_session SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
-                " created_at = CURRENT_TIMESTAMP - INTERVAL '2 minute'",
-        )
-        jdbc.update(
-            "UPDATE gc_upload_capability SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
-                " issued_at = CURRENT_TIMESTAMP - INTERVAL '2 minute'",
-        )
-        jdbc.update("UPDATE gc_idempotency SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'")
-        jdbc.update("UPDATE gc_document_job SET created_at = CURRENT_TIMESTAMP - INTERVAL '25 hours'")
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_session SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                    " created_at = CURRENT_TIMESTAMP - INTERVAL '2 minute' WHERE subject_id = ?",
+                "synthetic-alice",
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_upload_capability SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                    " issued_at = CURRENT_TIMESTAMP - INTERVAL '2 minute' WHERE document_id = ?",
+                documentId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_idempotency SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'" +
+                    " WHERE idempotency_key = 'janitor-doc'",
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_document_job SET created_at = CURRENT_TIMESTAMP - INTERVAL '25 hours' WHERE document_id = ?",
+                documentId,
+            ),
+        ).isEqualTo(1)
+        val liveIdempotencyKeys = count("gc_idempotency") - 1
+        assertThat(liveIdempotencyKeys).isPositive()
+
+        // A settled orphan is swept; an unknown file written moments ago is not, because the row that
+        // will point at it may still be mid-commit. Same for part files, stale versus in-flight.
         val orphan = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf")
         Files.writeString(orphan, "%PDF-1.7\norphan synthetic\n%%EOF\n")
-        // A part file still being written must survive; only one older than the in-flight window is swept.
+        backdateBeyondTheInFlightWindow(orphan)
+        val freshOrphan = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf")
+        Files.writeString(freshOrphan, "%PDF-1.7\njust-written synthetic\n%%EOF\n")
         val freshPart = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf.part")
         Files.writeString(freshPart, "%PDF-1.7\nin-flight synthetic\n")
         val stalePart = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf.part")
         Files.writeString(stalePart, "%PDF-1.7\nabandoned synthetic\n")
-        Files.setLastModifiedTime(
-            stalePart,
-            java.nio.file.attribute.FileTime.from(java.time.Instant.now(clock).minusSeconds(7_200)),
+        backdateBeyondTheInFlightWindow(stalePart)
+
+        val swept = captureFoundationLogs { janitor.sweep() }
+
+        assertThat(swept.value).isEqualTo(JanitorReport(1, 1, 1, 1, 1, 1))
+        // The sweep line carries all six counts as integers, part files in their own field.
+        assertThat(swept.lines).contains(
+            "event=janitor_sweep sessions=1 capabilities=1 idempotency=1 orphan_files=1 part_files=1 stale_jobs=1",
         )
 
-        val report = janitor.sweep()
-
-        assertThat(report.sessions).isEqualTo(1)
-        assertThat(report.capabilities).isEqualTo(1)
-        assertThat(report.idempotencyKeys).isEqualTo(1)
-        assertThat(report.orphanFiles).isEqualTo(2)
-        assertThat(report.staleJobs).isEqualTo(1)
+        // Swept: the settled orphan, the abandoned part file, alice's rows and her stale job.
         assertThat(Files.exists(orphan)).isFalse()
         assertThat(Files.exists(stalePart)).isFalse()
-        assertThat(Files.exists(freshPart)).isTrue()
-        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$documentId.pdf"))).isTrue()
         assertThat(documentStatus(documentId)).isEqualTo("FAILED_TERMINAL")
         assertThat(
             jdbc.queryForObject(
@@ -3233,12 +3273,114 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 documentId,
             ),
         ).isEqualTo("FAILED_TERMINAL")
-        assertThat(count("gc_session")).isZero()
-        assertThat(count("gc_upload_capability")).isZero()
         read(get("/api/foundation/records"), alice).andExpect(status().isUnauthorized)
 
+        // Kept: every live row, and every file something still points at or that is still too young.
+        assertThat(Files.exists(freshOrphan)).isTrue()
+        assertThat(Files.exists(freshPart)).isTrue()
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$documentId.pdf"))).isTrue()
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$bobDocumentId.pdf"))).isTrue()
+        assertThat(count("gc_session")).isEqualTo(1)
+        assertThat(countForSubject("gc_session", "synthetic-bob")).isEqualTo(1)
+        assertThat(count("gc_upload_capability")).isEqualTo(1)
+        assertThat(
+            jdbc.queryForObject("SELECT document_id FROM gc_upload_capability", UUID::class.java),
+        ).isEqualTo(bobDocumentId)
+        assertThat(count("gc_idempotency")).isEqualTo(liveIdempotencyKeys)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM gc_document_job WHERE document_id = ?",
+                String::class.java,
+                bobDocumentId,
+            ),
+        ).isEqualTo("QUEUED")
+        assertThat(documentStatus(bobDocumentId)).isNotEqualTo("FAILED_TERMINAL")
+        read(get("/api/foundation/records"), bob).andExpect(status().isOk)
+
+        // The file that survived only because it was young is swept once it has settled — the same file,
+        // the same sweep, nothing but its age changed.
+        backdateBeyondTheInFlightWindow(freshOrphan)
+        assertThat(janitor.sweep()).isEqualTo(JanitorReport(0, 0, 0, 1, 0, 0))
+        assertThat(Files.exists(freshOrphan)).isFalse()
+
         Files.delete(freshPart)
-        assertThat(janitor.sweep()).isEqualTo(JanitorReport(0, 0, 0, 0, 0))
+        assertThat(janitor.sweep()).isEqualTo(JanitorReport(0, 0, 0, 0, 0, 0))
+    }
+
+    /**
+     * A sweep is five independent categories, not one transaction. When one of them throws — here the
+     * quarantine listing, injected through the storage seam because a read-only bit is not portable
+     * (CI runs as root) — the other four must still run to completion, the failure must be logged as
+     * `janitor_category_failed` with the category name and the exception's *class* only, and the next
+     * sweep must pick up what the failed category left behind. The alternative, a sweep that abandons
+     * everything after the first error, means one unreadable directory quietly stops sessions expiring.
+     */
+    @Test
+    fun aFailedJanitorCategoryIsLoggedAndLeavesTheOtherCategoriesRunning() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "janitor-isolation")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        jdbc.update(
+            "UPDATE gc_session SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                " created_at = CURRENT_TIMESTAMP - INTERVAL '2 minute'",
+        )
+        jdbc.update(
+            "UPDATE gc_upload_capability SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                " issued_at = CURRENT_TIMESTAMP - INTERVAL '2 minute'",
+        )
+        jdbc.update("UPDATE gc_idempotency SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'")
+        jdbc.update("UPDATE gc_document_job SET created_at = CURRENT_TIMESTAMP - INTERVAL '25 hours'")
+        val orphan = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf")
+        Files.writeString(orphan, "%PDF-1.7\norphan synthetic\n%%EOF\n")
+        backdateBeyondTheInFlightWindow(orphan)
+        faultyDocumentStorage.failNextListObjectKeys()
+
+        val swept = captureFoundationLogs { janitor.sweep() }
+
+        // Four categories ran; the file category contributed zero and touched nothing.
+        assertThat(swept.value).isEqualTo(JanitorReport(1, 1, 1, 0, 0, 1))
+        assertThat(Files.exists(orphan)).isTrue()
+        assertThat(swept.lines).contains("event=janitor_category_failed category=files exception_class=IOException")
+        assertThat(swept.lines).contains(
+            "event=janitor_sweep sessions=1 capabilities=1 idempotency=1 orphan_files=0 part_files=0 stale_jobs=1",
+        )
+        // The exception's message names a path in production; only its class name may be written down.
+        assertThat(swept.lines).noneMatch { it.contains("synthetic-injected-list-failure") }
+        assertThat(count("gc_session")).isZero()
+
+        // Nothing is lost: the next sweep collects what the failed category could not.
+        assertThat(janitor.sweep()).isEqualTo(JanitorReport(0, 0, 0, 1, 0, 0))
+        assertThat(Files.exists(orphan)).isFalse()
+    }
+
+    /** Ages [path] past the janitor's one-hour in-flight grace, so a sweep may consider it settled. */
+    private fun backdateBeyondTheInFlightWindow(path: Path) {
+        Files.setLastModifiedTime(
+            path,
+            java.nio.file.attribute.FileTime.from(java.time.Instant.now(clock).minusSeconds(7_200)),
+        )
+    }
+
+    private class CapturedSweep<T>(val value: T, val lines: List<String>)
+
+    /** Runs [block] with a `ListAppender` on the foundation's own logger category, so a test can assert
+     * the exact shape of the lines the sweep chose to write. */
+    private fun <T> captureFoundationLogs(block: () -> T): CapturedSweep<T> {
+        val logger = LoggerFactory.getLogger("kr.co.genomecompanion.foundation") as Logger
+        val appender = ListAppender<ILoggingEvent>().also { it.start() }
+        val previousLevel = logger.level
+        logger.addAppender(appender)
+        logger.level = Level.TRACE
+        try {
+            val value = block()
+            return CapturedSweep(value, appender.list.map { it.formattedMessage })
+        } finally {
+            logger.detachAppender(appender)
+            logger.level = previousLevel
+            appender.stop()
+        }
     }
 
     /** A document still waiting for its upload owns its untrusted key even before the row records it:
