@@ -528,7 +528,7 @@ fun main(args: Array<String>) {
         loopHeartbeat = heartbeat::get,
         clock = Clock.systemUTC(),
     )
-    val healthServer = configuration.healthPort?.let { startLoopbackHealthServer(it, health::check) }
+    configuration.healthPort?.let { startLoopbackHealthServer(it, health::check) }
     if (args.contains("--once")) {
         worker.runOnce()
         return
