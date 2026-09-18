@@ -64,6 +64,9 @@ export const abstentionReasonLabels: Record<FoundationAbstention["reason"], stri
   ambiguous_value: "값이 여러 개로 읽힘",
   ambiguous_unit: "단위를 확정할 수 없음",
   missing_evidence: "검사일을 찾지 못함",
+  qualified_value: "부등호가 붙은 값이라 숫자로 확정하지 않음",
+  qualitative: "음성·양성 같은 판정 결과라 값으로 저장하지 않음",
+  previous_column: "이전 결과 칸의 값이라 이번 결과지 값으로 쓰지 않음",
 };
 
 export function labelAbstentionReason(reason: Known<FoundationAbstention["reason"]>) {

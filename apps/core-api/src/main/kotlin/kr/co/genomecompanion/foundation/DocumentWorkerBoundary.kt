@@ -149,7 +149,7 @@ data class ExtractedCandidate(
 data class ExtractionAbstention(
     @field:Size(min = 1, max = 80)
     val label: String,
-    @field:Pattern(regexp = "^(unreadable|ambiguous_value|ambiguous_unit|missing_evidence)$")
+    @field:Pattern(regexp = "^(unreadable|ambiguous_value|ambiguous_unit|missing_evidence|qualified_value|qualitative|previous_column)$")
     val reason: String,
     @field:Min(1) @field:Max(20)
     val evidencePage: Int? = null,

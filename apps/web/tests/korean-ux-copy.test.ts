@@ -156,6 +156,9 @@ describe("Korean UX language boundary", () => {
 
   it("describes a document whose labelled dates disagree without a raw reason code", () => {
     expect(source("lib/format/status-labels.ts")).toContain("검사일이 둘 이상이라 확실하지 않음");
+    expect(source("lib/format/status-labels.ts")).toContain("부등호가 붙은 값이라 숫자로 확정하지 않음");
+    expect(source("lib/format/status-labels.ts")).toContain("음성·양성 같은 판정 결과라 값으로 저장하지 않음");
+    expect(source("lib/format/status-labels.ts")).toContain("이전 결과 칸의 값이라 이번 결과지 값으로 쓰지 않음");
     expect(source("components/integrated/IntegratedHealthExperience.tsx")).toContain("describeAbstention(item)");
     expect(source("components/integrated/IntegratedHealthExperience.tsx")).not.toContain("labelAbstentionReason(item.reason)");
   });

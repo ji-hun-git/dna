@@ -23,7 +23,7 @@ const evidenceBoxSchema = z.object({
 // Why a row (or the whole file) produced no candidate. The reason list is closed.
 const extractionAbstentionSchema = z.object({
   label: z.string().min(1).max(80),
-  reason: z.enum(["unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence"]),
+  reason: z.enum(["unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence", "qualified_value", "qualitative", "previous_column"]),
   evidencePage: z.number().int().positive().nullable().optional(),
 }).strict();
 

@@ -56,6 +56,14 @@ class ExtractionResultRequestValidationTest {
     }
 
     @Test
+    fun acceptsExactlyTheSevenClosedAbstentionReasons() {
+        for (reason in listOf("unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence", "qualified_value", "qualitative", "previous_column")) {
+            assertThat(validator.validate(request(abstentions = listOf(abstention(reason = reason))))).describedAs(reason).isEmpty()
+        }
+        assertThat(validator.validate(request(abstentions = listOf(abstention(reason = "render_error"))))).isNotEmpty()
+    }
+
+    @Test
     fun rejectsUnknownAbstentionReasonsAndOversizedLists() {
         assertThat(validator.validate(request(abstentions = listOf(abstention(reason = "low_confidence"))))).isNotEmpty()
         assertThat(validator.validate(request(candidates = (1..101).map { candidate(ordinal = it) }))).isNotEmpty()

@@ -47,7 +47,7 @@ export const expectedMeasurementSchema = extractedMeasurementSchema
 export const extractionAbstentionSchema = z.strictObject({
   fieldId: z.string().regex(/^[a-z0-9-]+$/),
   label: z.string().min(1).max(80),
-  reason: z.enum(["unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence"]),
+  reason: z.enum(["unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence", "qualified_value", "qualitative", "previous_column"]),
   evidence: evidenceLocationSchema.optional(),
 });
 
