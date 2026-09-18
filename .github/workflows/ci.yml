@@ -260,7 +260,13 @@ jobs:
               docker run --rm --entrypoint java "${IMAGE_REF}" -version
               ;;
             document-worker)
-              test "$(docker run --rm --entrypoint /usr/local/bin/clamscan "${IMAGE_REF}" --version)" = "ClamAV 1.5.4"
+              # With signatures baked in (freshclam at build), clamscan --version prints "ClamAV 1.5.4/<db version>/<db date>".
+            clamscan_version="$(docker run --rm --entrypoint /usr/local/bin/clamscan "${IMAGE_REF}" --version)"
+            echo "${clamscan_version}"
+            case "${clamscan_version}" in
+              "ClamAV 1.5.4"|"ClamAV 1.5.4/"*) ;;
+              *) echo "unexpected clamscan version: ${clamscan_version}" >&2; exit 1 ;;
+            esac
               ;;
           esac
       - name: Record immutable build evidence
