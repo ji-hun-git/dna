@@ -293,4 +293,10 @@ describe("Korean UX language boundary", () => {
       expect(source(path), `${path} does not use the shared helper`).toContain("originalLabelLine(");
     }
   });
+
+  it("tells the user in Korean that a stalled request was stopped, not left spinning", () => {
+    expect(source("lib/foundation/messages.ts")).toContain(
+      "서버 응답이 늦어져 요청을 멈췄어요. 잠시 후 다시 시도해 주세요.",
+    );
+  });
 });

@@ -156,6 +156,21 @@ describe("foundation same-origin client", () => {
     await expect(client.getSession()).rejects.toMatchObject({ code: "invalid_server_response" });
   });
 
+  it("aborts a request that exceeds the timeout and reports request_timeout", async () => {
+    const fetcher = vi.fn((_: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal!.reason));
+    }));
+    const client = createFoundationClient({
+      fetcher,
+      readCsrfToken: () => "csrf-value",
+      timeouts: { requestMs: 20, uploadMs: 20 },
+    });
+
+    await expect(client.getSession()).rejects.toMatchObject({ code: "request_timeout", status: 0 });
+    const [, init] = fetcher.mock.calls[0] as unknown as [unknown, RequestInit];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("rejects attacker-shaped resource identifiers before constructing a request path", async () => {
     const fetcher = vi.fn();
     const client = createFoundationClient({ fetcher, readCsrfToken: () => "csrf-value" });

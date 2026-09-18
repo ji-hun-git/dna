@@ -290,7 +290,8 @@ export type FoundationErrorCode =
   | "internal_error"
   | "invalid_server_response"
   | "csrf_unavailable"
-  | "network_unavailable";
+  | "network_unavailable"
+  | "request_timeout";
 
 export class FoundationClientError extends Error {
   constructor(
@@ -309,7 +310,10 @@ type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Respons
 type FoundationClientOptions = {
   fetcher?: Fetcher;
   readCsrfToken?: () => string | null;
+  timeouts?: { requestMs: number; uploadMs: number };
 };
+
+const defaultTimeouts = { requestMs: 10_000, uploadMs: 20_000 };
 
 function browserCsrfToken() {
   if (typeof document === "undefined") return null;
@@ -374,6 +378,8 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     if (stateChangingMethods.has((init.method ?? "GET").toUpperCase())) {
       headers.set("X-Requested-With", "GC-Foundation");
     }
+    const timeouts = options.timeouts ?? defaultTimeouts;
+    const signal = AbortSignal.timeout((init.method ?? "GET").toUpperCase() === "PUT" ? timeouts.uploadMs : timeouts.requestMs);
     let response: Response;
     try {
       response = await fetcher(path, {
@@ -382,8 +388,12 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
         credentials: "include",
         cache: "no-store",
         redirect: "error",
+        signal,
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+        throw new FoundationClientError("request_timeout", 0);
+      }
       throw new FoundationClientError("network_unavailable", 0);
     }
     let body: unknown;
