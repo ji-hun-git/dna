@@ -378,7 +378,8 @@ class FoundationLifecycleService(
         rawCapability: String,
         content: ByteArray,
     ): DocumentReceipt {
-        val document = requireDocument(principal, documentId)
+        val document = repository.lockDocument(principal.subjectId, documentId)
+            ?: deniedNotFound(principal, "DOCUMENT_ACCESS_DENIED", "DOCUMENT", documentId, "document_not_found")
         requireActiveConsent(principal, document.consentId)
         val capability = repository.findActiveUploadCapability(
             capabilityId,
@@ -431,7 +432,8 @@ class FoundationLifecycleService(
 
     @Transactional
     fun finalizeDocument(principal: FoundationPrincipal, documentId: UUID): DocumentReceipt {
-        val document = requireDocument(principal, documentId)
+        val document = repository.lockDocument(principal.subjectId, documentId)
+            ?: deniedNotFound(principal, "DOCUMENT_ACCESS_DENIED", "DOCUMENT", documentId, "document_not_found")
         requireActiveConsent(principal, document.consentId)
         if (document.status != "UPLOAD_PENDING") return documentReceipt(document)
         val objectKey = document.objectKey ?: throw FoundationConflictException("document_upload_incomplete")
@@ -508,7 +510,8 @@ class FoundationLifecycleService(
         idempotencyKey: String,
     ): CandidateReceipt {
         requireIdempotencyKey(idempotencyKey)
-        val candidate = requireCandidate(principal, candidateId)
+        val candidate = repository.lockCandidate(principal.subjectId, candidateId)
+            ?: deniedNotFound(principal, "CANDIDATE_ACCESS_DENIED", "CANDIDATE", candidateId, "candidate_not_found")
         val document = requireDocument(principal, candidate.documentId)
         requireActiveConsent(principal, document.consentId)
         if (candidate.status == "EXCLUDED") return candidateReceipt(candidate)
@@ -537,7 +540,8 @@ class FoundationLifecycleService(
         requireIdempotencyKey(idempotencyKey)
         if (!confirmedValuePattern.matches(confirmedValue)) throw FoundationBadRequestException("confirmed_value_invalid")
         val requestedObservedOn = confirmedObservedOn?.let(::parseConfirmedObservedOn)
-        val candidate = requireCandidate(principal, candidateId)
+        val candidate = repository.lockCandidate(principal.subjectId, candidateId)
+            ?: deniedNotFound(principal, "CANDIDATE_ACCESS_DENIED", "CANDIDATE", candidateId, "candidate_not_found")
         val document = requireDocument(principal, candidate.documentId)
         requireActiveConsent(principal, document.consentId)
 
@@ -545,17 +549,24 @@ class FoundationLifecycleService(
         val now = Instant.now(clock)
         val requestSha256 = requestHash("CANDIDATE_CONFIRM", candidateId.toString(), "$confirmedValue|${confirmedObservedOn.orEmpty()}")
         // A mismatched replay must 422 even when the candidate already has a record, so this check runs
-        // before the "already confirmed" short-circuit below could otherwise silently answer it.
-        requireNoMismatch(subjectHash, "CANDIDATE_CONFIRM", idempotencyKey, requestSha256, now)
-        repository.findRecordForCandidate(principal.subjectId, candidateId)?.let { return recordReceipt(it) }
-        if (candidate.status != "PENDING") throw FoundationConflictException("candidate_not_pending")
+        // before any status-based short-circuit below could otherwise silently answer it. A live claim for
+        // *this exact key* is a genuine replay and returns the record it created; a different, new key
+        // hitting a candidate that is no longer PENDING is not a replay, so it falls through to the status
+        // checks below and 409s like any other racing or duplicate request.
+        requireNoMismatch(subjectHash, "CANDIDATE_CONFIRM", idempotencyKey, requestSha256, now)?.let {
+            return recordReceipt(requireRecord(principal, it))
+        }
+        if (candidate.status == "EXCLUDED") throw FoundationConflictException("candidate_not_pending")
+        if (candidate.status != "PENDING") throw FoundationConflictException("candidate_state_changed")
         val observedOn = requestedObservedOn ?: candidate.observedOn
 
         val recordId = UUID.randomUUID()
         replayOrClaim(subjectHash, "CANDIDATE_CONFIRM", idempotencyKey, recordId, requestSha256, now)?.let {
             return recordReceipt(requireRecord(principal, it))
         }
-        repository.createRecordFromCandidate(recordId, UUID.randomUUID(), candidate, confirmedValue, now, observedOn)
+        if (!repository.createRecordFromCandidate(recordId, UUID.randomUUID(), candidate, confirmedValue, now, observedOn)) {
+            throw FoundationConflictException("candidate_state_changed")
+        }
         val unchanged = confirmedValue == candidate.candidateValue && observedOn == candidate.observedOn
         audit(principal, if (unchanged) "CANDIDATE_CONFIRMED" else "CANDIDATE_CORRECTED", "RECORD", recordId, "SUCCESS")
         return recordReceipt(requireRecord(principal, recordId))
@@ -655,10 +666,18 @@ class FoundationLifecycleService(
         if (normalizedReason.isEmpty() || normalizedReason.length > 200) {
             throw FoundationBadRequestException("correction_reason_invalid")
         }
+        // The version this correction targets is fixed by this early, unlocked read (the optimistic-
+        // concurrency basis of the request), not by a fresher value read after the lock below: once this
+        // request has decided which version it is superseding, a racing correction that reaches the atomic
+        // UPDATE first must make this one 409, not silently rebase onto the winner's new CURRENT version.
         val current = requireRecord(principal, recordId)
         val candidate = requireCandidate(principal, current.candidateId)
         val document = requireDocument(principal, candidate.documentId)
         requireActiveConsent(principal, document.consentId)
+        // Locks the row so a concurrent correction serializes here rather than racing unguarded to the
+        // final UPDATE; the lock itself grants no fresher data used for this call's own decision above.
+        repository.lockRecord(principal.subjectId, recordId)
+            ?: deniedNotFound(principal, "RECORD_ACCESS_DENIED", "RECORD", recordId, "record_not_found")
 
         val subjectHash = subjectHash(principal.subjectId)
         val newVersionId = UUID.randomUUID()
@@ -777,12 +796,16 @@ class FoundationLifecycleService(
         }
 
     /**
-     * 422s a mismatched replay before a resource-level short-circuit (e.g. "this candidate already has a
-     * record") gets the chance to silently answer it with the wrong receipt.
+     * Checks a still-live claim for this key against the current request's hash (422 on mismatch), and
+     * returns the resource id it already claimed when this exact key was used before (a genuine replay),
+     * or null when the key is new. This is what lets a resource-level short-circuit (e.g. "this candidate
+     * already has a record") answer only a genuine same-key replay, not any new key that happens to arrive
+     * after the resource's state has moved on.
      */
-    private fun requireNoMismatch(subjectHash: String, operation: String, key: String, requestSha256: String, now: Instant) {
-        val existing = repository.peekIdempotency(subjectHash, operation, key, now) ?: return
+    private fun requireNoMismatch(subjectHash: String, operation: String, key: String, requestSha256: String, now: Instant): UUID? {
+        val existing = repository.peekIdempotency(subjectHash, operation, key, now) ?: return null
         if (existing.requestSha256 != null && existing.requestSha256 != requestSha256) throw FoundationUnprocessableException("idempotency_key_mismatch")
+        return existing.resourceId
     }
 
     private fun issueDocumentTicket(document: FoundationDocumentRow): IssuedDocumentTicket {

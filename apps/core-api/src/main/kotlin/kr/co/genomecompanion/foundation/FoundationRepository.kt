@@ -547,20 +547,6 @@ class FoundationRepository(
             subjectHash, operation, idempotencyKey, now.atOffset(ZoneOffset.UTC),
         ).firstOrNull()
 
-    fun findIdempotentResource(subjectHash: String, operation: String, idempotencyKey: String, now: Instant): UUID? =
-        jdbc.query(
-            """
-            SELECT resource_id
-            FROM gc_idempotency
-            WHERE subject_hash = ? AND operation = ? AND idempotency_key = ? AND expires_at > ?
-            """.trimIndent(),
-            RowMapper { result, _ -> result.getObject("resource_id", UUID::class.java) },
-            subjectHash,
-            operation,
-            idempotencyKey,
-            now.atOffset(ZoneOffset.UTC),
-        ).firstOrNull()
-
     fun deleteExpiredIdempotency(now: Instant): Int =
         jdbc.update("DELETE FROM gc_idempotency WHERE expires_at <= ?", now.atOffset(ZoneOffset.UTC))
 
@@ -624,6 +610,17 @@ class FoundationRepository(
             subjectId,
             documentId,
         ).firstOrNull()
+
+    /**
+     * Locks the document row before any status check. Lock order across this repository is always:
+     * idempotency claim (Task 7's `INSERT ... ON CONFLICT`) first, then at most one target row of
+     * `gc_candidate`, `gc_health_record`, or `gc_document` (never more than one — no path locks two of
+     * these tables in the same transaction), so no two request paths can deadlock against each other.
+     */
+    fun lockDocument(subjectId: String, documentId: UUID): FoundationDocumentRow? {
+        jdbc.query("SELECT document_id FROM gc_document WHERE document_id = ? AND subject_id = ? FOR UPDATE", { _, _ -> Unit }, documentId, subjectId)
+        return findDocument(subjectId, documentId)
+    }
 
     fun findLatestActiveDocument(subjectId: String): FoundationDocumentRow? =
         jdbc.query(
@@ -1195,6 +1192,12 @@ class FoundationRepository(
             candidateId,
         ).firstOrNull()
 
+    /** Locks the candidate row before any status check. See [lockDocument] for the shared lock-order comment. */
+    fun lockCandidate(subjectId: String, candidateId: UUID): FoundationCandidateRow? {
+        jdbc.query("SELECT candidate_id FROM gc_candidate WHERE candidate_id = ? AND subject_id = ? FOR UPDATE", { _, _ -> Unit }, candidateId, subjectId)
+        return findCandidate(subjectId, candidateId)
+    }
+
     fun findPreviewArtifact(subjectId: String, documentId: UUID): PreviewArtifactRow? =
         jdbc.query(
             """
@@ -1288,7 +1291,7 @@ class FoundationRepository(
         confirmedValue: String,
         now: Instant,
         observedOn: LocalDate = candidate.observedOn,
-    ) {
+    ): Boolean {
         val updated = jdbc.update(
             """
             UPDATE gc_candidate
@@ -1299,7 +1302,7 @@ class FoundationRepository(
             candidate.candidateId,
             candidate.subjectId,
         )
-        check(updated == 1) { "candidate state changed during confirmation" }
+        if (updated != 1) return false
         jdbc.update(
             """
             INSERT INTO gc_health_record(
@@ -1350,15 +1353,8 @@ class FoundationRepository(
             candidate.documentId,
             candidate.subjectId,
         )
+        return true
     }
-
-    fun findRecordForCandidate(subjectId: String, candidateId: UUID): FoundationRecordRow? =
-        jdbc.query(
-            "$recordProjection WHERE r.subject_id = ? AND r.candidate_id = ? AND v.status = 'CURRENT'",
-            recordMapper,
-            subjectId,
-            candidateId,
-        ).firstOrNull()
 
     fun findRecord(subjectId: String, recordId: UUID): FoundationRecordRow? =
         jdbc.query(
@@ -1367,6 +1363,12 @@ class FoundationRepository(
             subjectId,
             recordId,
         ).firstOrNull()
+
+    /** Locks the record row before any status check. See [lockDocument] for the shared lock-order comment. */
+    fun lockRecord(subjectId: String, recordId: UUID): FoundationRecordRow? {
+        jdbc.query("SELECT record_id FROM gc_health_record WHERE record_id = ? AND subject_id = ? FOR UPDATE", { _, _ -> Unit }, recordId, subjectId)
+        return findRecord(subjectId, recordId)
+    }
 
     fun findRecordVersion(subjectId: String, versionId: UUID): FoundationRecordRow? =
         jdbc.query(

@@ -653,18 +653,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("document_not_found"))
 
-        val firstRecord = responseJson(
-            mutate(
-                post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
-                    .header("Idempotency-Key", "confirm-multi-ordinal-1")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json(mapOf("value" to "188"))),
-                alice,
-            ).andExpect(status().isCreated)
-                .andReturn()
-                .response
-                .contentAsByteArray,
-        )
+        mutate(
+            post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
+                .header("Idempotency-Key", "confirm-multi-ordinal-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isCreated)
         assertThat(documentStatus(documentId)).isEqualTo("REVIEW_REQUIRED")
 
         read(get("/api/foundation/documents/$documentId/candidate"), alice)
@@ -673,19 +668,18 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.status").value("PENDING"))
             .andExpect(jsonPath("$.totalCandidates").value(3))
 
-        val replayedRecord = responseJson(
-            mutate(
-                post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
-                    .header("Idempotency-Key", "confirm-multi-ordinal-1-replay")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json(mapOf("value" to "188"))),
-                alice,
-            ).andExpect(status().isCreated)
-                .andReturn()
-                .response
-                .contentAsByteArray,
-        )
-        assertThat(replayedRecord["recordId"].asText()).isEqualTo(firstRecord["recordId"].asText())
+        // A different (non-matching) Idempotency-Key against an already-CONFIRMED candidate is not a
+        // replay: the row's locked state has genuinely changed under this request, so it is a 409, not a
+        // silent success. Only a matching key (the same-key replay case exercised elsewhere in this class)
+        // returns the original record.
+        mutate(
+            post("/api/foundation/candidates/${candidateIds[0]}/confirmation")
+                .header("Idempotency-Key", "confirm-multi-ordinal-1-not-a-replay")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("candidate_state_changed"))
         assertThat(count("gc_health_record")).isEqualTo(1)
         assertThat(documentStatus(documentId)).isEqualTo("REVIEW_REQUIRED")
 
@@ -2053,6 +2047,92 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         }
     }
 
+    @Test
+    fun twoThreadsConfirmingOneCandidateProduceExactlyOneRecordAndOneConflict() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "race-confirm")
+        val principal = FoundationPrincipal("synthetic-alice", UUID.randomUUID(), alice.cookie.value.let(FoundationHashing::sha256))
+        val results = race(2) { index ->
+            service.confirmCandidate(principal, candidateId, "188", "race-confirm-key-$index")
+        }
+        assertThat(results.count { it.isSuccess }).isEqualTo(1)
+        assertThat(results.mapNotNull { it.exceptionOrNull() }).singleElement().isInstanceOfSatisfying(FoundationConflictException::class.java) {
+            assertThat(it.code).isEqualTo("candidate_state_changed")
+        }
+        assertThat(count("gc_health_record")).isEqualTo(1)
+        assertThat(count("gc_health_record_version")).isEqualTo(1)
+        assertThat(jdbc.queryForObject("SELECT status FROM gc_candidate WHERE candidate_id = ?", String::class.java, candidateId)).isEqualTo("CONFIRMED")
+    }
+
+    @Test
+    fun confirmAndExcludeRacingOnOneCandidateLeaveExactlyOneOutcome() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "race-mixed")
+        val principal = FoundationPrincipal("synthetic-alice", UUID.randomUUID(), FoundationHashing.sha256(alice.cookie.value))
+        val results = race(2) { index ->
+            if (index == 0) service.confirmCandidate(principal, candidateId, "188", "race-mixed-confirm") else service.excludeCandidate(principal, candidateId, "race-mixed-exclude")
+        }
+        assertThat(results.count { it.isSuccess }).isEqualTo(1)
+        val status = jdbc.queryForObject("SELECT status FROM gc_candidate WHERE candidate_id = ?", String::class.java, candidateId)
+        assertThat(status).isIn("CONFIRMED", "EXCLUDED")
+        assertThat(count("gc_health_record")).isEqualTo(if (status == "CONFIRMED") 1L else 0L)
+        val failure = results.mapNotNull { it.exceptionOrNull() }.single() as FoundationConflictException
+        assertThat(failure.code).isIn("candidate_state_changed", "candidate_not_pending")
+    }
+
+    @Test
+    fun twoThreadsCorrectingOneRecordProduceExactlyOneNewVersion() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        // Warms the two worker threads' own connection-pool and JIT paths through this exact call shape on a
+        // throwaway record first, then removes every row it created: this test's timing window (two threads
+        // truly overlapping on one record) is tight enough that a cold pooled connection or a not-yet-JIT'ed
+        // correctRecord() path on either thread's first-ever call can by itself decide the race.
+        val warmupPrincipal = FoundationPrincipal("synthetic-alice", UUID.randomUUID(), FoundationHashing.sha256(alice.cookie.value))
+        val warmupCandidateId = createCandidate(alice, consentId, "race-correct-warmup")
+        val warmupRecordId = service.confirmCandidate(warmupPrincipal, warmupCandidateId, "1", "race-correct-warmup-confirm").recordId
+        race(2) { index -> service.correctRecord(warmupPrincipal, warmupRecordId, "2$index", "warmup $index", "race-correct-warmup-key-$index") }
+        jdbc.update("DELETE FROM gc_health_record_version WHERE record_id = ?", warmupRecordId)
+        jdbc.update("DELETE FROM gc_health_record WHERE record_id = ?", warmupRecordId)
+        jdbc.update("DELETE FROM gc_candidate WHERE candidate_id = ?", warmupCandidateId)
+
+        val candidateId = createCandidate(alice, consentId, "race-correct")
+        val principal = FoundationPrincipal("synthetic-alice", UUID.randomUUID(), FoundationHashing.sha256(alice.cookie.value))
+        val recordId = service.confirmCandidate(principal, candidateId, "188", "race-correct-confirm").recordId
+        val results = race(2) { index ->
+            service.correctRecord(principal, recordId, "19$index", "race $index", "race-correct-key-$index")
+        }
+        assertThat(results.count { it.isSuccess }).isEqualTo(1)
+        assertThat((results.mapNotNull { it.exceptionOrNull() }.single() as FoundationConflictException).code).isEqualTo("record_state_changed")
+        assertThat(count("gc_health_record_version")).isEqualTo(2)
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_health_record_version WHERE status = 'CURRENT'", Long::class.java)).isEqualTo(1L)
+    }
+
+    /** Starts [threads] callables on one latch against the real database and returns their results in submission order. */
+    private fun <T> race(threads: Int, action: (Int) -> T): List<Result<T>> {
+        val executor = Executors.newFixedThreadPool(threads)
+        val ready = CountDownLatch(threads)
+        val start = CountDownLatch(1)
+        try {
+            val futures = (0 until threads).map { index ->
+                executor.submit<Result<T>> {
+                    ready.countDown()
+                    check(start.await(5, TimeUnit.SECONDS))
+                    runCatching { action(index) }
+                }
+            }
+            check(ready.await(5, TimeUnit.SECONDS))
+            start.countDown()
+            return futures.map { it.get(15, TimeUnit.SECONDS) }
+        } finally {
+            start.countDown()
+            executor.shutdownNow()
+            check(executor.awaitTermination(5, TimeUnit.SECONDS))
+        }
+    }
+
     /** The July document whose first row prints the range `120-199` (stored, exported only). */
     private fun importJulyWithRange(client: TestClient, consentId: UUID, keyPrefix: String): List<JsonNode> {
         val documentId = requestDocument(client, consentId, fixturePdf, "$keyPrefix-document-request")
@@ -2345,6 +2425,11 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             registry.add("spring.datasource.url") { checkNotNull(System.getenv("GC_TEST_POSTGRES_URL")) }
             registry.add("spring.datasource.username") { "postgres" }
             registry.add("spring.datasource.password") { "" }
+            // The concurrency (race) tests below genuinely need 2+ live connections at once; the pool
+            // otherwise grows lazily and a fresh second connection's one-time setup cost can itself decide
+            // an otherwise-tight two-thread race.
+            registry.add("spring.datasource.hikari.minimum-idle") { "4" }
+            registry.add("spring.datasource.hikari.maximum-pool-size") { "8" }
             registry.add("security.oidc.enabled") { "true" }
             registry.add("security.oidc.issuer") { "https://issuer.test.invalid" }
             registry.add("security.oidc.jwk-set-uri") { "https://issuer.test.invalid/.well-known/jwks.json" }
