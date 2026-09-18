@@ -32,10 +32,10 @@ export const RINGS: ReadonlyArray<ExampleRing> = [
     t: 0.34,
     rx: 210,
     ry: 46,
+    // Lab/vital items only: a backend can plausibly produce these from a result sheet. Sleep and
+    // step-count (wearable/lifestyle metrics) were removed for that reason.
     nodes: [
       { item: "혈압", value: "120/80", unit: "mmHg", observedOn: "2025-07-14", shape: "squircle", size: 30, phase: 1.1 },
-      { item: "수면", value: "7시간 12분", unit: "", observedOn: "2025-07-14", shape: "circle", size: 14, phase: 2.6 },
-      { item: "걸음", value: "8,900", unit: "", observedOn: "2025-07-15", shape: "squircle", size: 20, phase: 4.7 },
     ],
   },
   {
@@ -58,7 +58,8 @@ export const RINGS: ReadonlyArray<ExampleRing> = [
 ];
 
 export function nodeLabel(node: ExampleNode) {
-  return node.unit ? `${node.item} ${node.value} ${node.unit}` : `${node.item} ${node.value}`;
+  // .trim() covers the hero's "+N개" overflow marker, whose value is intentionally empty.
+  return (node.unit ? `${node.item} ${node.value} ${node.unit}` : `${node.item} ${node.value}`).trim();
 }
 
 export function nodeValueWithUnit(node: ExampleNode) {

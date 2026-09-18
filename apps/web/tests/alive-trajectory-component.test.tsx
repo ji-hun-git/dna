@@ -86,7 +86,7 @@ it("has no axe violations", async () => {
   expect(await axe(container)).toHaveNoViolations();
 });
 
-it("draws the arrow as separate phase segments, each with its own dash pattern, plus an open chevron gate at the tip", () => {
+it("draws the axis as separate phase segments, each with its own dash pattern, with no tip marker, gate or arrowhead", () => {
   const { container } = render(<AliveTrajectory />);
   const svg = container.querySelector("svg")!;
   // The phases group sits between the halo and the flow-dash path; it holds one <path> per
@@ -103,10 +103,9 @@ it("draws the arrow as separate phase segments, each with its own dash pattern, 
   const tickLines = svg.querySelectorAll("line");
   expect(tickLines.length).toBeGreaterThanOrEqual(3);
 
-  // The tip is an open chevron (no fill), not a solid arrowhead.
-  const tipPaths = Array.from(svg.querySelectorAll("path")).filter((p) => (p.getAttribute("d") ?? "").includes("L 0 0"));
-  expect(tipPaths.length).toBeGreaterThan(0);
-  for (const p of tipPaths) expect(p.getAttribute("fill")).toBe("none");
+  // The horizontal time axis has no tip marker: nothing rotates a group to point along the
+  // tangent at the path's end (that rotate(...) transform was only ever used by the old tip/gate).
+  expect(svg.querySelector('g[transform*="rotate"]')).toBeNull();
 });
 
 it("labels each phase with a time period only, never a life-stage or health-stage word", () => {

@@ -104,12 +104,14 @@ describe("pathPoint", () => {
     expect(end.y).toBeCloseTo(BASE_CONTROL_POINTS[6][1], 5);
   });
 
-  it("moves up and to the right as t increases, matching a curving-up arrow", () => {
+  it("moves to the right as t increases and never climbs, matching a horizontal time axis", () => {
     const points = createControlPoints(BASE_CONTROL_POINTS, () => 0.5);
     const a = pathPoint(points, 0.2);
     const b = pathPoint(points, 0.8);
     expect(b.x).toBeGreaterThan(a.x);
-    expect(b.y).toBeLessThan(a.y);
+    // With no breathing applied (springs unstepped, sitting exactly at their base value), the
+    // path stays at the same height throughout: a flat horizontal line, not a climbing arc.
+    expect(b.y).toBeCloseTo(a.y, 5);
   });
 });
 

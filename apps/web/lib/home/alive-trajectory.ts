@@ -117,15 +117,20 @@ export type ControlPoint = {
   py: number;
 };
 
-/** Base control points for the curving-up-and-to-the-right arrow, in the reference's 1200x760 viewBox. */
+/**
+ * Base control points for the horizontal living time axis, in the 1200x760 viewBox: a flat line
+ * at mid-height (y = 380, roughly half of 760) running left to right. It never climbs — the only
+ * vertical motion is the existing per-point breathing springs (+/- a few percent of the height),
+ * applied identically to every point regardless of x.
+ */
 export const BASE_CONTROL_POINTS: ReadonlyArray<readonly [number, number]> = [
-  [90, 690],
-  [330, 690],
-  [470, 560],
-  [640, 400],
-  [810, 240],
-  [900, 172],
-  [1060, 108],
+  [40, 380],
+  [220, 380],
+  [400, 380],
+  [600, 380],
+  [800, 380],
+  [980, 380],
+  [1160, 380],
 ];
 
 export function createControlPoints(
@@ -234,6 +239,9 @@ export function halfEllipsePath(
 }
 
 // ---------- phases (checkup periods, never life-stage or health-stage words) ----------
+
+/** End of the drawable path in the [0, 1] curve parameter; matches the reference's T_END. */
+export const T_END = 0.97;
 
 /** Time periods only. Never a life-stage or health-stage word. */
 export const PHASE_LABELS: readonly string[] = ["2024 검진", "2025 검진", "2026 검진", "다음 검진"];
