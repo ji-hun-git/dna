@@ -26,9 +26,10 @@ export function renderNativeTextReport(report: MedicalDocumentSyntheticContractR
     `| Required abstention recall | ${percent(m.requiredAbstentionRecall)} |`,
     `| Hallucinated measurements | ${m.hallucinatedMeasurementCount} (${percent(m.hallucinationRate)}) |`,
     `| Reference-range text carried verbatim | ${percent(m.referenceRangeAccuracy)} |`,
+    `| Concept code per the alias and unit rule | ${percent(m.conceptAccuracy)} |`,
     `| Gate | ${report.gate.passed ? "PASS" : `FAIL: ${report.gate.failures.join(", ")}`} |`,
     "",
-    "Thresholds: field F1 = 1, critical value exact = 1, evidence localization = 1, hallucination = 0, required abstention recall = 1, reference-range text = 1.",
+    "Thresholds: field F1 = 1, critical value exact = 1, evidence localization = 1, hallucination = 0, required abstention recall = 1, reference-range text = 1, concept code = 1.",
     "",
   ].join("\n");
 }

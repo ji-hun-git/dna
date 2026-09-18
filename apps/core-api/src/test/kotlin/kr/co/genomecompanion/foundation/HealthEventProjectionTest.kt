@@ -20,6 +20,7 @@ class HealthEventProjectionTest {
         documentId: UUID = docWithPreview,
         confirmedAt: Instant = Instant.parse("2026-07-28T09:10:00Z"),
         conceptCode: String? = "total-cholesterol",
+        originalLabel: String? = null,
     ) = FoundationRecordRow(
         recordId = UUID.randomUUID(),
         recordVersionId = UUID.randomUUID(),
@@ -40,7 +41,17 @@ class HealthEventProjectionTest {
         sourceTextSha256 = "b".repeat(64),
         documentSha256 = "a".repeat(64),
         conceptCode = conceptCode,
+        originalLabel = originalLabel,
     )
+
+    @Test
+    fun carriesTheResultSheetLabelAndOmitsItForRowsStoredBeforeItWasKept() {
+        val kept = row(label = "총콜레스테롤", value = "188", observedOn = LocalDate.of(2026, 7, 28), originalLabel = "Cholesterol")
+        val old = row(label = "당화혈색소", value = "5.2", observedOn = LocalDate.of(2026, 7, 28), conceptCode = "hba1c")
+        val events = HealthEventProjection.project(listOf(kept, old), setOf(docWithPreview)).associateBy { it.concept }
+        assertThat(events.getValue("총콜레스테롤").originalLabel).isEqualTo("Cholesterol")
+        assertThat(events.getValue("당화혈색소").originalLabel).isNull()
+    }
 
     @Test
     fun projectsOnlyCurrentVersionsAsLabEventsOrderedByDateThenConcept() {

@@ -22,8 +22,9 @@ const report: MedicalDocumentSyntheticContractRegression = {
     requiredAbstentionRecall: 1,
     hallucinationRate: 0,
     referenceRangeAccuracy: 1,
+    conceptAccuracy: 1,
   },
-  gate: { passed: true, failures: [], thresholds: { fieldF1: 1, criticalValueExactRate: 1, evidenceLocalizationRate: 1, hallucinationRate: 0, requiredAbstentionRecall: 1, referenceRangeAccuracy: 1 } },
+  gate: { passed: true, failures: [], thresholds: { fieldF1: 1, criticalValueExactRate: 1, evidenceLocalizationRate: 1, hallucinationRate: 0, requiredAbstentionRecall: 1, referenceRangeAccuracy: 1, conceptAccuracy: 1 } },
 };
 
 it("renders the gate metrics as a markdown table without an accuracy claim", () => {
@@ -33,7 +34,9 @@ it("renders the gate metrics as a markdown table without an accuracy claim", () 
   expect(markdown).toContain("| Field F1 | 100.0% |");
   expect(markdown).toContain("| Required abstention recall | 100.0% |");
   expect(markdown).toContain("| Reference-range text carried verbatim | 100.0% |");
+  expect(markdown).toContain("| Concept code per the alias and unit rule | 100.0% |");
   expect(markdown).toContain("reference-range text = 1");
+  expect(markdown).toContain("concept code = 1");
   expect(markdown).toContain("| Gate | PASS |");
   expect(markdown).toContain("Not a clinical, regulatory or production-accuracy claim");
   expect(markdown).not.toMatch(/diagnos|정상|비정상/);

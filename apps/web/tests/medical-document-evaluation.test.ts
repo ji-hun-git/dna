@@ -124,3 +124,31 @@ it("rejects reference-range text that is not a bare range body", () => {
   delete gold.expectedMeasurements[0].referenceRangeText;
   expect(medicalDocumentGoldSchema.safeParse(gold).success).toBe(true);
 });
+
+it("scores the concept code against gold, counts an expected no-concept row, and fails the gate when it drifts", () => {
+  const baseline = evaluateMedicalDocumentPipeline(corpus, referenceRuns);
+  expect(baseline.metrics.conceptAccuracy).toBe(1);
+  expect(baseline.gate.thresholds.conceptAccuracy).toBe(1);
+
+  const gold = structuredClone(corpus) as unknown as { documents: Array<{ documentId: string; expectedMeasurements: Array<Record<string, unknown>> }> };
+  const runs = structuredClone(referenceRuns) as unknown as Array<{ documentId: string; candidates: Array<Record<string, unknown>> }>;
+  const run = runs[0];
+  const [first, second] = run.candidates;
+  const fields = gold.documents.find((document) => document.documentId === run.documentId)!.expectedMeasurements;
+  fields.find((field) => field.fieldId === first.fieldId)!.expectedConceptCode = "glucose";
+  fields.find((field) => field.fieldId === second.fieldId)!.expectedNoConcept = true;
+  first.conceptCode = "glucose";
+  const matching = evaluateMedicalDocumentPipeline(gold, runs);
+  expect(matching.metrics.conceptAccuracy).toBe(1);
+  expect(matching.gate.passed).toBe(true);
+
+  first.conceptCode = "fasting-glucose";
+  const drifted = evaluateMedicalDocumentPipeline(gold, runs);
+  expect(drifted.metrics.conceptAccuracy).toBe(0.5);
+  expect(drifted.metrics.fieldF1).toBe(1);
+  expect(drifted.gate.failures).toEqual(["concept_accuracy_below_threshold"]);
+
+  first.conceptCode = "glucose";
+  second.conceptCode = "uric-acid";
+  expect(evaluateMedicalDocumentPipeline(gold, runs).gate.failures).toEqual(["concept_accuracy_below_threshold"]);
+});

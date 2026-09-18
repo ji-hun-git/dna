@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FoundationCandidate } from "@/lib/foundation/client";
 import { formatKoreanDate } from "@/lib/format/korean-date";
+import { originalLabelLine } from "@/lib/format/original-label";
 import { earliestCorrectableObservedOn, isCorrectableObservedOn, localIsoDate } from "@/lib/format/observed-on";
 import { labelCandidateStatus } from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
@@ -110,6 +111,9 @@ export function CandidateReview({
           <article className="gc-import__candidate">
             <p className="gc-import__candidate-label">확인할 항목 · 예시 데이터</p>
             <h2>{candidate.label}</h2>
+            {originalLabelLine(candidate.originalLabel, candidate.label) && (
+              <p className="gc-import__candidate-original" data-testid="original-label">{originalLabelLine(candidate.originalLabel, candidate.label)}</p>
+            )}
             <p className="gc-import__candidate-value"><strong>{candidate.value}</strong><span>{candidate.unit}</span></p>
             <p className="gc-import__candidate-source">결과지 텍스트에서 읽은 값 · 문자 인식 아님</p>
             <dl>

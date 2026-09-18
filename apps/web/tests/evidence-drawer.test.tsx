@@ -21,6 +21,18 @@ it("shows source, page, digests and confirmation time for a verified event", () 
   expect(region).toHaveTextContent(shortDigest(event.source.sourceTextSha256));
 });
 
+it("shows the result-sheet label when it differs, nothing when it is the same, and says so when it was never kept", () => {
+  const { rerender } = render(<EvidenceDrawer event={syntheticHealthEvent()} onClose={() => {}} />);
+  expect(screen.getByTestId("original-label")).toHaveTextContent("결과지 표기: Cholesterol");
+  rerender(<EvidenceDrawer event={syntheticHealthEvent({ concept: "혈당", conceptCode: "glucose", originalLabel: "혈당" })} onClose={() => {}} />);
+  expect(screen.queryByTestId("original-label")).toBeNull();
+  expect(screen.queryByText("이 기록은 결과지 표기를 보존하기 전에 저장됐어요.")).toBeNull();
+  const { originalLabel: _none, ...preV11 } = syntheticHealthEvent();
+  rerender(<EvidenceDrawer event={preV11} onClose={() => {}} />);
+  expect(screen.queryByTestId("original-label")).toBeNull();
+  expect(screen.getByText("이 기록은 결과지 표기를 보존하기 전에 저장됐어요.")).toBeVisible();
+});
+
 it("explains a missing preview instead of hiding it, and lists the correction history for a corrected value", () => {
   const event = syntheticHealthEvent({
     verification: "uncertain",

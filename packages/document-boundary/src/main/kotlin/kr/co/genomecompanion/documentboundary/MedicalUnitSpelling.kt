@@ -11,6 +11,7 @@ object MedicalUnitSpelling {
     private val canonicalSpellings = listOf(
         "mg/dL", "%", "ng/mL", "ng/dL", "mmHg", "kg", "cm", "kg/m²", "U/L", "IU/L", "g/dL", "10³/µL", "10⁶/µL",
         "/µL", "mL/min/1.73m²", "mmol/L", "µIU/mL", "mg/L", "회/분", "pg/mL", "mEq/L",
+        "fL", "pg", "mm/hr", "µg/dL", "µU/mL", "U/mL", "IU/mL", "µmol/L", "g/L",
     )
 
     private val variants = mapOf(
@@ -22,6 +23,7 @@ object MedicalUnitSpelling {
         "ml/min/1.73m2" to "mL/min/1.73m²", "ml/min/1.73㎡" to "mL/min/1.73m²",
         "uiu/ml" to "µIU/mL",
         "bpm" to "회/분", "/min" to "회/분",
+        "ug/dl" to "µg/dL", "uu/ml" to "µU/mL", "mm/h" to "mm/hr", "umol/l" to "µmol/L",
     )
 
     /** NFC, lower-case, whitespace removed, Greek mu (U+03BC) folded to the micro sign (U+00B5). */

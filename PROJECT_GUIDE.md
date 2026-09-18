@@ -100,7 +100,7 @@ Authoritative responsibility:
 | Responsibility | Owner |
 |---|---|
 | Browser rendering and interaction | `apps/web` |
-| Session, CSRF/origin enforcement, authorization, consent, records, provenance, audit, deletion | `apps/core-api` |
+| Session, CSRF/origin enforcement, authorization, consent, records, provenance, audit, deletion | `apps/core-api`. Since Wave 5 it keeps the result sheet's own item name beside the normalized one, guards concepts by accepted unit, and exports LOINC only where the audit allows (`docs/status/2026-09-17/wave5.md`, `docs/status/2026-09-17/loinc-audit.md`). |
 | Hostile document inspection/extraction execution | `apps/document-worker` behind narrow contracts |
 | Public DataON/AIDA evidence exploration | `apps/research-web`, isolated from the health-data plane |
 | Shared document-boundary contracts | `packages/document-boundary` |

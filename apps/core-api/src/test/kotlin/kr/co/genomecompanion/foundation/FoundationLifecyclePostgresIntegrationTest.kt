@@ -826,6 +826,8 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(listed[0]["extractionMethod"].asText()).isEqualTo("native-text")
         assertThat(listed[0]["sourceTextSha256"].asText()).isEqualTo("1".repeat(64))
         assertThat(listed[1]["label"].asText()).isEqualTo("알 수 없는 항목")
+        assertThat(listed[0]["originalLabel"].asText()).isEqualTo("Cholesterol")
+        assertThat(listed[1]["originalLabel"].asText()).isEqualTo("알 수 없는 항목")
         assertThat(listed[1].hasNonNull("conceptCode")).isFalse()
         assertThat(listed[1].hasNonNull("evidenceBox")).isFalse()
         assertThat(listed[1]["evidencePage"].asInt()).isEqualTo(2)
@@ -848,6 +850,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).andExpect(status().isCreated)
             .andExpect(jsonPath("$.conceptCode").value("total-cholesterol"))
             .andExpect(jsonPath("$.label").value("총콜레스테롤"))
+            .andExpect(jsonPath("$.originalLabel").value("Cholesterol"))
         assertThat(
             jdbc.queryForObject("SELECT concept_code FROM gc_health_record_version WHERE status = 'CURRENT'", String::class.java),
         ).isEqualTo("total-cholesterol")
@@ -969,6 +972,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(events).hasSize(1)
         val event = events[0]
         assertThat(event["concept"].asText()).isEqualTo("총콜레스테롤")
+        assertThat(event["originalLabel"].asText()).isEqualTo("Cholesterol")
         assertThat(event["value"].asText()).isEqualTo("188")
         assertThat(event["unit"].asText()).isEqualTo("mg/dL")
         assertThat(event["observedOn"].asText()).isEqualTo("2026-07-28")
@@ -1195,6 +1199,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(series.map { it["concept"].asText() }).containsExactly("당화혈색소", "비타민 D", "총콜레스테롤")
         assertThat(series.map { it["unit"].asText() }).containsExactly("%", "ng/mL", "mg/dL")
         assertThat(series.map { it["conceptCode"].asText() }).containsExactly("hba1c", "vitamin-d", "total-cholesterol")
+        assertThat(series.flatMap { it["points"] }.map { it["originalLabel"].asText() }).containsOnly("Cholesterol", "HbA1c", "Vitamin D")
 
         val cholesterol = series[2]
         // CURRENT only: the superseded 188 is gone, the corrected 190 is the point.
@@ -1203,7 +1208,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(cholesterol["points"][0]["documentId"].asText()).isEqualTo(january[0]["documentId"].asText())
         assertThat(cholesterol["points"][1]["documentId"].asText()).isEqualTo(july[0]["documentId"].asText())
         assertThat(cholesterol["points"][0].fieldNames().asSequence().toList())
-            .containsExactlyInAnyOrder("eventId", "value", "observedOn", "documentId")
+            .containsExactlyInAnyOrder("eventId", "value", "observedOn", "documentId", "originalLabel")
         // 194 days apart: -4, -4/194 = -2.1 %, -4/194×30 = -0.6.
         assertThat(cholesterol["derived"]["lastDifference"]["absolute"].asText()).isEqualTo("-4")
         assertThat(cholesterol["derived"]["lastDifference"]["percent"].asText()).isEqualTo("-2.1")
@@ -1421,7 +1426,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
         val empty = read(get("/api/foundation/health-events/export"), alice)
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v3"))
             .andExpect(jsonPath("$.events.length()").value(0))
             .andExpect(jsonPath("$.documents.length()").value(0))
             .andReturn().response
@@ -1437,7 +1442,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(header().string("Cache-Control", "no-store"))
             .andExpect(header().string("X-Content-Type-Options", "nosniff"))
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v3"))
             .andExpect(jsonPath("$.subjectKind").value("synthetic"))
             .andExpect(jsonPath("$.exportedAt").isNotEmpty)
             .andExpect(jsonPath("$.events.length()").value(3))
@@ -1601,7 +1606,164 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
-    fun exportV2CarriesTheReferenceRangeTextTheCorrectionHistoryAndEveryCompletedDocument() {
+    fun storesTheResultSheetLabelCopiesItAtConfirmationInheritsItOnCorrectionAndGuardsTheUnit() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "original-label-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "Cholesterol", "188", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64)),
+                ExtractedCandidate(2, "혈당", "95", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64)),
+                ExtractedCandidate(3, "UA", "1.2", "g/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.18, 0.25, 0.02), "3".repeat(64)),
+            ),
+        )
+        assertThat(
+            jdbc.queryForList("SELECT label || '|' || original_label || '|' || COALESCE(concept_code, '-') FROM gc_candidate ORDER BY ordinal", String::class.java),
+        ).containsExactly("총콜레스테롤|Cholesterol|total-cholesterol", "혈당|혈당|glucose", "UA|UA|-")
+
+        val candidates = responseJson(
+            read(get("/api/foundation/documents/$documentId/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).toList()
+        confirmEveryCandidate(alice, candidates, "original-label")
+        assertThat(
+            jdbc.queryForList(
+                """
+                SELECT v.original_label FROM gc_health_record_version v
+                JOIN gc_health_record r ON r.record_id = v.record_id
+                JOIN gc_candidate c ON c.candidate_id = r.candidate_id
+                WHERE v.status = 'CURRENT' ORDER BY c.ordinal
+                """.trimIndent(),
+                String::class.java,
+            ),
+        ).containsExactly("Cholesterol", "혈당", "UA")
+
+        val recordId = responseJson(
+            read(get("/api/foundation/records"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).single { it["label"].asText() == "총콜레스테롤" }["recordId"].asText()
+        // The label is never client-writable: the strict Jackson posture rejects the unknown field.
+        mutate(
+            post("/api/foundation/records/$recordId/corrections")
+                .header("Idempotency-Key", "original-label-correction-rejected")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인", "originalLabel" to "LDL"))),
+            alice,
+        ).andExpect(status().isBadRequest)
+        mutate(
+            post("/api/foundation/records/$recordId/corrections")
+                .header("Idempotency-Key", "original-label-correction-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "191", "reason" to "합성 원문 재확인"))),
+            alice,
+        ).andExpect(status().isOk)
+        assertThat(
+            jdbc.queryForList(
+                "SELECT original_label FROM gc_health_record_version WHERE record_id = ?::uuid ORDER BY changed_at",
+                String::class.java,
+                recordId,
+            ),
+        ).containsExactly("Cholesterol", "Cholesterol")
+        val fhir = responseJson(
+            read(get("/api/foundation/health-events/export/fhir"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )["entry"].map { it["resource"] }.associateBy { it["code"]["text"].asText() }
+        assertThat(fhir.keys).containsExactlyInAnyOrder("Cholesterol", "혈당", "UA")
+        assertThat(fhir.getValue("혈당")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("UA")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("UA").has("category")).isFalse()
+        // Audit rows never carry the label.
+        assertThat(
+            jdbc.queryForList(
+                "SELECT event_type || ' ' || resource_type || ' ' || COALESCE(purpose_code, '') || ' ' || outcome FROM gc_audit_event",
+                String::class.java,
+            ),
+        ).noneMatch { it.contains("Cholesterol") || it.contains("혈당") }
+    }
+
+    /**
+     * The FHIR `loincExport`/unit-guard behaviour end to end through the REAL seeded
+     * `gc_medical_concept` table (V11), not a hand-built map: this is the concept data the audit
+     * (docs/status/2026-09-17/loinc-audit.md § Final values) actually produced.
+     */
+    @Test
+    fun exportsFhirCodingFromTheRealSeededConceptTableForEveryAuditedCase() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "loinc-audit-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "CRP", "0.2", "mg/L", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.20, 0.02), "1".repeat(64)),
+                ExtractedCandidate(2, "T-Bil", "0.8", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64)),
+                ExtractedCandidate(3, "FBS", "92", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.18, 0.20, 0.02), "3".repeat(64)),
+                ExtractedCandidate(4, "LDL-C", "110", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.22, 0.20, 0.02), "4".repeat(64)),
+                ExtractedCandidate(5, "e-GFR", "90", "mL/min/1.73m²", "2026-07-28", 1, EvidenceBox(0.08, 0.26, 0.20, 0.02), "5".repeat(64)),
+                ExtractedCandidate(6, "Vitamin D", "42", "ng/mL", "2026-07-28", 1, EvidenceBox(0.08, 0.30, 0.20, 0.02), "6".repeat(64)),
+                ExtractedCandidate(7, "Waist", "82", "cm", "2026-07-28", 1, EvidenceBox(0.08, 0.34, 0.20, 0.02), "7".repeat(64)),
+                ExtractedCandidate(8, "혈당", "95", "mg/dL", "2026-07-28", 1, EvidenceBox(0.08, 0.38, 0.20, 0.02), "8".repeat(64)),
+                ExtractedCandidate(9, "Cholesterol", "4.9", "mmol/L", "2026-07-28", 1, EvidenceBox(0.08, 0.42, 0.20, 0.02), "9".repeat(64)),
+            ),
+        )
+        val candidates = responseJson(
+            read(get("/api/foundation/documents/$documentId/candidates"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        ).toList()
+        confirmEveryCandidate(alice, candidates, "loinc-audit")
+
+        val fhir = responseJson(
+            read(get("/api/foundation/health-events/export/fhir"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
+        )["entry"].map { it["resource"] }.associateBy { it["code"]["text"].asText() }
+        assertThat(fhir.keys).containsExactlyInAnyOrder(
+            "CRP", "T-Bil", "FBS", "LDL-C", "e-GFR", "Vitamin D", "Waist", "혈당", "Cholesterol",
+        )
+
+        // Codes the audit found no more specific than the label: coding present with the exact audited code.
+        assertThat(fhir.getValue("CRP")["code"]["coding"].single()["code"].asText()).isEqualTo("1988-5")
+        assertThat(fhir.getValue("T-Bil")["code"]["coding"].single()["code"].asText()).isEqualTo("1975-2")
+        assertThat(fhir.getValue("FBS")["code"]["coding"].single()["code"].asText()).isEqualTo("1558-6")
+        assertThat(fhir.getValue("LDL-C")["code"]["coding"].single()["code"].asText()).isEqualTo("2089-1")
+
+        // Codes the audit found more specific than the label (method/site/formula), or no concept
+        // code at all, or a value not in the concept's canonical unit: coding absent.
+        assertThat(fhir.getValue("e-GFR")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("Vitamin D")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("Waist")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("혈당")["code"].has("coding")).isFalse()
+        assertThat(fhir.getValue("Cholesterol")["code"].has("coding")).isFalse()
+
+        // category: omitted only for the body-measurement concept, laboratory for every coded/uncoded lab item.
+        assertThat(fhir.getValue("Waist").has("category")).isFalse()
+        assertThat(fhir.getValue("CRP")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("T-Bil")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("FBS")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("LDL-C")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("e-GFR")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("Vitamin D")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("혈당")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+        assertThat(fhir.getValue("Cholesterol")["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
+
+        // code.text is each row's own sheet label (verified above by keying the map on code.text
+        // itself): none of the normalized display labels ("총빌리루빈", "공복혈당" ...) appear instead.
+        assertThat(fhir.keys).doesNotContain("총빌리루빈", "공복혈당", "LDL 콜레스테롤", "eGFR", "비타민 D", "허리둘레", "총콜레스테롤")
+    }
+
+    @Test
+    fun existingRowsKeepANullResultSheetLabel() {
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT is_nullable FROM information_schema.columns WHERE table_name = 'gc_health_record_version' AND column_name = 'original_label'",
+                String::class.java,
+            ),
+        ).isEqualTo("YES")
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM gc_medical_concept WHERE jsonb_array_length(accepted_units) = 0", Long::class.java),
+        ).isZero()
+    }
+
+    @Test
+    fun exportV3CarriesTheReferenceRangeTextTheCorrectionHistoryAndEveryCompletedDocument() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
 
@@ -1666,11 +1828,12 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val export = responseJson(
             read(get("/api/foundation/health-events/export"), alice)
                 .andExpect(status().isOk)
-                .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+                .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v3"))
                 .andExpect(jsonPath("$.events.length()").value(2))
                 .andExpect(jsonPath("$.documents.length()").value(3))
                 .andReturn().response.contentAsByteArray,
         )
+        assertThat(export["events"].map { it["originalLabel"].asText() }).contains("Cholesterol")
         val event = export["events"].single { it["source"]["documentId"].asText() == rangedDocument.toString() }
         assertThat(event["value"].asText()).isEqualTo("190")
         assertThat(event["originalValue"].asText()).isEqualTo("188")
@@ -1743,13 +1906,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(bundle["meta"]["tag"].single()["code"].asText()).isEqualTo("synthetic")
 
         val observations = bundle["entry"].map { it["resource"] }.associateBy { it["code"]["text"].asText() }
-        assertThat(observations.keys).containsExactlyInAnyOrder("총콜레스테롤", "당화혈색소", "비타민 D")
+        assertThat(observations.keys).containsExactlyInAnyOrder("Cholesterol", "HbA1c", "Vitamin D")
         val eventIds = responseJson(
             read(get("/api/foundation/health-events"), alice).andExpect(status().isOk).andReturn().response.contentAsByteArray,
         ).map { it["eventId"].asText() }
         assertThat(observations.values.map { it["id"].asText() }).containsExactlyInAnyOrderElementsOf(eventIds)
 
-        val cholesterol = observations.getValue("총콜레스테롤")
+        val cholesterol = observations.getValue("Cholesterol")
         assertThat(cholesterol["resourceType"].asText()).isEqualTo("Observation")
         assertThat(cholesterol["status"].asText()).isEqualTo("final")
         assertThat(cholesterol["category"].single()["coding"].single()["code"].asText()).isEqualTo("laboratory")
@@ -1763,11 +1926,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(cholesterol["referenceRange"].single()["text"].asText()).isEqualTo("120-199")
         assertThat(cholesterol["note"].single()["text"].asText()).isEqualTo("본인이 값을 수정함")
 
-        val hba1c = observations.getValue("당화혈색소")
+        val hba1c = observations.getValue("HbA1c")
         assertThat(hba1c["code"]["coding"].single()["code"].asText()).isEqualTo("4548-4")
         assertThat(hba1c["valueQuantity"]["value"].decimalValue()).isEqualByComparingTo("5.2")
         assertThat(hba1c.has("referenceRange")).isFalse()
         assertThat(hba1c.has("note")).isFalse()
+        // vitamin-d's code names D3 specifically: the concept data keeps it out of the export.
+        assertThat(observations.getValue("Vitamin D")["code"].has("coding")).isFalse()
         assertThat(response.contentAsString).doesNotContain("interpretation", "subject", "performer", "\"low\"", "\"high\"", "valueString")
         // Every valueQuantity is a plain JSON number, never exponent notation.
         assertThat(response.contentAsString).doesNotContainPattern("\"value\":[0-9.]*[eE][+-]?[0-9]")
@@ -1780,7 +1945,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         // The JSON export is untouched: same schema, same filename shape, its own audit resource type.
         val jsonExport = read(get("/api/foundation/health-events/export"), alice)
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v2"))
+            .andExpect(jsonPath("$.schemaVersion").value("alm-health-events-export.v3"))
             .andReturn().response
         assertThat(jsonExport.contentType).startsWith("application/json")
         assertThat(jsonExport.getHeader(HttpHeaders.CONTENT_DISPOSITION))

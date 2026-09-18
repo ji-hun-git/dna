@@ -3,6 +3,7 @@ package kr.co.genomecompanion.benchmark
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kr.co.genomecompanion.documentboundary.MedicalConceptCatalogue
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -32,6 +33,15 @@ data class GoldMeasurement(
     val semanticRole: String = "measurement",
     /** The rendered 참고치 text the parser must carry verbatim; null when the variant prints none. Never a clinical range. */
     val expectedReferenceRangeText: String? = null,
+    /**
+     * The concept core's rule (alias match against the printed label + accepted unit) must give this row;
+     * absent when [expectedNoConcept]. Computed by calling [MedicalConceptCatalogue.resolve] on the row's
+     * actual rendered label and unit — a broad label like bare "Glucose" can resolve differently from its
+     * Korean sibling "혈당" even though both come from the same [RowSpec], so this is never typed by hand.
+     */
+    val expectedConceptCode: String? = null,
+    /** True when the rule must give no concept (unmatched alias, or the unit is not one the labelled concept accepts). Never false. */
+    val expectedNoConcept: Boolean? = null,
 )
 
 
@@ -53,7 +63,7 @@ data class Corpus(
     val documents: List<GoldDocument>,
     val corpusId: String,
     val schemaVersion: String = "medical-document-corpus.v1",
-    val description: String = "합성 한국 검진 결과지 4 레이아웃 × 6 변형 + 생년월일 선행 1종 (25종, 1종은 텍스트 레이어 없는 스캔, 1종은 무날짜). PDFBox 텍스트 레이어 파서 채점용. 실제 데이터 없음.",
+    val description: String = "합성 한국 검진 결과지 5 레이아웃 × 6 변형 + 생년월일 선행 1종 (31종, 1종은 텍스트 레이어 없는 스캔, 1종은 무날짜; extended-panel은 넓은 라벨·신규 항목·단위 불일치 행). PDFBox 텍스트 레이어 파서 채점용. 실제 데이터 없음.",
     val syntheticOnly: Boolean = true,
 )
 
@@ -87,6 +97,7 @@ object CorpusWriter {
             emptyList()
         } else {
             generated.rows.mapIndexed { index, row ->
+                val resolved = MedicalConceptCatalogue.resolve(row.label, row.unit)
                 GoldMeasurement(
                     fieldId = row.spec.conceptCode,
                     label = row.label,
@@ -100,6 +111,8 @@ object CorpusWriter {
                         sourceTextSha256 = "sha256:" + BenchmarkJson.sha256(row.text),
                     ),
                     expectedReferenceRangeText = row.referenceRangeText,
+                    expectedConceptCode = resolved?.conceptCode,
+                    expectedNoConcept = if (resolved == null) true else null,
                 )
             }
         }

@@ -200,6 +200,8 @@
 .historySource { display: grid; gap: 0.35rem; }
 .historySource strong { font-size: 0.9rem; }
 .historySource span { color: #737c89; font-size: 0.75rem; }
+.historySource { min-width: 0; }
+.historyOriginal { min-width: 0; overflow-wrap: anywhere; }
 .history details { min-width: 0; }
 .history summary { color: #2f5fdd; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
 .history details dl { margin: 1rem 0 0; }

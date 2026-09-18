@@ -1,6 +1,7 @@
 package kr.co.genomecompanion.foundation
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import kr.co.genomecompanion.documentboundary.MedicalConcept
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
@@ -10,7 +11,11 @@ import java.util.UUID
 
 class FhirObservationMapperTest {
     private val now = Instant.parse("2026-09-17T01:02:03.456789Z")
-    private val loinc = mapOf("total-cholesterol" to "2093-3")
+
+    private fun concept(code: String, loinc: String?, export: Boolean, unit: String = "mg/dL") =
+        MedicalConcept(code, code, loinc, unit, listOf(code.uppercase()), listOf(unit), export)
+
+    private val loinc = mapOf("total-cholesterol" to concept("total-cholesterol", "2093-3", true))
 
     private fun row(
         label: String = "총콜레스테롤",
@@ -22,6 +27,7 @@ class FhirObservationMapperTest {
         referenceRangeText: String? = null,
         status: String = "CURRENT",
         originalObservedOn: LocalDate? = null,
+        originalLabel: String? = null,
     ) = FoundationRecordRow(
         recordId = UUID.randomUUID(),
         recordVersionId = UUID.randomUUID(),
@@ -43,6 +49,7 @@ class FhirObservationMapperTest {
         documentSha256 = "a".repeat(64),
         conceptCode = conceptCode,
         referenceRangeText = referenceRangeText,
+        originalLabel = originalLabel,
     )
 
     @Test
@@ -57,7 +64,7 @@ class FhirObservationMapperTest {
 
     @Test
     fun mapsACorrectedCodedNumericRecordWithItsRangeTextVerbatim() {
-        val record = row(originalValue = "188", referenceRangeText = "120-199")
+        val record = row(originalValue = "188", referenceRangeText = "120-199", originalLabel = "Cholesterol")
         val observation = FhirObservationMapper.bundle(listOf(record), loinc, now).entry!!.single().resource
 
         assertThat(observation.resourceType).isEqualTo("Observation")
@@ -66,7 +73,7 @@ class FhirObservationMapperTest {
         assertThat(observation.category).containsExactly(
             FhirCodeableConcept(listOf(FhirCoding("http://terminology.hl7.org/CodeSystem/observation-category", "laboratory")), null),
         )
-        assertThat(observation.code).isEqualTo(FhirCodeableConcept(listOf(FhirCoding("http://loinc.org", "2093-3")), "총콜레스테롤"))
+        assertThat(observation.code).isEqualTo(FhirCodeableConcept(listOf(FhirCoding("http://loinc.org", "2093-3")), "Cholesterol"))
         assertThat(observation.effectiveDateTime).isEqualTo("2026-07-28")
         assertThat(observation.valueQuantity).isEqualTo(FhirQuantity(BigDecimal("190"), "mg/dL"))
         assertThat(observation.valueString).isNull()
@@ -100,27 +107,48 @@ class FhirObservationMapperTest {
     }
 
     @Test
-    fun omitsLoincCodingForAliasOverspecifiedConceptsButKeepsTextAndKeepsCodingElsewhere() {
-        val overspecified = mapOf(
-            "fasting-glucose" to "1558-6",
-            "crp" to "1988-5",
-            "total-bilirubin" to "1975-2",
-            "egfr" to "62238-1",
-            "total-cholesterol" to "2093-3",
+    fun emitsLoincCodingOnlyWhenTheConceptDataAllowsItAndTheUnitIsCanonicalAndKeepsTheResultSheetLabelAsText() {
+        // ldl-cholesterol, fasting-glucose and total-cholesterol are loincExport=true per the audit
+        // (docs/status/2026-09-17/loinc-audit.md § Final values); egfr is the real false-with-a-code
+        // case (62238-1 names a specific formula) rather than a fabricated value for ldl-cholesterol.
+        val concepts = mapOf(
+            "total-cholesterol" to concept("total-cholesterol", "2093-3", true),
+            "ldl-cholesterol" to concept("ldl-cholesterol", "2089-1", true),
+            "glucose" to concept("glucose", null, false),
+            "fasting-glucose" to concept("fasting-glucose", "1558-6", true),
+            "egfr" to concept("egfr", "62238-1", false, unit = "mL/min/1.73m²"),
         )
-        val glucose = row(label = "혈당", value = "95", unit = "mg/dL", conceptCode = "fasting-glucose")
-        val crp = row(label = "hs-CRP", value = "0.1", unit = "mg/L", conceptCode = "crp")
-        val bilirubin = row(label = "Bilirubin", value = "0.8", unit = "mg/dL", conceptCode = "total-bilirubin")
-        val gfr = row(label = "GFR", value = "90", unit = "mL/min/1.73m²", conceptCode = "egfr")
-        val cholesterol = row(label = "총콜레스테롤", value = "190")
-        val bundle = FhirObservationMapper.bundle(listOf(glucose, crp, bilirubin, gfr, cholesterol), overspecified, now)
-        val byLabel = bundle.entry!!.map { it.resource }.associateBy { it.code.text }
+        val ldl = row(label = "LDL 콜레스테롤", value = "110", conceptCode = "ldl-cholesterol", originalLabel = "LDL-C")
+        val glucose = row(label = "혈당", value = "95", conceptCode = "glucose", originalLabel = "혈당")
+        val fasting = row(label = "공복혈당", value = "92", conceptCode = "fasting-glucose", originalLabel = "FBS")
+        val molar = row(label = "총콜레스테롤", value = "4.9", unit = "mmol/L", originalLabel = "TC")
+        val gfr = row(label = "GFR", value = "90", unit = "mL/min/1.73m²", conceptCode = "egfr", originalLabel = "eGFR")
+        val old = row(label = "총콜레스테롤", value = "190")
+        val byText = FhirObservationMapper.bundle(listOf(ldl, glucose, fasting, molar, gfr, old), concepts, now)
+            .entry!!.map { it.resource }.associateBy { it.code.text }
 
-        assertThat(byLabel.getValue("혈당").code.coding).isNull()
-        assertThat(byLabel.getValue("hs-CRP").code.coding).isNull()
-        assertThat(byLabel.getValue("Bilirubin").code.coding).isNull()
-        assertThat(byLabel.getValue("GFR").code.coding).isNull()
-        assertThat(byLabel.getValue("총콜레스테롤").code.coding).containsExactly(FhirCoding("http://loinc.org", "2093-3"))
+        assertThat(byText.getValue("LDL-C").code.coding).containsExactly(FhirCoding("http://loinc.org", "2089-1"))
+        assertThat(byText.getValue("혈당").code.coding).isNull()
+        assertThat(byText.getValue("FBS").code.coding).containsExactly(FhirCoding("http://loinc.org", "1558-6"))
+        assertThat(byText.getValue("TC").code.coding).isNull()
+        assertThat(byText.getValue("eGFR").code.coding).isNull()
+        // A row stored before V11 has no result-sheet label (original_label is NULL): the display label
+        // is the text, and no coding is emitted even though the concept still allows LOINC export — the
+        // sheet's own wording was never confirmed, so a coding cannot be tied to it (C1).
+        assertThat(byText.getValue("총콜레스테롤").code.coding).isNull()
+    }
+
+    @Test
+    fun omitsCodingForAPreV11RowEvenWhenItsConceptCodeWasNarrowedByALaterAlias() {
+        // Before V11, "공복혈당" (fasting glucose) could resolve via the old broad "혈당" alias to
+        // fasting-glucose. After V11 narrows the aliases, that stored concept code is unchanged, but
+        // the row has no original_label — so it must not regain a coding it never had.
+        val concepts = mapOf("fasting-glucose" to concept("fasting-glucose", "1558-6", true))
+        val record = row(label = "공복혈당", conceptCode = "fasting-glucose", originalLabel = null)
+        val observation = FhirObservationMapper.bundle(listOf(record), concepts, now).entry!!.single().resource
+
+        assertThat(observation.code.coding).isNull()
+        assertThat(observation.code.text).isEqualTo("공복혈당")
     }
 
     @Test

@@ -19,6 +19,16 @@ class MedicalUnitSpellingTest {
         assertThat(MedicalUnitSpelling.canonical("/uL")).isEqualTo("/µL")
         assertThat(MedicalUnitSpelling.canonical("bpm")).isEqualTo("회/분")
         assertThat(MedicalUnitSpelling.canonical(" U/L ")).isEqualTo("U/L")
+        assertThat(MedicalUnitSpelling.canonical("fl")).isEqualTo("fL")
+        assertThat(MedicalUnitSpelling.canonical("pg")).isEqualTo("pg")
+        assertThat(MedicalUnitSpelling.canonical("mm/h")).isEqualTo("mm/hr")
+        assertThat(MedicalUnitSpelling.canonical("ug/dL")).isEqualTo("µg/dL")
+        assertThat(MedicalUnitSpelling.canonical("μg/dL")).isEqualTo("µg/dL")
+        assertThat(MedicalUnitSpelling.canonical("uU/mL")).isEqualTo("µU/mL")
+        assertThat(MedicalUnitSpelling.canonical("u/ml")).isEqualTo("U/mL")
+        assertThat(MedicalUnitSpelling.canonical("iu/ml")).isEqualTo("IU/mL")
+        assertThat(MedicalUnitSpelling.canonical("umol/L")).isEqualTo("µmol/L")
+        assertThat(MedicalUnitSpelling.canonical("g/l")).isEqualTo("g/L")
     }
 
     @Test

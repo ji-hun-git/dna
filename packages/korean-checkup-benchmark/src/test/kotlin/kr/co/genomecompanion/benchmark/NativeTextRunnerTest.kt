@@ -21,7 +21,7 @@ class NativeTextRunnerTest {
 
         val runs = NativeTextRunner.run(out, OffsetDateTime.of(2026, 9, 16, 9, 0, 0, 0, ZoneOffset.UTC))
 
-        assertThat(runs).hasSize(25)
+        assertThat(runs).hasSize(31)
         val run = runs.first { it.documentId == "synthetic-nhis-table-v0" }
         assertThat(run.schemaVersion).isEqualTo("medical-document-run.v1")
         assertThat(run.pipelineId).isEqualTo("pdfbox-native-text")
@@ -69,5 +69,18 @@ class NativeTextRunnerTest {
 
         val json = BenchmarkJson.mapper.writeValueAsString(run)
         assertThat(json).doesNotContain("referenceRange").doesNotContain("null")
+
+        assertThat(run.candidates.map { it.conceptCode }).containsExactly(
+            "total-cholesterol", "ldl-cholesterol", "hdl-cholesterol", "triglycerides",
+            "fasting-glucose", "hba1c", "hemoglobin", "creatinine",
+        )
+        val extended = runs.first { it.documentId == "synthetic-extended-panel-v0" }
+        val byLabel = extended.candidates.associateBy { it.label }
+        assertThat(byLabel.getValue("혈당").conceptCode).isEqualTo("glucose")
+        assertThat(byLabel.getValue("빌리루빈").conceptCode).isEqualTo("bilirubin")
+        assertThat(byLabel.getValue("요산").fieldId).isEqualTo("uric-acid")
+        assertThat(byLabel.getValue("요산").conceptCode).isNull()
+        assertThat(byLabel.getValue("혈색소").conceptCode).isNull()
+        assertThat(extended.abstentions).isEmpty()
     }
 }

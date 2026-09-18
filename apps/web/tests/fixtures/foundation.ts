@@ -23,6 +23,7 @@ export const syntheticCandidates: FoundationCandidate[] = [
     createdAt: "2026-07-28T09:00:00Z",
     ordinal: 1,
     totalCandidates: 3,
+    originalLabel: "Cholesterol",
   },
   {
     candidateId: "3f5b0f0a-2d31-4a5f-9d54-2f4bd5f1b002",
@@ -42,6 +43,7 @@ export const syntheticCandidates: FoundationCandidate[] = [
     createdAt: "2026-07-28T09:00:01Z",
     ordinal: 2,
     totalCandidates: 3,
+    originalLabel: "HbA1c",
   },
   {
     candidateId: "3f5b0f0a-2d31-4a5f-9d54-2f4bd5f1b003",
@@ -61,6 +63,7 @@ export const syntheticCandidates: FoundationCandidate[] = [
     createdAt: "2026-07-28T09:00:02Z",
     ordinal: 3,
     totalCandidates: 3,
+    originalLabel: "Vitamin D",
   },
 ];
 
@@ -83,6 +86,7 @@ export function syntheticRecord(overrides: Partial<FoundationRecord> = {}): Foun
     sourceTextSha256: "b".repeat(64),
     documentSha256,
     conceptCode: "total-cholesterol",
+    originalLabel: "Cholesterol",
     ...overrides,
   };
 }
@@ -111,6 +115,7 @@ export function syntheticHealthEvent(overrides: Partial<HealthEvent> = {}): Heal
       sourceTextSha256: "b".repeat(64),
       previewAvailable: true,
     },
+    originalLabel: "Cholesterol",
     ...overrides,
   };
 }
@@ -130,8 +135,8 @@ export function syntheticSeries(): SeriesResponse {
         concept: "당화혈색소",
         unit: "%",
         points: [
-          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d61", value: "5.4", observedOn: "2026-01-15", documentId: januaryDocumentId },
-          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d62", value: "5.2", observedOn: "2026-07-27", documentId },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d61", value: "5.4", observedOn: "2026-01-15", documentId: januaryDocumentId, originalLabel: "HbA1c" },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d62", value: "5.2", observedOn: "2026-07-27", documentId, originalLabel: "HbA1c" },
         ],
         derived: { lastDifference: { absolute: "-0.2" }, per30Days: "-0.03" },
       },
@@ -140,7 +145,7 @@ export function syntheticSeries(): SeriesResponse {
         concept: "비타민 D",
         unit: "ng/mL",
         points: [
-          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d63", value: "45", observedOn: "2026-01-15", documentId: januaryDocumentId },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d63", value: "45", observedOn: "2026-01-15", documentId: januaryDocumentId, originalLabel: "Vitamin D" },
         ],
         derived: {},
       },
@@ -149,8 +154,8 @@ export function syntheticSeries(): SeriesResponse {
         concept: "총콜레스테롤",
         unit: "mg/dL",
         points: [
-          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d64", value: "194", observedOn: "2026-01-15", documentId: januaryDocumentId },
-          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d65", value: "190", observedOn: "2026-07-28", documentId },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d64", value: "194", observedOn: "2026-01-15", documentId: januaryDocumentId, originalLabel: "Cholesterol" },
+          { eventId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d65", value: "190", observedOn: "2026-07-28", documentId, originalLabel: "Cholesterol" },
         ],
         derived: { lastDifference: { absolute: "-4", percent: "-2.1" }, per30Days: "-0.6" },
       },

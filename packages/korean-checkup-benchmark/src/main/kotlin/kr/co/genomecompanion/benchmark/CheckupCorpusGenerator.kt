@@ -26,6 +26,7 @@ enum class Layout(val id: String, val documentType: String) {
     HOSPITAL_TWO_COLUMN("hospital-two-column", "public-health-lab-report"),
     CENTER_SUMMARY("center-summary", "health-screening-lab-report"),
     TWO_PAGE("two-page", "health-screening-lab-report"),
+    EXTENDED_PANEL("extended-panel", "health-screening-lab-report"),
 }
 
 
@@ -61,6 +62,15 @@ data class RowSpec(
     val decimals: Int,
     val countLike: Boolean = false,
     val koreanLabelOverride: String? = null,
+    /**
+     * Marks a row deliberately printed with a unit the labelled concept does not accept, so gold is
+     * expected to carry no concept for it regardless of language (`conceptCode` is still the row's field
+     * id). This is documentation of intent, not the source of truth: gold is always computed by calling
+     * [kr.co.genomecompanion.documentboundary.MedicalConceptCatalogue.resolve] on the row's actual printed
+     * label and unit, because a broad label (bare "Glucose") can resolve differently from its Korean
+     * sibling ("혈당") even though both share this same spec.
+     */
+    val expectNoConcept: Boolean = false,
 ) {
     val koreanLabel: String
         get() = koreanLabelOverride ?: checkNotNull(MedicalConceptCatalogue.byCode(conceptCode)) { conceptCode }.displayKo
@@ -153,6 +163,19 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
                     Canvas(document, font, 2).use { canvas ->
                         tableHeader(canvas, variant)
                         TWO_PAGE_ROWS.forEach { rows += tableRow(canvas, it, variant, random) }
+                    }
+                }
+                Layout.EXTENDED_PANEL -> {
+                    Canvas(document, font, 1).use { canvas ->
+                        canvas.line(listOf(56f to "종합검진 추가 항목 (합성 예시)"), 14f)
+                        if (!omitDate) canvas.line(listOf(56f to dateLine(isoDate, variant.dateStyle)))
+                        canvas.skip()
+                        tableHeader(canvas, variant)
+                        BROAD_LABEL_ROWS.forEach { rows += tableRow(canvas, it, variant, random) }
+                    }
+                    Canvas(document, font, 2).use { canvas ->
+                        tableHeader(canvas, variant)
+                        EXTENDED_ROWS.forEach { rows += tableRow(canvas, it, variant, random) }
                     }
                 }
             }
@@ -387,6 +410,46 @@ class CheckupCorpusGenerator(private val fontFile: Path) {
             RowSpec("potassium", "Potassium", "mmol/L", "mmol/l", 3.7, 4.8, 1),
             RowSpec("calcium", "Calcium", "mg/dL", "mg/dl", 8.8, 10.0, 1),
             RowSpec("total-protein", "Total Protein", "g/dL", "g/dl", 6.5, 8.0, 1),
+        )
+
+        /** Labels that do not say which specific test they are (→ generic concept), their specific siblings, and two unit mismatches (→ no concept). */
+        val BROAD_LABEL_ROWS = listOf(
+            RowSpec("glucose", "Glucose", "mg/dL", "mg/dl", 80.0, 140.0, 0),
+            RowSpec("postprandial-glucose", "PP2", "mg/dL", "mg/dl", 90.0, 139.0, 0),
+            RowSpec("hs-crp", "hs-CRP", "mg/L", "mg/l", 0.1, 0.9, 2),
+            RowSpec("bilirubin", "Bilirubin", "mg/dL", "mg/dl", 0.3, 1.1, 1),
+            RowSpec("direct-bilirubin", "D-Bil", "mg/dL", "mg/dl", 0.1, 0.3, 1),
+            RowSpec("gfr", "GFR", "mL/min/1.73m2", "ml/min/1.73m2", 75.0, 110.0, 0),
+            RowSpec("uric-acid", "UA", "g/dL", "g/dl", 1.0, 2.0, 1, koreanLabelOverride = "요산", expectNoConcept = true),
+            RowSpec("hemoglobin", "Hb", "mg/dL", "mg/dl", 12.0, 16.0, 1, koreanLabelOverride = "혈색소", expectNoConcept = true),
+        )
+
+        val EXTENDED_ROWS = listOf(
+            RowSpec("hematocrit", "Hematocrit", "%", "%", 36.0, 48.0, 1),
+            RowSpec("mcv", "MCV", "fL", "fl", 82.0, 98.0, 1),
+            RowSpec("mch", "MCH", "pg", "pg", 27.0, 33.0, 1),
+            RowSpec("mchc", "MCHC", "g/dL", "g/dl", 32.0, 36.0, 1),
+            RowSpec("chloride", "Chloride", "mmol/L", "mmol/l", 98.0, 107.0, 0),
+            RowSpec("phosphorus", "Phosphorus", "mg/dL", "mg/dl", 2.5, 4.5, 1),
+            RowSpec("magnesium", "Magnesium", "mg/dL", "mg/dl", 1.8, 2.4, 1),
+            RowSpec("iron", "Iron", "ug/dL", "ug/dl", 60.0, 160.0, 0),
+            RowSpec("tibc", "TIBC", "ug/dL", "ug/dl", 250.0, 400.0, 0),
+            RowSpec("vitamin-b12", "Vitamin B12", "pg/mL", "pg/ml", 300.0, 900.0, 0),
+            RowSpec("folate", "Folate", "ng/mL", "ng/ml", 4.0, 15.0, 1),
+            RowSpec("esr", "ESR", "mm/hr", "mm/hr", 2.0, 15.0, 0),
+            RowSpec("ldh", "LDH", "U/L", "u/l", 140.0, 250.0, 0),
+            RowSpec("amylase", "Amylase", "U/L", "u/l", 30.0, 100.0, 0),
+            RowSpec("ck", "CK", "U/L", "u/l", 50.0, 180.0, 0),
+            RowSpec("free-t3", "FT3", "pg/mL", "pg/ml", 2.3, 4.0, 2),
+            RowSpec("t3", "T3", "ng/dL", "ng/dl", 80.0, 180.0, 0),
+            RowSpec("non-hdl-cholesterol", "Non-HDL Cholesterol", "mg/dL", "mg/dl", 90.0, 150.0, 0),
+            RowSpec("insulin", "Insulin", "uU/mL", "uu/ml", 3.0, 15.0, 1),
+            RowSpec("afp", "AFP", "ng/mL", "ng/ml", 1.0, 7.0, 1),
+            RowSpec("cea", "CEA", "ng/mL", "ng/ml", 0.5, 4.0, 1),
+            RowSpec("psa", "PSA", "ng/mL", "ng/ml", 0.3, 3.0, 2),
+            RowSpec("ca19-9", "CA19-9", "U/mL", "u/ml", 5.0, 30.0, 1),
+            RowSpec("ca125", "CA125", "U/mL", "u/ml", 5.0, 30.0, 1),
+            RowSpec("rf", "RF", "IU/mL", "iu/ml", 3.0, 13.0, 1),
         )
     }
 }

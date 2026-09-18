@@ -38,6 +38,17 @@ function reviewProps() {
   };
 }
 
+it("shows the result-sheet label under the normalized name only when they differ", () => {
+  const { rerender } = render(<CandidateReview {...reviewProps()} />);
+  expect(screen.getByRole("heading", { level: 2, name: "총콜레스테롤" })).toBeVisible();
+  expect(screen.getByTestId("original-label")).toHaveTextContent("결과지 표기: Cholesterol");
+  rerender(<CandidateReview {...reviewProps()} candidate={{ ...syntheticCandidates[0], label: "혈당", conceptCode: "glucose", originalLabel: "혈당" }} />);
+  expect(screen.queryByTestId("original-label")).toBeNull();
+  const { originalLabel: _none, ...preV11 } = syntheticCandidates[0];
+  rerender(<CandidateReview {...reviewProps()} candidate={preV11} />);
+  expect(screen.queryByTestId("original-label")).toBeNull();
+});
+
 it("shows the review position of the candidate the server asked about", () => {
   render(<CandidateReview {...reviewProps()} candidate={syntheticCandidates[1]} />);
 

@@ -35,6 +35,8 @@ data class RunCandidate(
     val semanticRole: String = "measurement",
     val confidence: Double = 1.0,
     val referenceRangeText: String? = null,
+    /** Core's rule computed from the Kotlin copy of the dictionary (alias match + accepted unit); the seed-equality test binds the copy to core. */
+    val conceptCode: String? = null,
 )
 
 
@@ -114,6 +116,7 @@ object NativeTextRunner {
             sourceTextSha256 = "sha256:" + candidate.sourceTextSha256,
         ),
         referenceRangeText = candidate.referenceRangeText,
+        conceptCode = MedicalConceptCatalogue.resolve(candidate.label, candidate.unit)?.conceptCode,
     )
 
     private fun toAbstention(abstention: ParsedAbstention, index: Int, used: MutableSet<String>) = RunAbstention(

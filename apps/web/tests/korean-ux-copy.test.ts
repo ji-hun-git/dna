@@ -30,6 +30,7 @@ const userFacingFiles = [
   "components/my-data/HealthEventTable.tsx",
   "components/my-data/history/MeasurementHistory.tsx",
   "components/my-data/history/HistoryGraph.tsx",
+  "lib/format/original-label.ts",
 ] as const;
 
 const forbiddenUserTerms = [
@@ -239,5 +240,14 @@ describe("Korean UX language boundary", () => {
     // colour token, class or data attribute may exist, and the graph never branches on a value.
     expect(graph).not.toMatch(/value\s*[<>]=?|delta|percent/);
     expect(graph).not.toMatch(/hist-series-\d|data-series-colour|seriesColour/i);
+  });
+
+  it("names the result-sheet label without judging it", () => {
+    const helper = source("lib/format/original-label.ts");
+    expect(helper).toContain("결과지 표기: ");
+    expect(helper).toContain("이 기록은 결과지 표기를 보존하기 전에 저장됐어요.");
+    for (const path of ["components/integrated/CandidateReview.tsx", "components/integrated/IntegratedRecords.tsx", "components/my-data/EvidenceDrawer.tsx", "components/my-data/history/MeasurementHistory.tsx"]) {
+      expect(source(path), `${path} does not use the shared helper`).toContain("originalLabelLine(");
+    }
   });
 });

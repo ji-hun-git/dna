@@ -4,6 +4,7 @@ const sha256Schema = z.string().regex(/^sha256:[0-9a-f]{64}$/);
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 /** A printed range body carried verbatim: digits, separators and comparison signs only. Never interpreted. */
 const referenceRangeTextSchema = z.string().regex(/^[0-9.,\s\-~–<>≤≥]{1,40}$/);
+const conceptCodeSchema = z.string().regex(/^[a-z0-9-]{1,64}$/);
 
 export const evidenceBoxSchema = z.strictObject({
   x: z.number().min(0).max(1),
@@ -30,13 +31,18 @@ export const extractedMeasurementSchema = z.strictObject({
   observedAt: dateSchema,
   referenceRange: z.string().min(1).max(80).optional(),
   referenceRangeText: referenceRangeTextSchema.optional(),
+  conceptCode: conceptCodeSchema.optional(),
   confidence: z.number().min(0).max(1),
   evidence: evidenceLocationSchema,
 });
 
 export const expectedMeasurementSchema = extractedMeasurementSchema
-  .omit({ confidence: true, referenceRangeText: true })
-  .extend({ expectedReferenceRangeText: referenceRangeTextSchema.optional() });
+  .omit({ confidence: true, referenceRangeText: true, conceptCode: true })
+  .extend({
+    expectedReferenceRangeText: referenceRangeTextSchema.optional(),
+    expectedConceptCode: conceptCodeSchema.optional(),
+    expectedNoConcept: z.literal(true).optional(),
+  });
 
 export const extractionAbstentionSchema = z.strictObject({
   fieldId: z.string().regex(/^[a-z0-9-]+$/),

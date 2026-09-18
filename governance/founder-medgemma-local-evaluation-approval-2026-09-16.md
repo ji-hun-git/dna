@@ -53,3 +53,5 @@ Recorded from the founder's answer in the 2026-09-16 planning session (Claude QA
 - GPU / driver: NVIDIA GeForce RTX 3070, driver `610.74`, `8192 MiB`; `ollama ps` PROCESSOR `100% GPU` (CONTEXT column reported `8192`).
 - Observed: unreadable documents `7` (done_reason `length=7`), field F1 `61.3%`, hallucinated measurements `14 (10.5%)`. Observation only; no cause is claimed.
 - Full report: `docs/status/2026-09-17/medgemma-local-experiment.md` §Run 3.
+
+Note (Wave 5, 2026-09-17): Runs 1–3 used the previous corpus `synthetic-ko-checkup-r2-e6befc286ae6ce1d` (25 documents); the current generator produces `synthetic-ko-checkup-r2-50ed23041bb4af1d` (31 documents, `extended-panel` added) and MedGemma has not been re-run on it.

@@ -19,8 +19,8 @@ class PageRendererTest {
 
         val pages = PageRenderer.render(corpus, out)
 
-        // 25 documents; the six two-page documents contribute a second page each.
-        assertThat(pages).hasSize(31)
+        // 31 documents; the twelve two-page documents (two-page × 6, extended-panel × 6) each contribute a second page.
+        assertThat(pages).hasSize(43)
         assertThat(pages.map { it.fileName.toString() }).contains("synthetic-nhis-table-v0-p1.png", "synthetic-two-page-v0-p2.png", "synthetic-hospital-two-column-v6-p1.png")
         assertThat(pages.map { it.fileName.toString() }).doesNotContain("synthetic-nhis-table-v0-p2.png")
         val image = ImageIO.read(out.resolve("synthetic-two-page-v0-p2.png").toFile())

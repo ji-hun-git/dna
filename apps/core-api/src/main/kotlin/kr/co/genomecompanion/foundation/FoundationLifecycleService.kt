@@ -3,6 +3,7 @@ package kr.co.genomecompanion.foundation
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonUnwrapped
 import kr.co.genomecompanion.documentboundary.BoundedUploadCapability
+import kr.co.genomecompanion.documentboundary.MedicalConcept
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
@@ -85,6 +86,7 @@ data class CandidateReceipt(
     val sourceType: String = "DOCUMENT_TEXT_LAYER",
     val extractionMethod: String = "native-text",
     val createdAt: Instant,
+    val originalLabel: String? = null,
 )
 
 
@@ -108,6 +110,7 @@ data class RecordReceipt(
     val sourceTextSha256: String,
     val documentSha256: String,
     val conceptCode: String?,
+    val originalLabel: String? = null,
 )
 
 
@@ -137,9 +140,12 @@ data class ExportedHealthEvent(
     val referenceRangeText: String?,
 )
 
-/** The person's own events as one file. Same read-model as GET /health-events plus the verbatim range text. */
+/**
+ * The person's own events as one file. Same read-model as GET /health-events plus the verbatim range text.
+ * v3 adds `originalLabel`.
+ */
 data class HealthEventExport(
-    val schemaVersion: String = "alm-health-events-export.v2",
+    val schemaVersion: String = "alm-health-events-export.v3",
     val exportedAt: Instant,
     val subjectKind: String = "synthetic",
     val events: List<ExportedHealthEvent>,
@@ -172,9 +178,9 @@ class FoundationLifecycleService(
     private val seoul: ZoneId = ZoneId.of("Asia/Seoul")
     private val earliestObservedOn: LocalDate = LocalDate.of(1900, 1, 1)
 
-    /** Informational LOINC codes from the seed-only concept table, read once per process. */
-    private val loincByConceptCode: Map<String, String> by lazy {
-        conceptSource.concepts().mapNotNull { concept -> concept.loincCode?.let { concept.conceptCode to it } }.toMap()
+    /** The seed-only concept table, read once per process: LOINC code, export flag and canonical unit. */
+    private val conceptByCode: Map<String, MedicalConcept> by lazy {
+        conceptSource.concepts().associateBy { it.conceptCode }
     }
 
     @Transactional
@@ -657,7 +663,7 @@ class FoundationLifecycleService(
     @Transactional
     fun exportHealthEventsAsFhir(principal: FoundationPrincipal): FhirExportEnvelope {
         val now = Instant.now(clock)
-        val bundle = FhirObservationMapper.bundle(repository.listRecords(principal.subjectId), loincByConceptCode, now)
+        val bundle = FhirObservationMapper.bundle(repository.listRecords(principal.subjectId), conceptByCode, now)
         // Same event as the JSON export; the format is a value-free resource-type code. No count, value or date.
         audit(principal, "HEALTH_EVENTS_EXPORTED", "EXPORT_FHIR", null, "SUCCESS")
         val filename = "alm-health-events-${LocalDate.ofInstant(now, seoul).format(DateTimeFormatter.BASIC_ISO_DATE)}.fhir.json"
@@ -856,6 +862,7 @@ class FoundationLifecycleService(
             conceptCode = candidate.conceptCode,
             evidenceBox = candidate.evidenceBox,
             createdAt = candidate.createdAt,
+            originalLabel = candidate.originalLabel,
         )
 
     private fun recordReceipt(record: FoundationRecordRow): RecordReceipt =
@@ -879,6 +886,7 @@ class FoundationLifecycleService(
             sourceTextSha256 = record.sourceTextSha256,
             documentSha256 = record.documentSha256,
             conceptCode = record.conceptCode,
+            originalLabel = record.originalLabel,
         )
 
     private fun subjectHash(subjectId: String): String =
