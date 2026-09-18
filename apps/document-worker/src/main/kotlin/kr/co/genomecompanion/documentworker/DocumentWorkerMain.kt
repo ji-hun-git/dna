@@ -528,7 +528,7 @@ fun main(args: Array<String>) {
         loopHeartbeat = heartbeat::get,
         clock = Clock.systemUTC(),
     )
-    configuration.healthPort?.let { startLoopbackHealthServer(it, health::check) }
+    val healthServer = configuration.healthPort?.let { startLoopbackHealthServer(it, health::check) }
     if (args.contains("--once")) {
         worker.runOnce()
         return
@@ -581,7 +581,8 @@ fun main(args: Array<String>) {
     }.also {
         it.name = "document-worker-loop"
         // Without this an OutOfMemoryError would be printed and main would still exit 0: a container that
-        // has quietly stopped taking work instead of restarting. Rethrowing makes the exit non-zero.
+        // has quietly stopped taking work instead of restarting. [haltOnFatalLoopError] makes the exit
+        // non-zero, and makes it actually happen.
         it.setUncaughtExceptionHandler { _, throwable -> fatal.set(throwable) }
         it.start()
     }
@@ -598,7 +599,34 @@ fun main(args: Array<String>) {
         },
     )
     loop.join()
-    fatal.get()?.let { throw it }
+    fatal.get()?.let { haltOnFatalLoopError(it, healthServer) }
+}
+
+
+/**
+ * End the process after the loop thread has died of an `Error`, and make sure it actually ends.
+ *
+ * Rethrowing out of `main` is not enough. The JDK `HttpServer` behind /healthz runs a non-daemon
+ * `HTTP-Dispatcher` thread -- it inherits daemon status from whichever thread created it, which is
+ * `main` -- so once `main` unwinds the JVM still has a live non-daemon thread and never exits. The
+ * container then sits there forever, answering `503 loop-stalled` and taking no work, which is
+ * exactly the state the fatal path exists to escape. `halt` skips shutdown hooks deliberately: the
+ * loop thread is already dead, so the hook's `join` has nothing to wait for, and after an
+ * OutOfMemoryError we do not want to run more Kotlin than we must.
+ *
+ * The stack trace goes to stderr in full. A `VirtualMachineError`'s trace is JDK and worker frames --
+ * no document bytes, no file name, no job content -- so it is the one place the worker prints more
+ * than a [WorkerLog] code, and an operator needs it to tell an OOM from a `StackOverflowError`.
+ */
+internal fun haltOnFatalLoopError(
+    fatal: Throwable,
+    server: HttpServer?,
+    stderr: java.io.PrintStream = System.err,
+    exit: (Int) -> Unit = { Runtime.getRuntime().halt(it) },
+) {
+    runCatching { fatal.printStackTrace(stderr); stderr.flush() }
+    runCatching { server?.stop(0) }
+    exit(1)
 }
 
 
@@ -606,6 +634,13 @@ private fun configuredObjectMapper(): ObjectMapper = jacksonObjectMapper()
     .registerModule(JavaTimeModule())
 
 
+/**
+ * @param port the loopback port to bind, or `0` to let the OS choose a free one -- the caller reads the
+ * actual port back from the returned server's `address.port`. Production always passes
+ * `GC_WORKER_HEALTH_PORT`, which `WorkerConfiguration` still requires to be an explicit 1024..65535;
+ * `0` exists so a test does not have to reserve a port with `ServerSocket(0)` and then rebind it, a
+ * window in which CI can hand the port to something else.
+ */
 internal fun startLoopbackHealthServer(port: Int, check: () -> HealthReport): HttpServer {
     // Loopback only: this is a supervisor's readiness probe, not a service. The image-smoke container runs
     // in the host network namespace, so the probe reaches it there without exposing it to anything else.
@@ -623,8 +658,7 @@ internal fun startLoopbackHealthServer(port: Int, check: () -> HealthReport): Ht
         val report = try {
             check()
         } catch (exception: Exception) {
-            val code = exception.javaClass.simpleName.lowercase().filter { it.isLetterOrDigit() }.take(80)
-            WorkerLog.emit("health_check_error", null, if (code.length < 3) "unknown_error" else code)
+            WorkerLog.emit("health_check_error", null, healthCheckErrorCode(exception))
             HealthReport(false, "scan-unavailable")
         }
         val body = report.code.toByteArray(StandardCharsets.UTF_8)
@@ -635,6 +669,22 @@ internal fun startLoopbackHealthServer(port: Int, check: () -> HealthReport): Ht
     }
     server.start()
     return server
+}
+
+
+/**
+ * `<phase>_<exception class>`, e.g. `signatures_nosuchfileexception`.
+ *
+ * The wire code set stays closed (`scan-unavailable` for anything that throws) because Task 19's
+ * image-smoke matches on it, so this log line is the only thing that tells an operator a raising
+ * heartbeat clock from a missing signature file. Class name only, never the message: a
+ * `NoSuchFileException`'s message is the path it could not find.
+ */
+internal fun healthCheckErrorCode(exception: Exception): String {
+    val phase = (exception as? HealthCheckFailure)?.phase ?: "unknown"
+    val cause = (exception as? HealthCheckFailure)?.cause ?: exception
+    val name = cause.javaClass.simpleName.lowercase().filter { it.isLetterOrDigit() }
+    return "${phase}_${if (name.length < 3) "unknown_error" else name}".take(80)
 }
 
 
