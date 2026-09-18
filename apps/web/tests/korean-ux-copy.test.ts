@@ -184,6 +184,10 @@ describe("Korean UX language boundary", () => {
     expect(source("components/integrated/RecordComparison.tsx")).toContain(
       "두 날짜 이상 확인한 항목이 아직 없어요.",
     );
+    // Neutral "이번/이전" wording, never an arrow between the two values.
+    expect(source("components/integrated/RecordComparison.tsx")).not.toMatch(/[↑↓▲▼→]/);
+    expect(source("components/integrated/RecordComparison.tsx")).toContain("이번 ");
+    expect(source("components/integrated/RecordComparison.tsx")).toContain("이전 ");
   });
 
   it("keeps the server status word out of visible copy unless it is labelled as a code", () => {
