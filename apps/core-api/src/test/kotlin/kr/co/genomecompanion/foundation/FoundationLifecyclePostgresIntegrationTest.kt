@@ -121,9 +121,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isForbidden)
         mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, "https://attacker.invalid"))
             .andExpect(status().isForbidden)
-        val first = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+        val first = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
             .andExpect(status().isCreated).andReturn().response
-        val second = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+        val second = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
             .andExpect(status().isCreated).andReturn().response
         val firstBody = responseJson(first.contentAsByteArray)
         assertThat(firstBody["subjectId"].asText()).startsWith("synthetic-demo-")
@@ -143,10 +143,10 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     @Test
     fun demoBootstrapHasDurableGlobalProvisioningBudget() {
         repeat(20) {
-            mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+            mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
                 .andExpect(status().isCreated)
         }
-        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
             .andExpect(status().isTooManyRequests)
         assertThat(count("gc_subject")).isEqualTo(20)
     }
@@ -158,7 +158,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             SELECT 'synthetic-demo-retired-' || n, CURRENT_TIMESTAMP - INTERVAL '1 day', NULL
             FROM generate_series(1, 1000) AS n
         """.trimIndent())
-        val response = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+        val response = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("demo_capacity_exhausted"))
             .andReturn().response
@@ -166,7 +166,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(count("gc_subject")).isEqualTo(1000)
 
         jdbc.update("UPDATE gc_subject SET deleted_at = CURRENT_TIMESTAMP WHERE subject_id = 'synthetic-demo-retired-1'")
-        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
             .andExpect(status().isCreated)
     }
 
@@ -177,7 +177,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         // with bob's five attempts below would lock bob's IP one attempt early on an unrelated
         // probe. Isolating the IPs keeps this test about the subject-level lock it names.
         fun attempt(subject: String, credential: String, remoteAddr: String = "127.0.0.1") = mockMvc.perform(
-            post("/api/foundation/session").header(HttpHeaders.ORIGIN, allowedOrigin).contentType(MediaType.APPLICATION_JSON)
+            post("/api/foundation/session").header(HttpHeaders.ORIGIN, allowedOrigin)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(json(mapOf("subjectId" to subject, "credential" to credential)))
                 .with { request -> request.remoteAddr = remoteAddr; request },
         )
@@ -190,6 +192,90 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(header().string("Retry-After", "900"))
         sessionRateLimiter.clear()
         attempt("synthetic-bob", bobCredential).andExpect(status().isCreated)
+    }
+
+    @Test
+    fun forwardedForHeaderDoesNotMoveTheLoginLockOffTheRealSocketAddress() {
+        // application.yml pins server.forward-headers-strategy to none, so no ForwardedHeaderFilter
+        // rewrites remoteAddr: a client cannot rotate X-Forwarded-For to escape its own IP bucket.
+        // Each attempt uses a different unknown subject, so only the shared client-IP bucket can
+        // produce the lock: if X-Forwarded-For still decided the key, six rotating values would
+        // each get their own fresh bucket and nothing would ever lock.
+        fun probe(subject: String, forwardedFor: String) = mockMvc.perform(
+            post("/api/foundation/session")
+                .header(HttpHeaders.ORIGIN, allowedOrigin)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
+                .header("X-Forwarded-For", forwardedFor)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    json(
+                        mapOf(
+                            "subjectId" to subject,
+                            "credential" to "wrong-credential-value-with-32-characters",
+                        ),
+                    ),
+                )
+                .with { request -> request.remoteAddr = "198.51.100.7"; request },
+        )
+        repeat(5) { index ->
+            probe("synthetic-forwarded-probe-$index", "203.0.113.${index + 10}")
+                .andExpect(status().isForbidden)
+                .andExpect(jsonPath("$.code").value("local_identity_denied"))
+        }
+        probe("synthetic-forwarded-probe-last", "203.0.113.99")
+            .andExpect(status().isTooManyRequests)
+            .andExpect(jsonPath("$.code").value("login_locked"))
+    }
+
+    @Test
+    fun stateChangesNeedTheRequestedWithHeaderAndLogoutEndsTheSessionWithoutSliding() {
+        val alice = login("synthetic-alice")
+        mockMvc.perform(
+            post("/api/foundation/consents/document-extraction").cookie(alice.cookie)
+                .header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_CSRF_HEADER, alice.csrf),
+        )
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("requested_with_denied"))
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+        mockMvc.perform(
+            post("/api/foundation/consents/document-extraction").cookie(alice.cookie)
+                .header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_CSRF_HEADER, alice.csrf)
+                .header("X-Requested-With", "XMLHttpRequest"),
+        )
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("requested_with_denied"))
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'REQUEST_REQUESTED_WITH_DENIED'",
+                Long::class.java,
+            ),
+        ).isEqualTo(2L)
+        grantConsent(alice)
+        val expiresBefore = jdbc.queryForObject(
+            "SELECT expires_at FROM gc_session WHERE subject_id = 'synthetic-alice'",
+            java.time.OffsetDateTime::class.java,
+        )
+        read(get("/api/foundation/session"), alice).andExpect(status().isOk)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT expires_at FROM gc_session WHERE subject_id = 'synthetic-alice'",
+                java.time.OffsetDateTime::class.java,
+            ),
+        ).isEqualTo(expiresBefore)
+        val logout = mutate(post("/api/foundation/session/logout"), alice)
+            .andExpect(status().isNoContent).andReturn().response
+        assertThat(logout.getCookie(FOUNDATION_SESSION_COOKIE)!!.maxAge).isZero()
+        assertThat(logout.getCookie(FOUNDATION_CSRF_COOKIE)!!.maxAge).isZero()
+        assertThat(logout.getHeaders(HttpHeaders.SET_COOKIE)).allMatch { it.contains("SameSite=Strict") }
+        assertThat(logout.getHeaders(HttpHeaders.SET_COOKIE)).noneMatch { it.contains("Secure") }
+        read(get("/api/foundation/session"), alice)
+            .andExpect(status().isUnauthorized).andExpect(jsonPath("$.code").value("session_invalid"))
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT revoked_at IS NOT NULL FROM gc_session WHERE subject_id = 'synthetic-alice'",
+                Boolean::class.java,
+            ),
+        ).isTrue()
+        mockMvc.perform(get("/actuator/prometheus")).andExpect(status().isNotFound)
+        mockMvc.perform(get("/actuator/health")).andExpect(status().isOk)
     }
 
     @Test
@@ -314,6 +400,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         mockMvc.perform(
             post("/api/foundation/session")
                 .header(HttpHeaders.ORIGIN, allowedOrigin)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     json(
@@ -529,7 +616,8 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             post("/api/foundation/consents/$aliceConsentId/revocation")
                 .cookie(bob.cookie)
                 .header(HttpHeaders.ORIGIN, allowedOrigin)
-                .header(FOUNDATION_CSRF_HEADER, bob.csrf),
+                .header(FOUNDATION_CSRF_HEADER, bob.csrf)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE),
         ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("consent_not_found"))
 
@@ -2704,6 +2792,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val response = mockMvc.perform(
             post("/api/foundation/session")
                 .header(HttpHeaders.ORIGIN, allowedOrigin)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     json(
@@ -2852,7 +2941,8 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             builder
                 .cookie(client.cookie)
                 .header(HttpHeaders.ORIGIN, allowedOrigin)
-                .header(FOUNDATION_CSRF_HEADER, client.csrf),
+                .header(FOUNDATION_CSRF_HEADER, client.csrf)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE),
         )
 
     private fun read(builder: MockHttpServletRequestBuilder, client: TestClient) =

@@ -320,10 +320,15 @@ function browserCsrfToken() {
   return entry ? decodeURIComponent(entry.slice("GC_CSRF=".length)) : null;
 }
 
+const stateChangingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 function mapProblem(code: string, status: number): FoundationErrorCode {
   if (code === "session_required") return "authentication_required";
   if (code === "session_invalid") return "session_expired";
-  if (["local_identity_denied", "origin_denied", "csrf_denied", "foundation_principal_missing"].includes(code)) {
+  if (
+    ["local_identity_denied", "origin_denied", "csrf_denied", "requested_with_denied", "foundation_principal_missing"]
+      .includes(code)
+  ) {
     return "forbidden";
   }
   if (code === "active_consent_required") return "consent_required";
@@ -363,6 +368,11 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       const csrf = readCsrfToken();
       if (!csrf) throw new FoundationClientError("csrf_unavailable", 0);
       headers.set("X-GC-CSRF", csrf);
+    }
+    // A custom header a cross-site page cannot set: the server requires it on every state change,
+    // including the two session-creating POSTs that carry no CSRF token yet.
+    if (stateChangingMethods.has((init.method ?? "GET").toUpperCase())) {
+      headers.set("X-Requested-With", "GC-Foundation");
     }
     let response: Response;
     try {

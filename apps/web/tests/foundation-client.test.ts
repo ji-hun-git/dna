@@ -54,6 +54,8 @@ describe("foundation same-origin client", () => {
       credentials: "include",
       cache: "no-store",
     }));
+    const [, readRequest] = fetcher.mock.calls[0] as unknown as [RequestInfo | URL, RequestInit | undefined];
+    expect(new Headers(readRequest?.headers).get("X-Requested-With")).toBeNull();
   });
 
   it("attaches the synchronizer CSRF value to a fixed same-origin mutation", async () => {
@@ -70,6 +72,7 @@ describe("foundation same-origin client", () => {
     expect(path).toBe("/api/foundation/consents/document-extraction");
     expect(request).toMatchObject({ method: "POST", credentials: "include", cache: "no-store" });
     expect(new Headers(request?.headers).get("X-GC-CSRF")).toBe("csrf-value");
+    expect(new Headers(request?.headers).get("X-Requested-With")).toBe("GC-Foundation");
   });
 
   it("accepts the truthful NOT_GRANTED consent shape when null fields are omitted", async () => {
@@ -374,6 +377,7 @@ describe("foundation same-origin client", () => {
     expect(path).toBe("/api/foundation/consents/RESEARCH_USE");
     expect(new Headers(request.headers).get("Idempotency-Key")).toBe("consent-000000000001");
     expect(new Headers(request.headers).get("X-GC-CSRF")).toBe("csrf-value");
+    expect(new Headers(request.headers).get("X-Requested-With")).toBe("GC-Foundation");
     await expect(client.grantConsent("STUDY-1", "consent-000000000002")).rejects.toMatchObject({ code: "validation_error" });
     expect(fetcher).toHaveBeenCalledTimes(2);
   });

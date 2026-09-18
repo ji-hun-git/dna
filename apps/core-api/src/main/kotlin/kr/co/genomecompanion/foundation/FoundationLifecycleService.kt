@@ -224,6 +224,18 @@ class FoundationLifecycleService(
         return issueSession(subjectId, now)
     }
 
+    /**
+     * Ends exactly the calling session server-side. Expiring the cookies alone would leave a stolen
+     * token usable for the rest of its TTL, so the row is revoked and `findActiveSession` stops
+     * matching it.
+     */
+    @Transactional
+    fun logout(principal: FoundationPrincipal) {
+        if (repository.revokeSession(principal.sessionId, Instant.now(clock))) {
+            audit(principal, "SESSION_ENDED", "SESSION", principal.sessionId, "SUCCESS")
+        }
+    }
+
     @Transactional
     fun bootstrapDemo(): Pair<String, IssuedFoundationSession> {
         if (!properties.demoBootstrapEnabled) throw FoundationForbiddenException("demo_bootstrap_disabled")

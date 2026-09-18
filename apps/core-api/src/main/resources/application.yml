@@ -7,7 +7,9 @@ security:
     client-id: ${OIDC_CLIENT_ID:}
 
 server:
-  forward-headers-strategy: framework
+  # No proxy is trusted by default: X-Forwarded-* must not decide a client IP (and therefore a
+  # rate-limit bucket) outside the hosted profile, which names its trusted proxies explicitly.
+  forward-headers-strategy: none
   error:
     include-message: never
     include-binding-errors: never
@@ -19,7 +21,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,prometheus
+        include: health
   endpoint:
     health:
       probes:

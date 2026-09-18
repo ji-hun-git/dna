@@ -158,6 +158,28 @@ class FoundationLifecycleController(
             )
     }
 
+    @PostMapping("/session/logout")
+    fun logout(request: HttpServletRequest): ResponseEntity<Void> {
+        service.logout(request.foundationPrincipal())
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+            .header(
+                HttpHeaders.SET_COOKIE,
+                expiredCookie(FOUNDATION_SESSION_COOKIE, "/api", httpOnly = true).toString(),
+                expiredCookie(FOUNDATION_CSRF_COOKIE, "/", httpOnly = false).toString(),
+            )
+            .cacheControlNoStore()
+            .build()
+    }
+
+    private fun expiredCookie(name: String, path: String, httpOnly: Boolean): ResponseCookie =
+        ResponseCookie.from(name, "")
+            .httpOnly(httpOnly)
+            .secure(properties.secureCookies)
+            .sameSite("Strict")
+            .path(path)
+            .maxAge(Duration.ZERO)
+            .build()
+
     @GetMapping("/consents/document-extraction")
     fun getDocumentConsent(request: HttpServletRequest): ResponseEntity<ConsentResponse> {
         val consent = service.getDocumentConsent(request.foundationPrincipal())
@@ -417,22 +439,12 @@ class FoundationLifecycleController(
     @DeleteMapping("/profile")
     fun deleteProfile(request: HttpServletRequest): ResponseEntity<DeletionReceipt> {
         val receipt = service.deleteProfile(request.foundationPrincipal())
-        val expiredSession = ResponseCookie.from(FOUNDATION_SESSION_COOKIE, "")
-            .httpOnly(true)
-            .secure(properties.secureCookies)
-            .sameSite("Strict")
-            .path("/api")
-            .maxAge(Duration.ZERO)
-            .build()
-        val expiredCsrf = ResponseCookie.from(FOUNDATION_CSRF_COOKIE, "")
-            .httpOnly(false)
-            .secure(properties.secureCookies)
-            .sameSite("Strict")
-            .path("/")
-            .maxAge(Duration.ZERO)
-            .build()
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, expiredSession.toString(), expiredCsrf.toString())
+            .header(
+                HttpHeaders.SET_COOKIE,
+                expiredCookie(FOUNDATION_SESSION_COOKIE, "/api", httpOnly = true).toString(),
+                expiredCookie(FOUNDATION_CSRF_COOKIE, "/", httpOnly = false).toString(),
+            )
             .cacheControlNoStore()
             .body(receipt)
     }

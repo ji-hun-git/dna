@@ -373,6 +373,14 @@ class FoundationRepository(
             now.atOffset(ZoneOffset.UTC),
         ).firstOrNull()
 
+    /** True exactly once per session: the row was live and this call is the one that ended it. */
+    fun revokeSession(sessionId: UUID, now: Instant): Boolean =
+        jdbc.update(
+            "UPDATE gc_session SET revoked_at = ? WHERE session_id = ? AND revoked_at IS NULL",
+            now.atOffset(ZoneOffset.UTC),
+            sessionId,
+        ) == 1
+
     fun grantConsent(consentId: UUID, subjectId: String, purposeCode: String, policyVersion: String, now: Instant) {
         jdbc.update(
             """
