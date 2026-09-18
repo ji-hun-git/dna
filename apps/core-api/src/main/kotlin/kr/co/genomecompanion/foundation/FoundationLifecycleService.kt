@@ -929,7 +929,7 @@ class FoundationLifecycleService(
             deletionId = deletionId,
             status = "COMPLETED",
             auditEventTypes = repository.listAuditEventTypes(subjectHash),
-            rawHealthValuesPresentInAudit = repository.countRawHealthValuesInAudit() > 0,
+            rawHealthValuesPresentInAudit = repository.countRawHealthValuesInAudit(listOf("mg/dL", "g/dL", "mmol/L", "2026-")) > 0,
         )
     }
 

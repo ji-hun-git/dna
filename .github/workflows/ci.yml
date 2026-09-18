@@ -320,8 +320,9 @@ jobs:
     timeout-minutes: 30
     # `needs` orders this after the images have been built and scanned; it does not carry the images
     # over, because image layers are not job artifacts. Both images are rebuilt here from the same
-    # revision and the same Dockerfiles, so the build cache makes the rebuild cheap without making
-    # this job depend on anything the previous job left behind.
+    # revision and the same Dockerfiles. The runner is ephemeral and shares no layer cache with the
+    # `runtime-images` job, so this is a full cold build of both images — paid for a second time, and
+    # budgeted for by this job's 30-minute timeout rather than avoided.
     needs: runtime-images
     permissions:
       contents: read

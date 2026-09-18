@@ -314,6 +314,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 eventId,
             )
         }.isInstanceOf(DataAccessException::class.java)
+        // The V3 trigger fires `before update or delete`; UPDATE alone only proves half of it, and
+        // `release/readiness.json`'s external_audit_anchor evidence claims both. DELETE is the half
+        // that matters most for an append-only claim, so it is asserted here rather than inferred
+        // from the trigger definition. (The gc_audit_event equivalent already asserts both.)
+        org.assertj.core.api.Assertions.assertThatThrownBy {
+            jdbc.update("DELETE FROM security_audit_event WHERE event_id = ?", eventId)
+        }.isInstanceOf(DataAccessException::class.java)
 
         assertThat(
             jdbc.queryForObject(
@@ -591,17 +598,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 deletionId,
             ),
         ).isEqualTo(1)
-        assertThat(
-            jdbc.queryForObject(
-                """
-                SELECT COUNT(*) FROM gc_audit_event
-                WHERE event_type LIKE '%188%'
-                   OR event_type LIKE '%190%'
-                   OR resource_type LIKE '%mg/dL%'
-                """.trimIndent(),
-                Long::class.java,
-            ),
-        ).isZero()
+        assertThat(auditRowsContaining("2026-07-28")).isEmpty()
         assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$aliceDocumentId.pdf"))).isFalse()
 
         val repeatedDeletion = service.deleteProfile(
@@ -1546,9 +1543,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(
             jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'CANDIDATE_CORRECTED'", Long::class.java),
         ).isEqualTo(1L)
-        assertThat(
-            jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event a WHERE a::text LIKE '%2026-07-27%' OR a::text LIKE '%2026-07-28%'", Long::class.java),
-        ).isEqualTo(0L)
+        assertThat(auditRowsContaining("2026-07-27", "2026-07-28")).isEmpty()
 
         read(get("/api/foundation/records/$recordId"), alice)
             .andExpect(status().isOk)
@@ -3615,6 +3610,31 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
     private fun count(table: String): Long =
         jdbc.queryForObject("SELECT COUNT(*) FROM $table", Long::class.java) ?: 0L
+
+    /**
+     * Every audit row whose content contains one of the synthetic lifecycle's own health values,
+     * labels, unit, reference range or filename extensions, plus any [extraNeedles] (the exam dates
+     * the calling test actually used). The haystack is the whole row as JSON text rather than the
+     * three columns this check used to name, minus the opaque identifier and bookkeeping columns —
+     * see [FoundationRepository.AUDIT_CONTENT_TEXT] for which six and why. The rows themselves are
+     * returned, not a count, so a failure names the leak instead of just asserting a number.
+     */
+    private fun auditRowsContaining(vararg extraNeedles: String): List<String> {
+        fun matching(needles: List<String>): List<String> = jdbc.queryForList(
+            "SELECT ${FoundationRepository.AUDIT_CONTENT_TEXT} FROM gc_audit_event a " +
+                "WHERE ${FoundationRepository.AUDIT_CONTENT_TEXT} ~ ?",
+            String::class.java,
+            needles.joinToString("|") { it.replace(".", "\\.") },
+        )
+        // Positive control: an all-zero result only means something if the haystack can match at
+        // all. `outcome` is one of the searched columns and 'SUCCESS' is in it on every lifecycle,
+        // so this proves the query reaches the content columns rather than passing vacuously.
+        assertThat(matching(listOf("SUCCESS"))).describedAs("audit-leak query positive control").isNotEmpty()
+        return matching(
+            listOf("188", "5.2", "42", "190", "Cholesterol", "HbA1c", "Vitamin D", "120-199", ".pdf", ".png") +
+                extraNeedles,
+        )
+    }
 
     private fun countForSubject(table: String, subjectId: String): Long =
         jdbc.queryForObject(

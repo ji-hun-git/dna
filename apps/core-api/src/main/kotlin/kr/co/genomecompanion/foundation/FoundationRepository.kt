@@ -1808,15 +1808,39 @@ class FoundationRepository(
             subjectHash,
         )
 
-    fun countRawHealthValuesInAudit(): Long =
+    /**
+     * Counts audit rows whose **content** contains any of [forbidden]. The haystack is the whole
+     * row rendered as JSON text, not the three columns this check used to name, so a value that
+     * leaks into a column added later (V9's `purpose_code`, or anything after it) is caught without
+     * anybody remembering to extend this query — the old form could go quietly vacuous as the table
+     * grew.
+     *
+     * [AUDIT_CONTENT_TEXT] removes the six columns that carry no content the subject ever typed or
+     * uploaded: `audit_sequence` (a counter), `event_id`/`resource_id` (server-generated UUIDs),
+     * `subject_hash`/`actor_session_hash` (peppered SHA-256 digests) and `occurred_at` (the instant
+     * the row was appended). All six are full of incidental digits, and leaving them in would make
+     * a needle such as `2026-` match `occurred_at` on every row and turn the receipt field into a
+     * constant `true` — the same coincidence the log-capture test masks for. A leaked value would
+     * have to land inside a UUID or a hex digest to hide here.
+     *
+     * The alternation is built by escaping `.` only; callers pass a fixed list with no other regex
+     * metacharacter in it.
+     */
+    fun countRawHealthValuesInAudit(forbidden: List<String>): Long =
         jdbc.queryForObject(
-            """
-            SELECT COUNT(*)
-            FROM gc_audit_event
-            WHERE event_type LIKE '%188%'
-               OR event_type LIKE '%190%'
-               OR resource_type LIKE '%mg/dL%'
-            """.trimIndent(),
+            "SELECT COUNT(*) FROM gc_audit_event a WHERE $AUDIT_CONTENT_TEXT ~ ?",
             Long::class.java,
+            forbidden.joinToString("|") { Regex.escape(it).removePrefix("\\Q").removeSuffix("\\E").replace(".", "\\.") },
         ) ?: 0L
+
+    companion object {
+        /**
+         * Every column of `gc_audit_event` as one JSON text, minus the opaque identifier and
+         * bookkeeping columns. Shared with `FoundationLifecyclePostgresIntegrationTest`'s
+         * audit-leak assertion so both search exactly the same surface.
+         */
+        const val AUDIT_CONTENT_TEXT: String =
+            "(to_jsonb(a) - 'audit_sequence' - 'event_id' - 'resource_id' " +
+                "- 'subject_hash' - 'actor_session_hash' - 'occurred_at')::text"
+    }
 }

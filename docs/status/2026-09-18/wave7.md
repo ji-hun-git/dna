@@ -65,3 +65,121 @@ All eight review findings (F1–F8) were fixed with TDD (a red test written per 
 | `git diff --quiet 191eb1a -- release/readiness.json` | exit 0, readiness unchanged |
 
 `apps/web/next-env.d.ts` was touched by `foundation:e2e`'s `next dev` again and restored with `git checkout -- apps/web/next-env.d.ts`; never staged.
+
+---
+
+## PR 7b — security, API contract, operability, honesty
+
+### Evidence date and revision
+
+- Evidence date: **2026-09-18** (gates executed 2026-09-18/19, Asia/Seoul).
+- 7a revision: branch `codex/wave13-backend-hardening`, head `6f9c574bd1110d96a675c9a0fd87e904a42791a8`, PR [#17](https://github.com/ji-hun-git/dna/pull/17) (base `codex/wave11-alive-home`).
+- 7b revision: branch `codex/wave14-backend-hardening-7b`, tasks 14–26 — the 25 commits `6f9c574..c242edd` plus the commit that carries this file. There is no PR and no pushed head for 7b at the time of writing.
+- Data: synthetic fixtures only. No hosted target, no registry action, no real document, no provider call.
+
+### Executive result
+
+7b hardens the request boundary (body caps, session limits, logout/CSRF/hosted profile, worker HMAC identity and rate limit), the document boundary (XFA/depth inspection, rendering in a bounded child JVM with a cleared environment), the API contract (hand-written OpenAPI checked against live responses, cursor pagination, export caps), and operability (PHI-safe lifecycle logging proven by log capture, real worker health codes, a scheduled janitor, a Flyway replay job, a web fetch timeout). Task 26 replaces the audit-leak check, which searched three named columns and could go vacuous, with one over the whole audit row.
+
+**The release verdict is unchanged: `NO_GO`, 12 blocking gates not PASS.** The only readiness change in this PR is the wording of `external_audit_anchor.evidence` (now naming both append-only tables and their triggers) and the top-level `evaluatedAt`. No gate status moved. The GHCR stop-ship is untouched.
+
+### Live evidence table
+
+All gates run locally on 2026-09-18/19 against the 7b working tree, Node `24.20.0`, pnpm `11.20.0`, Java `21`, embedded/local PostgreSQL at `jdbc:postgresql://127.0.0.1:5432/gc_test`, `GC_TEST_QUARANTINE_ROOT=C:/gc-synthetic-test/quarantine`.
+
+| Gate (exact command) | Last lines of output |
+|---|---|
+| `GC_TEST_POSTGRES_URL=… GC_TEST_QUARANTINE_ROOT=… ./gradlew.bat test --no-daemon` (repo root, every JVM module; no `cleanTest` — both variables are declared Gradle test inputs) | `BUILD SUCCESSFUL in 1m 23s` / `19 actionable tasks: 2 executed, 17 up-to-date`. JUnit XML totals: core-api 226 tests, document-worker 85, document-boundary 25, korean-checkup-benchmark 10 — **346 tests, 0 failures, 0 errors, 3 skipped** (the skips are the PostgreSQL-only classes' own `@EnabledIfEnvironmentVariable` siblings). |
+| `pnpm web:test` | `Test Files  58 passed (58)` / `Tests  432 passed (432)` / `Duration  24.63s` |
+| `pnpm --dir apps/web exec tsc --noEmit -p tsconfig.json` | no output, exit 0 |
+| `pnpm --dir apps/web build` | `✓ Compiled successfully in 708ms`; 11 routes generated (`/`, `/_not-found`, `/connections`, `/data-control`, `ƒ /healthz`, `/my-data`, `/my-data/history`, `/prepare`, `/providers`, `/records`, middleware). `apps/web/next-env.d.ts` was regenerated and restored with `git checkout --`; never staged. |
+| `GC_TEST_POSTGRES_URL=… GC_TEST_QUARANTINE_ROOT=… pnpm foundation:e2e` | `ok 1 … visible Korean product persists reloads revokes and deletes the synthetic lifecycle (35.6s)` / `ok 2 … 200 percent equivalent viewport (6.3s)` / `ok 3 … 400 percent equivalent viewport (8.2s)` / `3 passed (1.3m)`. Ports 8087/8091/3138 were confirmed free before the run. |
+| `pnpm security:github-actions-policy` | `github-actions-policy: PASS` |
+| `pnpm security:runtime-policy` | `runtime-policy: PASS node=24.20.0 pnpm=11.20.0 next=16.3.3` |
+| `pnpm auth-security:gate` | `auth-security-gate: PASS` |
+| `pnpm medical-ai:native-text-gate` | see the two corpora below |
+| `pnpm release:readiness:validate` | `release-readiness: NO_GO 12 blocking gate(s) are not PASS`, exit 0 |
+| `pnpm release:readiness` | `release-readiness: NO_GO 12 blocking gate(s) are not PASS`, exit 1 (expected while the verdict is `NO_GO`) |
+
+Native-text gate, both corpora:
+
+| Corpus id | Metrics |
+|---|---|
+| `synthetic-ko-checkup-r2-50ed23041bb4af1d` (31 generated documents) | `fieldF1: 1`, `criticalValueExactRate: 1`, `evidenceLocalizationRate: 1`, `hallucinationRate: 0`, `requiredAbstentionRecall: 1`, `referenceRangeAccuracy: 1`, `conceptAccuracy: 1`, `gate.passed: true`, `failures: []`. `conceptAccuracy: 1` means the runner and the gold set agree on the concept for every scored measurement on this generated corpus — it is agreement with a hand-written expectation over synthetic documents, not a production accuracy claim (`productionAccuracyClaim: false`, `evidenceLevel: synthetic-contract-regression-only`). |
+| `synthetic-ko-hand-labelled-4b20bf06922a7e0a` (3 hand-labelled documents) | `expectedCandidates: 14`, `matchedCandidates: 13`, `expectedAbstentions: 10`, `matchedAbstentions: 9`, `hallucinatedCandidates: 0`, `candidateAccuracy: 0.9285714285714286`, `abstentionAccuracy: 0.9`, `handLabelledAccuracy: 0.9166666666666666` against its pinned floor `0.9166666666666666`, `passed: true`. Not 100%, and not presented as such. |
+
+CI, `genome-companion-ci`:
+
+| Revision | Run | Result |
+|---|---|---|
+| 7a head `6f9c574` | [35368074815](https://github.com/ji-hun-git/dna/actions/runs/35368074815) and [35368070333](https://github.com/ji-hun-git/dna/actions/runs/35368070333) (pull-request and push triggers of the same head) | `success`; all 15 checks on PR #17 pass — CodeQL SAST (Java/Kotlin), CodeQL SAST (JavaScript/TypeScript), runtime image (core-api / document-worker / web), secrets, dependencies, configuration, and license policy, synthetic contract and integration evidence. |
+| 7b head | **not verified (no run URL; pushed after this report)** | — |
+| `image-smoke` job (`runtime image smoke (core-api + document-worker boot to /healthz)`) | **not verified (no run URL; pushed after this report)** | The job is new in 7b and has never executed on a runner. |
+| `migration-replay` job (`Flyway replay V1..V12 + seeded rows + V13`) | **not verified (no run URL; pushed after this report)** | The job is new in 7b and has never executed on a runner. |
+| Trivy steps in `runtime-images`: `Fail on Critical image vulnerabilities, fixed or not` (`severity: CRITICAL`, `ignore-unfixed: false`, `exit-code: "1"`) and `Report High image vulnerabilities (informational)` (`severity: HIGH`, `exit-code: "0"`) | **not verified (no run URL; pushed after this report)** | The Critical step's blocking behaviour has not been observed on a runner. |
+
+### Findings — what remains
+
+Ranked; all are stated limits of 7b, not regressions.
+
+1. **F7b-01 — every limiter is per process.** The session token bucket, the failure lock, the demo-capacity count and the worker `/internal/**` bucket all live in one JVM's heap. Two replicas double every limit. Correct behaviour under more than one instance is a hosted gate, not proven here.
+2. **F7b-02 — the worker MAC has no nonce and the credential is shared.** The worker's HMAC identity proof is constant for a given worker id and secret, and every worker instance sharing that credential presents the same id. A captured header is replayable until the secret rotates, and two instances are indistinguishable in the audit trail. The one-shot lease pinning bounds the damage; it does not remove the collision.
+3. **F7b-03 — the `hosted` profile is untested against a real proxy.** `Secure` cookies, `forward-headers-strategy: none` and `RemoteIpValve` are exercised only by unit/slice tests. No run behind an actual reverse proxy exists, so client-IP and scheme handling in a hosted topology is **not verified**.
+4. **F7b-04 — the render subprocess is proven on one synthetic fixture plus in-memory hostile PDFs.** The bounded child JVM with a cleared environment has rendered exactly one synthetic fixture end to end; the hostile cases are constructed in memory. Coverage of real-world malformed PDFs is not claimed.
+5. **F7b-05 — PDF depth beyond 8 stops counting rather than rejecting**, so a document nested deeper than the limit is accepted on the strength of what was inspected down to depth 8.
+6. **F7b-06 — image deduplication per `COSStream` loosens `IMAGE_COMPLEXITY`.** The same image object referenced many times counts once, so a document can present more decoded pixels than the limit contemplates. The child JVM's heap cap compensates in practice; the stated limit is nonetheless looser than it reads.
+7. **F7b-07 — `policyVersion` is unchanged** despite F7b-05/F7b-06 changing what the boundary accepts, because the core accepts a single policy version value. A consumer cannot tell the old policy from the new one.
+8. **F7b-08 — the janitor has no cross-replica lock** and its sweeps on `expires_at` are unindexed. Two replicas would sweep concurrently, and the sweep cost grows with table size.
+9. **F7b-09 — stale terminations write no per-document audit row.** A document terminated by the janitor leaves a status change with no audit event naming that document.
+10. **F7b-10 — `/session/logout` has no UI caller.** The endpoint exists and is tested; no web surface invokes it.
+11. **F7b-11 — `prometheus` is not exposed in any profile.** The actuator is health-only everywhere, so there is no metrics scrape target.
+12. **F7b-12 — `deleteProfile` hard-deletes session rows** where the rest of the codebase revokes. The convention is inconsistent; deletion is the stricter of the two, but the divergence is unexplained in code.
+13. **F7b-13 — the Trivy Critical gate can redden CI without a code change**, because a newly published unfixed Critical in a base image fails the job. That is the intended trade (see the step's own comment) and a standing operational cost.
+14. **F7b-14 — both runtime images are built twice per run**, once in `runtime-images` and again in `image-smoke`, on an ephemeral runner with no shared layer cache. The second build is a full cold build inside the smoke job's 30-minute budget.
+15. **F7b-15 — the OpenAPI contract test does not validate `parameters`.** Paths, methods and response shapes are checked against live responses; declared query/path parameters are not.
+16. **F7b-16 — `/internal/**` routes are outside the OpenAPI document** entirely, so the worker-facing contract has no machine-readable description and no contract test.
+
+Task 26's own limits:
+
+17. **F7b-17 — the audit-leak query excludes six columns by name.** `countRawHealthValuesInAudit` and the integration assertion search the whole `gc_audit_event` row as JSON text minus `audit_sequence`, `event_id`, `resource_id`, `subject_hash`, `actor_session_hash` and `occurred_at`. Those six are counters, server-generated UUIDs, peppered digests and the row's own write instant; all are full of incidental digits, and leaving `occurred_at` in would make the receipt's `2026-` needle match every row and turn `rawHealthValuesPresentInAudit` into a constant `true`. A value that leaked *into* one of those six columns would therefore hide — it would have to take the shape of a UUID or a 64-character hex digest to do so. Every other column, including any column added after this commit, is searched, which is what the previous three-column form could not promise. The assertion carries a positive control (a needle known to be present in `outcome` must match) so an all-zero result cannot pass vacuously.
+18. **F7b-18 — the brief's two forbidden lists disagree** (`"%"` in its interface note, `"mmol/L"` in its step). The step's list is what shipped: `listOf("mg/dL", "g/dL", "mmol/L", "2026-")`. `%` was not added; as a bare needle it would match nothing useful in an enum-shaped column and is not a unit this corpus writes.
+19. **F7b-19 — other audit assertions elsewhere in the same test file still name individual columns** (for example the reference-range check that concatenates `event_type`, `resource_type`, `purpose_code` and `outcome`). Only the two assertions named by the task were converted.
+
+### Readiness interpretation
+
+- Verdict: **`NO_GO`**, unchanged. `pnpm release:readiness:validate` exits 0 and reports `release-readiness: NO_GO 12 blocking gate(s) are not PASS`; `pnpm release:readiness` exits 1 with the same line.
+- The only field this PR changed in `release/readiness.json` besides `evaluatedAt` (`2026-09-07` → `2026-09-18`) is `external_audit_anchor.evidence`, from "database mutation guard exists, but no separately permissioned external chain-head checkpoint has been exercised" to "gc_audit_event and security_audit_event are append-only at the database (V3 and V13 triggers; PostgreSQL integration tests reject UPDATE and DELETE), but no separately permissioned external chain-head checkpoint has been exercised". The gate's `status` stays `FAIL` and `blocking` stays `true`.
+- No gate moved to `PASS`. Nothing in 7b is hosted evidence. The runtime-image gate and the GHCR anonymous-pull stop-ship are exactly as they were.
+- `docs/release/readiness.md` gained one paragraph stating the same append-only fact and that it is a local database guard only, and its "Latest evidence review" line now reads 2026-09-18 to match `evaluatedAt`.
+
+### Changes made
+
+Verified against `git log --oneline 6f9c574..HEAD` and the code.
+
+- **Task 14 — body caps.** 256 KB JSON cap and 4.9 MB worker body cap; the 10 MB upload streams to quarantine without a heap copy.
+- **Task 15 — session limiting.** Token bucket plus a failure lock per subject; unknown subjects are refused silently (no enumeration oracle); demo capacity is counted by *active* subjects; idle limiter entries are evicted so the map cannot grow without bound.
+- **Task 16 — session and proxy surface.** `/session/logout`, an `X-Requested-With` CSRF header requirement, a `hosted` profile for `Secure` cookies, `forward-headers-strategy: none`, and a health-only actuator.
+- **Task 17 — worker identity.** HMAC-proven worker id, a per-worker rate-limit bucket on `/internal/**`, a pinned one-shot lease replay test, and a shared `TokenBucketWindow`.
+- **Task 18 — document boundary.** XFA and nesting-depth inspection, page/annotation actions, attachments, nested image pixels, a linear trailing scan, and rendering in a bounded child JVM whose environment is cleared and whose stdin write is bounded. A render-subprocess exception can no longer skip the failure report.
+- **Task 19 — image supply chain.** Trivy now fails the job on Critical findings whether or not a fix exists; Highs are reported informationally. New `image-smoke` job boots core-api and document-worker to `/healthz`.
+- **Task 20 — API contract.** Hand-written OpenAPI document checked against live responses by a contract test, cursor pagination with a keyset order, export caps, a one-instant filename rule, and an invalid pagination limit that is always `400 request_invalid`.
+- **Task 21 — logging.** `PhiSafeLogger` lifecycle events for every step, worker stdout events, and a log-capture test at TRACE proving no value, label, filename or date reaches a log line. That test found and pinned the JDBC bind-parameter leak. `worker_job_failed` is emitted on every dead letter and the logger never throws.
+- **Task 22 — worker operability.** Real health checks (core, signatures, age, loop) with a named failing phase, `freshclam` in the image, loop backoff, graceful shutdown that never swallows OOM, a JVM halt on a fatal loop error, and a halt that cannot block on a wedged dispatcher join.
+- **Task 23 — janitor.** A scheduled sweep of expired sessions, capabilities, idempotency keys, orphan files and stale jobs, disk-first, with a one-hour upload-pending grace and per-category isolation so one failing category cannot abort the rest; it no longer deletes live files.
+- **Task 24 — migration replay.** A CI job replaying V1..V12, seeding rows and applying V13, with failing assertions when a row is missing; `GC_TEST_POSTGRES_URL` is declared a Gradle test input (so `cleanTest` is no longer needed anywhere).
+- **Task 25 — web.** `AbortSignal.timeout` on every fetch with a Korean `request_timeout` message.
+- **Task 26 — this commit.** `countRawHealthValuesInAudit(forbidden: List<String>)` searches the whole audit row as JSON text (minus the six opaque columns, F7b-17) instead of three named columns; the service passes `listOf("mg/dL", "g/dL", "mmol/L", "2026-")`. The two integration assertions in `persistsAttacksRevokesAndDeletesOneSyntheticLifecycle` and `storesAConfirmedExamDateKeepsTheParserDateAndAuditsNoDateValue` now call one shared `auditRowsContaining(...)` helper over the same surface, return the offending rows rather than a count so a failure names the leak, and carry a positive control. The `security_audit_event` append-only test gained a `DELETE` rejection assertion beside its existing `UPDATE` one, so the readiness sentence's "reject UPDATE and DELETE" is proven by a run for both tables rather than inferred from the V3 trigger's `before update or delete` definition. `release/readiness.json`, `docs/release/readiness.md`, `PROJECT_GUIDE.md` and `AGENTS.md` were updated as described above, and the `image-smoke` job's `needs` comment was corrected: it previously claimed a build cache made the rebuild cheap, which is false on an ephemeral runner with no shared cache.
+- **Also unchanged on purpose:** no Flyway migration was added in 7b past V13; no dependency was added or bumped; no fixture PDF was committed; no workflow secret was introduced.
+
+### Next safe sequence
+
+1. Push `codex/wave14-backend-hardening-7b` and open the 7b PR onto `codex/wave13-backend-hardening`. Append the resulting `genome-companion-ci` run URL to this file, replacing the three "not verified" rows, and record whether `image-smoke`, `migration-replay` and the Trivy Critical step are green on their first real execution.
+2. If the Trivy Critical step fails on an unfixed base-image Critical, decide it as a finding (rebase the base image, drop the dependency, or record an accepted risk) — do not weaken the step.
+3. Review and merge 7a (PR #17) first, then 7b, keeping the stack order.
+4. Only then consider F7b-01/F7b-02 (shared limiter state, per-worker credentials), which need a hosted topology and therefore a founder gate.
+
+### Founder-only actions
+
+- **GHCR stop-ship: unchanged.** All three published packages remain anonymously pullable and therefore stop-ship. Nothing in 7a or 7b deletes, republishes or re-permissions a package, and no probe was run. The private-ECR direction remains unprovisioned. This still requires an explicit founder decision.
+- **Hosted staging, AWS apply, provider activation, real data: unchanged and prohibited.** 7b adds a `hosted` Spring profile; that is configuration, not a deployment, and it is **not verified** against any hosted target.
+- **`external_audit_anchor`**: exercising a separately permissioned external chain-head checkpoint is the only thing that can move this gate off `FAIL`. It needs an external, separately permissioned system and is a founder gate.
