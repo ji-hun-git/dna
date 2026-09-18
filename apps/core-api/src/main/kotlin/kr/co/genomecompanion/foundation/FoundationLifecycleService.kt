@@ -174,7 +174,7 @@ class FoundationLifecycleService(
 ) {
     private val subjectPattern = Regex("^synthetic-[a-z0-9-]+$")
     private val idempotencyPattern = Regex("^[A-Za-z0-9._:-]{8,80}$")
-    private val confirmedValuePattern = Regex("^[0-9]{1,4}(?:\\.[0-9]{1,2})?$")
+    private val confirmedValuePattern = Regex(CONFIRMED_VALUE_PATTERN)
     private val seoul: ZoneId = ZoneId.of("Asia/Seoul")
     private val earliestObservedOn: LocalDate = LocalDate.of(1900, 1, 1)
 

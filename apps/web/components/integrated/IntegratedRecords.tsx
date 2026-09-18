@@ -179,7 +179,7 @@ export function IntegratedRecords() {
                           {editingId === record.recordId ? (
                             <form className="gc-integrated-correction" onSubmit={(event) => void correctRecord(event, record)}>
                               <label htmlFor={`record-value-${record.recordId}`}>수정할 값</label>
-                              <input id={`record-value-${record.recordId}`} value={draftValue} onChange={(event) => setDraftValue(event.target.value)} inputMode="decimal" pattern="[0-9]{1,4}([.][0-9]{1,2})?" required />
+                              <input id={`record-value-${record.recordId}`} value={draftValue} onChange={(event) => setDraftValue(event.target.value)} inputMode="decimal" pattern="-?([0-9]{1,3}(,[0-9]{3})+|[0-9]+)([.][0-9]+)?" maxLength={64} required />
                               <label htmlFor={`record-reason-${record.recordId}`}>수정 이유</label>
                               <input id={`record-reason-${record.recordId}`} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={200} required />
                               <div className="gc-integrated-actions"><button type="button" onClick={() => setEditingId(undefined)}>취소</button><button type="submit" disabled={busy}>{busy ? "서버에 반영 중" : "새 버전으로 저장"}</button></div>

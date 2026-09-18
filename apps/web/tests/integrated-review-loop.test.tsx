@@ -10,6 +10,7 @@ import { syntheticCandidates, syntheticDocumentId } from "./fixtures/foundation"
 let candidates: FoundationCandidate[] = [];
 let records: FoundationRecord[] = [];
 let changes: ChangeSummary = { items: [], newConcepts: [], unchangedCount: 0 };
+let lastConfirmedValue: string | undefined;
 
 const server = setupServer(
   http.get("/api/foundation/session", () => HttpResponse.json({
@@ -39,6 +40,7 @@ const server = setupServer(
   http.get("/api/foundation/documents/:documentId/candidates", () => HttpResponse.json(candidates)),
   http.post("/api/foundation/candidates/:candidateId/confirmation", async ({ params, request }) => {
     const { value, observedOn } = await request.json() as { value: string; observedOn?: string };
+    lastConfirmedValue = value;
     const target = candidates.find((item) => item.candidateId === params.candidateId)!;
     candidates = candidates.map((item) => item.candidateId === target.candidateId
       ? { ...item, status: "CONFIRMED" }
@@ -79,6 +81,7 @@ beforeEach(() => {
   candidates = syntheticCandidates.map((candidate) => ({ ...candidate }));
   records = [];
   changes = { items: [], newConcepts: [], unchangedCount: 0 };
+  lastConfirmedValue = undefined;
   document.cookie = "GC_CSRF=synthetic-review-csrf-value";
 });
 
@@ -180,6 +183,24 @@ it("walks every candidate of one document before reporting the result", async ()
   expect(screen.queryByText("CORRECTED")).toBeNull();
   expect(screen.getByRole("link", { name: "진료 준비 목록 보기" })).toHaveAttribute("href", "/prepare");
   expect(screen.getByRole("link", { name: "저장된 기록 보기" })).toHaveAttribute("href", "/records");
+});
+
+it("accepts a comma-formatted value in the worker grammar and sends it verbatim", async () => {
+  render(<IntegratedHealthExperience />);
+
+  expect(await screen.findByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible();
+  fireEvent.load(screen.getByRole("img"));
+
+  await userEvent.click(screen.getByRole("button", { name: "값 수정" }));
+  const input = screen.getByLabelText("원문과 같은 값으로 수정");
+  fireEvent.change(input, { target: { value: "250,000" } });
+
+  const confirmButton = screen.getByRole("button", { name: "수정한 값 확인" });
+  expect(confirmButton).toBeEnabled();
+
+  await userEvent.click(confirmButton);
+
+  await waitFor(() => expect(lastConfirmedValue).toBe("250,000"));
 });
 
 it("resumes at the first candidate the person has not decided yet", async () => {

@@ -1022,6 +1022,52 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun confirmsAndCorrectsValuesInTheWorkerGrammarAndStoresThemVerbatim() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "value-grammar-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(
+            documentId,
+            candidates = listOf(
+                ExtractedCandidate(1, "혈소판", "250,000", "/µL", "2026-07-28", 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64)),
+                ExtractedCandidate(2, "Base Excess", "-2", "mmol/L", "2026-07-28", 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64)),
+                ExtractedCandidate(3, "TSH", "1.23", "µIU/mL", "2026-07-28", 1, EvidenceBox(0.08, 0.18, 0.25, 0.02), "3".repeat(64)),
+            ),
+        )
+        val candidates = responseJson(read(get("/api/foundation/documents/$documentId/candidates"), alice).andReturn().response.contentAsByteArray).toList()
+        fun confirm(index: Int, value: String, key: String) = mutate(
+            post("/api/foundation/candidates/${candidates[index]["candidateId"].asText()}/confirmation")
+                .header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON).content(json(mapOf("value" to value))),
+            alice,
+        )
+        confirm(0, "250,000", "grammar-confirm-1").andExpect(status().isCreated)
+            .andExpect(jsonPath("$.value").value("250,000")).andExpect(jsonPath("$.reviewDecision").value("CONFIRMED"))
+        confirm(1, "-2", "grammar-confirm-2").andExpect(status().isCreated)
+            .andExpect(jsonPath("$.value").value("-2")).andExpect(jsonPath("$.unit").value("mmol/L"))
+        val tsh = responseJson(confirm(2, "1.23", "grammar-confirm-3").andExpect(status().isCreated).andReturn().response.contentAsByteArray)
+        mutate(
+            post("/api/foundation/records/${tsh["recordId"].asText()}/corrections")
+                .header("Idempotency-Key", "grammar-correct-3").contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "1.234", "reason" to "결과지에 소수 셋째 자리까지 적혀 있음"))),
+            alice,
+        ).andExpect(status().isOk).andExpect(jsonPath("$.value").value("1.234")).andExpect(jsonPath("$.reviewDecision").value("CORRECTED"))
+        mutate(
+            post("/api/foundation/records/${tsh["recordId"].asText()}/corrections")
+                .header("Idempotency-Key", "grammar-correct-long").contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "1." + "2".repeat(63), "reason" to "too long"))),
+            alice,
+        ).andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("request_invalid"))
+        for (bad in listOf("1,00", "abc", "1.", "+5", "1 000")) {
+            confirm(0, bad, "grammar-bad-$bad".replace(Regex("[^A-Za-z0-9._:-]"), "_")).andExpect(status().isBadRequest)
+        }
+        assertThat(jdbc.queryForObject("SELECT confirmed_value FROM gc_health_record WHERE label = '혈소판'", String::class.java)).isEqualTo("250,000")
+        // Arithmetic still removes commas: /series meanOfLast3 etc. are unaffected; the delta of 250,000 vs itself is 0.
+        assertThat(ChangeDeltaCalculator.compute("250,000", "249,000")?.absolute).isEqualTo("+1000")
+    }
+
+    @Test
     fun storesAConfirmedExamDateKeepsTheParserDateAndAuditsNoDateValue() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
