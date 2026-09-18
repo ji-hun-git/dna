@@ -60,6 +60,12 @@ private const val WORKER_ID_HEADER = "X-GC-Worker-Id"
 private const val WORKER_ID_MAC_HEADER = "X-GC-Worker-Id-Mac"
 private const val JOB_LEASE_HEADER = "X-GC-Job-Lease"
 
+// Route *templates* for the worker-boundary log lines: constants, never a request URI.
+private const val LEASE_ROUTE = "/internal/document-boundary/jobs/lease"
+private const val INSPECTION_RESULT_ROUTE = "/internal/document-boundary/jobs/{jobId}/inspection-result"
+private const val EXTRACTION_RESULT_ROUTE = "/internal/document-boundary/jobs/{jobId}/extraction-result"
+private const val FAILURE_ROUTE = "/internal/document-boundary/jobs/{jobId}/failure"
+
 
 data class WorkerLeaseResponse(
     val jobId: UUID,
@@ -222,7 +228,7 @@ class DocumentWorkerBoundaryService(
         ) ?: return null
         // No subject hash on the worker boundary: a job belongs to a document, and tying a worker line
         // to a person is neither needed to operate the queue nor safe to write down.
-        logging.event(TelemetryEvent.WORKER_JOB_LEASED, "/internal/document-boundary/jobs/lease", null)
+        logging.event(TelemetryEvent.WORKER_JOB_LEASED, LEASE_ROUTE, null)
         return WorkerLeaseResponse(
             jobId = job.jobId,
             jobType = job.jobType,
@@ -258,31 +264,28 @@ class DocumentWorkerBoundaryService(
         val now = Instant.now(clock)
         val job = requireLeasedJob(jobId, rawLease, now, "SECURITY_INSPECTION")
         if (!FoundationHashing.constantTimeHexEquals(request.sourceSha256, job.sourceSha256)) {
-            repository.markJobFailed(job, "inspection_digest_mismatch", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_digest_mismatch", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (
             request.decision == InspectionDecision.RETRYABLE_FAILURE &&
             request.reason != InspectionReason.SCANNER_UNAVAILABLE
         ) {
-            repository.markJobFailed(job, "inspection_result_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_result_invalid", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (request.decision == InspectionDecision.RETRYABLE_FAILURE) {
-            repository.markJobFailed(job, request.reason.name.lowercase(), retryable = true, now)
+            // The reason is one of our own enum constants, not a worker-supplied message.
+            val receipt = failAndLog(job, request.reason.name.lowercase(), retryable = true, now, INSPECTION_RESULT_ROUTE)
             audit(job, "DOCUMENT_INSPECTION_RETRY", "REJECTED", now)
-            return WorkerResultReceipt(jobId, if (job.attempt < job.maxAttempts) "RETRY_SCHEDULED" else "DEAD_LETTER")
+            return receipt
         }
         if (request.decision == InspectionDecision.APPROVED && request.reason != InspectionReason.CLEAN) {
-            repository.markJobFailed(job, "inspection_result_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_result_invalid", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (
             request.decision == InspectionDecision.REJECTED &&
             request.reason in setOf(InspectionReason.CLEAN, InspectionReason.SCANNER_UNAVAILABLE)
         ) {
-            repository.markJobFailed(job, "inspection_result_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_result_invalid", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         val approvedScanner = when (request.scannerName) {
             "ClamAV" -> request.scannerVersion == properties.requiredClamAvVersion
@@ -291,15 +294,13 @@ class DocumentWorkerBoundaryService(
             else -> false
         }
         if (request.decision == InspectionDecision.APPROVED && !approvedScanner) {
-            repository.markJobFailed(job, "unapproved_scanner", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "unapproved_scanner", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (
             request.decision == InspectionDecision.APPROVED &&
             request.policyVersion != "pdf-security-v1"
         ) {
-            repository.markJobFailed(job, "inspection_policy_mismatch", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_policy_mismatch", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (
             request.decision == InspectionDecision.APPROVED &&
@@ -313,16 +314,14 @@ class DocumentWorkerBoundaryService(
                     request.embeddedFiles != false
             )
         ) {
-            repository.markJobFailed(job, "inspection_evidence_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_evidence_invalid", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         val bytes = storage.read(StorageTrustZone.UNTRUSTED, job.sourceObjectKey)
         if (
             bytes.size.toLong() != job.sourceLength ||
             !FoundationHashing.constantTimeHexEquals(FoundationHashing.sha256(bytes), job.sourceSha256)
         ) {
-            repository.markJobFailed(job, "inspection_source_changed", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_source_changed", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         val report = InspectionReport(
             decision = request.decision,
@@ -365,7 +364,7 @@ class DocumentWorkerBoundaryService(
             if (request.decision == InspectionDecision.APPROVED) "SUCCESS" else "REJECTED",
             now,
         )
-        logging.event(TelemetryEvent.WORKER_JOB_COMPLETED, "/internal/document-boundary/jobs/{jobId}/inspection-result", null)
+        logging.event(TelemetryEvent.WORKER_JOB_COMPLETED, INSPECTION_RESULT_ROUTE, null)
         return WorkerResultReceipt(jobId, "COMPLETED")
     }
 
@@ -374,34 +373,29 @@ class DocumentWorkerBoundaryService(
         val now = Instant.now(clock)
         val job = requireLeasedJob(jobId, rawLease, now, "SYNTHETIC_EXTRACTION")
         if (!FoundationHashing.constantTimeHexEquals(request.sourceSha256, job.sourceSha256)) {
-            repository.markJobFailed(job, "extraction_digest_mismatch", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "extraction_digest_mismatch", retryable = false, now, EXTRACTION_RESULT_ROUTE)
         }
         val source = storage.read(StorageTrustZone.APPROVED_SOURCE, job.sourceObjectKey)
         if (
             source.size.toLong() != job.sourceLength ||
             !FoundationHashing.constantTimeHexEquals(FoundationHashing.sha256(source), job.sourceSha256)
         ) {
-            repository.markJobFailed(job, "approved_source_changed", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "approved_source_changed", retryable = false, now, EXTRACTION_RESULT_ROUTE)
         }
         val ordinals = request.candidates.map { it.ordinal }
         val candidates = runCatching {
             require(ordinals.distinct().size == ordinals.size) { "duplicate ordinal" }
             request.candidates.sortedBy { it.ordinal }.map(normalizer::normalize)
         }.getOrElse {
-            repository.markJobFailed(job, "extraction_candidates_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "extraction_candidates_invalid", retryable = false, now, EXTRACTION_RESULT_ROUTE)
         }
         val previewBytes = runCatching { Base64.getDecoder().decode(request.previewPngBase64) }
             .getOrElse {
-                repository.markJobFailed(job, "preview_base64_invalid", retryable = false, now)
-                return WorkerResultReceipt(jobId, "DEAD_LETTER")
+                return failAndLog(job, "preview_base64_invalid", retryable = false, now, EXTRACTION_RESULT_ROUTE)
             }
         val preview = runCatching { storage.putDerivedPreview(job.documentId, job.sourceSha256, previewBytes) }
             .getOrElse {
-                repository.markJobFailed(job, "preview_artifact_invalid", retryable = false, now)
-                return WorkerResultReceipt(jobId, "DEAD_LETTER")
+                return failAndLog(job, "preview_artifact_invalid", retryable = false, now, EXTRACTION_RESULT_ROUTE)
             }
         registerRollbackDelete(preview, StorageTrustZone.DERIVED_SAFE_ARTIFACT)
         repository.markExtractionCompleted(
@@ -418,7 +412,7 @@ class DocumentWorkerBoundaryService(
         )
         // Count only: the audit row names the extraction job, never a value.
         audit(job, if (candidates.isEmpty()) "EXTRACTION_NO_CANDIDATES" else "EXTRACTION_CANDIDATES_CREATED", "SUCCESS", now)
-        logging.event(TelemetryEvent.WORKER_JOB_COMPLETED, "/internal/document-boundary/jobs/{jobId}/extraction-result", null)
+        logging.event(TelemetryEvent.WORKER_JOB_COMPLETED, EXTRACTION_RESULT_ROUTE, null)
         return WorkerResultReceipt(jobId, "COMPLETED")
     }
 
@@ -427,11 +421,37 @@ class DocumentWorkerBoundaryService(
         val now = Instant.now(clock)
         val job = repository.lockLeasedJob(jobId, FoundationHashing.sha256(rawLease), now)
             ?: throw FoundationForbiddenException("worker_job_lease_invalid")
+        // `request.code` comes from the worker and is validated by `WorkerFailureRequest`, but it is not
+        // ours, so it is written to the job row (which is not a log) and never to the log line.
         repository.markJobFailed(job, request.code, request.retryable, now)
         audit(job, "DOCUMENT_JOB_FAILED", "REJECTED", now)
-        logging.event(TelemetryEvent.WORKER_JOB_FAILED, "/internal/document-boundary/jobs/{jobId}/failure", null)
+        logging.failure(TelemetryEvent.WORKER_JOB_FAILED, FAILURE_ROUTE, "worker_reported_failure")
         val retryScheduled = request.retryable && job.attempt < job.maxAttempts
         return WorkerResultReceipt(jobId, if (retryScheduled) "RETRY_SCHEDULED" else "DEAD_LETTER")
+    }
+
+    /**
+     * Every server-side dead-letter: mark the job failed **and** say so on one line.
+     *
+     * Before this existed each of the fourteen validation failures in `completeInspection`/
+     * `completeExtraction` marked the job failed and returned silently, so only a worker-reported
+     * failure (`failJob`) ever produced a `worker_job_failed` line — exactly inverting the operational
+     * need, since a dead letter the server decided on is the one a human has to explain. The line
+     * carries the same safe context as `failJob`'s (event code, route template, no subject hash, plus
+     * the correlation id `logback-spring.xml` prints from the MDC) and, in addition, [reasonCode]:
+     * always a constant from this file or one of our own enum names, never a worker message.
+     */
+    private fun failAndLog(
+        job: DocumentJobRow,
+        reasonCode: String,
+        retryable: Boolean,
+        now: Instant,
+        routeTemplate: String,
+    ): WorkerResultReceipt {
+        repository.markJobFailed(job, reasonCode, retryable, now)
+        logging.failure(TelemetryEvent.WORKER_JOB_FAILED, routeTemplate, reasonCode)
+        val retryScheduled = retryable && job.attempt < job.maxAttempts
+        return WorkerResultReceipt(job.jobId, if (retryScheduled) "RETRY_SCHEDULED" else "DEAD_LETTER")
     }
 
     private fun requireLeasedJob(

@@ -12,6 +12,16 @@
          stray `logging.level` change cannot reintroduce the echo. -->
     <logger name="org.springframework.web" level="WARN"/>
     <logger name="org.apache.pdfbox" level="ERROR"/>
+    <!-- Task 21 fix round 1: the same rule, one layer lower. Below INFO both of these print bind
+         parameters — `org.springframework.jdbc.core.StatementCreatorUtils` at TRACE says "Setting SQL
+         statement parameter value: column index 7, parameter value [188]", and the pgjdbc wire log
+         prints `FE=> Bind(... $7=<('188')>, $19=<('Cholesterol')> ...)`, i.e. every value, label and
+         exam date the person uploaded. That is PHI in a log file, so neither category may drop below
+         INFO even when an operator raises the root level during an incident. SQL text itself is not
+         lost: it is a constant in `FoundationRepository`, and a slow query is found through Postgres'
+         own logging, which never leaves the database host. -->
+    <logger name="org.springframework.jdbc" level="INFO"/>
+    <logger name="org.postgresql" level="INFO"/>
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>

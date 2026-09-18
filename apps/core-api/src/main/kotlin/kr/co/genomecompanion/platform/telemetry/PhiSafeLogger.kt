@@ -30,15 +30,56 @@ class PhiSafeLogger(
      *    then trip over by coincidence rather than by a real leak.
      *  - [subjectHash] is a prefix of a peppered SHA-256 of the subject id, never the subject id itself,
      *    and is length-capped and charset-checked here so a caller cannot smuggle text through it.
+     *
+     * A context that fails either check **drops the line** and emits [TelemetryEvent
+     * .TELEMETRY_CONTEXT_REJECTED] instead; it does not throw. Every caller logs from inside a
+     * `@Transactional` service method *after* the repository write, so throwing here would roll back a
+     * state change the user already completed — a logging defect must never change what the system did.
      */
     fun emitLifecycle(event: TelemetryEvent, routeTemplate: String?, subjectHash: String?) {
-        require(routeTemplate == null || routeTemplate.matches(ROUTE_TEMPLATE_PATTERN))
-        require(subjectHash == null || subjectHash.matches(SUBJECT_HASH_PATTERN))
+        if (!isSafeRouteTemplate(routeTemplate) || !isSafeSubjectHash(subjectHash)) {
+            emitContextRejected(event)
+            return
+        }
         logger.info(
             "event={} route_template={} subject_hash={}",
             event.code,
             routeTemplate ?: "none",
             subjectHash ?: "none",
+        )
+    }
+
+    /**
+     * [emitLifecycle] for a state change that failed, plus the *server's own* reason code for the
+     * failure (a compile-time constant or an enum name from this codebase — never a worker-supplied or
+     * exception-supplied message, which could quote document text). Charset-checked like the rest, and
+     * dropped rather than thrown on a violation for the same transactional reason.
+     */
+    fun emitLifecycleFailure(event: TelemetryEvent, routeTemplate: String?, reasonCode: String) {
+        if (!isSafeRouteTemplate(routeTemplate) || !reasonCode.matches(REASON_CODE_PATTERN)) {
+            emitContextRejected(event)
+            return
+        }
+        logger.info(
+            "event={} route_template={} subject_hash={} reason_code={}",
+            event.code,
+            routeTemplate ?: "none",
+            "none",
+            reasonCode,
+        )
+    }
+
+    private fun isSafeRouteTemplate(routeTemplate: String?): Boolean =
+        routeTemplate == null || routeTemplate.matches(ROUTE_TEMPLATE_PATTERN)
+
+    private fun isSafeSubjectHash(subjectHash: String?): Boolean =
+        subjectHash == null || subjectHash.matches(SUBJECT_HASH_PATTERN)
+
+    private fun emitContextRejected(attempted: TelemetryEvent) {
+        logger.warn(
+            "event={} attempted_event={}",
+            TelemetryEvent.TELEMETRY_CONTEXT_REJECTED.code,
+            attempted.code,
         )
     }
 
@@ -93,6 +134,7 @@ class PhiSafeLogger(
     companion object {
         private val ROUTE_TEMPLATE_PATTERN = Regex("^/[A-Za-z0-9_/{}-]{1,127}$")
         private val SUBJECT_HASH_PATTERN = Regex("^[0-9a-f]{1,12}$")
+        private val REASON_CODE_PATTERN = Regex("^[a-z0-9_]{3,64}$")
 
         /** A `PhiSafeLogger` writing under the named category, for the one caller that logs for a whole
          * package rather than for a single class. Kept here so that caller needs no `org.slf4j` import. */

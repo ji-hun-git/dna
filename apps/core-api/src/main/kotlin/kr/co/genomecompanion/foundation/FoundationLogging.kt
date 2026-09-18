@@ -34,4 +34,15 @@ class FoundationLogging {
     fun event(event: TelemetryEvent, routeTemplate: String?, subjectHash: String?) {
         logger.emitLifecycle(event, routeTemplate, subjectHash?.take(12))
     }
+
+    /**
+     * A failed state change, plus the server's own reason code for it.
+     *
+     * @param reasonCode a constant from this codebase (or an enum name of ours) describing *why* the
+     *   server rejected the work — never a worker-supplied message, an exception message or any text
+     *   derived from a document.
+     */
+    fun failure(event: TelemetryEvent, routeTemplate: String?, reasonCode: String) {
+        logger.emitLifecycleFailure(event, routeTemplate, reasonCode)
+    }
 }

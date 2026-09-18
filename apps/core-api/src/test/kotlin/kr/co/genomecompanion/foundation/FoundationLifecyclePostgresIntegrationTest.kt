@@ -2872,15 +2872,28 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
     /**
      * PHI-safe logging as a property, not a habit: one whole lifecycle (session, consent, document,
-     * candidates, confirmation, correction, export, revocation, deletion) plus a malformed-body failure
-     * runs with a `ListAppender` on the *root* logger, so every category — the foundation service, the
-     * worker boundary, Spring, PDFBox, the driver — is captured, and nothing a person uploaded or typed
-     * may appear in any of it.
+     * candidates, confirmation, correction, export, revocation, deletion), a server-decided worker dead
+     * letter and a malformed-body failure run with a `ListAppender` on the *root* logger **with the root
+     * level lowered to TRACE**, so a category that inherits the root level — the foundation service, the
+     * worker boundary, the JDBC template, the driver, Spring's own internals — is captured at every
+     * level it can speak at, not only at INFO, and nothing a person uploaded or typed may appear in any
+     * of it.
+     *
+     * Two categories are *not* widened by this, and deliberately so: `logback-spring.xml` pins
+     * `org.springframework.web` to WARN and `org.apache.pdfbox` to ERROR, and an explicit level on a
+     * logger wins over the root's. Those two pins are themselves the control for those categories (a
+     * `spring.mvc.log-request-details`-style body echo and PDFBox's parse warnings), so the capture
+     * below proves the pins hold rather than re-proving what they exclude. `org.springframework.jdbc`
+     * is pinned to DEBUG for the same reason: at TRACE, `StatementCreatorUtils` prints every bind
+     * parameter — i.e. every value, label and exam date — so the pin, not this test's filtering, is what
+     * keeps a value out of a log line when someone raises a level in an incident.
      */
     @Test
     fun aFullLifecycleLogsNoValueLabelFilenameOrDate() {
         val root = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME) as Logger
         val appender = ListAppender<ILoggingEvent>().also { it.start(); root.addAppender(it) }
+        val originalRootLevel = root.level
+        root.level = ch.qos.logback.classic.Level.TRACE
         val stdout = java.io.ByteArrayOutputStream()
         val originalOut = System.out
         System.setOut(java.io.PrintStream(stdout, true, Charsets.UTF_8))
@@ -2889,6 +2902,20 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             val consentId = grantConsent(alice)
             val candidates = importJulyWithRange(alice, consentId, "log-capture")
             confirmEveryCandidate(alice, candidates, "log-capture")
+            // A server-decided dead letter too: the worker reports a digest that is not the one the
+            // core stored, so `completeInspection` fails the job itself. That path marks the job failed
+            // without the worker ever calling `/failure`, and it must still say `worker_job_failed`.
+            val deadLettered = requestDocument(alice, consentId, fixturePdf, "log-capture-dead-letter")
+            uploadDocument(alice, deadLettered, fixturePdf).andExpect(status().isOk)
+            mutate(post("/api/foundation/documents/$deadLettered/finalization"), alice).andExpect(status().isAccepted)
+            val staleLease = checkNotNull(workerService.lease("a".repeat(64)))
+            assertThat(
+                workerService.completeInspection(
+                    staleLease.jobId,
+                    staleLease.leaseToken,
+                    approvedInspectionRequest("f".repeat(64)),
+                ).status,
+            ).isEqualTo("DEAD_LETTER")
             val recordId = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray)
                 .first()["recordId"].asText()
             mutate(
@@ -2911,6 +2938,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             ).andExpect(status().isBadRequest)
         } finally {
             System.setOut(originalOut)
+            root.level = originalRootLevel
             root.detachAppender(appender)
             appender.stop()
         }
@@ -2924,13 +2952,37 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             stdout.toString(Charsets.UTF_8).lines().map { it.replace(consolePrefix, "") }
         assertThat(lines).isNotEmpty()
         assertThat(lines.count { it.contains("event=") }).isGreaterThanOrEqualTo(8)
+        // The server-decided dead letter says so, with its own reason code and nothing else.
+        assertThat(lines.filter { it.contains("event=worker_job_failed") })
+            .describedAs("worker_job_failed lines")
+            .anyMatch { it.contains("reason_code=inspection_digest_mismatch") }
+        // Masked for the digit-only probes ("188", "42", "190") only, because a long hex token hits one
+        // of them by coincidence: the truncated `subject_hash` (a different `AUDIT_PEPPER` would
+        // otherwise red this test without a leak), Java's own `Object.toString()` identity hash
+        // (`PatternValidator@42ea42ba`), and a server-generated UUID — at TRACE, Spring Security and the
+        // test dispatcher echo the request *path*, and `.../documents/166f73f7-ec07-423e-…/content`
+        // contains "42" about a third of the time. None of the three is derived from anything a person
+        // typed or uploaded, and a leaked value would have to land inside one of those exact token
+        // shapes to hide here. Every non-numeric forbidden string is still matched against the whole
+        // line, masks and all.
+        val opaqueIdentifiers = Regex(
+            "subject_hash=[0-9a-f]{1,12}" +
+                "|@[0-9a-f]{6,16}\\b" +
+                "|\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b",
+        )
         for (
             forbidden in listOf(
                 "188", "5.2", "42", "190", "Cholesterol", "HbA1c", "Vitamin D", "2026-07-28", "120-199",
                 ".pdf", ".png", "synthetic-alice", "결과지에 190으로",
             )
         ) {
-            assertThat(lines.filter { it.contains(forbidden) }).describedAs("log lines containing '$forbidden'").isEmpty()
+            val haystack = if (forbidden.all { it.isDigit() }) {
+                lines.map { it.replace(opaqueIdentifiers, "<opaque>") }
+            } else {
+                lines
+            }
+            assertThat(haystack.filter { it.contains(forbidden) })
+                .describedAs("log lines containing '$forbidden'").isEmpty()
         }
     }
 

@@ -28,6 +28,14 @@ enum class TelemetryEvent(val code: String) {
     WORKER_JOB_LEASED("worker_job_leased"),
     WORKER_JOB_COMPLETED("worker_job_completed"),
     WORKER_JOB_FAILED("worker_job_failed"),
+
+    /**
+     * A lifecycle line was dropped because its context failed [PhiSafeLogger]'s own validation. Emitted
+     * instead of the rejected line, carrying only the event code that was attempted — never the
+     * offending route template or hash, since a value that failed the charset check is exactly the
+     * value that must not be written down.
+     */
+    TELEMETRY_CONTEXT_REJECTED("telemetry_context_rejected"),
 }
 
 data class SafeTelemetryContext(

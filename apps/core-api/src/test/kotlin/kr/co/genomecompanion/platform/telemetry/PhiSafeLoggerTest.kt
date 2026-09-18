@@ -56,6 +56,47 @@ class PhiSafeLoggerTest {
         }
     }
 
+    /**
+     * Every `emitLifecycle`/`emitLifecycleFailure` caller logs from inside a `@Transactional` service
+     * method, *after* the repository write. Throwing on a bad context would therefore roll back a state
+     * change the person already completed — the logger would be deciding what the system did. So a
+     * violation drops the line and says `telemetry_context_rejected`, naming only the event code that
+     * was attempted: the offending route template or hash is exactly the string that must not be
+     * written down.
+     */
+    @Test
+    fun `a rejected lifecycle context drops the line and reports the violation instead of throwing`() {
+        val appender = ListAppender<ILoggingEvent>().also { it.start() }
+        testLogger.addAppender(appender)
+        try {
+            phiSafeLogger.emitLifecycle(TelemetryEvent.RECORD_CORRECTED, "/api/foundation/records/188 mg/dL", "abc")
+            phiSafeLogger.emitLifecycle(TelemetryEvent.SESSION_CREATED, "/api/foundation/session", "synthetic-alice")
+            phiSafeLogger.emitLifecycleFailure(TelemetryEvent.WORKER_JOB_FAILED, "/internal/x", "Cholesterol 188 not parsed")
+            // The safe cases still log normally.
+            phiSafeLogger.emitLifecycle(TelemetryEvent.SESSION_CREATED, "/api/foundation/session", "0f1e2d3c4b5a")
+            phiSafeLogger.emitLifecycleFailure(
+                TelemetryEvent.WORKER_JOB_FAILED,
+                "/internal/document-boundary/jobs/{jobId}/inspection-result",
+                "inspection_digest_mismatch",
+            )
+
+            val rendered = appender.list.map { it.formattedMessage }
+            assertThat(rendered.filter { it.startsWith("event=telemetry_context_rejected") }).containsExactly(
+                "event=telemetry_context_rejected attempted_event=record_corrected",
+                "event=telemetry_context_rejected attempted_event=session_created",
+                "event=telemetry_context_rejected attempted_event=worker_job_failed",
+            )
+            assertThat(rendered).contains(
+                "event=session_created route_template=/api/foundation/session subject_hash=0f1e2d3c4b5a",
+                "event=worker_job_failed route_template=/internal/document-boundary/jobs/{jobId}/inspection-result " +
+                    "subject_hash=none reason_code=inspection_digest_mismatch",
+            )
+            assertThat(rendered.joinToString("\n")).doesNotContain("188", "Cholesterol", "synthetic-alice", "mg/dL")
+        } finally {
+            testLogger.detachAppender(appender)
+        }
+    }
+
     @Test
     fun `correlation filter accepts only UUID and copies no other header to MDC`() {
         val request = MockHttpServletRequest().apply {
