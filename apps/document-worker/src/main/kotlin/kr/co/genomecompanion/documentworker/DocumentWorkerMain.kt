@@ -12,6 +12,7 @@ import kr.co.genomecompanion.documentboundary.MalwareScanResult
 import kr.co.genomecompanion.documentboundary.MalwareScanner
 import kr.co.genomecompanion.documentboundary.PdfSecurityInspector
 import kr.co.genomecompanion.documentboundary.PdfInspectionPolicy
+import kr.co.genomecompanion.documentboundary.WorkerIdentity
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.rendering.ImageType
 import org.apache.pdfbox.rendering.PDFRenderer
@@ -246,9 +247,16 @@ class BoundaryApiClient(
         return builder.build()
     }
 
+    /** Derived once: the MAC is a pure function of the credential and worker id, both fixed for the
+     * process lifetime, and re-deriving it per request would hash the credential on every call. */
+    private val workerIdMac: String = WorkerIdentity.mac(configuration.credential, configuration.workerId)
+
     private fun authenticatedBuilder(uri: URI): HttpRequest.Builder = HttpRequest.newBuilder(uri)
         .header("X-GC-Worker-Credential", configuration.credential)
         .header("X-GC-Worker-Id", configuration.workerId)
+        // Proof that this process holds the credential *and* owns the id it claims; core verifies it
+        // against the credential digest it stores. See WorkerIdentity for why the digest is the key.
+        .header("X-GC-Worker-Id-Mac", workerIdMac)
         .header("Accept", "application/json")
 
     private fun resolve(path: String): URI {

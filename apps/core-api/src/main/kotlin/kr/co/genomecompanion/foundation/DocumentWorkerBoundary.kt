@@ -16,6 +16,11 @@ import kr.co.genomecompanion.documentboundary.InspectionDecision
 import kr.co.genomecompanion.documentboundary.InspectionReason
 import kr.co.genomecompanion.documentboundary.InspectionReport
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
+import kr.co.genomecompanion.documentboundary.WorkerIdentity
+import kr.co.genomecompanion.platform.telemetry.CorrelationFilter
+import kr.co.genomecompanion.platform.telemetry.PhiSafeLogger
+import kr.co.genomecompanion.platform.telemetry.SafeTelemetryContext
+import kr.co.genomecompanion.platform.telemetry.TelemetryEvent
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -52,6 +57,7 @@ import java.util.UUID
 private const val WORKER_ID_HASH_ATTRIBUTE = "gc.document.worker.id-hash"
 private const val WORKER_CREDENTIAL_HEADER = "X-GC-Worker-Credential"
 private const val WORKER_ID_HEADER = "X-GC-Worker-Id"
+private const val WORKER_ID_MAC_HEADER = "X-GC-Worker-Id-Mac"
 private const val JOB_LEASE_HEADER = "X-GC-Job-Lease"
 
 
@@ -583,12 +589,36 @@ class DocumentWorkerSecurityConfiguration {
 )
 class DocumentWorkerCredentialFilter(
     private val properties: FoundationProperties,
+    clock: Clock,
 ) : OncePerRequestFilter() {
     private val workerIdPattern = Regex("^[A-Za-z0-9._:-]{3,80}$")
+    private val phiSafeLogger = PhiSafeLogger.forClass(DocumentWorkerCredentialFilter::class.java)
+
+    /**
+     * Per-worker-id budget, keyed by the *hashed* worker id so the raw id never becomes a map key an
+     * operator could read out of a heap dump. It is deliberately the same mechanism the session
+     * limiter uses (see [TokenBucketWindow]) rather than a second copy of the eviction rules.
+     */
+    private val workerBuckets = TokenBucketWindow(clock) { properties.workerRateLimitPerMinute }
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
         !request.requestURI.startsWith("/internal/document-boundary/")
 
+    /**
+     * Three checks, in this order, and the order is the point:
+     *
+     * 1. **Credential.** A caller that cannot present the shared credential is not a worker at all.
+     * 2. **Identity proof.** `X-GC-Worker-Id-Mac` must be HMAC-SHA256(key = sha256(credential),
+     *    message = workerId) — see [WorkerIdentity]. Without it the worker id is a self-asserted
+     *    header, so any credential holder could claim any id, spend another worker's budget, and
+     *    scatter that id through the audit trail.
+     * 3. **Rate limit.** Only now is a request counted against the worker's bucket: counting before
+     *    step 1 or 2 would let an unauthenticated caller exhaust a *real* worker's budget by simply
+     *    naming it — a denial of service handed over for free.
+     *
+     * A denial logs one structured line with no credential, no MAC, and no worker id in it; the raw
+     * header values exist only as locals here.
+     */
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -604,16 +634,46 @@ class DocumentWorkerCredentialFilter(
                 properties.workerCredentialSha256,
             )
         ) {
-            response.status = HttpServletResponse.SC_FORBIDDEN
-            response.contentType = MediaType.APPLICATION_PROBLEM_JSON_VALUE
-            response.characterEncoding = StandardCharsets.UTF_8.name()
-            response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store")
-            response.writer.write("{\"code\":\"worker_identity_denied\"}")
+            deny(response, HttpServletResponse.SC_FORBIDDEN, "worker_identity_denied")
             return
         }
-        request.setAttribute(WORKER_ID_HASH_ATTRIBUTE, FoundationHashing.sha256(workerId))
+        val presentedMac = request.getHeader(WORKER_ID_MAC_HEADER).orEmpty()
+        if (
+            !FoundationHashing.constantTimeHexEquals(
+                presentedMac,
+                WorkerIdentity.macFromCredentialDigest(properties.workerCredentialSha256, workerId),
+            )
+        ) {
+            phiSafeLogger.emit(TelemetryEvent.AUTHENTICATION_DENIED, denialContext())
+            deny(response, HttpServletResponse.SC_FORBIDDEN, "worker_identity_denied")
+            return
+        }
+        val workerIdHash = FoundationHashing.sha256(workerId)
+        if (!workerBuckets.tryAcquire(workerIdHash)) {
+            response.setHeader(HttpHeaders.RETRY_AFTER, "60")
+            deny(response, HttpStatus.TOO_MANY_REQUESTS.value(), "rate_limited")
+            return
+        }
+        request.setAttribute(WORKER_ID_HASH_ATTRIBUTE, workerIdHash)
         filterChain.doFilter(request, response)
     }
+
+    private fun deny(response: HttpServletResponse, status: Int, code: String) {
+        response.status = status
+        response.contentType = MediaType.APPLICATION_PROBLEM_JSON_VALUE
+        response.characterEncoding = StandardCharsets.UTF_8.name()
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store")
+        response.writer.write("{\"code\":\"$code\"}")
+    }
+
+    /** No handler has been chosen this early in the chain, so the route template is the fixed prefix
+     * this filter guards rather than a request-derived path. */
+    private fun denialContext(): SafeTelemetryContext = SafeTelemetryContext(
+        correlationId = CorrelationFilter.currentCorrelationId() ?: UUID.randomUUID(),
+        routeTemplate = "/internal/document-boundary",
+        statusClass = "4xx",
+        latencyMs = null,
+    )
 }
 
 

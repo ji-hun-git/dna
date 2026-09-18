@@ -7,6 +7,7 @@ import ch.qos.logback.core.read.ListAppender
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.Cookie
+import kr.co.genomecompanion.documentboundary.WorkerIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -2788,6 +2789,71 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         return UUID.fromString(responseJson(response.contentAsByteArray)["candidateId"].asText())
     }
 
+    /**
+     * The worker's id is only as trustworthy as its proof: a shared credential alone lets any holder
+     * claim any worker id (and so any per-worker budget or audit attribution), so the worker boundary
+     * requires `X-GC-Worker-Id-Mac` = HMAC-SHA256(key = sha256(credential), message = workerId). Core
+     * stores only the credential digest, so it can verify without ever holding the raw secret.
+     *
+     * The same test pins one-shot lease semantics end to end over HTTP: the *identical* completion
+     * request replayed byte for byte (same job, same lease token, same body) is rejected, and exactly
+     * one inspection row exists — a retry storm or a duplicated worker can never double-write.
+     */
+    @Test
+    fun workerIdentityMustBeProvenByHmacAndACompletedLeaseCannotBeReplayed() {
+        fun lease(workerId: String, mac: String?) = mockMvc.perform(
+            post("/internal/document-boundary/jobs/lease")
+                .header("X-GC-Worker-Credential", workerCredential)
+                .header("X-GC-Worker-Id", workerId)
+                .let { if (mac == null) it else it.header("X-GC-Worker-Id-Mac", mac) },
+        )
+        lease("worker-a", null)
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("worker_identity_denied"))
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+        lease("worker-a", "0".repeat(64))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("worker_identity_denied"))
+        // A MAC that is valid, but for a different worker id, must not authenticate "worker-a".
+        lease("worker-a", WorkerIdentity.mac(workerCredential, "worker-b"))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("worker_identity_denied"))
+        lease("worker-a", WorkerIdentity.mac(workerCredential, "worker-a"))
+            .andExpect(status().isNoContent)
+
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "replay-lease")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+
+        val leased = responseJson(
+            lease("worker-a", WorkerIdentity.mac(workerCredential, "worker-a"))
+                .andExpect(status().isOk)
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        )
+        assertThat(leased["jobType"].asText()).isEqualTo("SECURITY_INSPECTION")
+        val jobId = leased["jobId"].asText()
+        val leaseToken = leased["leaseToken"].asText()
+        // Rebuilt, never reused: two requests that are identical on the wire, not two different requests.
+        fun completeInspection() = mockMvc.perform(
+            post("/internal/document-boundary/jobs/$jobId/inspection-result")
+                .header("X-GC-Worker-Credential", workerCredential)
+                .header("X-GC-Worker-Id", "worker-a")
+                .header("X-GC-Worker-Id-Mac", WorkerIdentity.mac(workerCredential, "worker-a"))
+                .header("X-GC-Job-Lease", leaseToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(approvedInspectionRequest())),
+        )
+        completeInspection().andExpect(status().isOk)
+        completeInspection()
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("worker_job_lease_invalid"))
+        assertThat(count("gc_document_inspection")).isEqualTo(1)
+    }
+
     private fun login(subjectId: String): TestClient {
         val response = mockMvc.perform(
             post("/api/foundation/session")
@@ -2973,6 +3039,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         private const val allowedOrigin = "http://127.0.0.1:3137"
         private const val aliceCredential = "alice-foundation-test-credential-00000001"
         private const val bobCredential = "bob-foundation-test-credential-00000000002"
+        private const val workerCredential = "worker-credential-for-integration-test-0001"
         private val fixturePdf =
             "%PDF-1.7\nGenome Companion synthetic fixture only; no real health data.\n%%EOF\n".toByteArray()
         private val fixtureDigest = FoundationHashing.sha256(fixturePdf)
@@ -3012,7 +3079,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             registry.add("gc.foundation.enabled") { "true" }
             registry.add("gc.foundation.demo-bootstrap-enabled") { "true" }
             registry.add("gc.foundation.document-boundary-enabled") { "true" }
-            registry.add("gc.foundation.worker-credential-sha256") { "c".repeat(64) }
+            registry.add("gc.foundation.worker-credential-sha256") { FoundationHashing.sha256(workerCredential) }
             registry.add("gc.foundation.allow-synthetic-scanner-results") { "true" }
             registry.add("gc.foundation.allowed-origin") { allowedOrigin }
             registry.add("gc.foundation.secure-cookies") { "false" }
@@ -3022,6 +3089,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             }
             registry.add("gc.foundation.allowed-document-sha256") { "$fixtureDigest,$januaryFixtureDigest" }
             registry.add("gc.foundation.session-rate-limit-per-minute") { "10000" }
+            registry.add("gc.foundation.worker-rate-limit-per-minute") { "100000" }
             registry.add("gc.foundation.local-identities[0].subject-id") { "synthetic-alice" }
             registry.add("gc.foundation.local-identities[0].credential-sha256") {
                 FoundationHashing.sha256(aliceCredential)

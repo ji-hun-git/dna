@@ -2,6 +2,7 @@ package kr.co.genomecompanion.documentworker
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.sun.net.httpserver.HttpServer
+import kr.co.genomecompanion.documentboundary.WorkerIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -21,9 +22,11 @@ class BoundaryApiClientTest {
         val bytes = ("%PDF-1.7\n" + "synthetic-source".repeat(8) + "\n%%EOF\n").toByteArray()
         val digest = sha256(bytes)
         val observedAccept = AtomicReference<String>()
+        val observedWorkerIdMac = AtomicReference<String>()
         withSourceServer(bytes, digest) { server ->
             server.createContext(sourcePath()) { exchange ->
                 observedAccept.set(exchange.requestHeaders.getFirst("Accept"))
+                observedWorkerIdMac.set(exchange.requestHeaders.getFirst("X-GC-Worker-Id-Mac"))
                 exchange.responseHeaders.set("Content-Type", "application/octet-stream")
                 exchange.responseHeaders.set("X-GC-Source-SHA256", digest)
                 exchange.sendResponseHeaders(200, bytes.size.toLong())
@@ -32,6 +35,10 @@ class BoundaryApiClientTest {
         }.useClient { client, lease ->
             assertThat(client.source(lease)).containsExactly(*bytes)
             assertThat(observedAccept.get()).isEqualTo("application/octet-stream")
+            // The worker proves its id with an HMAC keyed by sha256(credential); the raw credential
+            // never keys anything the core can replay, and the core holds only the digest.
+            assertThat(observedWorkerIdMac.get())
+                .isEqualTo(WorkerIdentity.mac(TEST_WORKER_CREDENTIAL, TEST_WORKER_ID))
         }
     }
 
@@ -130,8 +137,8 @@ class BoundaryApiClientTest {
             try {
                 val configuration = WorkerConfiguration(
                     apiBaseUri = URI.create("http://127.0.0.1:${server.address.port}"),
-                    credential = "synthetic-worker-credential-value-0001",
-                    workerId = "worker-test",
+                    credential = TEST_WORKER_CREDENTIAL,
+                    workerId = TEST_WORKER_ID,
                     clamscanPath = null,
                     requiredClamAvVersion = "1.5.4",
                     allowSyntheticScanner = true,
@@ -163,5 +170,7 @@ class BoundaryApiClientTest {
 
     companion object {
         private val JOB_ID: UUID = UUID.fromString("7f547322-3a10-41fb-a1ad-6e75f16567cc")
+        private const val TEST_WORKER_CREDENTIAL = "synthetic-worker-credential-value-0001"
+        private const val TEST_WORKER_ID = "worker-test"
     }
 }
