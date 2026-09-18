@@ -1,5 +1,9 @@
 package kr.co.genomecompanion.foundation
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.Cookie
@@ -7,6 +11,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -2108,6 +2113,74 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat((results.mapNotNull { it.exceptionOrNull() }.single() as FoundationConflictException).code).isEqualTo("record_state_changed")
         assertThat(count("gc_health_record_version")).isEqualTo(2)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_health_record_version WHERE status = 'CURRENT'", Long::class.java)).isEqualTo(1L)
+    }
+
+    @Test
+    fun frameworkFailuresAreProblemJsonWithNoStoreAndNeverEchoTheRequest() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "problem-shape")
+        val secret = "SECRET-BODY-VALUE-7731"
+        fun expectProblem(builder: MockHttpServletRequestBuilder, status: Int, code: String) {
+            val response = mutate(builder, alice).andExpect(status().`is`(status))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(code))
+                .andReturn().response
+            assertThat(response.contentAsString).isEqualTo("""{"code":"$code"}""")
+            assertThat(response.contentAsString).doesNotContain(secret)
+        }
+        val confirmation = "/api/foundation/candidates/$candidateId/confirmation"
+        expectProblem(post(confirmation).header("Idempotency-Key", "problem-json-1").contentType(MediaType.APPLICATION_JSON).content("{\"value\": \"$secret"), 400, "request_body_invalid")
+        expectProblem(post(confirmation).header("Idempotency-Key", "problem-json-2").contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"188\",\"extra\":\"$secret\"}"), 400, "request_body_invalid")
+        expectProblem(post(confirmation).contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"188\"}"), 400, "request_header_missing")
+        expectProblem(post("/api/foundation/candidates/not-a-uuid-$secret/confirmation").header("Idempotency-Key", "problem-json-3").contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"188\"}"), 400, "request_path_invalid")
+        expectProblem(post(confirmation).header("Idempotency-Key", "problem-json-4").contentType(MediaType.TEXT_PLAIN).content(secret), 415, "media_type_unsupported")
+        expectProblem(put("/api/foundation/candidates/$candidateId/confirmation").contentType(MediaType.APPLICATION_JSON).content("{}"), 405, "method_not_allowed")
+        assertThat(count("gc_health_record")).isZero()
+    }
+
+    @Test
+    fun malformedJsonNeverEchoesTheSentinelInResponseOrLog() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "problem-log-shape")
+        val sentinel = "188 mg/dL SENTINEL"
+
+        val watchedLoggers = listOf(
+            "org.springframework.web",
+            "kr.co.genomecompanion.foundation",
+            "org.springframework.web.servlet.handler.HandlerExceptionResolver",
+        ).map { LoggerFactory.getLogger(it) as Logger }
+        val appender = ListAppender<ILoggingEvent>()
+        appender.start()
+        val previousLevels = watchedLoggers.map { it.level }
+        watchedLoggers.forEach {
+            it.addAppender(appender)
+            it.level = Level.TRACE
+        }
+        try {
+            val response = mutate(
+                post("/api/foundation/candidates/$candidateId/confirmation")
+                    .header("Idempotency-Key", "problem-log-json-1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"value\": \"$sentinel"),
+                alice,
+            ).andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.code").value("request_body_invalid"))
+                .andReturn().response
+            assertThat(response.contentAsString).doesNotContain(sentinel)
+            assertThat(response.contentAsString).doesNotContain("188")
+
+            val loggedMessages = appender.list.map { it.formattedMessage + it.throwableProxy?.message.orEmpty() }
+            assertThat(loggedMessages).noneMatch { it.contains(sentinel) || it.contains("188") }
+        } finally {
+            watchedLoggers.forEachIndexed { index, logger ->
+                logger.detachAppender(appender)
+                logger.level = previousLevels[index]
+            }
+            appender.stop()
+        }
     }
 
     /** Starts [threads] callables on one latch against the real database and returns their results in submission order. */

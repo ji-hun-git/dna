@@ -12,6 +12,8 @@ server:
     include-message: never
     include-binding-errors: never
     include-stacktrace: never
+    whitelabel:
+      enabled: false
 
 management:
   endpoints:

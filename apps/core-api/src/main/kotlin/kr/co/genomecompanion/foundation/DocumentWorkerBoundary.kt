@@ -524,11 +524,15 @@ class DocumentWorkerBoundaryController(
         FoundationBadRequestException::class,
         FoundationForbiddenException::class,
         FoundationConflictException::class,
+        FoundationUnprocessableException::class,
+        FoundationRateLimitedException::class,
     )
     fun problem(exception: RuntimeException): ResponseEntity<ApiProblem> {
         val status = when (exception) {
             is FoundationBadRequestException -> HttpStatus.BAD_REQUEST
             is FoundationForbiddenException -> HttpStatus.FORBIDDEN
+            is FoundationUnprocessableException -> HttpStatus.UNPROCESSABLE_ENTITY
+            is FoundationRateLimitedException -> HttpStatus.TOO_MANY_REQUESTS
             else -> HttpStatus.CONFLICT
         }
         return ResponseEntity.status(status)
