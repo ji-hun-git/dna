@@ -88,22 +88,11 @@ object NativeTextRunner {
         val stamp = createdAt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
         return index.documents.map { document ->
             val bytes = Files.readAllBytes(corpusDir.resolve("${document.documentId}.pdf"))
-            val outcome = NativeTextExtractionProvider.extract(bytes)
-            val usedFieldIds = mutableSetOf<String>()
-            NativeTextRun(
-                runId = "run-native-text-" + document.documentId.removePrefix("synthetic-"),
-                documentId = document.documentId,
-                documentSha256 = "sha256:" + BenchmarkJson.sha256(bytes),
-                documentType = document.documentType,
-                createdAt = stamp,
-                models = RunModels(layout = model, semantic = model),
-                candidates = outcome.candidates.map { toCandidate(it, usedFieldIds) },
-                abstentions = outcome.abstentions.mapIndexed { index, abstention -> toAbstention(abstention, index, usedFieldIds) },
-            )
+            toRun(document.documentId, document.documentType, bytes, stamp, model)
         }
     }
 
-    private fun toCandidate(candidate: ParsedCandidate, used: MutableSet<String>) = RunCandidate(
+    internal fun toCandidate(candidate: ParsedCandidate, used: MutableSet<String>) = RunCandidate(
         fieldId = fieldIdFor(candidate.label, candidate.ordinal, used),
         label = candidate.label,
         value = candidate.value,
@@ -119,7 +108,7 @@ object NativeTextRunner {
         conceptCode = MedicalConceptCatalogue.resolve(candidate.label, candidate.unit)?.conceptCode,
     )
 
-    private fun toAbstention(abstention: ParsedAbstention, index: Int, used: MutableSet<String>) = RunAbstention(
+    internal fun toAbstention(abstention: ParsedAbstention, index: Int, used: MutableSet<String>) = RunAbstention(
         fieldId = fieldIdFor(abstention.label, index, used),
         label = abstention.label,
         reason = abstention.reason.code,
@@ -141,4 +130,20 @@ object NativeTextRunner {
 
     private fun slug(label: String): String =
         label.lowercase(Locale.ROOT).replace(Regex("[^a-z0-9]+"), "-").trim('-')
+}
+
+/** Shared by [NativeTextRunner.run] and [HandLabelledRunner.run]: extracts one document into one run record. */
+internal fun NativeTextRunner.toRun(documentId: String, documentType: String, bytes: ByteArray, stamp: String, model: PinnedModel): NativeTextRun {
+    val outcome = NativeTextExtractionProvider.extract(bytes)
+    val usedFieldIds = mutableSetOf<String>()
+    return NativeTextRun(
+        runId = "run-native-text-" + documentId.removePrefix("synthetic-"),
+        documentId = documentId,
+        documentSha256 = "sha256:" + BenchmarkJson.sha256(bytes),
+        documentType = documentType,
+        createdAt = stamp,
+        models = RunModels(layout = model, semantic = model),
+        candidates = outcome.candidates.map { toCandidate(it, usedFieldIds) },
+        abstentions = outcome.abstentions.mapIndexed { index, abstention -> toAbstention(abstention, index, usedFieldIds) },
+    )
 }

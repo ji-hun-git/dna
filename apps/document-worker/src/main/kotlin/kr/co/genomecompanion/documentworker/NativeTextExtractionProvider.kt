@@ -2,6 +2,7 @@ package kr.co.genomecompanion.documentworker
 
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.pdmodel.PDPage
+import org.apache.pdfbox.pdmodel.graphics.state.RenderingMode
 import org.apache.pdfbox.text.PDFTextStripper
 import org.apache.pdfbox.text.TextPosition
 import java.security.MessageDigest
@@ -358,6 +359,17 @@ object NativeTextExtractionProvider {
         private var pageHeight = 1f
 
         init { sortByPosition = true }
+
+        /**
+         * A glyph drawn in invisible rendering mode (Tr 3 — used by scanned-page OCR text layers so a
+         * screen reader/copy-paste sees text the eye never does) must never be trusted as document
+         * content: skip it before it reaches [writeString] so an invisible OCR layer contributes no
+         * tokens at all and the page falls back to `unreadable`.
+         */
+        override fun processTextPosition(text: TextPosition) {
+            if (graphicsState.textState.renderingMode == RenderingMode.NEITHER) return
+            super.processTextPosition(text)
+        }
 
         override fun startPage(page: PDPage) {
             super.startPage(page)

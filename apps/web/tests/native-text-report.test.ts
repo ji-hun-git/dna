@@ -34,7 +34,7 @@ it("renders the gate metrics as a markdown table without an accuracy claim", () 
   expect(markdown).toContain("| Field F1 | 100.0% |");
   expect(markdown).toContain("| Required abstention recall | 100.0% |");
   expect(markdown).toContain("| Reference-range text carried verbatim | 100.0% |");
-  expect(markdown).toContain("| Concept code per the alias and unit rule | 100.0% |");
+  expect(markdown).toContain("| Concept code: runner and gold agree (both from the catalogue rule) | 100.0% |");
   expect(markdown).toContain("reference-range text = 1");
   expect(markdown).toContain("concept code = 1");
   expect(markdown).toContain("| Gate | PASS |");
@@ -45,4 +45,26 @@ it("renders the gate metrics as a markdown table without an accuracy claim", () 
 it("names the failed thresholds when the gate fails", () => {
   const failed = { ...report, gate: { ...report.gate, passed: false, failures: ["field_f1_below_threshold"] } };
   expect(renderNativeTextReport(failed, "2026-09-16")).toContain("| Gate | FAIL: field_f1_below_threshold |");
+});
+
+it("appends a separate hand-labelled section when a HandLabelledReport is supplied", () => {
+  const handLabelled = {
+    schemaVersion: "hand-labelled-report.v1" as const,
+    corpusId: "synthetic-ko-hand-labelled-4b20bf06922a7e0a",
+    expectedCandidates: 14,
+    matchedCandidates: 13,
+    expectedAbstentions: 6,
+    matchedAbstentions: 5,
+    hallucinatedCandidates: 0,
+    candidateAccuracy: 13 / 14,
+    abstentionAccuracy: 5 / 6,
+    handLabelledAccuracy: 0.9,
+    floor: 0.9,
+    passed: true,
+  };
+  const markdown = renderNativeTextReport(report, "2026-09-16", handLabelled);
+  expect(markdown).toContain("## Hand-labelled layouts — synthetic-ko-hand-labelled-4b20bf06922a7e0a");
+  expect(markdown).toContain("| handLabelledAccuracy | 90.0% |");
+  expect(markdown).toContain("| Regression floor | 90.0% |");
+  expect(markdown).toContain("| Gate | PASS |");
 });

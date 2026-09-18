@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { medicalDocumentGoldSchema, medicalDocumentRunSchema } from "@/lib/medical-ai/contracts";
 import {
   compareMedicalDocumentPipelines,
+  evaluateHandLabelled,
   evaluateMedicalDocumentPipeline,
 } from "@/lib/medical-ai/evaluation";
 import corpus from "./fixtures/medical-ai/synthetic-korean-lab.corpus.json";
@@ -151,4 +152,97 @@ it("scores the concept code against gold, counts an expected no-concept row, and
   first.conceptCode = "glucose";
   second.conceptCode = "uric-acid";
   expect(evaluateMedicalDocumentPipeline(gold, runs).gate.failures).toEqual(["concept_accuracy_below_threshold"]);
+});
+
+function handLabelledEvidence(blockId: string) {
+  return {
+    page: 1,
+    blockId,
+    box: { x: 0.1, y: 0.1, width: 0.2, height: 0.01 },
+    sourceTextSha256: "sha256:" + "a".repeat(64),
+  };
+}
+
+function handLabelledRun(documentId: string, documentSha256: string, candidates: Array<{ fieldId: string; label: string; value: string; unit: string }>) {
+  return {
+    schemaVersion: "medical-document-run.v1",
+    pipelineId: "pdfbox-native-text",
+    runId: `run-native-text-${documentId.replace(/^synthetic-/, "")}`,
+    documentId,
+    documentSha256,
+    documentType: "health-screening-lab-report",
+    language: "ko-KR",
+    synthetic: true,
+    createdAt: "2026-09-18T00:00:00.000Z",
+    models: {
+      layout: { modelId: "pdfbox-native-text", artifactSha256: "sha256:" + "b".repeat(64), executionMode: "offline-pinned" },
+      semantic: { modelId: "pdfbox-native-text", artifactSha256: "sha256:" + "b".repeat(64), executionMode: "offline-pinned" },
+    },
+    candidates: candidates.map((candidate, index) => ({
+      semanticRole: "measurement",
+      fieldId: candidate.fieldId,
+      label: candidate.label,
+      value: candidate.value,
+      unit: candidate.unit,
+      observedAt: "2026-05-12",
+      confidence: 1,
+      evidence: handLabelledEvidence(`block-row-${index + 1}`),
+    })),
+    abstentions: [],
+  };
+}
+
+it("scores a two-document hand-labelled corpus and fails below the pinned floor", () => {
+  const shaA = "sha256:" + "1".repeat(64);
+  const shaB = "sha256:" + "2".repeat(64);
+  const corpus = {
+    corpusId: "synthetic-ko-hand-labelled-0123456789abcdef",
+    documents: [
+      {
+        documentId: "synthetic-hand-doc-a",
+        documentSha256: shaA,
+        expected: {
+          schemaVersion: "hand-labelled-expectation.v1",
+          documentId: "synthetic-hand-doc-a",
+          layout: "테스트용 2단 레이아웃",
+          observedOn: "2026-05-12",
+          candidates: [
+            { label: "신장", value: "171.2", unit: "cm" },
+            { label: "체중", value: "66.4", unit: "kg" },
+          ],
+          abstentions: [],
+        },
+      },
+      {
+        documentId: "synthetic-hand-doc-b",
+        documentSha256: shaB,
+        expected: {
+          schemaVersion: "hand-labelled-expectation.v1",
+          documentId: "synthetic-hand-doc-b",
+          layout: "테스트용 4단 레이아웃",
+          observedOn: "2026-05-12",
+          candidates: [
+            { label: "총콜레스테롤", value: "183", unit: "mg/dL" },
+            { label: "크레아티닌", value: "0.9", unit: "mg/dL" },
+          ],
+          abstentions: [],
+        },
+      },
+    ],
+  };
+  const runs = [
+    handLabelledRun("synthetic-hand-doc-a", shaA, [
+      { fieldId: "height", label: "신장", value: "171.2", unit: "cm" },
+      { fieldId: "weight", label: "체중", value: "66.4", unit: "kg" },
+    ]),
+    handLabelledRun("synthetic-hand-doc-b", shaB, [
+      { fieldId: "total-cholesterol", label: "총콜레스테롤", value: "183", unit: "mg/dL" },
+    ]),
+  ];
+
+  const report = evaluateHandLabelled(corpus, runs, 0.8);
+  expect(report.expectedCandidates).toBe(4);
+  expect(report.matchedCandidates).toBe(3);
+  expect(report.handLabelledAccuracy).toBe(0.75);
+  expect(report.passed).toBe(false);
 });
