@@ -2884,7 +2884,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
      * logger wins over the root's. Those two pins are themselves the control for those categories (a
      * `spring.mvc.log-request-details`-style body echo and PDFBox's parse warnings), so the capture
      * below proves the pins hold rather than re-proving what they exclude. `org.springframework.jdbc`
-     * is pinned to DEBUG for the same reason: at TRACE, `StatementCreatorUtils` prints every bind
+     * is pinned to INFO for the same reason: at TRACE, `StatementCreatorUtils` prints every bind
      * parameter — i.e. every value, label and exam date — so the pin, not this test's filtering, is what
      * keeps a value out of a log line when someone raises a level in an incident.
      */
