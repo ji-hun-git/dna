@@ -41,4 +41,28 @@ class PositionalLineGrouperTest {
         assertThat(years.last().previousColumn).isTrue()
         assertThat(years[4].previousColumn).isFalse()
     }
+
+    @Test
+    fun `a data row with two value cells and no header words is never mistaken for a header`() {
+        val lines = PositionalLineGrouper.group(
+            listOf(
+                token("총콜레스테롤", 0.05, 0.20), token("194", 0.30, 0.20), token("mg/dL", 0.34, 0.20),
+                token("201", 0.55, 0.20), token("mg/dL", 0.59, 0.20),
+            ),
+        )
+        assertThat(lines.map { it.previousColumn }).containsOnly(false)
+    }
+
+    @Test
+    fun `a genuine header is still recognized even after an earlier baseline happened to have multiple columns`() {
+        val lines = PositionalLineGrouper.group(
+            listOf(
+                token("총콜레스테롤", 0.05, 0.10), token("194", 0.30, 0.10), token("mg/dL", 0.34, 0.10), token("201", 0.55, 0.10), token("mg/dL", 0.59, 0.10),
+                token("항목", 0.05, 0.14), token("이번", 0.30, 0.14), token("이전", 0.55, 0.14),
+                token("혈당", 0.05, 0.18), token("95", 0.30, 0.18), token("mg/dL", 0.34, 0.18), token("101", 0.55, 0.18), token("mg/dL", 0.59, 0.18),
+            ),
+        )
+        assertThat(lines.last().previousColumn).isTrue()
+        assertThat(lines[lines.size - 2].previousColumn).isFalse()
+    }
 }

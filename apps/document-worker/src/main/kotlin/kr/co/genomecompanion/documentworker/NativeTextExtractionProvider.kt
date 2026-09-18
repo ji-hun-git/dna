@@ -173,48 +173,75 @@ object NativeTextExtractionProvider {
     internal fun parseRow(raw: String): RowParse = parseRowAll(raw).single()
     internal fun parseRowAll(raw: String): List<RowParse> = RowGrammar.parse(raw)
 
-    /** A line with no numeric token whose next line (same page, same column, ≤ 0.03 below) is a measurement row: one row with the label prefixed. */
+    /**
+     * A run of one or more lines with no numeric token, each immediately followed (same page, same
+     * column, ≤ 0.03 below the previous) by another such line or finally by a measurement row: the
+     * whole run collapses into one row with every label fragment prefixed onto the measurement.
+     * A label wrapped across two (or more) label-only lines before the value line is handled by
+     * extending the run for as long as the run's own tail keeps being label-only.
+     */
     internal fun mergeContinuedLabels(lines: List<TextLine>): List<TextLine> {
         val merged = mutableListOf<TextLine>()
         var index = 0
         while (index < lines.size) {
-            val line = lines[index]
-            val next = lines.getOrNull(index + 1)
-            val labelOnly = RowGrammar.tokenize(line.text).none { RowGrammar.valueToken.matches(it) } &&
-                RowGrammar.parse(line.text).singleOrNull() == RowParse.Skipped &&
-                !dateLabel.containsMatchIn(line.text) &&
-                datePatterns.none { it.containsMatchIn(line.text) }
-            if (labelOnly && next != null && next.page == line.page && next.columnIndex == line.columnIndex &&
-                next.box.y - line.box.y in 0.0..0.03 && RowGrammar.parse(next.text).any { it is RowParse.Measurement }
+            var end = index
+            while (isLabelOnlyLine(lines[end]) && end + 1 < lines.size &&
+                lines[end + 1].page == lines[end].page && lines[end + 1].columnIndex == lines[end].columnIndex &&
+                lines[end + 1].box.y - lines[end].box.y in 0.0..0.03
             ) {
+                end += 1
+            }
+            if (end > index && RowGrammar.parse(lines[end].text).any { it is RowParse.Measurement }) {
+                val chain = lines.subList(index, end + 1)
+                val last = chain.last()
                 merged += TextLine(
-                    page = line.page,
-                    text = line.text + " " + next.text,
-                    box = TextBox(minOf(line.box.x, next.box.x), line.box.y, maxOf(line.box.width, next.box.width), next.box.y + next.box.height - line.box.y),
-                    columnIndex = line.columnIndex,
-                    previousColumn = next.previousColumn,
+                    page = chain.first().page,
+                    text = chain.joinToString(" ") { it.text },
+                    box = TextBox(
+                        chain.minOf { it.box.x },
+                        chain.first().box.y,
+                        chain.maxOf { it.box.width },
+                        last.box.y + last.box.height - chain.first().box.y,
+                    ),
+                    columnIndex = chain.first().columnIndex,
+                    previousColumn = last.previousColumn,
                 )
-                index += 2
+                index = end + 1
             } else {
-                merged += line
+                merged += lines[index]
                 index += 1
             }
         }
         return merged
     }
 
+    /** No numeric token anywhere, not a labelled or bare date line: a candidate label fragment for [mergeContinuedLabels]. */
+    private fun isLabelOnlyLine(line: TextLine): Boolean =
+        RowGrammar.tokenize(line.text).none { RowGrammar.valueToken.matches(it) } &&
+            RowGrammar.parse(line.text).singleOrNull() == RowParse.Skipped &&
+            !dateLabel.containsMatchIn(line.text) &&
+            datePatterns.none { it.containsMatchIn(line.text) }
+
     private val leadingComparisonSign = Regex("^[<>≤≥].*")
 
     /**
-     * A column-0 cell is a row's label; every cell to its right on the same baseline either (a)
-     * starts a new value (numeric-like or comparison-signed leading token: `177`, `<0.3 mg/L`) —
-     * one joined row per such cell, so a this-time/previous-time pair of value cells stays two rows
-     * — or (b) is a bare fragment with no numeric-like token of its own (a unit or 참고치 cell:
-     * `mg/dL`, `70-199`), which extends the value cell immediately to its left (unchanged legacy
-     * wide-table layout: label | 결과 | 단위 | 참고치 as four separate columns joins back into one
-     * row). A cell that already carries its own label before a number (`총콜레스테롤 188 mg/dL`,
-     * a second result panel on the same baseline) is self-sufficient and is left untouched — it
-     * parses as its own row without ever touching column 0.
+     * A column-0 cell is a row's label; every cell to its right on the same baseline is either:
+     *  - self-sufficient: it already carries its own label before its own number
+     *    (`총콜레스테롤 188 mg/dL`, a second result panel on the same baseline) — left untouched,
+     *    parsed on its own without ever touching column 0;
+     *  - or a fragment of column 0's own row. When at least one trailing cell on this baseline was
+     *    actually marked [TextLine.previousColumn] by a recognized header (이전/전회/직전/an earlier
+     *    year), every numeric-or-signed-leading fragment starts its own joined row (so a this-time/
+     *    previous-time pair of value cells stays two rows) and a bare fragment with no numeric token
+     *    of its own (a unit or 참고치 cell: `mg/dL`, `70-199`) extends the row immediately to its
+     *    left — the unchanged legacy wide-table layout (label | 결과 | 단위 | 참고치 as four separate
+     *    columns) still joins back into one row.
+     *  - Without any such recognized previous-column marking, every non-self-sufficient trailing
+     *    fragment on the baseline joins into a single row (there is no header to tell two value cells
+     *    apart, so a second bare value next to the first is not silently promoted to its own
+     *    candidate — the row grammar's own duplicate-value guard then abstains it `ambiguous_value`,
+     *    the same outcome a single physical line with two values already produced before positional
+     *    column splitting existed).
      */
     internal fun joinValueColumns(lines: List<TextLine>): List<TextLine> {
         val result = mutableListOf<TextLine>()
@@ -239,6 +266,7 @@ object NativeTextExtractionProvider {
                 index += 1
                 continue
             }
+            val hasRecognizedPreviousColumn = trailing.any { it.previousColumn }
             val groups = mutableListOf<MutableList<TextLine>>()
             val standalone = mutableListOf<TextLine>()
             trailing.forEach { cell ->
@@ -246,10 +274,15 @@ object NativeTextExtractionProvider {
                 val hasOwnLabel = !startsValue && RowGrammar.parse(cell.text).any { it is RowParse.Measurement || it is RowParse.Ambiguous }
                 when {
                     hasOwnLabel -> standalone += cell
+                    !hasRecognizedPreviousColumn -> if (groups.isEmpty()) groups += mutableListOf(cell) else groups[0] += cell
                     startsValue || groups.isEmpty() -> groups += mutableListOf(cell)
                     else -> groups.last() += cell
                 }
             }
+            // Column 0 may already be a complete self-sufficient row on its own (a first result panel
+            // with its own label+value+unit, next to a second panel far enough away to be its own
+            // column): if nothing to its right needed to borrow its label, emit it untouched too.
+            if (groups.isEmpty()) result += line
             groups.forEach { group ->
                 val anchor = group.first()
                 val left = minOf(line.box.x, group.minOf { it.box.x })

@@ -471,6 +471,65 @@ class NativeTextExtractionProviderTest {
         assertThat(outcome.abstentions.map { it.label to it.reason }).containsExactly("혈당" to AbstentionReason.PREVIOUS_COLUMN)
     }
 
+    @Test
+    fun `two value cells on one row with no recognized previous-column marking abstain as one ambiguous row, not two candidates`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("총콜레스테롤", y = 0.14, column = 0),
+                positioned("194 mg/dL", y = 0.14, column = 1),
+                positioned("201 mg/dL", y = 0.14, column = 2),
+            ),
+        )
+        assertThat(outcome.candidates).isEmpty()
+        assertThat(outcome.abstentions.map { it.label to it.reason }).containsExactly("총콜레스테롤" to AbstentionReason.AMBIGUOUS_VALUE)
+    }
+
+    @Test
+    fun `two value cells on one row where the second is marked previous-column split into a candidate and a previous_column abstention`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("총콜레스테롤", y = 0.14, column = 0),
+                positioned("194 mg/dL", y = 0.14, column = 1),
+                positioned("201 mg/dL", y = 0.14, column = 2, previous = true),
+            ),
+        )
+        assertThat(outcome.candidates.map { it.label to it.value }).containsExactly("총콜레스테롤" to "194")
+        assertThat(outcome.abstentions.map { it.label to it.reason }).containsExactly("총콜레스테롤" to AbstentionReason.PREVIOUS_COLUMN)
+    }
+
+    @Test
+    fun `two full result panels on one wide baseline become two candidates with distinct evidence, one row when the gap narrows`() {
+        fun tok(text: String, x: Double, y: Double) = PositionedToken(1, text, x, y, 0.02 * text.length, 0.012)
+        val wideLines = PositionalLineGrouper.group(
+            listOf(
+                tok("총콜레스테롤", 0.05, 0.20), tok("194", 0.19, 0.20), tok("mg/dL", 0.27, 0.20),
+                tok("공복혈당", 0.60, 0.20), tok("95", 0.70, 0.20), tok("mg/dL", 0.76, 0.20),
+            ),
+        )
+        val wideOutcome = NativeTextExtractionProvider.parse(listOf(positioned("검사일: 2026-07-28", y = 0.05)) + wideLines)
+        assertThat(wideOutcome.abstentions).isEmpty()
+        assertThat(wideOutcome.candidates.map { it.label to it.value }).containsExactly("총콜레스테롤" to "194", "공복혈당" to "95")
+        wideOutcome.candidates.forEach { candidate ->
+            assertThat(candidate.evidenceBox.x).isBetween(0.0, 1.0)
+            assertThat(candidate.evidenceBox.x + candidate.evidenceBox.width).isLessThanOrEqualTo(1.0)
+            assertThat(candidate.evidenceBox.y + candidate.evidenceBox.height).isLessThanOrEqualTo(1.0)
+        }
+        assertThat(wideOutcome.candidates[0].evidenceBox).isNotEqualTo(wideOutcome.candidates[1].evidenceBox)
+        assertThat(wideOutcome.candidates[0].sourceTextSha256).isNotEqualTo(wideOutcome.candidates[1].sourceTextSha256)
+
+        val narrowLines = PositionalLineGrouper.group(
+            listOf(
+                tok("총콜레스테롤", 0.05, 0.20), tok("194", 0.19, 0.20), tok("mg/dL", 0.27, 0.20),
+                tok("공복혈당", 0.40, 0.20), tok("95", 0.50, 0.20), tok("mg/dL", 0.56, 0.20),
+            ),
+        )
+        val narrowOutcome = NativeTextExtractionProvider.parse(listOf(positioned("검사일: 2026-07-28", y = 0.05)) + narrowLines)
+        assertThat(narrowOutcome.candidates).isEmpty()
+        assertThat(narrowOutcome.abstentions).hasSize(1)
+    }
+
     private fun positioned(text: String, y: Double, column: Int = 0, previous: Boolean = false, page: Int = 1) =
         TextLine(page, text, TextBox(0.05 + column * 0.3, y, 0.25, 0.012), column, previous)
 
