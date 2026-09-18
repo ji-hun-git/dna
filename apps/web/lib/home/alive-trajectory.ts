@@ -233,6 +233,75 @@ export function halfEllipsePath(
   return d;
 }
 
+// ---------- phases (checkup periods, never life-stage or health-stage words) ----------
+
+/** Time periods only. Never a life-stage or health-stage word. */
+export const PHASE_LABELS: readonly string[] = ["2024 검진", "2025 검진", "2026 검진", "다음 검진"];
+
+export type PhaseRange = { label: string; t0: number; t1: number };
+
+/** Divides [0, tEnd] into `labels.length` equal, contiguous ranges. */
+export function phaseRanges(labels: readonly string[], tEnd: number): PhaseRange[] {
+  const n = labels.length;
+  return labels.map((label, i) => ({ label, t0: (tEnd * i) / n, t1: (tEnd * (i + 1)) / n }));
+}
+
+/**
+ * A sampled polyline `d` string for the arrow path restricted to [t0, t1], so each phase can be
+ * drawn as its own <path> with its own dash pattern while still tracing the same breathing curve.
+ */
+export function phaseSegmentPath(points: ReadonlyArray<ControlPoint>, t0: number, t1: number, steps = 24): string {
+  let d = "";
+  for (let i = 0; i <= steps; i += 1) {
+    const t = t0 + ((t1 - t0) * i) / steps;
+    const p = pathPoint(points, t);
+    d += `${i ? " L " : "M "}${p.x} ${p.y}`;
+  }
+  return d;
+}
+
+/** Sampled arc length of the curve over [t0, t1], using `steps` straight-line segments. */
+export function sampledPathLength(points: ReadonlyArray<ControlPoint>, t0: number, t1: number, steps: number): number {
+  let length = 0;
+  let prev = pathPoint(points, t0);
+  for (let i = 1; i <= steps; i += 1) {
+    const t = t0 + ((t1 - t0) * i) / steps;
+    const point = pathPoint(points, t);
+    length += Math.hypot(point.x - prev.x, point.y - prev.y);
+    prev = point;
+  }
+  return length;
+}
+
+export type PhaseTick = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  labelX: number;
+  labelY: number;
+  angleDeg: number;
+};
+
+/**
+ * A short tick perpendicular to the path at parameter `t`, plus a label anchor further out along
+ * the same normal so the mono phase label never overlaps the path or a ring.
+ */
+export function phaseTick(points: ReadonlyArray<ControlPoint>, t: number, tickLength = 18, labelOffset = 16): PhaseTick {
+  const p = pathPoint(points, t);
+  const nx = -Math.sin(p.angle);
+  const ny = Math.cos(p.angle);
+  return {
+    x1: p.x - (nx * tickLength) / 2,
+    y1: p.y - (ny * tickLength) / 2,
+    x2: p.x + (nx * tickLength) / 2,
+    y2: p.y + (ny * tickLength) / 2,
+    labelX: p.x + nx * (tickLength / 2 + labelOffset),
+    labelY: p.y + ny * (tickLength / 2 + labelOffset),
+    angleDeg: (p.angle * 180) / Math.PI,
+  };
+}
+
 // ---------- fade edge ----------
 
 /**

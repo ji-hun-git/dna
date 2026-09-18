@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BASE_CONTROL_POINTS,
+  PHASE_LABELS,
   PICKER,
   Spring,
   buildPath,
@@ -11,6 +12,10 @@ import {
   fadeEdge,
   halfEllipsePath,
   pathPoint,
+  phaseRanges,
+  phaseSegmentPath,
+  phaseTick,
+  sampledPathLength,
   stepControlPoints,
   stepDrum,
 } from "@/lib/home/alive-trajectory";
@@ -134,6 +139,66 @@ describe("halfEllipsePath", () => {
     const d = halfEllipsePath(0, 0, 10, 5, 0, Math.PI, 2 * Math.PI, 8);
     expect(d.startsWith("M ")).toBe(true);
     expect(d.match(/ L /g)?.length).toBe(8);
+  });
+});
+
+describe("phaseRanges", () => {
+  it("divides [0, tEnd] into contiguous, equal ranges covering every label", () => {
+    const ranges = phaseRanges(PHASE_LABELS, 0.97);
+    expect(ranges).toHaveLength(PHASE_LABELS.length);
+    expect(ranges[0].t0).toBe(0);
+    expect(ranges[ranges.length - 1].t1).toBeCloseTo(0.97, 10);
+    for (let i = 1; i < ranges.length; i += 1) {
+      expect(ranges[i].t0).toBeCloseTo(ranges[i - 1].t1, 10);
+    }
+    expect(ranges.map((r) => r.label)).toEqual([...PHASE_LABELS]);
+  });
+});
+
+describe("phaseSegmentPath and sampledPathLength", () => {
+  it("splits the path into segments whose sampled lengths sum to the whole", () => {
+    const points = createControlPoints(BASE_CONTROL_POINTS, () => 0.5);
+    const tEnd = 0.97;
+    const ranges = phaseRanges(PHASE_LABELS, tEnd);
+    const stepsPerPhase = 75;
+    const total = sampledPathLength(points, 0, tEnd, stepsPerPhase * ranges.length);
+    const sumOfPhases = ranges.reduce((sum, r) => sum + sampledPathLength(points, r.t0, r.t1, stepsPerPhase), 0);
+    expect(sumOfPhases).toBeCloseTo(total, 6);
+    expect(total).toBeGreaterThan(0);
+  });
+
+  it("produces a polyline `d` string that starts and ends at the range's endpoints", () => {
+    const points = createControlPoints(BASE_CONTROL_POINTS, () => 0.5);
+    const d = phaseSegmentPath(points, 0.2, 0.5, 10);
+    expect(d.startsWith("M ")).toBe(true);
+    expect(d.match(/ L /g)?.length).toBe(10);
+    const start = pathPoint(points, 0.2);
+    const end = pathPoint(points, 0.5);
+    const nums = d.replace(/[ML]/g, "").trim().split(/\s+/).map(Number);
+    expect(nums[0]).toBeCloseTo(start.x, 5);
+    expect(nums[1]).toBeCloseTo(start.y, 5);
+    expect(nums[nums.length - 2]).toBeCloseTo(end.x, 5);
+    expect(nums[nums.length - 1]).toBeCloseTo(end.y, 5);
+  });
+});
+
+describe("phaseTick", () => {
+  it("returns a marker whose tick and label sit inside the viewBox, perpendicular to the path", () => {
+    const points = createControlPoints(BASE_CONTROL_POINTS, () => 0.5);
+    const tick = phaseTick(points, 0.4854);
+    for (const [x, y] of [
+      [tick.x1, tick.y1],
+      [tick.x2, tick.y2],
+      [tick.labelX, tick.labelY],
+    ]) {
+      expect(x).toBeGreaterThanOrEqual(-50);
+      expect(x).toBeLessThanOrEqual(1250);
+      expect(y).toBeGreaterThanOrEqual(-50);
+      expect(y).toBeLessThanOrEqual(810);
+    }
+    // The tick has nonzero length and the label sits further out along the same normal.
+    const tickLength = Math.hypot(tick.x2 - tick.x1, tick.y2 - tick.y1);
+    expect(tickLength).toBeGreaterThan(0);
   });
 });
 
