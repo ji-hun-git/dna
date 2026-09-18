@@ -2,7 +2,7 @@
 
 Bounded local evaluation approved in `governance/founder-medgemma-local-evaluation-approval-2026-09-16.md`. The model saw only synthetic page images rendered from the generated corpus and was asked to transcribe label, value, unit and the labelled exam date; it was told not to judge anything. Its output never entered product code and is not stored as a record. Not a clinical, regulatory or production-accuracy claim (`synthetic-contract-regression-only`). Thresholds are shown for the parser gate only; for the model they are evidence, not a verdict.
 
-Note (Wave 5, 2026-09-17): Runs 1–3 used the previous corpus `synthetic-ko-checkup-r2-e6befc286ae6ce1d` (25 documents); the current generator produces `synthetic-ko-checkup-r2-50ed23041bb4af1d` (31 documents, `extended-panel` added) and MedGemma has not been re-run on it.
+Note (Wave 5, 2026-09-17): Runs 1–3 used the previous corpus `synthetic-ko-checkup-r2-e6befc286ae6ce1d` (25 documents); the current generator produces `synthetic-ko-checkup-r2-50ed23041bb4af1d` (31 documents, `extended-panel` added) and MedGemma has not been re-run on it. Model runs carry no concept codes at all (the model only transcribes label/value/unit/date, never a `conceptCode`), so `conceptAccuracy` is not rendered or gated for any run in this document.
 
 ## 실행 환경
 
