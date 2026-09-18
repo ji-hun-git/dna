@@ -26,6 +26,19 @@ class FoundationPropertiesTest {
     }
 
     @Test
+    fun rejectsOutOfRangeSessionLimiterConfiguration() {
+        assertThatThrownBy { properties().copy(sessionRateLimitPerMinute = 0).validateEnabledConfiguration() }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { properties().copy(sessionFailureLockThreshold = 0).validateEnabledConfiguration() }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy {
+            properties().copy(sessionFailureLockDuration = java.time.Duration.ofSeconds(1)).validateEnabledConfiguration()
+        }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { properties().copy(workerRateLimitPerMinute = 0).validateEnabledConfiguration() }
+            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
     fun relaxedBindingMapsTheAllowListWithoutASyntheticDocumentBinding() {
         val source = MapConfigurationPropertySource(
             mapOf("gc.foundation.allowed-document-sha256" to "$firstDigest,$secondDigest"),

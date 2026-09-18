@@ -63,3 +63,5 @@ gc:
     quarantine-root: ${GC_QUARANTINE_ROOT:}
     audit-pepper: ${GC_AUDIT_PEPPER:}
     allowed-document-sha256: ${GC_ALLOWED_DOCUMENT_SHA256:}
+    session-rate-limit-per-minute: ${GC_SESSION_RATE_LIMIT_PER_MINUTE:10}
+    worker-rate-limit-per-minute: ${GC_WORKER_RATE_LIMIT_PER_MINUTE:600}

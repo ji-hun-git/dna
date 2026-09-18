@@ -105,8 +105,8 @@ class FoundationLifecycleController(
     private val properties: FoundationProperties,
 ) {
     @PostMapping("/session")
-    fun createSession(@Valid @RequestBody request: LocalSessionRequest): ResponseEntity<LocalSessionResponse> {
-        val issued = service.createSession(request.subjectId, request.credential)
+    fun createSession(@Valid @RequestBody request: LocalSessionRequest, http: HttpServletRequest): ResponseEntity<LocalSessionResponse> {
+        val issued = service.createSession(request.subjectId, request.credential, http.remoteAddr)
         return sessionResponse(request.subjectId, issued)
     }
 
@@ -458,11 +458,11 @@ class FoundationLifecycleController(
         problem(HttpStatus.UNPROCESSABLE_ENTITY, exception.code)
 
     @ExceptionHandler(FoundationRateLimitedException::class)
-    fun handleRateLimited(): ResponseEntity<ApiProblem> =
+    fun handleRateLimited(exception: FoundationRateLimitedException): ResponseEntity<ApiProblem> =
         ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-            .header("Retry-After", "60")
+            .header("Retry-After", exception.retryAfterSeconds.toString())
             .cacheControlNoStore()
-            .body(ApiProblem("rate_limited"))
+            .body(ApiProblem(exception.code))
 
     @ExceptionHandler(MethodArgumentNotValidException::class, BindException::class)
     fun handleValidation(): ResponseEntity<ApiProblem> =

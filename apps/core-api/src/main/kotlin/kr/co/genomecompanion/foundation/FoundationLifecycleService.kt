@@ -24,7 +24,7 @@ class FoundationForbiddenException(val code: String) : RuntimeException(code)
 class FoundationNotFoundException(val code: String) : RuntimeException(code)
 class FoundationConflictException(val code: String) : RuntimeException(code)
 class FoundationUnprocessableException(val code: String) : RuntimeException(code)
-class FoundationRateLimitedException : RuntimeException("rate_limited")
+class FoundationRateLimitedException(val code: String = "rate_limited", val retryAfterSeconds: Long = 60) : RuntimeException(code)
 
 
 data class IssuedFoundationSession(
@@ -173,6 +173,7 @@ class FoundationLifecycleService(
     private val properties: FoundationProperties,
     private val clock: Clock,
     private val conceptSource: MedicalConceptSource,
+    private val rateLimiter: SessionRateLimiter,
 ) {
     private val subjectPattern = Regex("^synthetic-[a-z0-9-]+$")
     private val idempotencyPattern = Regex("^[A-Za-z0-9._:-]{8,80}$")
@@ -187,17 +188,26 @@ class FoundationLifecycleService(
     }
 
     @Transactional
-    fun createSession(subjectId: String, credential: String): IssuedFoundationSession {
+    fun createSession(subjectId: String, credential: String, clientIp: String): IssuedFoundationSession {
         if (!subjectPattern.matches(subjectId)) throw FoundationBadRequestException("synthetic_subject_required")
+        val subjectKey = subjectHash(subjectId)
+        if (rateLimiter.isLocked(subjectKey, clientIp)) {
+            throw FoundationRateLimitedException("login_locked", properties.sessionFailureLockDuration.seconds)
+        }
+        if (!rateLimiter.tryAcquire(subjectKey, clientIp)) throw FoundationRateLimitedException()
         val expectedCredentialHash = properties.localIdentities
             .firstOrNull { identity -> identity.subjectId == subjectId }
             ?.credentialSha256
-        if (
-            expectedCredentialHash == null ||
-            !FoundationHashing.constantTimeHexEquals(FoundationHashing.sha256(credential), expectedCredentialHash)
-        ) {
+        if (expectedCredentialHash == null) {
+            // Unknown subject: count it toward the lock, write nothing — an audit row would record
+            // an attacker-chosen subject hash for a name nobody configured.
+            rateLimiter.recordFailure(subjectKey, clientIp)
+            throw FoundationForbiddenException("local_identity_denied")
+        }
+        if (!FoundationHashing.constantTimeHexEquals(FoundationHashing.sha256(credential), expectedCredentialHash)) {
+            rateLimiter.recordFailure(subjectKey, clientIp)
             repository.insertDeniedAudit(
-                subjectHash = subjectHash(subjectId),
+                subjectHash = subjectKey,
                 actorSessionHash = null,
                 eventType = "LOCAL_IDENTITY_DENIED",
                 resourceType = "SESSION",
@@ -210,6 +220,7 @@ class FoundationLifecycleService(
         if (!repository.ensureActiveSyntheticSubject(subjectId, now)) {
             throw FoundationForbiddenException("subject_deleted")
         }
+        rateLimiter.recordSuccess(subjectKey, clientIp)
         return issueSession(subjectId, now)
     }
 

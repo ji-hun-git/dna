@@ -300,12 +300,14 @@ class FoundationRepository(
         """.trimIndent()
 
     /** Transaction-scoped lock makes the cap durable and serial across API replicas/restarts.
-     * Deleted subjects count too: deletion must not reset an anonymous provisioning budget.
+     * Capacity is active subjects: deletion and expiry return it. The 20-per-minute creation rate
+     * still counts deleted rows so deletion cannot reset the per-minute budget.
      */
     fun reserveDemoBootstrap(now: Instant): DemoBootstrapBudget {
         jdbc.execute("SELECT pg_advisory_xact_lock(714220910)")
         val total = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM gc_subject WHERE subject_id LIKE 'synthetic-demo-%'", Long::class.java,
+            "SELECT COUNT(*) FROM gc_subject WHERE subject_id LIKE 'synthetic-demo-%' AND deleted_at IS NULL",
+            Long::class.java,
         ) ?: 0L
         val recent = jdbc.queryForObject(
             "SELECT COUNT(*) FROM gc_subject WHERE subject_id LIKE 'synthetic-demo-%' AND created_at > ?",

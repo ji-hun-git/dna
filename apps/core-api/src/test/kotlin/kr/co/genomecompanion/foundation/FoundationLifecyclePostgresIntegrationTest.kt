@@ -70,6 +70,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     @Autowired
     private lateinit var clock: java.time.Clock
 
+    @Autowired
+    private lateinit var sessionRateLimiter: SessionRateLimiter
+
     private val uploadCapabilities = mutableMapOf<UUID, TestUploadCapability>()
 
     private val faultyDocumentStorage: FaultInjectingFoundationDocumentStorage
@@ -89,6 +92,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
     @BeforeEach
     fun resetSyntheticDatabase() {
+        sessionRateLimiter.clear()
         faultyDocumentStorage.reset()
         jdbc.execute("TRUNCATE TABLE security_audit_event")
         jdbc.execute(
@@ -148,10 +152,10 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
-    fun exhaustedDemoCapacityDoesNotPromiseThatWaitingWillRecoverIt() {
+    fun demoCapacityCountsActiveSubjectsAndReturnsOnDeletion() {
         jdbc.execute("""
             INSERT INTO gc_subject(subject_id, created_at, deleted_at)
-            SELECT 'synthetic-demo-retired-' || n, CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP
+            SELECT 'synthetic-demo-retired-' || n, CURRENT_TIMESTAMP - INTERVAL '1 day', NULL
             FROM generate_series(1, 1000) AS n
         """.trimIndent())
         val response = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
@@ -160,6 +164,32 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andReturn().response
         assertThat(response.getHeader("Retry-After")).isNull()
         assertThat(count("gc_subject")).isEqualTo(1000)
+
+        jdbc.update("UPDATE gc_subject SET deleted_at = CURRENT_TIMESTAMP WHERE subject_id = 'synthetic-demo-retired-1'")
+        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+            .andExpect(status().isCreated)
+    }
+
+    @Test
+    fun fiveWrongCredentialsLockTheSubjectAndAnUnknownSubjectLeavesNoAuditRow() {
+        // The unknown-subject probe runs from a different client IP: the IP bucket is shared
+        // across subjects (any five failures from one IP lock that IP, by design), so sharing it
+        // with bob's five attempts below would lock bob's IP one attempt early on an unrelated
+        // probe. Isolating the IPs keeps this test about the subject-level lock it names.
+        fun attempt(subject: String, credential: String, remoteAddr: String = "127.0.0.1") = mockMvc.perform(
+            post("/api/foundation/session").header(HttpHeaders.ORIGIN, allowedOrigin).contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("subjectId" to subject, "credential" to credential)))
+                .with { request -> request.remoteAddr = remoteAddr; request },
+        )
+        attempt("synthetic-nobody", "definitely-not-a-configured-credential-000", remoteAddr = "203.0.113.5")
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("local_identity_denied"))
+        assertThat(count("gc_audit_event")).isZero()
+        repeat(5) { attempt("synthetic-bob", "wrong-credential-value-with-32-characters").andExpect(status().isForbidden) }
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'LOCAL_IDENTITY_DENIED'", Long::class.java)).isEqualTo(5L)
+        attempt("synthetic-bob", bobCredential).andExpect(status().isTooManyRequests).andExpect(jsonPath("$.code").value("login_locked"))
+            .andExpect(header().string("Retry-After", "900"))
+        sessionRateLimiter.clear()
+        attempt("synthetic-bob", bobCredential).andExpect(status().isCreated)
     }
 
     @Test
@@ -901,7 +931,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         // instance of the service directly (reusing the real, autowired repository/storage/clock),
         // so there genuinely is no active transaction — the guard must fall back to deleting the
         // files immediately instead of throwing (F7).
-        val rawService = FoundationLifecycleService(repository, documentStorage, foundationProperties, clock, conceptSource)
+        val rawService = FoundationLifecycleService(repository, documentStorage, foundationProperties, clock, conceptSource, sessionRateLimiter)
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
         val untrusted = requestDocument(alice, consentId, fixturePdf, "f7-revoke-untrusted")
@@ -2901,6 +2931,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 "foundation-integration-test-pepper-64-characters-minimum-value"
             }
             registry.add("gc.foundation.allowed-document-sha256") { "$fixtureDigest,$januaryFixtureDigest" }
+            registry.add("gc.foundation.session-rate-limit-per-minute") { "10000" }
             registry.add("gc.foundation.local-identities[0].subject-id") { "synthetic-alice" }
             registry.add("gc.foundation.local-identities[0].credential-sha256") {
                 FoundationHashing.sha256(aliceCredential)
