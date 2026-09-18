@@ -2740,10 +2740,40 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(0))
 
+        // Bob's own, real recordVersionId is just as much "not this subject's own" as a random UUID:
+        // Alice gets an empty page and no next-cursor header, never a peek at Bob's row.
+        val bob = login("synthetic-bob")
+        val bobConsentId = grantConsent(bob)
+        confirmEveryCandidate(bob, importSyntheticDocument(bob, bobConsentId, fixturePdf, fixtureDigest, "bob-page"), "bob-page")
+        val bobRecordVersionId = responseJson(
+            read(get("/api/foundation/records"), bob).andReturn().response.contentAsByteArray,
+        ).first()["recordVersionId"].asText()
+        val aliceWithBobCursor = read(get("/api/foundation/records").param("after", bobRecordVersionId), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(0))
+            .andReturn()
+            .response
+        assertThat(aliceWithBobCursor.getHeader(NEXT_AFTER_HEADER)).isNull()
+
+        // `limit` is one code, `request_invalid`, for every way it can be wrong: non-numeric,
+        // overflowing Int, zero, negative or above the cap — never Spring's own type-mismatch
+        // `request_path_invalid`, which a raw `Int?` binding would otherwise surface for the first two.
+        read(get("/api/foundation/records").param("limit", "abc"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/records").param("limit", "2147483648"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
         read(get("/api/foundation/records").param("limit", "201"), alice)
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("request_invalid"))
         read(get("/api/foundation/records").param("limit", "0"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/health-events").param("limit", "abc"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/health-events").param("limit", "2147483648"), alice)
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("request_invalid"))
         read(get("/api/foundation/records").param("after", "not-a-uuid"), alice)

@@ -362,16 +362,18 @@ class FoundationLifecycleController(
      * is present only when at least one further row follows, so its absence — not an empty page — is
      * the end of the list.
      *
-     * `limit` is checked here rather than with `@Min`/`@Max` plus `@Validated`: a `@Validated` class-level
-     * annotation proxies the controller (and, on Spring 6.1+, competes with the framework's own built-in
-     * method validation, which answers with a different problem body). The observable contract — 400
-     * `request_invalid` — is identical, and this way exactly one mechanism produces it.
+     * `limit` is bound as a raw `String?` rather than `Int?` so that a non-numeric or out-of-`Int`-range
+     * value never reaches Spring's own type conversion: `MethodArgumentTypeMismatchException` would
+     * otherwise surface as 400 `request_path_invalid` (see `FoundationProblemAdvice`), a second code for
+     * what is observably the same "not a valid page limit" failure. Parsing it here, alongside the
+     * `@Min`/`@Max`-shaped 1..[MAX_PAGE_LIMIT] check, keeps exactly one mechanism — and one code, 400
+     * `request_invalid` — for every invalid `limit`.
      */
     @GetMapping("/records")
     fun listRecords(
         request: HttpServletRequest,
         @RequestParam(required = false) after: UUID?,
-        @RequestParam(required = false) limit: Int?,
+        @RequestParam(required = false) limit: String?,
     ): ResponseEntity<List<RecordReceipt>> {
         val page = service.listRecordsPage(request.foundationPrincipal(), after, requireValidLimit(limit))
         return pageResponse(page.nextAfter).body(page.items)
@@ -381,14 +383,15 @@ class FoundationLifecycleController(
     fun listHealthEvents(
         request: HttpServletRequest,
         @RequestParam(required = false) after: UUID?,
-        @RequestParam(required = false) limit: Int?,
+        @RequestParam(required = false) limit: String?,
     ): ResponseEntity<List<HealthEvent>> {
         val page = service.listHealthEventsPage(request.foundationPrincipal(), after, requireValidLimit(limit))
         return pageResponse(page.nextAfter).body(page.items)
     }
 
-    private fun requireValidLimit(limit: Int?): Int {
-        val effective = limit ?: MAX_PAGE_LIMIT
+    private fun requireValidLimit(limit: String?): Int {
+        val effective = limit?.let { it.toIntOrNull() ?: throw FoundationBadRequestException("request_invalid") }
+            ?: MAX_PAGE_LIMIT
         if (effective !in 1..MAX_PAGE_LIMIT) throw FoundationBadRequestException("request_invalid")
         return effective
     }
