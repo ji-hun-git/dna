@@ -28,7 +28,7 @@ it("renders an identity definition list with the required example rows and the p
   expect(scope.getByText("25")).toBeInTheDocument();
   expect(scope.getByText("여성")).toBeInTheDocument();
   expect(scope.getByText("2026. 7. 28.")).toBeInTheDocument();
-  expect(scope.getByText("8개")).toBeInTheDocument();
+  expect(scope.getByText("6개")).toBeInTheDocument();
   expect(scope.getByText("3개")).toBeInTheDocument();
   expect(screen.getByText("이 프로필은 예시이며 실제 사람의 정보가 아니에요.")).toBeInTheDocument();
 });
@@ -48,15 +48,18 @@ it("renders a records table with Korean column headers and a state column that o
   }
 });
 
-it("renders the four phase labels in the bottom strip with exactly one current-phase marker", () => {
+it("renders one phase label per example ring (derived from its dates) plus a trailing open phase, with exactly one current-phase marker on the last dated phase", () => {
   const { container } = renderLayout();
   const strip = container.querySelector("nav[aria-label='검진 시기']")!;
   expect(strip).toBeInTheDocument();
-  for (const label of ["2024 검진", "2025 검진", "2026 검진", "다음 검진"]) {
-    expect(within(strip as HTMLElement).getByText(label, { exact: false })).toBeInTheDocument();
-  }
+  const items = within(strip as HTMLElement).getAllByText(/검진/);
+  // 4 example rings -> 4 dated phases, derived from their own node dates, plus "다음 검진".
+  expect(items.length).toBe(5);
+  expect(within(strip as HTMLElement).getByText("다음 검진")).toBeInTheDocument();
   const currentMarkers = container.querySelectorAll('[class*="phaseMarkerCurrent"]');
   expect(currentMarkers).toHaveLength(1);
+  // The current marker sits on the last phase that has a ring, never the trailing open phase.
+  expect(currentMarkers[0].parentElement?.textContent).not.toContain("다음 검진");
 });
 
 it("contains no forbidden judgement word anywhere in the rendered layout", () => {

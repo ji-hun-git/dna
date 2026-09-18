@@ -1,15 +1,25 @@
 import type { ReactNode } from "react";
 import { formatKoreanDate } from "@/lib/format/korean-date";
-import { PHASE_LABELS } from "@/lib/home/alive-trajectory";
-import { EXAMPLE_IDENTITY, exampleRecordRows, nodeValueWithUnit } from "@/lib/home/alive-example-data";
+import { EXAMPLE_IDENTITY, RINGS, exampleRecordRows, nodeValueWithUnit, type ExampleNode, type ExampleRing } from "@/lib/home/alive-example-data";
+import { buildExamplePhases } from "@/lib/home/alive-home-data";
 import { AliveTrajectory } from "@/components/home/AliveTrajectory";
 import styles from "@/components/home/AliveEntryLayout.module.css";
 
-/** The phase the strip marks as current. A fixed point in time, never a health state. */
-const CURRENT_PHASE_INDEX = 2;
+// No phase is ever empty by construction: derived once from the example rings' own node dates,
+// not a hand-picked label list that could drift out of sync with the data.
+const EXAMPLE_PHASES = buildExamplePhases(RINGS);
 
-function IdentityPanel() {
-  const identity = EXAMPLE_IDENTITY;
+export type AliveIdentity = {
+  name: string;
+  age: number | string;
+  gender: string;
+  /** null renders "없음" (no real-looking date is ever fabricated for a session with no history). */
+  lastResultDate: string | null;
+  recordCount: number;
+  resultSheetCount: number;
+};
+
+function IdentityPanel({ identity }: { identity: AliveIdentity }) {
   return (
     <div className={styles.panel} aria-labelledby="alive-identity-title">
       <p className={styles.panelTitle} id="alive-identity-title">
@@ -30,7 +40,7 @@ function IdentityPanel() {
         </div>
         <div>
           <dt>최근 결과지</dt>
-          <dd>{formatKoreanDate(identity.lastResultDate)}</dd>
+          <dd>{identity.lastResultDate ? formatKoreanDate(identity.lastResultDate) : "없음"}</dd>
         </div>
         <div>
           <dt>기록</dt>
@@ -46,53 +56,75 @@ function IdentityPanel() {
   );
 }
 
-function RecordsPanel() {
-  const rows = exampleRecordRows();
+export type AliveRecordsAction = { label: string; href: string };
+
+type RecordsPanelProps = {
+  title: string;
+  heading?: string;
+  rows: ExampleNode[];
+  zeroMessage?: string;
+  action?: AliveRecordsAction;
+  below?: ReactNode;
+};
+
+function RecordsPanel({ title, heading, rows, zeroMessage, action, below }: RecordsPanelProps) {
+  const titleId = "alive-records-title";
   return (
-    <div className={styles.panel} aria-labelledby="alive-records-title">
-      <p className={styles.panelTitle} id="alive-records-title">
-        최근 기록 · 예시
+    <div className={styles.panel} aria-labelledby={titleId}>
+      <p className={styles.panelTitle} id={titleId}>
+        {title}
       </p>
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col">항목</th>
-              <th scope="col">값</th>
-              <th scope="col">검사일</th>
-              <th scope="col">상태</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((node, i) => (
-              <tr key={`${node.item}-${i}`}>
-                <td>{node.item}</td>
-                <td>{nodeValueWithUnit(node)}</td>
-                <td>{formatKoreanDate(node.observedOn)}</td>
-                <td>직접 확인함</td>
+      {heading && <h2 className={styles.panelHeading}>{heading}</h2>}
+      {rows.length > 0 ? (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col">항목</th>
+                <th scope="col">값</th>
+                <th scope="col">검사일</th>
+                <th scope="col">상태</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((node, i) => (
+                <tr key={`${node.item}-${i}`}>
+                  <td>{node.item}</td>
+                  <td>{nodeValueWithUnit(node)}</td>
+                  <td>{formatKoreanDate(node.observedOn)}</td>
+                  <td>직접 확인함</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        zeroMessage && <p className={styles.identityNote}>{zeroMessage}</p>
+      )}
+      {action && (
+        <a className={styles.panelAction} href={action.href}>
+          {action.label}
+        </a>
+      )}
+      {below}
     </div>
   );
 }
 
-function PhaseStrip() {
+function PhaseStrip({ labels, currentIndex }: { labels: readonly string[]; currentIndex: number }) {
   return (
     <nav className={styles.phaseStrip} aria-label="검진 시기">
-      {PHASE_LABELS.map((label, i) => (
-        <div className={styles.phaseStripItem} key={label}>
+      {labels.map((label, i) => (
+        <div className={styles.phaseStripItem} key={`${label}-${i}`}>
           <span
-            className={[styles.phaseMarker, i === CURRENT_PHASE_INDEX ? styles.phaseMarkerCurrent : ""]
+            className={[styles.phaseMarker, i === currentIndex ? styles.phaseMarkerCurrent : ""]
               .filter(Boolean)
               .join(" ")}
             aria-hidden="true"
           />
           <span className={styles.phaseStripLabel}>
             {label}
-            {i === CURRENT_PHASE_INDEX ? " · 현재" : ""}
+            {i === currentIndex ? " · 현재" : ""}
           </span>
         </div>
       ))}
@@ -101,30 +133,71 @@ function PhaseStrip() {
 }
 
 export type AliveEntryLayoutProps = {
+  /** The left column's top block: the pre-login copy, or the logged-in actions panel. */
   children: ReactNode;
+  identity?: AliveIdentity;
+  recordsTitle?: string;
+  recordsHeading?: string;
+  rows?: ExampleNode[];
+  recordsZeroMessage?: string;
+  recordsAction?: AliveRecordsAction;
+  /** Rendered under the records table/empty-state inside the same panel (e.g. RecentChanges). */
+  belowRecords?: ReactNode;
+  /** A second panel stacked under the records panel in the right column (e.g. the boundary strip). */
+  rightExtra?: ReactNode;
+  rings?: ReadonlyArray<ExampleRing>;
+  phaseLabels?: readonly string[];
+  currentPhaseIndex?: number;
+  heroCaption?: string;
 };
 
 /**
- * The dense, gridded pre-login entry composition: the copy block and an example identity panel
- * in the left column, the alive-trajectory hero owning the centre, an example records panel on
- * the right, and a phase strip along the bottom. Under ~900px it stacks: hero (reduced height),
- * copy, identity, records, strip.
+ * The dense, gridded trajectory composition shared by the pre-login entry screen and the
+ * logged-in home screen: a copy/actions block and an identity panel in the left column, the
+ * alive-trajectory hero owning the centre, a records panel (plus an optional second panel) on the
+ * right, and a phase strip along the bottom. Under ~900px it stacks: hero (reduced height), copy,
+ * identity, records, strip. Every prop defaults to the pre-login example dataset, so the entry
+ * screen's call site is unchanged; the home screen passes the person's own records instead.
  */
-export function AliveEntryLayout({ children }: AliveEntryLayoutProps) {
+export function AliveEntryLayout({
+  children,
+  identity = EXAMPLE_IDENTITY,
+  recordsTitle = "최근 기록 · 예시",
+  recordsHeading,
+  rows = exampleRecordRows(),
+  recordsZeroMessage,
+  recordsAction,
+  belowRecords,
+  rightExtra,
+  rings = EXAMPLE_PHASES.rings,
+  phaseLabels = EXAMPLE_PHASES.labels,
+  // The last phase that has a ring — never hard-coded, and never the trailing open phase, which
+  // has no ring by definition.
+  currentPhaseIndex = Math.max(0, EXAMPLE_PHASES.rings.length - 1),
+  heroCaption,
+}: AliveEntryLayoutProps) {
   return (
     <div className={styles.grid}>
       <div className={styles.left}>
         <div className={styles.copy}>{children}</div>
-        <IdentityPanel />
+        <IdentityPanel identity={identity} />
       </div>
       <div className={styles.center}>
-        <AliveTrajectory />
+        <AliveTrajectory rings={rings} phaseLabels={phaseLabels} caption={heroCaption} />
       </div>
       <div className={styles.right}>
-        <RecordsPanel />
+        <RecordsPanel
+          title={recordsTitle}
+          heading={recordsHeading}
+          rows={rows}
+          zeroMessage={recordsZeroMessage}
+          action={recordsAction}
+          below={belowRecords}
+        />
+        {rightExtra}
       </div>
       <div className={styles.strip}>
-        <PhaseStrip />
+        <PhaseStrip labels={phaseLabels} currentIndex={currentPhaseIndex} />
       </div>
     </div>
   );
