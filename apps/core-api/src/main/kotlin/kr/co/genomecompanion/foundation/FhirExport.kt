@@ -119,10 +119,13 @@ object FhirObservationMapper {
     private fun observation(record: FoundationRecordRow, concepts: Map<String, MedicalConcept>): FhirObservation {
         val conceptCode = record.conceptCode
         // Data-driven (gc_medical_concept.loinc_export, docs/status/2026-09-17/loinc-audit.md): a code is emitted
-        // only when the audit found it no more specific than the labels, and only for a value in the concept's
-        // canonical unit — the seeded codes are tied to that unit's property (mass/volume, not moles/volume).
+        // only when the audit found it no more specific than the labels, only for a value in the concept's
+        // canonical unit — the seeded codes are tied to that unit's property (mass/volume, not moles/volume) —
+        // and only when the sheet's own label is known (record.originalLabel != null). A row stored before V11
+        // has no original_label and may carry a concept code an alias narrowed since; without this guard such a
+        // row would regain a LOINC coding it was explicitly denied before.
         val loinc = conceptCode?.let(concepts::get)
-            ?.takeIf { it.loincExport && record.unit == it.canonicalUnit }
+            ?.takeIf { it.loincExport && record.unit == it.canonicalUnit && record.originalLabel != null }
             ?.loincCode
         val number = ChangeDeltaCalculator.parse(record.currentValue)
         val category = when {

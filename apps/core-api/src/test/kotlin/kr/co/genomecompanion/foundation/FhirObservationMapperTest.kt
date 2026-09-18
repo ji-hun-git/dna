@@ -132,8 +132,23 @@ class FhirObservationMapperTest {
         assertThat(byText.getValue("FBS").code.coding).containsExactly(FhirCoding("http://loinc.org", "1558-6"))
         assertThat(byText.getValue("TC").code.coding).isNull()
         assertThat(byText.getValue("eGFR").code.coding).isNull()
-        // A row stored before V11 has no result-sheet label: the display label is the text.
-        assertThat(byText.getValue("총콜레스테롤").code.coding).containsExactly(FhirCoding("http://loinc.org", "2093-3"))
+        // A row stored before V11 has no result-sheet label (original_label is NULL): the display label
+        // is the text, and no coding is emitted even though the concept still allows LOINC export — the
+        // sheet's own wording was never confirmed, so a coding cannot be tied to it (C1).
+        assertThat(byText.getValue("총콜레스테롤").code.coding).isNull()
+    }
+
+    @Test
+    fun omitsCodingForAPreV11RowEvenWhenItsConceptCodeWasNarrowedByALaterAlias() {
+        // Before V11, "공복혈당" (fasting glucose) could resolve via the old broad "혈당" alias to
+        // fasting-glucose. After V11 narrows the aliases, that stored concept code is unchanged, but
+        // the row has no original_label — so it must not regain a coding it never had.
+        val concepts = mapOf("fasting-glucose" to concept("fasting-glucose", "1558-6", true))
+        val record = row(label = "공복혈당", conceptCode = "fasting-glucose", originalLabel = null)
+        val observation = FhirObservationMapper.bundle(listOf(record), concepts, now).entry!!.single().resource
+
+        assertThat(observation.code.coding).isNull()
+        assertThat(observation.code.text).isEqualTo("공복혈당")
     }
 
     @Test
