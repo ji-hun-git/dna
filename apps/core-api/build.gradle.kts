@@ -53,6 +53,10 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     systemProperty("user.timezone", "UTC")
+    // The PostgreSQL classes are gated by this variable; declaring it as an input re-runs them when it changes
+    // and skips them when nothing changed — no more `cleanTest` ritual.
+    inputs.property("gcTestPostgresUrl", System.getenv("GC_TEST_POSTGRES_URL") ?: "")
+    inputs.property("gcTestQuarantineRoot", System.getenv("GC_TEST_QUARANTINE_ROOT") ?: "")
 }
 
 dependencyLocking { lockAllConfigurations() }

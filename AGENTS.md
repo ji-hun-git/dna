@@ -34,7 +34,7 @@ This file is the short version. The authority is `PROJECT_GUIDE.md`; when they d
 | Any | `pnpm security:runtime-policy`, `pnpm release:readiness:validate` |
 | `apps/web` | `pnpm web:test`, `pnpm --dir apps/web build`, `pnpm auth-security:gate` |
 | `apps/research-web` | `pnpm research:test`, `pnpm research:build` |
-| JVM (`apps/core-api`, `apps/document-worker`, `packages/document-boundary`) | `.\gradlew.bat test --no-daemon` (PostgreSQL classes skip without Docker; CI runs them) |
+| JVM (`apps/core-api`, `apps/document-worker`, `packages/document-boundary`) | `.\gradlew.bat test --no-daemon` (PostgreSQL classes skip without `GC_TEST_POSTGRES_URL`; CI runs them). No `cleanTest`: that variable and `GC_TEST_QUARANTINE_ROOT` are declared Gradle test inputs, so changing one re-runs the task. |
 | Workflows | `pnpm security:github-actions-policy` |
 | Infra | `tofu fmt -check -recursive infra` and the module `validate`/`test` targets in `.github/workflows/ci.yml` |
 

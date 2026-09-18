@@ -295,6 +295,91 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  migration-replay:
+    name: Flyway replay V1..V12 + seeded rows + V13
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GC_DATABASE_URL: jdbc:postgresql://127.0.0.1:5432/postgres
+      GC_DATABASE_USERNAME: postgres
+      GC_DATABASE_PASSWORD: ""
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Java toolchain
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Build the core-api jar
+        run: ./gradlew :apps:core-api:bootJar --no-daemon
+      - name: Apply V1..V12 only
+        run: java -jar apps/core-api/build/libs/core-api.jar --spring.main.web-application-type=none --spring.main.lifecycle.timeout-per-shutdown-phase=1s --gc.migrate-only=true --spring.flyway.target=12
+      - name: Seed representative rows on the V12 schema
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO gc_subject(subject_id, created_at) VALUES ('synthetic-replay', now());
+          INSERT INTO gc_consent_grant(consent_id, subject_id, purpose_code, status, policy_version, granted_at)
+            VALUES ('00000000-0000-0000-0000-0000000000c1', 'synthetic-replay', 'DOCUMENT_EXTRACTION', 'ACTIVE', 'v1', now());
+          INSERT INTO gc_document(document_id, subject_id, consent_id, status, media_type, expected_length, created_at, expected_sha256, state_version, updated_at)
+            VALUES ('00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', '00000000-0000-0000-0000-0000000000c1', 'REVIEW_REQUIRED', 'application/pdf', 128, now(), repeat('a', 64), 3, now());
+          INSERT INTO gc_extraction_job(job_id, document_id, subject_id, status, created_at, attempt) VALUES ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', 'COMPLETED', now(), 1);
+          INSERT INTO gc_candidate(candidate_id, job_id, document_id, subject_id, status, ordinal, label, candidate_value, unit, observed_on, evidence_page, source_text_sha256, created_at, confirmed_at)
+            VALUES ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', 'CONFIRMED', 1, 'replay-a', '1', 'mg/dL', '2026-07-28', 1, repeat('1', 64), now(), now()),
+                   ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', 'PENDING', 2, 'replay-b', '2', 'mg/dL', '2026-07-28', 1, repeat('2', 64), now(), NULL);
+          INSERT INTO gc_health_record(record_id, candidate_id, document_id, subject_id, label, confirmed_value, unit, observed_on, confirmed_at)
+            VALUES ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', 'replay-a', '1', 'mg/dL', '2026-07-28', now());
+          INSERT INTO gc_health_record_version(version_id, record_id, subject_id, status, value, supersedes_version_id, correction_reason, changed_at)
+            VALUES ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000f1', 'synthetic-replay', 'SUPERSEDED', '1', NULL, NULL, now() - interval '1 minute'),
+                   ('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000f1', 'synthetic-replay', 'CURRENT', '3', '00000000-0000-0000-0000-0000000000b1', 'replay correction', now());
+          INSERT INTO gc_idempotency(subject_hash, operation, idempotency_key, resource_id, created_at) VALUES (repeat('c', 64), 'CANDIDATE_CONFIRM', 'replay-key-0001', '00000000-0000-0000-0000-0000000000f1', now() - interval '1 hour');
+          INSERT INTO gc_audit_event(event_id, subject_hash, actor_session_hash, event_type, resource_type, resource_id, outcome, occurred_at)
+            VALUES ('00000000-0000-0000-0000-0000000000ae', repeat('c', 64), NULL, 'CANDIDATE_CONFIRMED', 'RECORD', '00000000-0000-0000-0000-0000000000f1', 'SUCCESS', now());
+          SQL
+      - name: Apply V13 on the populated schema
+        run: java -jar apps/core-api/build/libs/core-api.jar --spring.main.web-application-type=none --spring.main.lifecycle.timeout-per-shutdown-phase=1s --gc.migrate-only=true
+      - name: Assert the seeded rows survived and the new rules hold
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          -- `ELSE 1/0` cannot fail an assertion: PostgreSQL constant-folds `1/0` while planning, so
+          -- such a statement raises division_by_zero whether or not the condition held. A PL/pgSQL
+          -- block evaluates its conditions at run time and names what broke.
+          DO $$ BEGIN
+            IF (SELECT COUNT(*) FROM gc_candidate) <> 2 THEN RAISE EXCEPTION 'seeded candidates did not survive V13'; END IF;
+            IF (SELECT COUNT(*) FROM gc_health_record_version WHERE status = 'CURRENT') <> 1 THEN RAISE EXCEPTION 'seeded record versions did not survive V13'; END IF;
+            IF NOT (SELECT expires_at = created_at + interval '24 hours' FROM gc_idempotency) THEN RAISE EXCEPTION 'V13 did not backfill gc_idempotency.expires_at'; END IF;
+            IF (SELECT version FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 1) <> '13' THEN RAISE EXCEPTION 'schema is not at V13'; END IF;
+            IF NOT (SELECT aliases ? '혈압(수축기)' FROM gc_medical_concept WHERE concept_code = 'systolic-blood-pressure') THEN RAISE EXCEPTION 'V13 alias is missing'; END IF;
+          END $$;
+          UPDATE gc_document SET status = 'TERMINATED_BY_REVOCATION' WHERE document_id = '00000000-0000-0000-0000-0000000000d1';
+          DO $$ BEGIN
+            BEGIN
+              UPDATE gc_audit_event SET outcome = 'DENIED';
+              RAISE EXCEPTION 'audit update must have been rejected';
+            EXCEPTION WHEN OTHERS THEN
+              IF SQLERRM NOT LIKE '%append-only%' THEN RAISE; END IF;
+            END;
+          END $$;
+          SQL
+
   supply-chain:
     name: secrets, dependencies, configuration, and license policy
     runs-on: ubuntu-latest
