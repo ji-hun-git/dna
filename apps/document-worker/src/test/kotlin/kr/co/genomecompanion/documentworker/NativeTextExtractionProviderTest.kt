@@ -386,6 +386,30 @@ class NativeTextExtractionProviderTest {
     }
 
     @Test
+    fun `a Korean compound that ends with the exam-date label is not a date label`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("재검사일: 2026-08-30", "혈당 95 mg/dL")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("예약검진일 2026-08-30", "검사일 2026-07-28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Found(java.time.LocalDate.of(2026, 7, 28)))
+    }
+
+    @Test
+    fun `an English date preceded by report, print or issue is not the exam date`() {
+        for (prefix in listOf("Report Date", "Print Date", "Printed Date", "Issue Date", "Issued date")) {
+            assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("$prefix: 2026-08-30")))
+                .describedAs(prefix).isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+        }
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Report Date: 2026-08-30", "Exam Date: 2026-07-28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Found(java.time.LocalDate.of(2026, 7, 28)))
+    }
+
+    @Test
+    fun `two-digit years are not dates`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("검사일: 26-07-28", "검사일 26.7.28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+    }
+
+    @Test
     fun `the abstention reason set is exactly the seven closed codes`() {
         assertThat(AbstentionReason.CODES).containsExactly(
             "unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence",

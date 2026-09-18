@@ -68,6 +68,7 @@ data class ExtractionOutcome(
  * carried verbatim as `referenceRangeText` (range body only — two bodies on one row joined by one
  * space — at most 40 characters, else null) so the person's
  * own export can keep it; the worker never compares a value against it.
+ * Two-digit years are not recognised; 재검사일, Report/Print/Issue Date are not exam-date labels.
  */
 object NativeTextExtractionProvider {
     const val METHOD = "native-text"
@@ -80,9 +81,9 @@ object NativeTextExtractionProvider {
     private const val MAX_UNIT = 32
 
     private val dateLabel = Regex(
-        "(?:(?:검사\\s*일자|검진\\s*일자|채취\\s*일자|검사일|검진일|채취일)(?![가-힣])|" +
-            "(?<![A-Za-z])(?<!birth\\s{1,10})(?:exam\\s+|test\\s+|collection\\s+)?date(?![A-Za-z])" +
-            "(?!\\s{1,10}of\\s{1,10}birth))\\s*[:：]?",
+        "(?:(?<![가-힣])(?:검사\\s*일자|검진\\s*일자|채취\\s*일자|검사일|검진일|채취일)(?![가-힣])|" +
+            "(?<![A-Za-z])(?<!birth\\s{1,10})(?<!report\\s{1,10})(?<!print\\s{1,10})(?<!printed\\s{1,10})(?<!issue\\s{1,10})(?<!issued\\s{1,10})" +
+            "(?:exam\\s+|test\\s+|collection\\s+)?date(?![A-Za-z])(?!\\s{1,10}of\\s{1,10}birth))\\s*[:：]?",
         RegexOption.IGNORE_CASE,
     )
     private val datePatterns = listOf(
