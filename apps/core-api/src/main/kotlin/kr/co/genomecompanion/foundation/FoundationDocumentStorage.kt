@@ -7,11 +7,13 @@ import kr.co.genomecompanion.platform.telemetry.PhiSafeLogger
 import kr.co.genomecompanion.platform.telemetry.TelemetryEvent
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.UUID
 import java.util.zip.CRC32
 
@@ -30,17 +32,50 @@ class FoundationDocumentStorage(
     private val root = properties.quarantineRoot!!.toAbsolutePath().normalize()
     private val phiSafeLogger = PhiSafeLogger.forClass(FoundationDocumentStorage::class.java)
 
-    fun putUntrusted(documentId: UUID, content: ByteArray): StoredObjectWrite {
+    /** Kept only for [FoundationDocumentStorageTest]'s pre-streaming coverage; no production caller remains
+     * (the upload path now streams via the [InputStream] overload below). */
+    fun putUntrusted(documentId: UUID, content: ByteArray): StoredObjectWrite =
+        putUntrusted(documentId, content.inputStream(), content.size.toLong(), FoundationHashing.sha256(content))
+
+    /**
+     * Streams [content] to `<key>.part` while hashing it, verifying the exact declared [expectedLength]
+     * and [expectedSha256] against what was actually written — never buffering the whole body in memory —
+     * then atomically moves the part file into place (or, if the final key already exists, compares the
+     * two files byte-by-byte through streams rather than reading either fully into memory).
+     */
+    fun putUntrusted(documentId: UUID, content: InputStream, expectedLength: Long, expectedSha256: String): StoredObjectWrite {
         val key = "$documentId.pdf"
         val path = resolve(StorageTrustZone.UNTRUSTED, key)
         Files.createDirectories(path.parent)
-        if (Files.exists(path)) {
-            val existing = Files.readAllBytes(path)
-            if (!existing.contentEquals(content)) throw FoundationConflictException("upload_overwrite_denied")
-            return StoredObjectWrite(descriptor(StorageTrustZone.UNTRUSTED, key, existing), createdNew = false)
+        val part = path.resolveSibling("$key.part")
+        val digest = MessageDigest.getInstance("SHA-256")
+        var written = 0L
+        try {
+            Files.newOutputStream(part, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE).use { output ->
+                val buffer = ByteArray(65_536)
+                while (true) {
+                    val read = content.read(buffer)
+                    if (read < 0) break
+                    written += read
+                    if (written > expectedLength) throw FoundationBadRequestException("content_length_mismatch")
+                    digest.update(buffer, 0, read)
+                    output.write(buffer, 0, read)
+                }
+            }
+            if (written != expectedLength) throw FoundationBadRequestException("content_length_mismatch")
+            val actual = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+            if (!FoundationHashing.constantTimeHexEquals(actual, expectedSha256)) {
+                throw FoundationBadRequestException("content_digest_mismatch")
+            }
+            if (Files.exists(path)) {
+                if (Files.mismatch(path, part) != -1L) throw FoundationConflictException("upload_overwrite_denied")
+                return StoredObjectWrite(descriptorFromDigest(StorageTrustZone.UNTRUSTED, key, written, actual), createdNew = false)
+            }
+            Files.move(part, path, StandardCopyOption.ATOMIC_MOVE)
+            return StoredObjectWrite(descriptorFromDigest(StorageTrustZone.UNTRUSTED, key, written, actual), createdNew = true)
+        } finally {
+            Files.deleteIfExists(part)
         }
-        Files.write(path, content, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
-        return StoredObjectWrite(descriptor(StorageTrustZone.UNTRUSTED, key, content), createdNew = true)
     }
 
     fun read(zone: StorageTrustZone, objectKey: String): ByteArray = Files.readAllBytes(resolve(zone, objectKey))
@@ -138,12 +173,15 @@ class FoundationDocumentStorage(
         if (key.length >= 36) runCatching { UUID.fromString(key.substring(0, 36)) }.getOrNull() else null
 
     private fun descriptor(zone: StorageTrustZone, key: String, bytes: ByteArray): ObjectDescriptor =
+        descriptorFromDigest(zone, key, bytes.size.toLong(), FoundationHashing.sha256(bytes))
+
+    private fun descriptorFromDigest(zone: StorageTrustZone, key: String, size: Long, sha256: String): ObjectDescriptor =
         ObjectDescriptor(
             zone = zone,
             objectKey = key,
-            version = FoundationHashing.sha256("${zone.name}:$key:${FoundationHashing.sha256(bytes)}"),
-            size = bytes.size.toLong(),
-            sha256 = FoundationHashing.sha256(bytes),
+            version = FoundationHashing.sha256("${zone.name}:$key:$sha256"),
+            size = size,
+            sha256 = sha256,
         )
 
     private fun resolve(zone: StorageTrustZone, objectKey: String): Path {

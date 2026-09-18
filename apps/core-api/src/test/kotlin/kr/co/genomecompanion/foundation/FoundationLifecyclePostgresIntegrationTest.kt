@@ -2528,6 +2528,42 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         }
     }
 
+    @Test
+    fun oversizedBodiesAre413BeforeAnyHandlerRuns() {
+        val alice = login("synthetic-alice")
+        val big = "{\"value\":\"" + "1".repeat(262_144) + "\"}"
+        mutate(post("/api/foundation/candidates/${UUID.randomUUID()}/confirmation").header("Idempotency-Key", "too-big-json")
+            .contentType(MediaType.APPLICATION_JSON).content(big), alice)
+            .andExpect(status().isPayloadTooLarge).andExpect(jsonPath("$.code").value("payload_too_large"))
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "too-big-upload")
+        val capability = uploadCapabilities.getValue(documentId)
+        mutate(put("/api/foundation/documents/$documentId/content").header("X-GC-Upload-Capability-Id", capability.capabilityId)
+            .header("X-GC-Upload-Capability", capability.rawToken).contentType(MediaType.APPLICATION_PDF).content(ByteArray(10_485_761)), alice)
+            .andExpect(status().isPayloadTooLarge)
+        assertThat(count("gc_audit_event")).isGreaterThan(0)
+    }
+
+    @Test
+    fun uploadIsStreamedToDiskAndVerifiedWithoutAHeapCopy() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "stream-upload")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        assertThat(Files.list(quarantineRoot.resolve("untrusted")).filter { it.toString().endsWith(".part") }.count()).isZero()
+        assertThat(Files.readAllBytes(quarantineRoot.resolve("untrusted").resolve("$documentId.pdf"))).containsExactly(*fixturePdf)
+        // Wrong bytes of the right length: rejected, and no partial file survives.
+        val other = requestDocument(alice, consentId, januaryFixturePdf, "stream-upload-2")
+        val capability = uploadCapabilities.getValue(other)
+        mutate(put("/api/foundation/documents/$other/content").header("X-GC-Upload-Capability-Id", capability.capabilityId)
+            .header("X-GC-Upload-Capability", capability.rawToken).contentType(MediaType.APPLICATION_PDF)
+            .content(ByteArray(januaryFixturePdf.size) { 'x'.code.toByte() }), alice)
+            .andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("content_digest_mismatch"))
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$other.pdf"))).isFalse()
+        assertThat(Files.list(quarantineRoot.resolve("untrusted")).filter { it.toString().endsWith(".part") }.count()).isZero()
+    }
+
     /** Starts [threads] callables on one latch against the real database and returns their results in submission order. */
     private fun <T> race(threads: Int, action: (Int) -> T): List<Result<T>> {
         val executor = Executors.newFixedThreadPool(threads)

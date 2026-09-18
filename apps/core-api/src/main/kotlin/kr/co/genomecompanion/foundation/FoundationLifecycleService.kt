@@ -376,7 +376,8 @@ class FoundationLifecycleService(
         documentId: UUID,
         capabilityId: UUID,
         rawCapability: String,
-        content: ByteArray,
+        content: java.io.InputStream,
+        declaredLength: Long,
     ): DocumentReceipt {
         val document = repository.lockDocument(principal.subjectId, documentId)
             ?: deniedNotFound(principal, "DOCUMENT_ACCESS_DENIED", "DOCUMENT", documentId, "document_not_found")
@@ -387,18 +388,18 @@ class FoundationLifecycleService(
             FoundationHashing.sha256(rawCapability),
             Instant.now(clock),
         ) ?: throw FoundationForbiddenException("upload_capability_invalid")
-        if (content.size.toLong() != capability.expectedLength || content.size.toLong() != document.expectedLength) {
+        if (declaredLength != capability.expectedLength || declaredLength != document.expectedLength) {
             throw FoundationBadRequestException("content_length_mismatch")
         }
-        val digest = FoundationHashing.sha256(content)
-        if (!FoundationHashing.constantTimeHexEquals(digest, capability.expectedSha256)) {
-            throw FoundationBadRequestException("content_digest_mismatch")
-        }
+        // Streams straight to disk (never buffers the whole body): verifies exact length and digest
+        // against the capability's expectations as it writes, throwing content_length_mismatch /
+        // content_digest_mismatch without ever holding the full content in memory.
+        val stored = documentStorage.putUntrusted(documentId, content, declaredLength, capability.expectedSha256)
+        val digest = stored.descriptor.sha256
         if (document.status != "UPLOAD_PENDING") {
-            if (document.sha256 == digest && document.actualLength == content.size.toLong()) return documentReceipt(document)
+            if (document.sha256 == digest && document.actualLength == stored.descriptor.size) return documentReceipt(document)
             throw FoundationConflictException("document_already_uploaded")
         }
-        val stored = documentStorage.putUntrusted(documentId, content)
         try {
             if (stored.createdNew) {
                 TransactionSynchronizationManager.registerSynchronization(
@@ -418,7 +419,7 @@ class FoundationLifecycleService(
             val updated = repository.markDocumentUploaded(
                 principal.subjectId,
                 documentId,
-                content.size.toLong(),
+                stored.descriptor.size,
                 digest,
                 stored.descriptor.objectKey,
             )

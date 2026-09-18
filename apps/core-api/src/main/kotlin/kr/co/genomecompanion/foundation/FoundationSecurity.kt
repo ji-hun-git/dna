@@ -28,6 +28,20 @@ const val FOUNDATION_SESSION_COOKIE = "GC_SESSION"
 const val FOUNDATION_CSRF_COOKIE = "GC_CSRF"
 const val FOUNDATION_CSRF_HEADER = "X-GC-CSRF"
 
+/**
+ * The one place a foundation filter (running ahead of `FoundationProblemAdvice`, which only sees
+ * exceptions that reach a `DispatcherServlet` handler) writes a `{"code":"…"}` problem response
+ * directly onto the servlet response. Shared by [FoundationSessionFilter] and [RequestBodyLimitFilter]
+ * so a third filter never grows its own slightly-different copy.
+ */
+fun writeProblemResponse(response: HttpServletResponse, status: Int, code: String) {
+    response.status = status
+    response.contentType = "application/problem+json"
+    response.characterEncoding = StandardCharsets.UTF_8.name()
+    response.setHeader("Cache-Control", "no-store")
+    response.writer.write("""{"code":"$code"}""")
+}
+
 
 data class FoundationPrincipal(
     val subjectId: String,
@@ -185,11 +199,6 @@ class FoundationSessionFilter(
     private fun subjectHash(subjectId: String): String =
         FoundationHashing.sha256("${properties.auditPepper}:$subjectId")
 
-    private fun reject(response: HttpServletResponse, status: Int, code: String) {
-        response.status = status
-        response.contentType = "application/problem+json"
-        response.characterEncoding = StandardCharsets.UTF_8.name()
-        response.setHeader("Cache-Control", "no-store")
-        response.writer.write("""{"code":"$code"}""")
-    }
+    private fun reject(response: HttpServletResponse, status: Int, code: String) =
+        writeProblemResponse(response, status, code)
 }

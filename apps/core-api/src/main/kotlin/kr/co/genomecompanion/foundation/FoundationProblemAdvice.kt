@@ -63,7 +63,15 @@ class FoundationProblemAdvice {
     private val phiSafeLogger = PhiSafeLogger.forClass(FoundationProblemAdvice::class.java)
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun unreadable(): ResponseEntity<ApiProblem> = problem(HttpStatus.BAD_REQUEST, "request_body_invalid")
+    fun unreadable(exception: HttpMessageNotReadableException): ResponseEntity<ApiProblem> {
+        val bodyTooLarge = generateSequence<Throwable>(exception) { it.cause }
+            .any { it is RequestBodyLimitFilter.BodyTooLargeException }
+        return if (bodyTooLarge) {
+            problem(HttpStatus.PAYLOAD_TOO_LARGE, "payload_too_large")
+        } else {
+            problem(HttpStatus.BAD_REQUEST, "request_body_invalid")
+        }
+    }
 
     @ExceptionHandler(MissingRequestHeaderException::class)
     fun missingHeader(): ResponseEntity<ApiProblem> = problem(HttpStatus.BAD_REQUEST, "request_header_missing")

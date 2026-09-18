@@ -222,9 +222,8 @@ class FoundationLifecycleController(
         @RequestHeader("X-GC-Upload-Capability-Id") capabilityId: UUID,
         @RequestHeader("X-GC-Upload-Capability") rawCapability: String,
     ): ResponseEntity<DocumentReceipt> {
-        if (request.contentLengthLong > 10_485_760) throw FoundationBadRequestException("document_size_invalid")
-        val content = request.inputStream.readNBytes(10_485_761)
-        if (content.size > 10_485_760) throw FoundationBadRequestException("document_size_invalid")
+        val declaredLength = request.contentLengthLong
+        if (declaredLength !in 64..10_485_760) throw FoundationBadRequestException("document_size_invalid")
         return ResponseEntity.ok()
             .cacheControlNoStore()
             .body(
@@ -233,7 +232,8 @@ class FoundationLifecycleController(
                     documentId,
                     capabilityId,
                     rawCapability,
-                    content,
+                    request.inputStream,
+                    declaredLength,
                 ),
             )
     }
