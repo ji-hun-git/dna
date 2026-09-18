@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 import java.time.Duration
@@ -95,6 +96,9 @@ data class RecordCorrectionRequest(
 
 
 data class ApiProblem(val code: String)
+
+/** Cursor for the next page of `/records` or `/health-events`; absent when the page is the last. */
+const val NEXT_AFTER_HEADER = "X-GC-Next-After"
 
 
 @RestController
@@ -351,17 +355,49 @@ class FoundationLifecycleController(
             .cacheControlNoStore()
             .body(service.excludeCandidate(request.foundationPrincipal(), candidateId, idempotencyKey))
 
+    /**
+     * One page of the person's records. `after` is the `recordVersionId` of the last row the caller
+     * already has (an opaque cursor as far as the contract is concerned — it is only ever echoed back
+     * from `X-GC-Next-After`); `limit` is 1..[MAX_PAGE_LIMIT] and defaults to the cap. `X-GC-Next-After`
+     * is present only when at least one further row follows, so its absence — not an empty page — is
+     * the end of the list.
+     *
+     * `limit` is checked here rather than with `@Min`/`@Max` plus `@Validated`: a `@Validated` class-level
+     * annotation proxies the controller (and, on Spring 6.1+, competes with the framework's own built-in
+     * method validation, which answers with a different problem body). The observable contract — 400
+     * `request_invalid` — is identical, and this way exactly one mechanism produces it.
+     */
     @GetMapping("/records")
-    fun listRecords(request: HttpServletRequest): ResponseEntity<List<RecordReceipt>> =
-        ResponseEntity.ok()
-            .cacheControlNoStore()
-            .body(service.listRecords(request.foundationPrincipal()))
+    fun listRecords(
+        request: HttpServletRequest,
+        @RequestParam(required = false) after: UUID?,
+        @RequestParam(required = false) limit: Int?,
+    ): ResponseEntity<List<RecordReceipt>> {
+        val page = service.listRecordsPage(request.foundationPrincipal(), after, requireValidLimit(limit))
+        return pageResponse(page.nextAfter).body(page.items)
+    }
 
     @GetMapping("/health-events")
-    fun listHealthEvents(request: HttpServletRequest): ResponseEntity<List<HealthEvent>> =
-        ResponseEntity.ok()
-            .cacheControlNoStore()
-            .body(service.listHealthEvents(request.foundationPrincipal()))
+    fun listHealthEvents(
+        request: HttpServletRequest,
+        @RequestParam(required = false) after: UUID?,
+        @RequestParam(required = false) limit: Int?,
+    ): ResponseEntity<List<HealthEvent>> {
+        val page = service.listHealthEventsPage(request.foundationPrincipal(), after, requireValidLimit(limit))
+        return pageResponse(page.nextAfter).body(page.items)
+    }
+
+    private fun requireValidLimit(limit: Int?): Int {
+        val effective = limit ?: MAX_PAGE_LIMIT
+        if (effective !in 1..MAX_PAGE_LIMIT) throw FoundationBadRequestException("request_invalid")
+        return effective
+    }
+
+    private fun pageResponse(nextAfter: UUID?): ResponseEntity.BodyBuilder {
+        val builder = ResponseEntity.ok().cacheControlNoStore()
+        nextAfter?.let { builder.header(NEXT_AFTER_HEADER, it.toString()) }
+        return builder
+    }
 
     @GetMapping("/changes")
     fun getChanges(request: HttpServletRequest): ResponseEntity<ChangeSummary> =
@@ -468,6 +504,10 @@ class FoundationLifecycleController(
     @ExceptionHandler(FoundationUnprocessableException::class)
     fun handleUnprocessable(exception: FoundationUnprocessableException): ResponseEntity<ApiProblem> =
         problem(HttpStatus.UNPROCESSABLE_ENTITY, exception.code)
+
+    @ExceptionHandler(FoundationPayloadCapException::class)
+    fun handlePayloadCap(exception: FoundationPayloadCapException): ResponseEntity<ApiProblem> =
+        problem(HttpStatus.PAYLOAD_TOO_LARGE, exception.code)
 
     @ExceptionHandler(FoundationRateLimitedException::class)
     fun handleRateLimited(exception: FoundationRateLimitedException): ResponseEntity<ApiProblem> =

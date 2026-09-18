@@ -535,6 +535,10 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
       { method: "POST", headers: { "Idempotency-Key": requireIdempotencyKey(idempotencyKey) } },
       true,
     ),
+    // Both endpoints are paginated server-side (`after`/`limit`, default and cap 200), but the cursor
+    // travels in the `X-GC-Next-After` response header, not in the body — so the body these two parse
+    // is unchanged and no schema here needs a new field. They deliberately ask for page one only;
+    // until a screen needs more than 200 rows, adding a cursor argument would be untested surface.
     getRecords: () => request("/api/foundation/records", z.array(recordSchema), { method: "GET" }),
     getHealthEvents: () => request("/api/foundation/health-events", z.array(healthEventSchema), { method: "GET" }),
     getChanges: () => request("/api/foundation/changes", changeSummarySchema, { method: "GET" }),

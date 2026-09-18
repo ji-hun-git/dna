@@ -1483,6 +1483,65 @@ class FoundationRepository(
             subjectId,
         )
 
+    /**
+     * One keyset page of [listRecords]'s exact order — `(observed_on, confirmed_at, record_id)`.
+     * `afterVersionId` is the CURRENT version id of the last row the caller already holds; the row it
+     * names is looked up **within the subject**, so a version id belonging to somebody else (or to a
+     * deleted row) yields an empty page rather than a window into another person's records. The query
+     * asks for `limit + 1` rows so the caller can tell whether a further page exists without a second
+     * round trip and without a COUNT. PostgreSQL row-wise comparison `(a,b,c) > (x,y,z)` is exactly the
+     * lexicographic "strictly after" of that ORDER BY, so a page boundary can neither skip nor repeat a
+     * row even when many records share an exam date and an instant.
+     */
+    fun listRecordsPage(subjectId: String, afterVersionId: UUID?, limit: Int): List<FoundationRecordRow> {
+        if (afterVersionId == null) {
+            return jdbc.query(
+                """
+                $recordProjection
+                WHERE r.subject_id = ? AND v.status = 'CURRENT'
+                ORDER BY r.observed_on, r.confirmed_at, r.record_id
+                LIMIT ?
+                """.trimIndent(),
+                recordMapper,
+                subjectId,
+                limit + 1,
+            )
+        }
+        val cursor = findRecordVersion(subjectId, afterVersionId) ?: return emptyList()
+        return jdbc.query(
+            """
+            $recordProjection
+            WHERE r.subject_id = ? AND v.status = 'CURRENT'
+              AND (r.observed_on, r.confirmed_at, r.record_id)
+                  > (CAST(? AS DATE), CAST(? AS TIMESTAMPTZ), CAST(? AS UUID))
+            ORDER BY r.observed_on, r.confirmed_at, r.record_id
+            LIMIT ?
+            """.trimIndent(),
+            recordMapper,
+            subjectId,
+            cursor.observedOn,
+            cursor.confirmedAt.atOffset(ZoneOffset.UTC),
+            cursor.recordId,
+            limit + 1,
+        )
+    }
+
+    /** CURRENT record versions this subject owns: the export/aggregate cap counts rows, never values. */
+    fun countCurrentRecords(subjectId: String): Long =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM gc_health_record_version WHERE subject_id = ? AND status = 'CURRENT'",
+            Long::class.java,
+            subjectId,
+        ) ?: 0L
+
+    /** Documents this subject owns, in any state: the second half of the export cap. */
+    fun countDocuments(subjectId: String): Long =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM gc_document WHERE subject_id = ?",
+            Long::class.java,
+            subjectId,
+        ) ?: 0L
+
     fun correctRecord(
         subjectId: String,
         recordId: UUID,

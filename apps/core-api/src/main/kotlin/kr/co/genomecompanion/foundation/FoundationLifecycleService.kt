@@ -26,6 +26,21 @@ class FoundationConflictException(val code: String) : RuntimeException(code)
 class FoundationUnprocessableException(val code: String) : RuntimeException(code)
 class FoundationRateLimitedException(val code: String = "rate_limited", val retryAfterSeconds: Long = 60) : RuntimeException(code)
 
+/**
+ * The person's own data set is larger than one response may carry. Distinct from
+ * [RequestBodyLimitFilter]'s `payload_too_large` (an oversized *request*): this one refuses to *build*
+ * a response — an export or a whole-history aggregate — so a single call can never be made to read
+ * unbounded rows, and the paged endpoints stay the only way through a large history.
+ */
+class FoundationPayloadCapException(val code: String = "payload_cap_exceeded") : RuntimeException(code)
+
+/** Largest page `/records` and `/health-events` will serve, and the default when `limit` is absent. */
+const val MAX_PAGE_LIMIT = 200
+
+/** Whole-history reads (both exports, `/changes`, `/series`) refuse above these sizes. */
+const val MAX_EXPORT_RECORDS = 5_000L
+const val MAX_EXPORT_DOCUMENTS = 200L
+
 
 data class IssuedFoundationSession(
     val sessionId: UUID,
@@ -163,6 +178,12 @@ data class HealthEventExportEnvelope(
     val filename: String,
     val export: HealthEventExport,
 )
+
+/** One page of `/records` plus the cursor for the next one (`null` when this page is the last). */
+data class RecordPage(val items: List<RecordReceipt>, val nextAfter: UUID?)
+
+/** One page of `/health-events`; the cursor is a *record* cursor, so both endpoints share it. */
+data class HealthEventPage(val items: List<HealthEvent>, val nextAfter: UUID?)
 
 
 @Service
@@ -619,20 +640,64 @@ class FoundationLifecycleService(
             repository.listDocumentIdsWithPreview(principal.subjectId),
         )
 
+    /** One page of records in the single read-model order; see [FoundationRepository.listRecordsPage]. */
+    @Transactional
+    fun listRecordsPage(principal: FoundationPrincipal, after: UUID?, limit: Int): RecordPage {
+        val rows = repository.listRecordsPage(principal.subjectId, after, limit)
+        val page = rows.take(limit)
+        return RecordPage(
+            items = page.map(::recordReceipt),
+            nextAfter = if (rows.size > limit) page.last().recordVersionId else null,
+        )
+    }
+
+    /**
+     * One page of health events over the same record cursor. [HealthEventProjection.project] sorts a
+     * page by `observedOn, concept, confirmedAt`, so events are ordered *within* a page while the page
+     * boundaries follow record order; the OpenAPI document states this explicitly.
+     */
+    @Transactional
+    fun listHealthEventsPage(principal: FoundationPrincipal, after: UUID?, limit: Int): HealthEventPage {
+        val rows = repository.listRecordsPage(principal.subjectId, after, limit)
+        val page = rows.take(limit)
+        return HealthEventPage(
+            items = HealthEventProjection.project(page, repository.listDocumentIdsWithPreview(principal.subjectId)),
+            nextAfter = if (rows.size > limit) page.last().recordVersionId else null,
+        )
+    }
+
+    /**
+     * Every endpoint that reads a person's whole history at once (both exports and both aggregates)
+     * refuses above this size rather than building an unbounded response. The paged `/records` and
+     * `/health-events` remain available at any size.
+     */
+    private fun requireBelowExportCap(principal: FoundationPrincipal) {
+        if (repository.countCurrentRecords(principal.subjectId) > MAX_EXPORT_RECORDS ||
+            repository.countDocuments(principal.subjectId) > MAX_EXPORT_DOCUMENTS
+        ) {
+            throw FoundationPayloadCapException()
+        }
+    }
+
     @Transactional(readOnly = true)
-    fun getChangeSummary(principal: FoundationPrincipal): ChangeSummary =
-        ChangeSummaryProjection.project(
+    fun getChangeSummary(principal: FoundationPrincipal): ChangeSummary {
+        requireBelowExportCap(principal)
+        return ChangeSummaryProjection.project(
             repository.listRecords(principal.subjectId),
             repository.listDocumentCompletions(principal.subjectId),
         )
+    }
 
     /** The person's CURRENT values per item and unit in exam-date order. Read-only: no audit row, no range text. */
     @Transactional(readOnly = true)
-    fun getSeries(principal: FoundationPrincipal): SeriesResponse =
-        SeriesProjection.project(repository.listRecords(principal.subjectId))
+    fun getSeries(principal: FoundationPrincipal): SeriesResponse {
+        requireBelowExportCap(principal)
+        return SeriesProjection.project(repository.listRecords(principal.subjectId))
+    }
 
     @Transactional
     fun exportHealthEvents(principal: FoundationPrincipal): HealthEventExportEnvelope {
+        requireBelowExportCap(principal)
         val now = Instant.now(clock)
         val records = repository.listRecords(principal.subjectId)
         val rangeByVersion = records.associate { it.recordVersionId to it.referenceRangeText }
@@ -666,6 +731,7 @@ class FoundationLifecycleService(
 
     @Transactional
     fun exportHealthEventsAsFhir(principal: FoundationPrincipal): FhirExportEnvelope {
+        requireBelowExportCap(principal)
         val now = Instant.now(clock)
         val bundle = FhirObservationMapper.bundle(repository.listRecords(principal.subjectId), conceptByCode, now)
         // Same event as the JSON export; the format is a value-free resource-type code. No count, value or date.

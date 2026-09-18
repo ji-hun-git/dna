@@ -2684,6 +2684,166 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     /** Starts [threads] callables on one latch against the real database and returns their results in submission order. */
+    /**
+     * The page boundary is a keyset, not an offset: page one plus page two plus page three is exactly
+     * the whole list, in the same order, with no row repeated and none skipped, and `X-GC-Next-After`
+     * is present only while more rows follow. The same cursor drives `/health-events`, because both
+     * read the one record order. `limit` outside 1..200 and a malformed cursor are refused in the
+     * product's own error shape rather than silently clamped.
+     */
+    @Test
+    fun recordsAndHealthEventsPaginateWithAnAfterCursorAndTheWholeHistoryReadsRefuseAboveTheCap() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        repeat(3) { round ->
+            confirmEveryCandidate(
+                alice,
+                importSyntheticDocument(alice, consentId, fixturePdf, fixtureDigest, "page-$round"),
+                "page-$round",
+            )
+        }
+
+        val page1 = read(get("/api/foundation/records").param("limit", "4"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(4))
+            .andReturn()
+            .response
+        val next = checkNotNull(page1.getHeader(NEXT_AFTER_HEADER))
+        assertThat(next).isEqualTo(responseJson(page1.contentAsByteArray).last()["recordVersionId"].asText())
+
+        val page2 = read(get("/api/foundation/records").param("limit", "4").param("after", next), alice)
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+        assertThat(responseJson(page2.contentAsByteArray)).hasSize(4)
+        val lastAfter = checkNotNull(page2.getHeader(NEXT_AFTER_HEADER))
+        val page3 = read(get("/api/foundation/records").param("limit", "4").param("after", lastAfter), alice)
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+        assertThat(responseJson(page3.contentAsByteArray)).hasSize(1)
+        assertThat(page3.getHeader(NEXT_AFTER_HEADER)).isNull()
+
+        val whole = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray)
+            .map { it["recordVersionId"].asText() }
+        assertThat(
+            listOf(page1, page2, page3).flatMap { page ->
+                responseJson(page.contentAsByteArray).map { it["recordVersionId"].asText() }
+            },
+        ).isEqualTo(whole)
+
+        read(get("/api/foundation/health-events").param("limit", "4").param("after", next), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(4))
+        // A cursor that is not this subject's own is an empty page, never a window into other rows.
+        read(get("/api/foundation/health-events").param("after", UUID.randomUUID().toString()), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(0))
+
+        read(get("/api/foundation/records").param("limit", "201"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/records").param("limit", "0"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/records").param("after", "not-a-uuid"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_path_invalid"))
+
+        // 9 real records plus 4,992 synthetic ones is 5,001 CURRENT versions: one past the cap. The
+        // rows are inserted as extra CANDIDATES on the same job first, so gc_health_record's UNIQUE
+        // candidate_id holds throughout and no constraint has to be dropped. Every value is the
+        // digit 1 and every label is `cap-<n>`: nothing here resembles a measurement.
+        val candidateId = jdbc.queryForObject(
+            "SELECT candidate_id FROM gc_candidate WHERE subject_id = ? ORDER BY candidate_id LIMIT 1",
+            UUID::class.java,
+            "synthetic-alice",
+        )
+        jdbc.update(
+            """
+            INSERT INTO gc_candidate(
+                candidate_id, job_id, document_id, subject_id, status, label, candidate_value, unit,
+                observed_on, evidence_page, source_text_sha256, created_at, ordinal, confirmed_at)
+            SELECT gen_random_uuid(), c.job_id, c.document_id, c.subject_id, 'CONFIRMED',
+                   'cap-' || n, '1', 'mg/dL', c.observed_on, 1, repeat('a', 64),
+                   CURRENT_TIMESTAMP, 1000 + n, CURRENT_TIMESTAMP
+            FROM gc_candidate c, generate_series(1, 4992) AS n
+            WHERE c.candidate_id = ?
+            """.trimIndent(),
+            candidateId,
+        )
+        jdbc.update(
+            """
+            INSERT INTO gc_health_record(
+                record_id, candidate_id, document_id, subject_id, label, confirmed_value, unit,
+                observed_on, confirmed_at)
+            SELECT gen_random_uuid(), c.candidate_id, c.document_id, c.subject_id, c.label,
+                   c.candidate_value, c.unit, c.observed_on, CURRENT_TIMESTAMP
+            FROM gc_candidate c
+            WHERE c.subject_id = ? AND c.label LIKE 'cap-%'
+            """.trimIndent(),
+            "synthetic-alice",
+        )
+        jdbc.update(
+            """
+            INSERT INTO gc_health_record_version(version_id, record_id, subject_id, status, value, changed_at)
+            SELECT gen_random_uuid(), r.record_id, r.subject_id, 'CURRENT', r.confirmed_value, CURRENT_TIMESTAMP
+            FROM gc_health_record r
+            WHERE r.subject_id = ? AND r.label LIKE 'cap-%'
+            """.trimIndent(),
+            "synthetic-alice",
+        )
+        assertThat(repository.countCurrentRecords("synthetic-alice")).isEqualTo(5_001L)
+
+        read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isPayloadTooLarge)
+            .andExpect(jsonPath("$.code").value("payload_cap_exceeded"))
+        read(get("/api/foundation/health-events/export/fhir"), alice)
+            .andExpect(status().isPayloadTooLarge)
+            .andExpect(jsonPath("$.code").value("payload_cap_exceeded"))
+        read(get("/api/foundation/changes"), alice)
+            .andExpect(status().isPayloadTooLarge)
+            .andExpect(jsonPath("$.code").value("payload_cap_exceeded"))
+        read(get("/api/foundation/series"), alice)
+            .andExpect(status().isPayloadTooLarge)
+            .andExpect(jsonPath("$.code").value("payload_cap_exceeded"))
+        // The paged reads stay available at any size: the cap bounds one response, not the data.
+        read(get("/api/foundation/records").param("limit", "10"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(10))
+    }
+
+    /**
+     * The filename and `exportedAt` come from one instant, so they cannot disagree about which side
+     * of midnight in Asia/Seoul the export happened on. The expected filename is derived from the
+     * body the server just returned, so this needs no clock control and cannot itself drift.
+     */
+    @Test
+    fun exportFilenameAndExportedAtComeFromOneInstantInSeoulTime() {
+        val alice = login("synthetic-alice")
+        grantConsent(alice)
+        val response = read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+        val exportedAt = java.time.Instant.parse(responseJson(response.contentAsByteArray)["exportedAt"].asText())
+        assertThat(responseJson(response.contentAsByteArray)["exportedAt"].asText()).endsWith("Z")
+        assertThat(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .isEqualTo("attachment; filename=\"alm-health-events-${seoulDate(exportedAt)}.json\"")
+
+        val fhir = read(get("/api/foundation/health-events/export/fhir"), alice)
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+        val timestamp = java.time.Instant.parse(responseJson(fhir.contentAsByteArray)["timestamp"].asText())
+        assertThat(fhir.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .isEqualTo("attachment; filename=\"alm-health-events-${seoulDate(timestamp)}.fhir.json\"")
+    }
+
+    private fun seoulDate(instant: java.time.Instant): String =
+        java.time.LocalDate.ofInstant(instant, java.time.ZoneId.of("Asia/Seoul"))
+            .format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)
+
     private fun <T> race(threads: Int, action: (Int) -> T): List<Result<T>> {
         val executor = Executors.newFixedThreadPool(threads)
         val ready = CountDownLatch(threads)
@@ -3036,17 +3196,16 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ) ?: 0L
 
     companion object {
-        private const val allowedOrigin = "http://127.0.0.1:3137"
-        private const val aliceCredential = "alice-foundation-test-credential-00000001"
-        private const val bobCredential = "bob-foundation-test-credential-00000000002"
-        private const val workerCredential = "worker-credential-for-integration-test-0001"
-        private val fixturePdf =
-            "%PDF-1.7\nGenome Companion synthetic fixture only; no real health data.\n%%EOF\n".toByteArray()
-        private val fixtureDigest = FoundationHashing.sha256(fixturePdf)
-        private val januaryFixturePdf =
-            "%PDF-1.7\nGenome Companion synthetic fixture 2026-01 only; no real health data.\n%%EOF\n"
-                .toByteArray()
-        private val januaryFixtureDigest = FoundationHashing.sha256(januaryFixturePdf)
+        // Every value below lives in FoundationTestProperties so this test and
+        // FoundationOpenApiContractTest cannot drift into describing two different applications.
+        private const val allowedOrigin = FoundationTestProperties.ALLOWED_ORIGIN
+        private const val aliceCredential = FoundationTestProperties.ALICE_CREDENTIAL
+        private const val bobCredential = FoundationTestProperties.BOB_CREDENTIAL
+        private const val workerCredential = FoundationTestProperties.WORKER_CREDENTIAL
+        private val fixturePdf = FoundationTestProperties.fixturePdf
+        private val fixtureDigest = FoundationTestProperties.fixtureDigest
+        private val januaryFixturePdf = FoundationTestProperties.januaryFixturePdf
+        private val januaryFixtureDigest = FoundationTestProperties.januaryFixtureDigest
         private fun demoCandidates(observedOn: String, values: List<String>) = listOf(
             ExtractedCandidate(1, "Cholesterol", values[0], "mg/dL", observedOn, 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64)),
             ExtractedCandidate(2, "HbA1c", values[1], "%", observedOn, 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64)),
@@ -3054,50 +3213,14 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         )
         private val julyCandidates = demoCandidates("2026-07-28", listOf("188", "5.2", "42"))
         private val januaryCandidates = demoCandidates("2026-01-15", listOf("194", "5.4", "45"))
-        private const val onePixelPngBase64 =
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
-        private val quarantineRoot: Path = Path.of(
-            System.getenv("GC_TEST_QUARANTINE_ROOT") ?: System.getProperty("java.io.tmpdir"),
-        ).resolve("gc-foundation-postgres-integration").toAbsolutePath().normalize()
+        private const val onePixelPngBase64 = FoundationTestProperties.ONE_PIXEL_PNG_BASE64
+        private val quarantineRoot: Path =
+            FoundationTestProperties.quarantineRoot("gc-foundation-postgres-integration")
 
         @JvmStatic
         @DynamicPropertySource
         fun foundationProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url") { checkNotNull(System.getenv("GC_TEST_POSTGRES_URL")) }
-            registry.add("spring.datasource.username") { "postgres" }
-            registry.add("spring.datasource.password") { "" }
-            // The concurrency (race) tests below genuinely need 2+ live connections at once; the pool
-            // otherwise grows lazily and a fresh second connection's one-time setup cost can itself decide
-            // an otherwise-tight two-thread race.
-            registry.add("spring.datasource.hikari.minimum-idle") { "4" }
-            registry.add("spring.datasource.hikari.maximum-pool-size") { "8" }
-            registry.add("security.oidc.enabled") { "true" }
-            registry.add("security.oidc.issuer") { "https://issuer.test.invalid" }
-            registry.add("security.oidc.jwk-set-uri") { "https://issuer.test.invalid/.well-known/jwks.json" }
-            registry.add("security.oidc.audience") { "https://api.genome-companion.test" }
-            registry.add("security.oidc.client-id") { "synthetic-web-client" }
-            registry.add("gc.foundation.enabled") { "true" }
-            registry.add("gc.foundation.demo-bootstrap-enabled") { "true" }
-            registry.add("gc.foundation.document-boundary-enabled") { "true" }
-            registry.add("gc.foundation.worker-credential-sha256") { FoundationHashing.sha256(workerCredential) }
-            registry.add("gc.foundation.allow-synthetic-scanner-results") { "true" }
-            registry.add("gc.foundation.allowed-origin") { allowedOrigin }
-            registry.add("gc.foundation.secure-cookies") { "false" }
-            registry.add("gc.foundation.quarantine-root") { quarantineRoot.toString() }
-            registry.add("gc.foundation.audit-pepper") {
-                "foundation-integration-test-pepper-64-characters-minimum-value"
-            }
-            registry.add("gc.foundation.allowed-document-sha256") { "$fixtureDigest,$januaryFixtureDigest" }
-            registry.add("gc.foundation.session-rate-limit-per-minute") { "10000" }
-            registry.add("gc.foundation.worker-rate-limit-per-minute") { "100000" }
-            registry.add("gc.foundation.local-identities[0].subject-id") { "synthetic-alice" }
-            registry.add("gc.foundation.local-identities[0].credential-sha256") {
-                FoundationHashing.sha256(aliceCredential)
-            }
-            registry.add("gc.foundation.local-identities[1].subject-id") { "synthetic-bob" }
-            registry.add("gc.foundation.local-identities[1].credential-sha256") {
-                FoundationHashing.sha256(bobCredential)
-            }
+            FoundationTestProperties.register(registry, quarantineRoot)
         }
     }
 }
