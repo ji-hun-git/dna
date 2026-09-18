@@ -171,7 +171,7 @@ it("puts the two dated values of the same item above the groups", async () => {
   )).toBeVisible();
   const items = screen.getAllByTestId("record-comparison-item");
   expect(items.map((item) => item.textContent)).toEqual([
-    "총콜레스테롤 · 2026. 1. 15. 194 mg/dL → 2026. 7. 28. 190 mg/dL",
+    "총콜레스테롤 · 이번 2026. 7. 28. 190 mg/dL · 이전 2026. 1. 15. 194 mg/dL",
   ]);
 });
 

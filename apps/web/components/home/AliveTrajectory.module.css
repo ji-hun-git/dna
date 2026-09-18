@@ -1,0 +1,69 @@
+/* The pre-login hero only. Tokens are scoped to .root and never touch app globals.css. */
+.root {
+  --alive-bg: #000000;
+  --alive-ink: #ffffff;
+  position: absolute;
+  inset: 0;
+  background: var(--alive-bg);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.svg {
+  position: absolute;
+  /* An <svg> is a replaced element: `inset` alone does not stretch it the way it would a normal
+     block box (the browser falls back to its intrinsic/default size instead, which made the
+     whole hero render as a ~20x20px speck). Give it explicit width/height so the 24px clearance
+     from the caption/boundary text and from any panel beside the hero actually takes effect. */
+  top: 24px;
+  left: 24px;
+  width: calc(100% - 48px);
+  height: calc(100% - 48px);
+  display: block;
+  text-rendering: geometricPrecision;
+  shape-rendering: geometricPrecision;
+}
+
+.svg text {
+  font-family: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", ui-sans-serif, sans-serif;
+}
+
+.mono {
+  font-family: "SF Mono", "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+.caption {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  right: 1rem;
+  margin: 0;
+  font-family: "SF Mono", "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.65);
+  text-transform: none;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.boundary {
+  position: absolute;
+  left: 1rem;
+  bottom: 2.1rem;
+  right: 1rem;
+  margin: 0;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.65);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .caption,
+  .boundary {
+    left: 0.75rem;
+    right: 0.75rem;
+  }
+}

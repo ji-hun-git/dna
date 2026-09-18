@@ -31,8 +31,8 @@ it("puts the two dated values of one item side by side in Korean", () => {
 
   const items = screen.getAllByTestId("record-comparison-item");
   expect(items.map((item) => item.textContent)).toEqual([
-    "당화혈색소 · 2026. 1. 15. 5.4 % → 2026. 7. 28. 5.2 %",
-    "총콜레스테롤 · 2026. 1. 15. 194 mg/dL → 2026. 7. 28. 190 mg/dL",
+    "당화혈색소 · 이번 2026. 7. 28. 5.2 % · 이전 2026. 1. 15. 5.4 %",
+    "총콜레스테롤 · 이번 2026. 7. 28. 190 mg/dL · 이전 2026. 1. 15. 194 mg/dL",
   ]);
 });
 

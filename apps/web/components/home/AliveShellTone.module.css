@@ -1,0 +1,49 @@
+/* Dark tone for the shared app shell, used ONLY on the pre-login entry view so the black hero
+   reads edge to edge. Scoped by the .dark class applied to that view's <header>/wrapper only;
+   globals.css and every other screen are untouched. Higher specificity than the global rules
+   (two classes here vs one there) so it overrides colour without needing !important. */
+
+.page {
+  background: #000;
+  min-height: 100vh;
+}
+
+.dark {
+  background: transparent;
+}
+
+.dark :global(.gc-shell) {
+  background: transparent;
+  border-bottom-color: rgba(255, 255, 255, 0.28);
+}
+
+.dark :global(.gc-shell__bar) {
+  background: transparent;
+}
+
+.dark :global(.gc-shell__brand) {
+  color: #fff;
+}
+
+.dark :global(.gc-shell__brand > span) {
+  background: #fff;
+  color: #000;
+}
+
+.dark :global(.gc-shell__nav) {
+  background: rgba(0, 0, 0, 0.72);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.dark :global(.gc-shell__nav a) {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dark :global(.gc-shell__nav a[aria-current="page"]) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.dark :global(.gc-shell__status) {
+  color: rgba(255, 255, 255, 0.75);
+}

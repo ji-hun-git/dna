@@ -31,6 +31,8 @@ const userFacingFiles = [
   "components/my-data/history/MeasurementHistory.tsx",
   "components/my-data/history/HistoryGraph.tsx",
   "lib/format/original-label.ts",
+  "components/home/AliveTrajectory.tsx",
+  "components/home/AliveEntryLayout.tsx",
 ] as const;
 
 const forbiddenUserTerms = [
@@ -95,6 +97,13 @@ describe("Korean UX language boundary", () => {
     }
   });
 
+  // Direction/trend glyphs were previously banned in only three files (RecentChanges,
+  // RecordComparison, and the history screen); a value or change must never be implied by an
+  // arrow anywhere user-facing, so the ban applies to every file in this list.
+  it.each(userFacingFiles)("never uses a direction/trend glyph in %s", (path) => {
+    expect(source(path)).not.toMatch(/[↑↓▲▼→←]/);
+  });
+
   it("states the example, connection, and medical limits in direct Korean", () => {
     expect(source("components/concept/RecordImportConcept.tsx")).toContain(
       "선택한 파일에서 읽은 값은 아니에요",
@@ -118,6 +127,17 @@ describe("Korean UX language boundary", () => {
       "이 값은 예시 결과지의 글자 정보에서 읽어 직접 확인한 값이에요. 실제 기관에서 가져오지 않았어요.",
     );
     expect(source("components/my-data/MyData.tsx")).toContain("값의 의미나 변화의 방향은 판단하지 않아요.");
+  });
+
+  it("labels the pre-login hero animation as example data with no health meaning", () => {
+    const hero = source("components/home/AliveTrajectory.tsx");
+    expect(hero).toContain("예시 데이터 · 실제 사람의 기록이 아니에요");
+    expect(hero).toContain("선의 모양과 움직임은 건강 상태를 뜻하지 않아요.");
+  });
+
+  it("labels the pre-login identity panel as an example profile, not a real person", () => {
+    const layout = source("components/home/AliveEntryLayout.tsx");
+    expect(layout).toContain("이 프로필은 예시이며 실제 사람의 정보가 아니에요.");
   });
 
   it("tells the reviewer the candidate came from the text layer, not from image recognition, and never from a fixture", () => {
@@ -171,6 +191,10 @@ describe("Korean UX language boundary", () => {
     expect(source("components/integrated/RecordComparison.tsx")).toContain(
       "두 날짜 이상 확인한 항목이 아직 없어요.",
     );
+    // Neutral "이번/이전" wording, never an arrow between the two values.
+    expect(source("components/integrated/RecordComparison.tsx")).not.toMatch(/[↑↓▲▼→]/);
+    expect(source("components/integrated/RecordComparison.tsx")).toContain("이번 ");
+    expect(source("components/integrated/RecordComparison.tsx")).toContain("이전 ");
   });
 
   it("keeps the server status word out of visible copy unless it is labelled as a code", () => {

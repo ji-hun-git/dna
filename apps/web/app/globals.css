@@ -591,10 +591,71 @@ html {
 @media (hover: hover) {
   .gc-shell--unified .gc-shell__nav a:hover { background: var(--gc-color-surface-soft); }
 }
-.gc-demo-entry .gc-integrated-auth { max-width: 43rem; padding: clamp(1.5rem, 4vw, 3rem); }
-.gc-demo-entry h1 { font-size: clamp(2.3rem, 5vw, 4rem); line-height: 1.18; letter-spacing: -0.055em; word-break: keep-all; }
-.gc-demo-entry__limit { font-size: 0.85rem; color: var(--gc-color-text-secondary); }
+/* The pre-login hero: AliveTrajectory (components/home) paints a full-viewport pitch-black
+   background behind this panel. Its own dark tokens live in AliveTrajectory.module.css; these
+   rules only place the existing copy panel above it and keep it legible on black. */
+/* .gc-integrated-shell--center makes this <main> a `display: grid; place-items: center` box
+   sized for the old single centered auth card. The v4 entry composition (AliveEntryLayout) is a
+   full-bleed grid, not a card: without this override its only child is not stretched, so it sizes
+   to its own (non-wrapping) content and can overflow the viewport symmetrically at narrow widths.
+   Stretch it edge to edge instead. */
+.gc-demo-entry {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  background: #000;
+  display: block;
+  place-items: normal;
+  padding: 0;
+  min-width: 0;
+}
+/* v4: square this to the same 1px-rule panel style as the identity/records panels
+   (AliveEntryLayout.module.css's .panel) instead of the old rounded translucent card. */
+.gc-demo-entry .gc-integrated-auth {
+  position: relative;
+  z-index: 1;
+  max-width: 43rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 0;
+  color: #fff;
+  box-shadow: none;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.gc-demo-entry .gc-integrated-auth > p:first-child { color: rgba(255, 255, 255, 0.72); }
+/* v4: the copy card lives in a permanently narrow (18%-of-viewport) left column, not a wide
+   centered card, so the heading can no longer scale off full viewport width (5vw at 1280px+
+   produced a ~64px heading inside a ~230px column, wrapping one syllable per line and pushing
+   the button far below the fold). Scale against a much smaller vw share instead. */
+.gc-demo-entry h1 { font-size: clamp(1.6rem, 1.8vw, 2.4rem); line-height: 1.18; letter-spacing: -0.055em; word-break: keep-all; color: #fff; }
+/* v5: the boundary panel (현재 허용 범위) and any other h2 inside a .gc-integrated-auth panel on
+   this dark, narrow-column screen must not use the browser's large default h2 size — it wrapped
+   into the "데이터 관리" button below it. Also drop the default disc bullets in favour of a plain
+   list, matching the rest of this screen's typographic, no-colour convention. */
+.gc-demo-entry .gc-integrated-auth h2 { font-size: 1.05rem; line-height: 1.35; margin: 4px 0 10px; word-break: keep-all; }
+.gc-demo-entry .gc-integrated-auth ul { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; font-size: 0.8rem; color: rgba(255, 255, 255, 0.85); }
+.gc-demo-entry .gc-integrated-auth p { color: rgba(255, 255, 255, 0.85); }
+.gc-demo-entry__limit { font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); }
 .gc-demo-entry .gc-button { width: 100%; margin-block: 1rem; min-height: 48px; }
+.gc-demo-entry .gc-integrated-error { position: relative; z-index: 1; }
+@media (max-width: 480px) {
+  /* Short phones (e.g. 320x720) stack hero → copy → identity → records → strip; the sign-in
+     button must still land inside the first viewport without scrolling, so the copy card and its
+     heading shrink here beyond the shared clamp() above. */
+  .gc-demo-entry .gc-integrated-auth { padding: 1rem; }
+  .gc-demo-entry h1 { font-size: 1.7rem; line-height: 1.22; }
+}
+@media (min-width: 901px) {
+  /* The desktop copy column is a fixed 18% of the viewport (AliveEntryLayout.module.css), so on
+     a wide-but-short viewport (e.g. 1280x720) the heading and lead paragraph wrap into many lines
+     even at the reduced clamp() above; tighten vertical spacing so the button still lands inside
+     the first 720px without scrolling. */
+  .gc-demo-entry .gc-integrated-auth h1 { margin-bottom: 2px; }
+  .gc-demo-entry .gc-integrated-auth h1 + p { line-height: 1.4; margin-top: 10px; }
+  .gc-demo-entry .gc-integrated-auth p { margin-block: 8px; }
+}
 .gc-source-preview { margin: 1rem 0; }
 .gc-source-preview img { display: block; width: 100%; max-height: 32rem; object-fit: contain; object-position: top; background: white; border: 1px solid var(--gc-color-line-subtle); }
 .gc-source-preview figcaption { margin-top: .5rem; font-size: .8rem; line-height: 1.6; color: var(--gc-color-text-secondary); }
@@ -646,7 +707,7 @@ html {
 @media (max-width: 42rem) {
   .gc-shell--unified .gc-shell__nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%; border: 0; border-top: 1px solid var(--gc-color-line-subtle); border-radius: 0;
     padding: .5rem max(.75rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left));
     box-shadow: 0 -4px 20px rgb(0 0 0 / 3%);

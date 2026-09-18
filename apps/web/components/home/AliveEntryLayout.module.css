@@ -1,0 +1,240 @@
+/* Dense, gridded "Palantir-like" layout for the pre-login entry screen only. Pitch-black ground,
+   thin 1px rgba(255,255,255,.28) rules, small uppercase mono metadata, no rounded corners, no
+   shadows, no gradients. Scoped entirely to this module; never touches globals.css. */
+
+.grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18% 1fr 24%;
+  grid-template-areas: "left center right" "strip strip strip";
+  grid-template-rows: 1fr auto;
+  min-height: 100vh;
+  gap: 24px;
+  background: #000;
+  color: #fff;
+  min-width: 0;
+}
+
+.left {
+  grid-area: left;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0 24px 24px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.center {
+  grid-area: center;
+  position: relative;
+  min-height: 420px;
+  min-width: 0;
+}
+
+.right {
+  grid-area: right;
+  padding: 24px 24px 24px 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.strip {
+  grid-area: strip;
+  padding: 0 24px 24px;
+  min-width: 0;
+}
+
+.panel {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+.panelTitle {
+  font-family: "SF Mono", "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0 0 10px;
+}
+
+.panelHeading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.panelAction {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.identityList {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0;
+}
+
+.identityList div {
+  display: contents;
+}
+
+.identityList dt,
+.identityList dd {
+  margin: 0;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  font-size: 0.8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.identityList div:first-child dt,
+.identityList div:first-child dd {
+  border-top: none;
+}
+
+.identityList dt {
+  font-family: "SF Mono", "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color: rgba(255, 255, 255, 0.6);
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
+.identityList dd {
+  text-align: right;
+}
+
+.identityNote {
+  margin: 10px 0 0;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.6);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 6px 8px 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  white-space: nowrap;
+}
+
+.table thead th {
+  border-top: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+  font-family: "SF Mono", "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 400;
+}
+
+.phaseStrip {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  padding-top: 10px;
+  gap: 0;
+}
+
+.phaseStripItem {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+  min-width: 0;
+}
+
+.phaseStripItem + .phaseStripItem {
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+  padding-left: 12px;
+}
+
+.phaseMarker {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border: 1px solid #fff;
+  background: transparent;
+}
+
+.phaseMarkerCurrent {
+  background: #fff;
+}
+
+.phaseStripLabel {
+  font-family: "SF Mono", "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .center {
+    order: 1;
+    /* Reduced height so the copy block's button stays reachable WITHOUT the fixed bottom nav
+       covering it on short phones (e.g. 320x720). The `- 4.5rem` reserves roughly the nav's own
+       height (padding + 56px min-height links) out of the hero's budget, shifting every stacked
+       item below it up by the same amount, instead of only capping total page height. The floor
+       is well under the old 320px so it does not cancel the reduction on the shortest viewport. */
+    height: calc(40vh - 4.5rem);
+    min-height: 180px;
+  }
+
+  .left {
+    order: 2;
+    padding: 0 16px;
+  }
+
+  .right {
+    order: 3;
+    padding: 0 16px;
+  }
+
+  .strip {
+    order: 4;
+    /* The bottom nav is position: fixed at the viewport bottom on every mobile screen (see
+       globals.css's @media (max-width: 42rem) .gc-shell--unified .gc-shell__nav); reserve the
+       same clearance here so the last stacked item is never hidden underneath it. */
+    padding: 0 16px calc(6rem + env(safe-area-inset-bottom));
+  }
+}

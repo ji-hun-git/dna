@@ -13,7 +13,8 @@ type RecordComparisonProps = {
 function comparisonLine(comparison: RecordComparisonEntry) {
   const earlier = `${formatKoreanDate(comparison.earlier.observedOn)} ${comparison.earlier.value} ${comparison.unit}`;
   const later = `${formatKoreanDate(comparison.later.observedOn)} ${comparison.later.value} ${comparison.unit}`;
-  return `${comparison.label} · ${earlier} → ${later}`;
+  // Neutral "이번/이전" wording, matching RecentChanges — never an arrow or a direction.
+  return `${comparison.label} · 이번 ${later} · 이전 ${earlier}`;
 }
 
 /** Two dated values of the same item, stated side by side and nothing more. */

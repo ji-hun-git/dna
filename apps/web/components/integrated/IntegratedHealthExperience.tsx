@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AliveEntryLayout } from "@/components/home/AliveEntryLayout";
 import { CandidateReview } from "@/components/integrated/CandidateReview";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { RecentChanges } from "@/components/integrated/RecentChanges";
@@ -20,11 +21,12 @@ import { formatKoreanDate } from "@/lib/format/korean-date";
 import {
   describeAbstention,
   labelConsentStatus,
-  labelRecordStatus,
   labelReviewOutcome,
 } from "@/lib/format/status-labels";
 import { shortDigest } from "@/lib/format/short-digest";
 import { buildSyntheticResultPdf } from "@/lib/foundation/synthetic-document";
+import { buildHomePhases, homeIdentityCounts } from "@/lib/home/alive-home-data";
+import type { AliveIdentity } from "@/components/home/AliveEntryLayout";
 
 type ShellState =
   | "INITIALIZING_SESSION"
@@ -96,6 +98,36 @@ export function IntegratedHealthExperience() {
   const [errorMessage, setErrorMessage] = useState("");
   const [pollingPaused, setPollingPaused] = useState(false);
   const [pollingNonce, setPollingNonce] = useState(0);
+
+  // Memoised on the record identities that actually feed them: `records` itself changes
+  // identity on every fetch/poll even when its contents don't, and every other piece of state in
+  // this component (busy, errorMessage, ...) also re-renders it; both were plain function calls
+  // returning fresh arrays every render — which are the hero's own effect deps below, so an
+  // unrelated re-render was restarting the breathing animation from scratch every time. Computed
+  // unconditionally (not inside the "home" branch further down) because this component has
+  // several early `return`s for other views, and a hook cannot be called conditionally.
+  const currentRecords = useMemo(() => records.filter((record) => record.status === "CURRENT"), [records]);
+  const homePhases = useMemo(() => buildHomePhases(currentRecords), [currentRecords]);
+  const identityCounts = useMemo(() => homeIdentityCounts(currentRecords), [currentRecords]);
+  // Exam-date descending (then confirmation time descending): the most recently examined result
+  // first, never the server's own `changed_at` insertion order.
+  const homeRows = useMemo(
+    () =>
+      [...currentRecords]
+        .sort((a, b) => (b.observedOn === a.observedOn
+          ? b.confirmedAt.localeCompare(a.confirmedAt)
+          : b.observedOn.localeCompare(a.observedOn)))
+        .map((record) => ({
+          item: record.label,
+          value: record.value,
+          unit: record.unit,
+          observedOn: record.observedOn,
+          shape: "circle" as const,
+          size: 0,
+          phase: 0,
+        })),
+    [currentRecords],
+  );
 
   const loadProductTruth = useCallback(async () => {
     // A failed or schema-rejected /changes read must not break the home
@@ -388,8 +420,9 @@ export function IntegratedHealthExperience() {
       );
     }
     return (
-      <IntegratedShell current="home" status="예시 데이터로 체험">
+      <IntegratedShell current="home" status="예시 데이터로 체험" tone="dark">
       <main className="gc-integrated-shell gc-integrated-shell--center gc-demo-entry">
+        <AliveEntryLayout>
         <section className="gc-integrated-auth" aria-labelledby="synthetic-login-title">
           <p className="gc-import__eyebrow">체험 데이터로 시작하기</p>
           <h1 id="synthetic-login-title">흩어진 결과지를,<br />출처가 보이는<br />내 건강 기록으로.</h1>
@@ -400,6 +433,7 @@ export function IntegratedHealthExperience() {
           <p className="gc-demo-entry__limit">이 브라우저의 체험 시간 동안 기록을 이어서 볼 수 있어요. 시간이 끝나거나 쿠키를 지우면 이전 체험에 다시 들어갈 수 없어요.</p>
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
         </section>
+        </AliveEntryLayout>
       </main>
       </IntegratedShell>
     );
@@ -581,40 +615,72 @@ export function IntegratedHealthExperience() {
 
   const latest = records.at(-1);
   const unfinished = !!activeCandidate || (!!documentReceipt && pollableStates.has(documentReceipt.status));
+
+  // v5: the logged-in home is the SAME alive-trajectory grid as the pre-login entry screen, fed
+  // with the person's own synthetic records instead of the example dataset. Phases are the
+  // person's completed documents in exam-date order, plus a trailing open "다음 결과지" phase;
+  // nodes are the person's CURRENT health events, capped at 4 per ring with the rest folded into
+  // a "+N개" marker (see lib/home/alive-home-data.ts — never dropped silently).
+  // `currentRecords`/`homePhases`/`identityCounts`/`homeRows` are computed once, unconditionally,
+  // near the top of this component (see the memoised block above the other hooks) so they can be
+  // real `useMemo`s despite this component's several early `return`s for other views.
+  const homeIdentity: AliveIdentity = {
+    name: "예시 사용자",
+    age: 25,
+    gender: "여성",
+    lastResultDate: identityCounts.lastResultDate,
+    recordCount: identityCounts.recordCount,
+    resultSheetCount: identityCounts.resultSheetCount,
+  };
+
   return (
-    <IntegratedShell
-      current="home"
-      status={session ? "예시 데이터로 체험 중" : undefined}
-    >
-      <main className="gc-health-home">
-        <div className="gc-health-home__shell">
-          <section className="gc-health-home__hero" id="home" aria-labelledby="integrated-home-title">
-            <div>
-              <p className="gc-health-home__greeting">내가 확인한 값과 출처</p>
-              <h1 id="integrated-home-title">값보다 먼저<br />출처를 확인하세요</h1>
-              <p className="gc-health-home__hero-copy">결과지에 적힌 값을 직접 확인해 주세요. 확인한 기록은 날짜별로 모아 진료 준비에 함께 사용해요.</p>
-              <div className="gc-health-home__hero-actions"><button className="gc-button gc-button--primary" type="button" onClick={unfinished ? () => setView(activeCandidate ? "review" : "processing") : beginImport}>{unfinished ? "이어서 확인" : "결과지 추가"}</button><a className="gc-button gc-button--weak" href="/records">전체 기록 보기</a></div>
+    <IntegratedShell current="home" status={session ? "예시 데이터로 체험 중" : undefined} tone="dark">
+      <main className="gc-integrated-shell gc-integrated-shell--center gc-demo-entry">
+        <AliveEntryLayout
+          identity={homeIdentity}
+          recordsTitle="직접 확인한 기록"
+          recordsHeading={latest ? "가장 최근에 확인한 값" : "아직 저장된 기록이 없어요"}
+          rows={homeRows}
+          recordsZeroMessage="허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다."
+          recordsAction={{ label: "전체 기록 보기", href: "/records" }}
+          belowRecords={changes ? <RecentChanges changes={changes} /> : null}
+          rightExtra={
+            <section className="gc-integrated-auth" aria-labelledby="integrated-boundary-title">
+              <p>현재 허용 범위</p>
+              <h2 id="integrated-boundary-title">합성 데이터만 처리해요</h2>
+              <ul>
+                <li>실제 카카오·네이버·MyHealthWay 비활성화</li>
+                <li>OCR·의료 AI 비활성화</li>
+                <li>문서는 승인 전까지 적대적 입력으로 격리</li>
+              </ul>
+              <a className="gc-button gc-button--weak" href="/data-control">데이터 관리</a>
+            </section>
+          }
+          rings={homePhases.rings}
+          phaseLabels={homePhases.labels}
+          // No ring means no current phase to mark (the trailing open "다음 결과지" phase must
+          // never claim the marker just because Math.max(0, -1) would otherwise land on it).
+          currentPhaseIndex={homePhases.rings.length > 0 ? homePhases.rings.length - 1 : -1}
+          heroCaption="예시 데이터로 체험 중이에요"
+        >
+          <section className="gc-integrated-auth" aria-label="빠른 실행">
+            <p className="gc-import__eyebrow">예시 데이터로 체험</p>
+            <div className="gc-health-home__hero-actions">
+              <button
+                className="gc-button gc-button--primary"
+                type="button"
+                onClick={unfinished ? () => setView(activeCandidate ? "review" : "processing") : beginImport}
+              >
+                {unfinished ? "이어서 확인" : "결과지 추가"}
+              </button>
             </div>
-            <aside className="gc-health-home__connection" aria-label="통합 합성 제품 상태">
-              <p><strong>예시 데이터로 체험 중이에요</strong></p>
-              <span>외부 기관 연결 0곳 · 직접 확인한 예시 기록 {records.length}개</span>
-              <a href="/data-control">동의와 삭제 상태 보기</a>
-              <a href="/prepare">진료 때 물어볼 내용 준비</a>
-            </aside>
+            <p><strong>예시 데이터로 체험 중이에요</strong></p>
+            <p>외부 기관 연결 0곳 · 직접 확인한 예시 기록 {records.length}개</p>
+            <p><a href="/data-control">동의와 삭제 상태 보기</a></p>
+            <p><a href="/prepare">진료 때 물어볼 내용 준비</a></p>
+            {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
           </section>
-          <section className="gc-health-home__overview" aria-labelledby="integrated-records-title">
-            <div className="gc-health-home__section-heading"><div><p>직접 확인한 기록</p><h2 id="integrated-records-title">{latest ? "가장 최근에 확인한 값" : "아직 저장된 기록이 없어요"}</h2></div><span>{records.length}개</span></div>
-            {latest ? (
-              <article className="gc-health-home__metric-card">
-                <div className="gc-health-home__metric-copy"><div className="gc-health-home__metric-topline"><span>{latest.label} · 예시 데이터</span><strong>{labelRecordStatus(latest.status)}</strong></div><p className="gc-health-home__metric-value"><strong>{latest.value}</strong><span>{latest.unit}</span></p><p className="gc-health-home__metric-source">예시 결과지 · {formatKoreanDate(latest.observedOn)}</p></div>
-                <a className="gc-button gc-button--weak" href={`/records#record-${latest.recordId}`}>이 값의 근거 보기</a>
-              </article>
-            ) : <p className="gc-integrated-empty">허용된 합성 PDF를 추가하고 후보를 직접 확인하면 여기에 기록됩니다.</p>}
-          </section>
-          {changes && <RecentChanges changes={changes} />}
-          <section className="gc-health-home__privacy" aria-labelledby="integrated-boundary-title"><div><p>현재 허용 범위</p><h2 id="integrated-boundary-title">합성 데이터만 처리해요</h2><ul><li>실제 카카오·네이버·MyHealthWay 비활성화</li><li>OCR·의료 AI 비활성화</li><li>문서는 승인 전까지 적대적 입력으로 격리</li></ul></div><a className="gc-button gc-button--weak" href="/data-control">데이터 관리</a></section>
-          {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
-        </div>
+        </AliveEntryLayout>
       </main>
     </IntegratedShell>
   );
