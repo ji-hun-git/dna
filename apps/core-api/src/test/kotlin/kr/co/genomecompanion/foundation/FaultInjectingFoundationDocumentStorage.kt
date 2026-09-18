@@ -27,8 +27,30 @@ class FaultInjectingFoundationDocumentStorage(
         keysWhoseNextDeleteShouldFail.add(objectKey)
     }
 
+    @Volatile
+    private var nextListObjectKeysShouldFail: Boolean = false
+
+    /**
+     * The next [listObjectKeys] call throws [IOException] instead of listing; every call after that
+     * succeeds normally. The seam a test uses to fail exactly one janitor category — an unreadable
+     * quarantine root is not portable (this suite's CI runner executes as root and ignores read-only
+     * bits), while throwing from here is deterministic everywhere.
+     */
+    fun failNextListObjectKeys() {
+        nextListObjectKeysShouldFail = true
+    }
+
     fun reset() {
         keysWhoseNextDeleteShouldFail.clear()
+        nextListObjectKeysShouldFail = false
+    }
+
+    override fun listObjectKeys(): List<StoredObjectListing> {
+        if (nextListObjectKeysShouldFail) {
+            nextListObjectKeysShouldFail = false
+            throw IOException("synthetic-injected-list-failure")
+        }
+        return super.listObjectKeys()
     }
 
     override fun deleteObject(zone: StorageTrustZone, key: String) {

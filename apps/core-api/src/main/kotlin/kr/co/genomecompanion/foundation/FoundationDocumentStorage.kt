@@ -7,11 +7,14 @@ import kr.co.genomecompanion.platform.telemetry.PhiSafeLogger
 import kr.co.genomecompanion.platform.telemetry.TelemetryEvent
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.time.Instant
 import java.util.UUID
 import java.util.zip.CRC32
 
@@ -19,6 +22,17 @@ import java.util.zip.CRC32
 data class StoredObjectWrite(
     val descriptor: ObjectDescriptor,
     val createdNew: Boolean,
+)
+
+/**
+ * One object found on disk by [FoundationDocumentStorage.listObjectKeys], with the modification time
+ * the janitor needs to tell a settled file from one that was written moments ago and whose database row
+ * may not have committed yet.
+ */
+data class StoredObjectListing(
+    val zone: StorageTrustZone,
+    val objectKey: String,
+    val lastModifiedAt: Instant,
 )
 
 
@@ -30,17 +44,50 @@ class FoundationDocumentStorage(
     private val root = properties.quarantineRoot!!.toAbsolutePath().normalize()
     private val phiSafeLogger = PhiSafeLogger.forClass(FoundationDocumentStorage::class.java)
 
-    fun putUntrusted(documentId: UUID, content: ByteArray): StoredObjectWrite {
+    /** Kept only for [FoundationDocumentStorageTest]'s pre-streaming coverage; no production caller remains
+     * (the upload path now streams via the [InputStream] overload below). */
+    fun putUntrusted(documentId: UUID, content: ByteArray): StoredObjectWrite =
+        putUntrusted(documentId, content.inputStream(), content.size.toLong(), FoundationHashing.sha256(content))
+
+    /**
+     * Streams [content] to `<key>.part` while hashing it, verifying the exact declared [expectedLength]
+     * and [expectedSha256] against what was actually written — never buffering the whole body in memory —
+     * then atomically moves the part file into place (or, if the final key already exists, compares the
+     * two files byte-by-byte through streams rather than reading either fully into memory).
+     */
+    fun putUntrusted(documentId: UUID, content: InputStream, expectedLength: Long, expectedSha256: String): StoredObjectWrite {
         val key = "$documentId.pdf"
         val path = resolve(StorageTrustZone.UNTRUSTED, key)
         Files.createDirectories(path.parent)
-        if (Files.exists(path)) {
-            val existing = Files.readAllBytes(path)
-            if (!existing.contentEquals(content)) throw FoundationConflictException("upload_overwrite_denied")
-            return StoredObjectWrite(descriptor(StorageTrustZone.UNTRUSTED, key, existing), createdNew = false)
+        val part = path.resolveSibling("$key.part")
+        val digest = MessageDigest.getInstance("SHA-256")
+        var written = 0L
+        try {
+            Files.newOutputStream(part, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE).use { output ->
+                val buffer = ByteArray(65_536)
+                while (true) {
+                    val read = content.read(buffer)
+                    if (read < 0) break
+                    written += read
+                    if (written > expectedLength) throw FoundationBadRequestException("content_length_mismatch")
+                    digest.update(buffer, 0, read)
+                    output.write(buffer, 0, read)
+                }
+            }
+            if (written != expectedLength) throw FoundationBadRequestException("content_length_mismatch")
+            val actual = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+            if (!FoundationHashing.constantTimeHexEquals(actual, expectedSha256)) {
+                throw FoundationBadRequestException("content_digest_mismatch")
+            }
+            if (Files.exists(path)) {
+                if (Files.mismatch(path, part) != -1L) throw FoundationConflictException("upload_overwrite_denied")
+                return StoredObjectWrite(descriptorFromDigest(StorageTrustZone.UNTRUSTED, key, written, actual), createdNew = false)
+            }
+            Files.move(part, path, StandardCopyOption.ATOMIC_MOVE)
+            return StoredObjectWrite(descriptorFromDigest(StorageTrustZone.UNTRUSTED, key, written, actual), createdNew = true)
+        } finally {
+            Files.deleteIfExists(part)
         }
-        Files.write(path, content, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
-        return StoredObjectWrite(descriptor(StorageTrustZone.UNTRUSTED, key, content), createdNew = true)
     }
 
     fun read(zone: StorageTrustZone, objectKey: String): ByteArray = Files.readAllBytes(resolve(zone, objectKey))
@@ -134,20 +181,98 @@ class FoundationDocumentStorage(
         Files.deleteIfExists(resolve(zone, key))
     }
 
+    /**
+     * Every object that exists on disk, by zone, each with its last-modified time — the other half of
+     * the janitor's orphan comparison (the other half is `FoundationRepository.listKnownObjectKeys`).
+     * Only names that are valid object keys are returned: anything else in a zone directory was not
+     * written by this class, and a file this class cannot even address is not the janitor's to delete.
+     * A missing zone directory is simply empty, never an error.
+     *
+     * The modification time is what lets the janitor apply an age threshold to *every* candidate, not
+     * just to `.part` files: a file whose bytes landed seconds ago may belong to a write whose row has
+     * not committed yet (the worker copies an approved PDF and its preview into storage before the
+     * `markInspectionCompleted` transaction commits), and such a file must never be treated as an
+     * orphan. A file that vanishes between the listing and the `stat` is dropped from the result — it
+     * is already gone, so there is nothing for a sweep to do about it.
+     */
+    fun listObjectKeys(): List<StoredObjectListing> =
+        StorageTrustZone.entries.flatMap { zone ->
+            val zoneRoot = root.resolve(zone.name.lowercase())
+            if (!Files.isDirectory(zoneRoot)) {
+                emptyList()
+            } else {
+                Files.list(zoneRoot).use { entries ->
+                    entries.filter(Files::isRegularFile).toList()
+                }.mapNotNull { path ->
+                    val name = path.fileName.toString()
+                    if (!name.matches(objectKeyPattern)) {
+                        null
+                    } else {
+                        runCatching { Files.getLastModifiedTime(path).toInstant() }
+                            .getOrNull()
+                            ?.let { StoredObjectListing(zone, name, it) }
+                    }
+                }
+            }
+        }
+
+    /**
+     * Deletes abandoned `<key>.part` files — an upload that died between `CREATE_NEW` and the atomic
+     * move, whose `finally` never ran (a killed process, a lost container). Only a part file untouched
+     * since [olderThan] is swept: a younger one belongs to an upload that may still be streaming right
+     * now, and deleting it would break a live request. Each delete is attempted on its own and a real
+     * I/O failure is logged with the exception's class name only — never the path — exactly as
+     * [deleteAll] does.
+     *
+     * @return the number of part files actually removed.
+     */
+    fun sweepStalePartFiles(olderThan: Instant): Int {
+        var removed = 0
+        for (zone in StorageTrustZone.entries) {
+            val zoneRoot = root.resolve(zone.name.lowercase())
+            if (!Files.isDirectory(zoneRoot)) continue
+            val parts = Files.list(zoneRoot).use { entries ->
+                entries.filter(Files::isRegularFile)
+                    .filter { it.fileName.toString().endsWith(".part") }
+                    .toList()
+            }
+            for (path in parts) {
+                try {
+                    if (Files.getLastModifiedTime(path).toInstant().isAfter(olderThan)) continue
+                    if (Files.deleteIfExists(path)) removed += 1
+                } catch (exception: Exception) {
+                    phiSafeLogger.emitResourceFailure(
+                        TelemetryEvent.QUARANTINE_FILE_DELETE_FAILED,
+                        CorrelationFilter.currentCorrelationId() ?: UUID.randomUUID(),
+                        documentIdFromKey(path.fileName.toString()) ?: UUID(0, 0),
+                        exception.javaClass.simpleName,
+                    )
+                }
+            }
+        }
+        return removed
+    }
+
     private fun documentIdFromKey(key: String): UUID? =
         if (key.length >= 36) runCatching { UUID.fromString(key.substring(0, 36)) }.getOrNull() else null
 
     private fun descriptor(zone: StorageTrustZone, key: String, bytes: ByteArray): ObjectDescriptor =
+        descriptorFromDigest(zone, key, bytes.size.toLong(), FoundationHashing.sha256(bytes))
+
+    private fun descriptorFromDigest(zone: StorageTrustZone, key: String, size: Long, sha256: String): ObjectDescriptor =
         ObjectDescriptor(
             zone = zone,
             objectKey = key,
-            version = FoundationHashing.sha256("${zone.name}:$key:${FoundationHashing.sha256(bytes)}"),
-            size = bytes.size.toLong(),
-            sha256 = FoundationHashing.sha256(bytes),
+            version = FoundationHashing.sha256("${zone.name}:$key:$sha256"),
+            size = size,
+            sha256 = sha256,
         )
 
+    /** The one object-key shape this class will address: `<uuid>[-<sha256>].{pdf,png}`. */
+    private val objectKeyPattern = Regex("^[a-f0-9-]{36,110}\\.(pdf|png)$")
+
     private fun resolve(zone: StorageTrustZone, objectKey: String): Path {
-        if (!objectKey.matches(Regex("^[a-f0-9-]{36,110}\\.(pdf|png)$"))) {
+        if (!objectKey.matches(objectKeyPattern)) {
             throw FoundationForbiddenException("object_key_denied")
         }
         val zoneRoot = root.resolve(zone.name.lowercase()).normalize()

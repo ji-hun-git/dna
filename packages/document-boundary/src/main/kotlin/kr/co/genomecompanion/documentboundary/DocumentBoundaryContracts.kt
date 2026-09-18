@@ -64,6 +64,7 @@ enum class InspectionReason {
     IMAGE_COMPLEXITY_EXCEEDED,
     EMBEDDED_FILE,
     ACTIVE_CONTENT,
+    XFA_FORM,
     TRAILING_DATA,
     MALWARE_DETECTED,
     SCANNER_UNAVAILABLE,
@@ -111,6 +112,7 @@ data class PdfInspectionPolicy(
     val maxPages: Int = 20,
     val maxIndirectObjects: Int = 20_000,
     val maxImagePixels: Long = 50_000_000,
+    val maxNestingDepth: Int = 8,
     val policyVersion: String = "pdf-security-v1",
 )
 

@@ -12,10 +12,7 @@ import kr.co.genomecompanion.documentboundary.MalwareScanResult
 import kr.co.genomecompanion.documentboundary.MalwareScanner
 import kr.co.genomecompanion.documentboundary.PdfSecurityInspector
 import kr.co.genomecompanion.documentboundary.PdfInspectionPolicy
-import org.apache.pdfbox.Loader
-import org.apache.pdfbox.rendering.ImageType
-import org.apache.pdfbox.rendering.PDFRenderer
-import java.io.ByteArrayOutputStream
+import kr.co.genomecompanion.documentboundary.WorkerIdentity
 import java.net.URI
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
@@ -29,13 +26,21 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Base64
 import java.util.HexFormat
+import java.time.Clock
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import javax.imageio.ImageIO
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 
 private const val WORKER_VERSION = "document-worker-v2"
 private const val MAX_SOURCE_BYTES = 10_485_760
 private const val MAX_RESPONSE_BYTES = 3_000_000
+
+// Mirrors PageRenderSubprocess's own private UNUSABLE_OUTPUT exit code: an exception starting or
+// running the render subprocess is not a different failure from an unusable render, it is just an
+// earlier place for the same one to happen.
+private const val UNUSABLE_RENDER_OUTCOME = -2
 
 
 data class WorkerConfiguration(
@@ -48,6 +53,7 @@ data class WorkerConfiguration(
     val workerImageDigest: String,
     val failFirstExtraction: Boolean,
     val healthPort: Int?,
+    val signatureDir: Path? = null,
 ) {
     init {
         require(apiBaseUri.userInfo == null && apiBaseUri.query == null && apiBaseUri.fragment == null)
@@ -64,18 +70,26 @@ data class WorkerConfiguration(
     }
 
     companion object {
-        fun fromEnvironment(environment: Map<String, String> = System.getenv()): WorkerConfiguration =
-            WorkerConfiguration(
+        fun fromEnvironment(environment: Map<String, String> = System.getenv()): WorkerConfiguration {
+            val clamscanPath = environment["GC_WORKER_CLAMSCAN_PATH"]?.let(Path::of)
+            return WorkerConfiguration(
                 apiBaseUri = URI.create(environment.getValue("GC_WORKER_API_BASE_URL")),
                 credential = environment.getValue("GC_WORKER_CREDENTIAL"),
                 workerId = environment.getOrDefault("GC_WORKER_ID", "document-worker-local"),
-                clamscanPath = environment["GC_WORKER_CLAMSCAN_PATH"]?.let(Path::of),
+                clamscanPath = clamscanPath,
                 requiredClamAvVersion = environment.getOrDefault("GC_WORKER_CLAMAV_VERSION", "1.5.4"),
                 allowSyntheticScanner = environment["GC_WORKER_ALLOW_SYNTHETIC_SCANNER"] == "true",
                 workerImageDigest = environment.getValue("GC_WORKER_IMAGE_DIGEST"),
                 failFirstExtraction = environment["GC_WORKER_FAIL_FIRST_EXTRACTION"] == "true",
                 healthPort = environment["GC_WORKER_HEALTH_PORT"]?.toInt(),
+                // Only a real ClamAV worker has signatures to check; with the synthetic scanner there is
+                // no signature directory and /healthz skips the signature checks entirely.
+                signatureDir = environment["GC_WORKER_SIGNATURE_DIR"]?.let(Path::of)
+                    ?: clamscanPath?.let { DEFAULT_SIGNATURE_DIR },
             )
+        }
+
+        private val DEFAULT_SIGNATURE_DIR: Path = Path.of("/usr/local/share/clamav")
 
         private fun isLoopbackHttp(uri: URI): Boolean =
             uri.scheme == "http" && uri.host in setOf("127.0.0.1", "localhost", "::1")
@@ -117,7 +131,31 @@ class BoundaryApiClient(
         .connectTimeout(Duration.ofSeconds(5))
         .followRedirects(HttpClient.Redirect.NEVER)
         .build(),
+    /**
+     * The probe gets its own client so its budget is its own. Sharing the job client meant inheriting a
+     * 5 s connect timeout, which a 2 s request timeout cannot shorten when the host is black-holed rather
+     * than refusing: the probe then outlived the readiness poll that asked for it and probes queued behind
+     * each other. 1 s to connect and 2 s end to end keeps a /healthz answer inside ~3 s in the worst case,
+     * and keeps probe traffic out of the connection pool the job requests use.
+     */
+    private val probeClient: HttpClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(1))
+        .followRedirects(HttpClient.Redirect.NEVER)
+        .build(),
 ) {
+    /**
+     * Liveness of the core API, for /healthz only: no credential, no job state, and a 2 s budget so a
+     * health poll cannot hang behind a lease request. A refused connection is an answer ("no"), not a
+     * failure, so the transport exception is folded into `false` here.
+     */
+    fun probe(): Boolean = runCatching {
+        val request = HttpRequest.newBuilder(configuration.apiBaseUri.resolve("/actuator/health"))
+            .timeout(Duration.ofSeconds(2))
+            .GET()
+            .build()
+        probeClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() == 200
+    }.getOrDefault(false)
+
     fun lease(): WorkerLease? {
         val response = send(
             HttpRequest.newBuilder(resolve("/internal/document-boundary/jobs/lease"))
@@ -246,9 +284,16 @@ class BoundaryApiClient(
         return builder.build()
     }
 
+    /** Derived once: the MAC is a pure function of the credential and worker id, both fixed for the
+     * process lifetime, and re-deriving it per request would hash the credential on every call. */
+    private val workerIdMac: String = WorkerIdentity.mac(configuration.credential, configuration.workerId)
+
     private fun authenticatedBuilder(uri: URI): HttpRequest.Builder = HttpRequest.newBuilder(uri)
         .header("X-GC-Worker-Credential", configuration.credential)
         .header("X-GC-Worker-Id", configuration.workerId)
+        // Proof that this process holds the credential *and* owns the id it claims; core verifies it
+        // against the credential digest it stores. See WorkerIdentity for why the digest is the key.
+        .header("X-GC-Worker-Id-Mac", workerIdMac)
         .header("Accept", "application/json")
 
     private fun resolve(path: String): URI {
@@ -272,7 +317,11 @@ class ClamAvCommandScanner(
 ) : MalwareScanner {
     override fun scan(bytes: ByteArray): MalwareScanResult {
         if (!Files.isRegularFile(executable)) return unavailable("executable-missing")
-        if (database != null && !Files.isRegularFile(database)) return unavailable("database-missing")
+        // The image points this at the signature *directory*; clamscan's --database takes either a
+        // directory of CVDs or a single database file, so accept both.
+        if (database != null && !Files.isRegularFile(database) && !Files.isDirectory(database)) {
+            return unavailable("database-missing")
+        }
         val version = readVersion() ?: return unavailable("version-unavailable")
         if (version.engine != requiredVersion) return unavailable("version-mismatch")
         val command = mutableListOf(executable.toString(), "--no-summary", "--stdout")
@@ -324,7 +373,7 @@ class ClamAvCommandScanner(
             val match = Regex("^ClamAV ([0-9]+[.][0-9]+[.][0-9]+)(?:/(.+))?$")
                 .matchEntire(output.lineSequence().firstOrNull() ?: return null) ?: return null
             val signatureVersion = match.groupValues[2].takeIf(String::isNotBlank)?.take(120)
-                ?: database?.let { "sha256:${sha256File(it)}" }
+                ?: database?.let { "sha256:${sha256Database(it)}" }
                 ?: return null
             ClamAvVersion(match.groupValues[1], signatureVersion)
         } finally {
@@ -340,20 +389,37 @@ class ClamAvCommandScanner(
         signature,
     )
 
-    private fun sha256File(path: Path): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        Files.newInputStream(path).use { input ->
-            val buffer = ByteArray(8_192)
-            while (true) {
-                val read = input.read(buffer)
-                if (read < 0) break
-                digest.update(buffer, 0, read)
-            }
-        }
-        return HexFormat.of().formatHex(digest.digest())
-    }
-
     private data class ClamAvVersion(val engine: String, val signatures: String)
+}
+
+
+/**
+ * A signature directory has no single digest of its own, so fold its files' digests into one. The
+ * fold is over the sorted paths, so the result is the same whatever order the filesystem lists them
+ * in; a regular file is just its own digest.
+ */
+internal fun sha256Database(path: Path): String {
+    if (Files.isRegularFile(path)) return sha256File(path)
+    val digest = MessageDigest.getInstance("SHA-256")
+    Files.list(path).use { entries ->
+        entries.filter(Files::isRegularFile).sorted().forEach {
+            digest.update(sha256File(it).toByteArray(StandardCharsets.UTF_8))
+        }
+    }
+    return HexFormat.of().formatHex(digest.digest())
+}
+
+internal fun sha256File(path: Path): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    Files.newInputStream(path).use { input ->
+        val buffer = ByteArray(8_192)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return HexFormat.of().formatHex(digest.digest())
 }
 
 
@@ -372,39 +438,84 @@ class DocumentWorker(
     private val configuration: WorkerConfiguration,
     private val client: BoundaryApiClient,
     private val inspector: PdfSecurityInspector,
+    /**
+     * Called at every phase boundary of an iteration. The loop's heartbeat is what /healthz reads to
+     * decide `loop-stalled`, and a heartbeat set once per iteration cannot tell a wedged loop from a
+     * slow but honest job: lease, fetch, a 60 s render and the result POST legitimately add up past a
+     * two-minute bound. Ticking here means a phase that is still making progress keeps the worker
+     * ready, while a phase that has genuinely hung still ages the heartbeat out.
+     */
+    private val heartbeat: () -> Unit = {},
 ) {
     private val transientFailures = mutableSetOf<String>()
 
     fun runOnce(): Boolean {
+        // An empty lease is the idle case and is not logged: the loop polls once a second, so a line
+        // per empty poll would be a line per second of nothing happening.
         val lease = client.lease() ?: return false
+        heartbeat()
+        WorkerLog.emit("job_leased", lease.jobId)
         val source = client.source(lease)
+        heartbeat()
         when (lease.jobType) {
-            "SECURITY_INSPECTION" -> client.inspectionResult(
-                lease,
-                inspector.inspect(source, lease.sourceSha256),
-            )
+            "SECURITY_INSPECTION" -> {
+                val report = inspector.inspect(source, lease.sourceSha256)
+                heartbeat()
+                client.inspectionResult(lease, report)
+                heartbeat()
+                WorkerLog.emit("job_completed", lease.jobId)
+            }
             "SYNTHETIC_EXTRACTION" -> {
                 if (configuration.failFirstExtraction && transientFailures.add(lease.jobId)) {
                     client.failure(lease, "simulated_transient_preview_failure", retryable = true)
+                    WorkerLog.emit("job_failed", lease.jobId, "simulated_transient_preview_failure")
                 } else {
-                    runCatching { renderFirstPage(source) }
-                        .onSuccess { preview -> client.extractionResult(lease, preview, NativeTextExtractionProvider.extract(source)) }
-                        .onFailure { client.failure(lease, "preview_generation_failed", retryable = true) }
+                    // Rendering is the one step that runs attacker-shaped bytes through a decoder, so it
+                    // runs in a child JVM: a page that exhausts the heap costs that child, not the worker.
+                    // Starting that child JVM can itself throw (e.g. an IOException from
+                    // ProcessBuilder.start()) before render() ever returns a RenderResult; without this
+                    // catch that exception would escape runOnce, and the caller's own runCatching around
+                    // runOnce() would swallow it silently -- the job posts no failure and just sits until
+                    // its lease expires. Route it to the same retryable outcome as the subprocess's own
+                    // unusable-output failure (class-only, no message content, to keep the same content
+                    // discipline as PageRenderSubprocess itself).
+                    // An Error is not a job failure. OutOfMemoryError or StackOverflowError here is
+                    // *this* JVM's heap or stack, not the child's (the child's own exhaustion comes back
+                    // as RenderResult.OutOfMemory, exit code 3). Downgrading one to a retryable failure
+                    // would leave a poisoned JVM leasing jobs it can never finish; rethrow so it reaches
+                    // the loop's Exception-only catch below, which deliberately lets it out and halts.
+                    // An InterruptedException means shutdown asked this thread to stop: runCatching
+                    // swallows the flag, so re-set it before returning the retryable failure.
+                    val rendered = runCatching { PageRenderSubprocess.render(source) }
+                        .getOrElse { failure ->
+                            if (failure is Error) throw failure
+                            if (failure is InterruptedException) Thread.currentThread().interrupt()
+                            RenderResult.Failed(UNUSABLE_RENDER_OUTCOME)
+                        }
+                    heartbeat()
+                    when (rendered) {
+                        is RenderResult.Png -> {
+                            client.extractionResult(lease, rendered.bytes, NativeTextExtractionProvider.extract(source))
+                            heartbeat()
+                            WorkerLog.emit("job_completed", lease.jobId)
+                        }
+                        RenderResult.OutOfMemory -> {
+                            client.failure(lease, "render_error", retryable = false)
+                            WorkerLog.emit("job_failed", lease.jobId, "render_error")
+                        }
+                        is RenderResult.Failed -> {
+                            client.failure(lease, "preview_generation_failed", retryable = true)
+                            WorkerLog.emit("job_failed", lease.jobId, "preview_generation_failed")
+                        }
+                    }
                 }
             }
-            else -> client.failure(lease, "unsupported_job_type", retryable = false)
+            else -> {
+                client.failure(lease, "unsupported_job_type", retryable = false)
+                WorkerLog.emit("job_failed", lease.jobId, "unsupported_job_type")
+            }
         }
         return true
-    }
-
-    private fun renderFirstPage(source: ByteArray): ByteArray = Loader.loadPDF(source).use { document ->
-        require(document.numberOfPages in 1..20)
-        val image = PDFRenderer(document).renderImageWithDPI(0, 110f, ImageType.RGB)
-        require(image.width.toLong() * image.height.toLong() <= 20_000_000)
-        ByteArrayOutputStream().use { output ->
-            check(ImageIO.write(image, "png", output))
-            output.toByteArray().also { require(it.size in 67..2_097_152) }
-        }
     }
 }
 
@@ -412,22 +523,124 @@ class DocumentWorker(
 fun main(args: Array<String>) {
     val configuration = WorkerConfiguration.fromEnvironment()
     val scanner = configuration.clamscanPath
-        ?.let { ClamAvCommandScanner(it, configuration.requiredClamAvVersion) }
+        ?.let { ClamAvCommandScanner(it, configuration.requiredClamAvVersion, configuration.signatureDir) }
         ?: SyntheticManifestScanner()
+    val client = BoundaryApiClient(configuration)
+    val heartbeat = AtomicReference(Instant.now())
     val worker = DocumentWorker(
         configuration,
-        BoundaryApiClient(configuration),
+        client,
         PdfSecurityInspector(policy = PdfInspectionPolicy(), malwareScanner = scanner),
+        heartbeat = { heartbeat.set(Instant.now()) },
     )
-    configuration.healthPort?.let(::startLoopbackHealthServer)
+    val health = WorkerHealth(
+        coreProbe = client::probe,
+        signatureDir = configuration.signatureDir,
+        loopHeartbeat = heartbeat::get,
+        clock = Clock.systemUTC(),
+    )
+    configuration.healthPort?.let { startLoopbackHealthServer(it, health::check) }
     if (args.contains("--once")) {
         worker.runOnce()
         return
     }
-    while (true) {
-        val processed = runCatching { worker.runOnce() }.getOrDefault(false)
-        if (!processed) Thread.sleep(1_000)
+    val running = AtomicBoolean(true)
+    val fatal = AtomicReference<Throwable?>(null)
+    // Guards the one window in which an interrupt is welcome. The shutdown hook only interrupts while
+    // `sleeping` is true and it holds this lock, so the interrupt can land on the backoff sleep and
+    // nowhere else -- never on a leased job's HTTP call, which an interrupt would tear in half.
+    val sleepLock = Any()
+    var sleeping = false
+    val loop = Thread {
+        var failures = 0
+        while (running.get()) {
+            heartbeat.set(Instant.now())
+            val processed = try {
+                worker.runOnce().also { failures = 0 }
+            } catch (exception: Exception) {
+                // Exception, never Throwable: an OutOfMemoryError or any other VirtualMachineError has to
+                // leave this loop and end the process so the supervisor restarts it with a fresh heap.
+                // Catching one would leave a poisoned JVM leasing jobs it can never finish.
+                failures += 1
+                // The exception's class name only: its message can quote a file name, a URL or a page of a
+                // person's document. An anonymous class has an empty simple name, so fall back to a constant
+                // rather than letting WorkerLog's own `require` turn a logged loop error into a crash.
+                val code = exception.javaClass.simpleName.lowercase().filter { it.isLetterOrDigit() }.take(80)
+                WorkerLog.emit("loop_error", null, if (code.length < 3) "unknown_error" else code)
+                false
+            }
+            // Idle polling stays at a second; consecutive errors back off 1, 2, 4 ... 30 s so a core that is
+            // down is not asked for work once a second until it comes back. The first failure waits 1 s,
+            // not 2: the exponent counts the failures *before* this one.
+            if (!processed) {
+                val exponent = minOf(maxOf(failures - 1, 0), 5)
+                val backoffMillis = minOf(30_000L, 1_000L shl exponent)
+                try {
+                    synchronized(sleepLock) { sleeping = running.get() }
+                    if (sleeping) Thread.sleep(backoffMillis)
+                } catch (_: InterruptedException) {
+                    // Shutdown, not failure: end the wait now and let the `while (running)` check exit.
+                } finally {
+                    synchronized(sleepLock) {
+                        sleeping = false
+                        // Clear a flag set just after the sleep returned, so it cannot reach the next job.
+                        Thread.interrupted()
+                    }
+                }
+            }
+        }
+    }.also {
+        it.name = "document-worker-loop"
+        // Without this an OutOfMemoryError would be printed and main would still exit 0: a container that
+        // has quietly stopped taking work instead of restarting. [haltOnFatalLoopError] makes the exit
+        // non-zero, and makes it actually happen.
+        it.setUncaughtExceptionHandler { _, throwable -> fatal.set(throwable) }
+        it.start()
     }
+    // SIGTERM must not tear a leased job in half: stop polling, then let the in-flight iteration finish.
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            running.set(false)
+            // Without the interrupt SIGTERM waits out a backoff that is already up to 30 s long, which is
+            // the whole join budget spent doing nothing. Interrupting only while the loop is inside its
+            // sleep keeps an in-flight job untouched: it finishes, then the loop sees `running == false`.
+            synchronized(sleepLock) { if (sleeping) loop.interrupt() }
+            loop.join(30_000)
+            WorkerLog.emit("shutdown_complete", null)
+        },
+    )
+    loop.join()
+    fatal.get()?.let { haltOnFatalLoopError(it) }
+}
+
+
+/**
+ * End the process after the loop thread has died of an `Error`, and make sure it actually ends.
+ *
+ * Rethrowing out of `main` is not enough. The JDK `HttpServer` behind /healthz runs a non-daemon
+ * `HTTP-Dispatcher` thread -- it inherits daemon status from whichever thread created it, which is
+ * `main` -- so once `main` unwinds the JVM still has a live non-daemon thread and never exits. The
+ * container then sits there forever, answering `503 loop-stalled` and taking no work, which is
+ * exactly the state the fatal path exists to escape. `halt` skips shutdown hooks deliberately: the
+ * loop thread is already dead, so the hook's `join` has nothing to wait for, and after an
+ * OutOfMemoryError we do not want to run more Kotlin than we must.
+ *
+ * This deliberately does not call `server.stop(0)` first: `HttpServer.stop` joins its
+ * `HTTP-Dispatcher` thread with no bound, so a wedged dispatcher would block the halt that exists
+ * to escape exactly that kind of wedge. `Runtime.halt` tears the whole JVM down regardless, so the
+ * health server's socket closes with it -- there is nothing `stop(0)` would still buy here.
+ *
+ * The stack trace goes to stderr in full. A `VirtualMachineError`'s trace is JDK and worker frames --
+ * no document bytes, no file name, no job content -- so it is the one place the worker prints more
+ * than a [WorkerLog] code, and an operator needs it to tell an OOM from a `StackOverflowError`.
+ */
+internal fun haltOnFatalLoopError(
+    fatal: Throwable,
+    stderr: java.io.PrintStream = System.err,
+    exit: (Int) -> Unit = { Runtime.getRuntime().halt(it) },
+) {
+    runCatching { fatal.printStackTrace(stderr); stderr.flush() }
+    exit(1)
 }
 
 
@@ -435,16 +648,57 @@ private fun configuredObjectMapper(): ObjectMapper = jacksonObjectMapper()
     .registerModule(JavaTimeModule())
 
 
-private fun startLoopbackHealthServer(port: Int) {
+/**
+ * @param port the loopback port to bind, or `0` to let the OS choose a free one -- the caller reads the
+ * actual port back from the returned server's `address.port`. Production always passes
+ * `GC_WORKER_HEALTH_PORT`, which `WorkerConfiguration` still requires to be an explicit 1024..65535;
+ * `0` exists so a test does not have to reserve a port with `ServerSocket(0)` and then rebind it, a
+ * window in which CI can hand the port to something else.
+ */
+internal fun startLoopbackHealthServer(port: Int, check: () -> HealthReport): HttpServer {
+    // Loopback only: this is a supervisor's readiness probe, not a service. The image-smoke container runs
+    // in the host network namespace, so the probe reaches it there without exposing it to anything else.
     val server = HttpServer.create(InetSocketAddress("127.0.0.1", port), 0)
+    // A null executor runs every request on HttpServer's single dispatcher thread, so one probe waiting on
+    // the core blocks the next one behind it. Two daemon threads: enough that a slow probe and the poll
+    // that follows it do not serialise, few enough that /healthz can never become a work queue.
+    server.executor = Executors.newFixedThreadPool(2) { runnable ->
+        Thread(runnable, "document-worker-healthz").apply { isDaemon = true }
+    }
     server.createContext("/healthz") { exchange ->
-        val body = "ready".toByteArray(StandardCharsets.UTF_8)
+        // Fail closed. A check that throws -- a signature file deleted between two calls, a probe that
+        // raises rather than returns -- must read as "not ready", never as a 500 the supervisor may treat
+        // as a transport blip. Class name only in the log, for the same reason WorkerLog exists at all.
+        val report = try {
+            check()
+        } catch (exception: Exception) {
+            WorkerLog.emit("health_check_error", null, healthCheckErrorCode(exception))
+            HealthReport(false, "scan-unavailable")
+        }
+        val body = report.code.toByteArray(StandardCharsets.UTF_8)
         exchange.responseHeaders.set("Content-Type", "text/plain; charset=utf-8")
         exchange.responseHeaders.set("Cache-Control", "no-store")
-        exchange.sendResponseHeaders(200, body.size.toLong())
+        exchange.sendResponseHeaders(if (report.ready) 200 else 503, body.size.toLong())
         exchange.responseBody.use { it.write(body) }
     }
     server.start()
+    return server
+}
+
+
+/**
+ * `<phase>_<exception class>`, e.g. `signatures_nosuchfileexception`.
+ *
+ * The wire code set stays closed (`scan-unavailable` for anything that throws) because Task 19's
+ * image-smoke matches on it, so this log line is the only thing that tells an operator a raising
+ * heartbeat clock from a missing signature file. Class name only, never the message: a
+ * `NoSuchFileException`'s message is the path it could not find.
+ */
+internal fun healthCheckErrorCode(exception: Exception): String {
+    val phase = (exception as? HealthCheckFailure)?.phase ?: "unknown"
+    val cause = (exception as? HealthCheckFailure)?.cause ?: exception
+    val name = cause.javaClass.simpleName.lowercase().filter { it.isLetterOrDigit() }
+    return "${phase}_${if (name.length < 3) "unknown_error" else name}".take(80)
 }
 
 

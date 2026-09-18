@@ -7,7 +7,9 @@ security:
     client-id: ${OIDC_CLIENT_ID:}
 
 server:
-  forward-headers-strategy: framework
+  # No proxy is trusted by default: X-Forwarded-* must not decide a client IP (and therefore a
+  # rate-limit bucket) outside the hosted profile, which names its trusted proxies explicitly.
+  forward-headers-strategy: none
   error:
     include-message: never
     include-binding-errors: never
@@ -19,7 +21,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,prometheus
+        include: health
   endpoint:
     health:
       probes:
@@ -43,6 +45,10 @@ spring:
     log-request-details: false
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  task:
+    scheduling:
+      pool:
+        size: 1
 
 gc:
   consent:
@@ -63,3 +69,6 @@ gc:
     quarantine-root: ${GC_QUARANTINE_ROOT:}
     audit-pepper: ${GC_AUDIT_PEPPER:}
     allowed-document-sha256: ${GC_ALLOWED_DOCUMENT_SHA256:}
+    session-rate-limit-per-minute: ${GC_SESSION_RATE_LIMIT_PER_MINUTE:10}
+    worker-rate-limit-per-minute: ${GC_WORKER_RATE_LIMIT_PER_MINUTE:600}
+    janitor-interval: 5m

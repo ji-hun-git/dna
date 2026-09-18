@@ -28,6 +28,12 @@ data class FoundationProperties(
     val auditPepper: String = "",
     val allowedDocumentSha256: Set<String> = emptySet(),
     val localIdentities: List<LocalSyntheticIdentity> = emptyList(),
+    val sessionRateLimitPerMinute: Int = 10,
+    val sessionFailureLockThreshold: Int = 5,
+    val sessionFailureLockDuration: Duration = Duration.ofMinutes(15),
+    val workerRateLimitPerMinute: Int = 600,
+    /** How often [FoundationJanitor] sweeps. Also its initial delay, so no sweep runs at startup. */
+    val janitorInterval: Duration = Duration.ofMinutes(5),
 ) {
     fun validateEnabledConfiguration() {
         if (!enabled) return
@@ -66,5 +72,20 @@ data class FoundationProperties(
                     identity.credentialSha256.matches(Regex("^[0-9a-f]{64}$"))
             },
         ) { "foundation local identities require a synthetic subject and SHA-256 credential" }
+        require(sessionRateLimitPerMinute in 1..100_000) {
+            "foundation session rate limit per minute must be between one and one hundred thousand"
+        }
+        require(sessionFailureLockThreshold in 1..100) {
+            "foundation session failure lock threshold must be between one and one hundred"
+        }
+        require(sessionFailureLockDuration in Duration.ofMinutes(1)..Duration.ofHours(24)) {
+            "foundation session failure lock duration must be between one minute and one day"
+        }
+        require(workerRateLimitPerMinute in 1..1_000_000) {
+            "foundation worker rate limit per minute must be between one and one million"
+        }
+        require(janitorInterval in Duration.ofMinutes(1)..Duration.ofHours(24)) {
+            "foundation janitor interval must be between one minute and one day"
+        }
     }
 }

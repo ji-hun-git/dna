@@ -1,0 +1,11 @@
+# Hosted synthetic staging only. Activated with SPRING_PROFILES_ACTIVE=hosted behind a TLS proxy
+# whose addresses GC_TRUSTED_PROXIES names; never active for local development or the e2e run.
+server:
+  forward-headers-strategy: framework
+  tomcat:
+    remoteip:
+      trusted-proxies: ${GC_TRUSTED_PROXIES}
+
+gc:
+  foundation:
+    secure-cookies: true

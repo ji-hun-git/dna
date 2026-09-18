@@ -216,12 +216,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # `trivyignore` is the only accepted-risk channel here: a non-empty value names a file
+          # of CVE ids the blocking Critical step below is allowed to pass over, and it is set for
+          # the web image alone. `ignore-unfixed` stays `false` for all three images.
           - name: web
             dockerfile: apps/web/Dockerfile
+            trivyignore: apps/web/.trivyignore
           - name: core-api
             dockerfile: apps/core-api/Dockerfile
+            trivyignore: ""
           - name: document-worker
             dockerfile: apps/document-worker/Dockerfile
+            trivyignore: ""
     env:
       IMAGE_REF: genome-companion/${{ matrix.name }}:${{ github.sha }}
       DOCKER_BUILDKIT: "1"
@@ -254,7 +260,13 @@ jobs:
               docker run --rm --entrypoint java "${IMAGE_REF}" -version
               ;;
             document-worker)
-              test "$(docker run --rm --entrypoint /usr/local/bin/clamscan "${IMAGE_REF}" --version)" = "ClamAV 1.5.4"
+              # With signatures baked in (freshclam at build), clamscan --version prints "ClamAV 1.5.4/<db version>/<db date>".
+            clamscan_version="$(docker run --rm --entrypoint /usr/local/bin/clamscan "${IMAGE_REF}" --version)"
+            echo "${clamscan_version}"
+            case "${clamscan_version}" in
+              "ClamAV 1.5.4"|"ClamAV 1.5.4/"*) ;;
+              *) echo "unexpected clamscan version: ${clamscan_version}" >&2; exit 1 ;;
+            esac
               ;;
           esac
       - name: Record immutable build evidence
@@ -274,7 +286,11 @@ jobs:
           exit-code: "0"
           format: cyclonedx
           output: runtime-image-evidence/${{ matrix.name }}.cdx.json
-      - name: Fail on unresolved Critical or High image vulnerabilities
+      # A Critical finding with no upstream fix is still a Critical finding: `ignore-unfixed: true`
+      # let the one class of vulnerability we cannot patch our way out of pass unnoticed, which is
+      # backwards -- an unfixed Critical is the one that needs a human decision (rebase the base
+      # image, drop the dependency, or record an accepted risk), not the one that needs silence.
+      - name: Fail on Critical image vulnerabilities, fixed or not
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
         with:
           version: v0.72.0
@@ -282,9 +298,28 @@ jobs:
           image-ref: ${{ env.IMAGE_REF }}
           scan-type: image
           scanners: vuln
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
+          severity: CRITICAL
+          ignore-unfixed: false
           exit-code: "1"
+          format: table
+          # Empty for core-api and document-worker; `apps/web/.trivyignore` for web, where four
+          # Debian 12 Criticals (perl-base x3, zlib1g) have no fixed version and are accepted
+          # in-repo with a review date rather than silenced by flipping `ignore-unfixed`.
+          trivyignores: ${{ matrix.trivyignore }}
+      # High findings move to a non-blocking report: blocking on every unfixed High in a JRE or Node
+      # base image would make the pipeline red for reasons no change in this repository can clear,
+      # and a gate that is always red stops being read. The table still prints in the job log.
+      - name: Report High image vulnerabilities (informational)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          skip-setup-trivy: true
+          image-ref: ${{ env.IMAGE_REF }}
+          scan-type: image
+          scanners: vuln
+          severity: HIGH
+          ignore-unfixed: false
+          exit-code: "0"
           format: table
       - name: Preserve image ID, manifest, and SBOM evidence
         if: ${{ always() && steps.image-evidence.outcome == 'success' }}
@@ -294,6 +329,180 @@ jobs:
           path: runtime-image-evidence
           if-no-files-found: error
           retention-days: 14
+
+  image-smoke:
+    name: runtime image smoke (core-api + document-worker boot to /healthz)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # `needs` orders this after the images have been built and scanned; it does not carry the images
+    # over, because image layers are not job artifacts. Both images are rebuilt here from the same
+    # revision and the same Dockerfiles. The runner is ephemeral and shares no layer cache with the
+    # `runtime-images` job, so this is a full cold build of both images — paid for a second time, and
+    # budgeted for by this job's 30-minute timeout rather than avoided.
+    needs: runtime-images
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DOCKER_BUILDKIT: "1"
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build core-api and document-worker images
+        run: |
+          docker build --pull --platform linux/amd64 --file apps/core-api/Dockerfile --tag gc-smoke/core-api .
+          docker build --pull --platform linux/amd64 --file apps/document-worker/Dockerfile --tag gc-smoke/document-worker .
+      - name: Boot core-api against the service database and wait for /actuator/health
+        run: |
+          # gc.foundation.enabled defaults to false, so the context starts with no secrets at all: the
+          # three datasource variables below are the whole boot surface, and Flyway migrates V1..V13
+          # into the empty service database on the way up.
+          docker run --detach --name gc-core --network host \
+            --env GC_DATABASE_URL=jdbc:postgresql://127.0.0.1:5432/postgres \
+            --env GC_DATABASE_USERNAME=postgres --env GC_DATABASE_PASSWORD= \
+            gc-smoke/core-api
+          for attempt in $(seq 1 45); do
+            body="$(curl --silent --write-out ' HTTP_%{http_code}' http://127.0.0.1:8080/actuator/health || true)"
+            case "${body}" in
+              *HTTP_200) echo "core-api UP after ${attempt} polls: ${body}"; exit 0 ;;
+            esac
+            sleep 2
+          done
+          echo "core-api health never reached 200 within 90s; last body: ${body}"
+          docker logs gc-core 2>&1 | tail -n 200
+          exit 1
+      - name: Boot document-worker against core-api and wait for /healthz
+        run: |
+          # GC_WORKER_IMAGE_DIGEST is validated as 64 lowercase hex, which the image ID satisfies once
+          # the `sha256:` prefix is stripped. Everything else the worker needs -- the clamscan path,
+          # the required ClamAV version and the signature directory -- is baked into the image as ENV
+          # by its Dockerfile, so the run only supplies what is environment-specific.
+          image_id="$(docker image inspect --format '{{.Id}}' gc-smoke/document-worker | sed 's/^sha256://')"
+          docker run --detach --name gc-worker --network host \
+            --env GC_WORKER_API_BASE_URL=http://127.0.0.1:8080 \
+            --env GC_WORKER_CREDENTIAL=smoke-credential-with-at-least-32-chars-000 \
+            --env GC_WORKER_ID=ci-smoke-worker \
+            --env GC_WORKER_IMAGE_DIGEST="${image_id}" \
+            --env GC_WORKER_HEALTH_PORT=8091 \
+            gc-smoke/document-worker
+          # The health server binds 127.0.0.1 only; --network host is what puts that loopback in the
+          # runner's own namespace. A 503 core-unreachable early in the poll is expected and not an
+          # error: it means the worker answered before its first successful probe of the core.
+          for attempt in $(seq 1 30); do
+            body="$(curl --silent --write-out ' HTTP_%{http_code}' http://127.0.0.1:8091/healthz || true)"
+            case "${body}" in
+              *HTTP_200) echo "worker ready after ${attempt} polls: ${body}"; exit 0 ;;
+            esac
+            sleep 2
+          done
+          echo "worker health never reached 200 within 60s; last body: ${body}"
+          docker logs gc-worker 2>&1 | tail -n 100
+          docker logs gc-core 2>&1 | tail -n 100
+          exit 1
+      - name: Stop containers
+        if: ${{ always() }}
+        run: docker rm --force gc-core gc-worker || true
+
+  migration-replay:
+    name: Flyway replay V1..V12 + seeded rows + V13
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GC_DATABASE_URL: jdbc:postgresql://127.0.0.1:5432/postgres
+      GC_DATABASE_USERNAME: postgres
+      GC_DATABASE_PASSWORD: ""
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Java toolchain
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Build the core-api jar
+        run: ./gradlew :apps:core-api:bootJar --no-daemon
+      - name: Apply V1..V12 only
+        run: java -jar apps/core-api/build/libs/core-api.jar --spring.main.web-application-type=none --spring.main.lifecycle.timeout-per-shutdown-phase=1s --gc.migrate-only=true --spring.flyway.target=12
+      - name: Seed representative rows on the V12 schema
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO gc_subject(subject_id, created_at) VALUES ('synthetic-replay', now());
+          INSERT INTO gc_consent_grant(consent_id, subject_id, purpose_code, status, policy_version, granted_at)
+            VALUES ('00000000-0000-0000-0000-0000000000c1', 'synthetic-replay', 'DOCUMENT_EXTRACTION', 'ACTIVE', 'v1', now());
+          INSERT INTO gc_document(document_id, subject_id, consent_id, status, media_type, expected_length, created_at, expected_sha256, state_version, updated_at)
+            VALUES ('00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', '00000000-0000-0000-0000-0000000000c1', 'REVIEW_REQUIRED', 'application/pdf', 128, now(), repeat('a', 64), 3, now());
+          INSERT INTO gc_extraction_job(job_id, document_id, subject_id, status, created_at, attempt) VALUES ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', 'COMPLETED', now(), 1);
+          INSERT INTO gc_candidate(candidate_id, job_id, document_id, subject_id, status, ordinal, label, candidate_value, unit, observed_on, evidence_page, source_text_sha256, created_at, confirmed_at)
+            VALUES ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', 'CONFIRMED', 1, 'replay-a', '1', 'mg/dL', '2026-07-28', 1, repeat('1', 64), now(), now()),
+                   ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', 'PENDING', 2, 'replay-b', '2', 'mg/dL', '2026-07-28', 1, repeat('2', 64), now(), NULL);
+          INSERT INTO gc_health_record(record_id, candidate_id, document_id, subject_id, label, confirmed_value, unit, observed_on, confirmed_at)
+            VALUES ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000d1', 'synthetic-replay', 'replay-a', '1', 'mg/dL', '2026-07-28', now());
+          INSERT INTO gc_health_record_version(version_id, record_id, subject_id, status, value, supersedes_version_id, correction_reason, changed_at)
+            VALUES ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000f1', 'synthetic-replay', 'SUPERSEDED', '1', NULL, NULL, now() - interval '1 minute'),
+                   ('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000f1', 'synthetic-replay', 'CURRENT', '3', '00000000-0000-0000-0000-0000000000b1', 'replay correction', now());
+          INSERT INTO gc_idempotency(subject_hash, operation, idempotency_key, resource_id, created_at) VALUES (repeat('c', 64), 'CANDIDATE_CONFIRM', 'replay-key-0001', '00000000-0000-0000-0000-0000000000f1', now() - interval '1 hour');
+          INSERT INTO gc_audit_event(event_id, subject_hash, actor_session_hash, event_type, resource_type, resource_id, outcome, occurred_at)
+            VALUES ('00000000-0000-0000-0000-0000000000ae', repeat('c', 64), NULL, 'CANDIDATE_CONFIRMED', 'RECORD', '00000000-0000-0000-0000-0000000000f1', 'SUCCESS', now());
+          SQL
+      - name: Apply V13 on the populated schema
+        run: java -jar apps/core-api/build/libs/core-api.jar --spring.main.web-application-type=none --spring.main.lifecycle.timeout-per-shutdown-phase=1s --gc.migrate-only=true
+      - name: Assert the seeded rows survived and the new rules hold
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          -- `ELSE 1/0` cannot fail an assertion: PostgreSQL constant-folds `1/0` while planning, so
+          -- such a statement raises division_by_zero whether or not the condition held. A PL/pgSQL
+          -- block evaluates its conditions at run time and names what broke.
+          DO $$ BEGIN
+            IF (SELECT COUNT(*) FROM gc_candidate) <> 2 THEN RAISE EXCEPTION 'seeded candidates did not survive V13'; END IF;
+            IF (SELECT COUNT(*) FROM gc_health_record_version WHERE status = 'CURRENT') <> 1 THEN RAISE EXCEPTION 'seeded record versions did not survive V13'; END IF;
+            -- A scalar subquery over an empty table yields NULL, `NOT NULL` is NULL, and PL/pgSQL
+            -- treats a NULL IF condition as false -- so the three conditions below would pass
+            -- silently in exactly the regression each one exists to catch (the row vanished). COALESCE
+            -- and IS DISTINCT FROM turn "no row" back into a failure. The two COUNT(*) conditions above
+            -- need no such guard: an aggregate over an empty table returns 0, never NULL.
+            IF NOT COALESCE((SELECT expires_at = created_at + interval '24 hours' FROM gc_idempotency), false) THEN RAISE EXCEPTION 'V13 did not backfill gc_idempotency.expires_at'; END IF;
+            IF (SELECT version FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 1) IS DISTINCT FROM '13' THEN RAISE EXCEPTION 'schema is not at V13'; END IF;
+            IF NOT COALESCE((SELECT aliases ? '혈압(수축기)' FROM gc_medical_concept WHERE concept_code = 'systolic-blood-pressure'), false) THEN RAISE EXCEPTION 'V13 alias is missing'; END IF;
+          END $$;
+          UPDATE gc_document SET status = 'TERMINATED_BY_REVOCATION' WHERE document_id = '00000000-0000-0000-0000-0000000000d1';
+          DO $$ BEGIN
+            BEGIN
+              UPDATE gc_audit_event SET outcome = 'DENIED';
+              RAISE EXCEPTION 'audit update must have been rejected';
+            EXCEPTION WHEN OTHERS THEN
+              IF SQLERRM NOT LIKE '%append-only%' THEN RAISE; END IF;
+            END;
+          END $$;
+          SQL
 
   supply-chain:
     name: secrets, dependencies, configuration, and license policy

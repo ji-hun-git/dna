@@ -10,7 +10,7 @@ It exits:
 - 1 when the file is valid but one or more blocking gates are not PASS.
 - 2 when the artifact is structurally or logically invalid.
 
-Current target: **HOSTED SYNTHETIC STAGING**. Current verdict: **NO_GO**. Latest evidence review: **2026-09-07**.
+Current target: **HOSTED SYNTHETIC STAGING**. Current verdict: **NO_GO**. Latest evidence review: **2026-09-18**.
 
 The digest-bound hostile-document state machine, bounded upload capability, local trust zones, transactional job leases/retries/DLQ and separate worker artifact exist. Main run [33367429797](https://github.com/ji-hun-git/dna/actions/runs/33367429797) for commit `937361c5ee995174bcce7648957a02b430bdf450` passed the exact runtime contract, web and research tests/builds, Spring/Flyway/PostgreSQL lifecycle, real ClamAV adapter test, browser-to-Spring-to-worker lifecycle, both CodeQL analyses, Gitleaks, Trivy, CycloneDX and OpenTofu checks.
 
@@ -25,6 +25,12 @@ The [unified-product rebuild ledger](../revision/ASTRA_PRODUCT_REBUILD.md) recor
 new local web/JVM/browser evidence, including 200%/400%-equivalent viewport keyboard
 reflow. This is not a real screen-reader or actual browser-zoom pass, and does not
 upgrade any hosted gate.
+
+Both audit tables are append-only at the database: `security_audit_event` by the V3 trigger and
+`gc_audit_event` by the V13 trigger, each proven by a PostgreSQL integration test that a direct
+`UPDATE` and a direct `DELETE` are rejected. That is a local database guard only — no separately
+permissioned external chain-head checkpoint has been exercised, so `external_audit_anchor` stays
+`FAIL`.
 
 The AWS Seoul OpenTofu foundation remains unapplied. No hosted object/IAM/queue/network control, observability probe, external audit anchor, backup/restore, deletion replay, actual browser-zoom/screen-reader accessibility check, hosted research-denial evidence, application deployment, provider connection, or PHI processing passes yet. The scanner evidence remains an engine boundary rather than a hosted scanner with an operational official-signature feed.
 
