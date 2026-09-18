@@ -365,9 +365,14 @@ jobs:
           DO $$ BEGIN
             IF (SELECT COUNT(*) FROM gc_candidate) <> 2 THEN RAISE EXCEPTION 'seeded candidates did not survive V13'; END IF;
             IF (SELECT COUNT(*) FROM gc_health_record_version WHERE status = 'CURRENT') <> 1 THEN RAISE EXCEPTION 'seeded record versions did not survive V13'; END IF;
-            IF NOT (SELECT expires_at = created_at + interval '24 hours' FROM gc_idempotency) THEN RAISE EXCEPTION 'V13 did not backfill gc_idempotency.expires_at'; END IF;
-            IF (SELECT version FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 1) <> '13' THEN RAISE EXCEPTION 'schema is not at V13'; END IF;
-            IF NOT (SELECT aliases ? '혈압(수축기)' FROM gc_medical_concept WHERE concept_code = 'systolic-blood-pressure') THEN RAISE EXCEPTION 'V13 alias is missing'; END IF;
+            -- A scalar subquery over an empty table yields NULL, `NOT NULL` is NULL, and PL/pgSQL
+            -- treats a NULL IF condition as false -- so the three conditions below would pass
+            -- silently in exactly the regression each one exists to catch (the row vanished). COALESCE
+            -- and IS DISTINCT FROM turn "no row" back into a failure. The two COUNT(*) conditions above
+            -- need no such guard: an aggregate over an empty table returns 0, never NULL.
+            IF NOT COALESCE((SELECT expires_at = created_at + interval '24 hours' FROM gc_idempotency), false) THEN RAISE EXCEPTION 'V13 did not backfill gc_idempotency.expires_at'; END IF;
+            IF (SELECT version FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 1) IS DISTINCT FROM '13' THEN RAISE EXCEPTION 'schema is not at V13'; END IF;
+            IF NOT COALESCE((SELECT aliases ? '혈압(수축기)' FROM gc_medical_concept WHERE concept_code = 'systolic-blood-pressure'), false) THEN RAISE EXCEPTION 'V13 alias is missing'; END IF;
           END $$;
           UPDATE gc_document SET status = 'TERMINATED_BY_REVOCATION' WHERE document_id = '00000000-0000-0000-0000-0000000000d1';
           DO $$ BEGIN
