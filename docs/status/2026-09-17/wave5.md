@@ -1,0 +1,36 @@
+# Wave 5 evidence — concept accuracy (2026-09-17)
+
+Branch `codex/wave10-concept-accuracy` (stacked on `codex/wave9-history-screen`). Synthetic only. Release remains NO_GO; no readiness gate or verdict changed. No gate document: every item narrows a claim or preserves document text (spec `docs/superpowers/specs/2026-09-17-wave5-concept-accuracy-design.md`). Gates were run on 2026-09-18.
+
+No intended-use gate applies to this wave: every change either narrows an existing claim (aliases, unit guard, LOINC export) or preserves text the person already sees (`original_label`). The founder's earlier no-regulatory-review judgement continues to apply to synthetic staging only and is not re-affirmed or extended by this wave.
+
+## What exists now
+
+- **결과지 표기.** V11 `original_label` on the candidate and the record version: written from the worker's raw label, copied at confirmation, inherited by corrections, never client-writable (an `originalLabel` field on a correction request returns 400), absent from audit rows. Returned as `originalLabel` on candidate receipts, record receipts, record detail, health events and series points; JSON export `alm-health-events-export.v3`; FHIR `code.text` is the sheet's label (falling back to the normalized label for rows stored before V11). Rows stored before V11 keep NULL and were not re-normalised.
+- **Aliases.** `glucose` split into the generic `glucose` (혈당/Glucose/Blood Glucose), `fasting-glucose` narrowed to fasting-only terms (FBS/FPG/식전혈당) and new `postprandial-glucose` (식후혈당); `bilirubin` split into the generic `bilirubin` (Bilirubin), `total-bilirubin` narrowed to total-specific terms and new `direct-bilirubin`; new `hs-crp` carved out of `crp` (hs-CRP removed from `crp`'s aliases); `gfr` split from `egfr`; the one-letter alias `K` removed from `potassium`. 69 concepts total. Invariants tested: no alias key shared by two concepts, no one-character alias, and the broad labels (혈당, Glucose, Bilirubin, hs-CRP, GFR, 사구체여과율) resolve to the generic concepts.
+- **Unit guard.** A label keeps its concept only when `MedicalUnitSpelling.canonical(unit)` is in that concept's `accepted_units`; otherwise no concept is attached and the raw label is kept, on the same path as "no concept".
+- **LOINC.** `loinc_export` is read from data, not hard-coded. `FALSE` (code kept, not exported) for `egfr` (62238-1, named CKD-EPI formula), `vitamin-d` (1989-3, D3 only), `waist-circumference` (8280-0, site + instrument specific). `NULL` code (no code at all) for the generic `glucose`, `bilirubin`, `gfr`, plus `hematocrit` (both readable candidate codes name a method) and `postprandial-glucose` (the only readable code says "2 hours post meal", more specific than the concept's own no-time-stated aliases). 9 over-specific codes were replaced by verified method-free ones: `ldl-cholesterol` 2089-1, `red-blood-cells` 26453-1, `white-blood-cells` 26464-8, `platelets` 26515-7, `urine-protein` 2888-6, `urine-glucose` 2350-7, `mcv` 30428-7, `mch` 28539-5, `mchc` 28540-3. Counts: TRUE 61 / FALSE (code kept, export false) 3 / NULL (no code) 5 / of the TRUE rows, 9 are replaced codes. Evidence: `docs/status/2026-09-17/loinc-audit.md`.
+- **Benchmark.** 31 documents (was 25); `corpusId` `synthetic-ko-checkup-r2-50ed23041bb4af1d` (previous `synthetic-ko-checkup-r2-e6befc286ae6ce1d`, 25 documents; MedGemma Runs 1–3 used the previous corpus and were not re-run); `conceptAccuracy` added to the `native-text-gate`, anchored to a hand-written expectation table (the first version compared `resolve(x)==resolve(x)` and was tautological; fixed after review).
+- **Web.** "결과지 표기: …" line on review, records, the evidence drawer and the 측정 이력 table, shown only when it differs from the normalized name; the evidence drawer shows a sentence for records that predate V11 and therefore have no `originalLabel`.
+
+## Evidence (local, 2026-09-18)
+
+| Gate | Result |
+|---|---|
+| `pnpm security:runtime-policy` | `runtime-policy: PASS node=24.20.0 pnpm=11.20.0 next=16.3.3` |
+| `pnpm release:readiness:validate` | `release-readiness: NO_GO 12 blocking gate(s) are not PASS` (exit 0; verdict unchanged from before this wave) |
+| `pnpm security:github-actions-policy` | `github-actions-policy: PASS` |
+| `pnpm auth-security:gate` | `auth-security-gate: PASS` |
+| `pnpm web:test` | `Test Files 53 passed (53)`, `Tests 347 passed (347)` |
+| `pnpm --dir apps/web exec tsc --noEmit -p tsconfig.json` | clean, no output |
+| `pnpm --dir apps/web build` | `✓ Compiled successfully in 6.2s`, all 11 routes generated including `/my-data/history` |
+| `GC_TEST_POSTGRES_URL=... ./gradlew.bat cleanTest test --no-daemon` | `BUILD SUCCESSFUL in 1m 35s`; 219 JVM tests passed, 0 failures (core-api 159, document-worker 35, document-boundary 18, korean-checkup-benchmark 7) |
+| `pnpm medical-ai:native-text-gate` | `"documentCount": 31`, `corpusId "synthetic-ko-checkup-r2-50ed23041bb4af1d"`, `"fieldF1": 1`, `"referenceRangeAccuracy": 1`, `"conceptAccuracy": 1`, `"gate": {"passed": true, "failures": []}` |
+| `GC_TEST_QUARANTINE_ROOT=... pnpm foundation:e2e` | `3 passed (1.7m)` (ports 8087/8091/3138 confirmed free before the run) |
+| `git diff --quiet $(git merge-base HEAD origin/codex/wave9-history-screen) -- release/readiness.json` | `readiness unchanged` |
+
+`apps/web/next-env.d.ts` was regenerated by `next build` and by `next dev` (foundation:e2e) and restored with `git checkout -- apps/web/next-env.d.ts` after each; it was never staged.
+
+## Limits
+
+No hosted run. LOINC names were read from public pages on one day (2026-09-17/18) and are informational metadata only; codes that could not be read, or whose name did not fit the concept, are not exported. Existing records keep the concept they were given before the aliases were narrowed (for example a row printed as "혈당" and stored as 공복혈당 stays so, and still shares a series with it). Qualitative results still abstain. No unit conversion: the same item recorded in two units is two series. MedGemma was not re-run on the new corpus; Runs 1–3 remain evidence against the previous corpus only. The e2e fixture is ASCII, so the Korean "혈당" path is proven in the core integration test and the benchmark, and the browser test proves the same behaviour with the ASCII broad label "Glucose" (excluded afterward so no downstream count changes). No corpus row from Task 5 changed after Step 5 review beyond the additions already reflected in the 31-document count; no other e2e deviation from the spec's plan.
