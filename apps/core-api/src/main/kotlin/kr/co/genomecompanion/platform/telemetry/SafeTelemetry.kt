@@ -9,6 +9,8 @@ enum class TelemetryEvent(val code: String) {
     CONSENT_GRANTED("consent_granted"),
     CONSENT_REVOKED("consent_revoked"),
     DELETION_COMPLETED("deletion_completed"),
+    INTERNAL_ERROR("internal_error"),
+    STORAGE_UNAVAILABLE("storage_unavailable"),
 }
 
 data class SafeTelemetryContext(
