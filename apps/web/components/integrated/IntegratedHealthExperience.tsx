@@ -516,7 +516,7 @@ export function IntegratedHealthExperience() {
             <div className="gc-integrated-actions">
               {activeCandidate && <button type="button" onClick={() => setView("review")} disabled={busy}>이어서 확인</button>}
               {pollingPaused && <button type="button" onClick={() => { setErrorMessage(""); setPollingPaused(false); setPollingNonce((value) => value + 1); }}>상태 다시 확인</button>}
-              {(processingState === "SECURITY_REJECTED" || processingState === "FAILED_TERMINAL") && <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>}
+              {(processingState === "SECURITY_REJECTED" || processingState === "FAILED_TERMINAL" || processingState === "TERMINATED_BY_REVOCATION") && <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>}
             </div>
             {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
           </section>

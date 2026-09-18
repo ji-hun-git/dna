@@ -720,9 +720,21 @@ class FoundationLifecycleService(
         }
         val now = Instant.now(clock)
         if (repository.revokeConsent(principal.subjectId, consentId, now)) {
-            // No document ever references a research or project consent, so this is a no-op for them.
-            repository.terminateDocumentJobsForRevokedConsent(principal.subjectId, consentId, now)
+            // Only DOCUMENT_EXTRACTION documents reference a consent; research/project purposes terminate nothing.
+            val terminated = repository.terminateDocumentsForRevokedConsent(principal.subjectId, consentId, now)
+            terminated.forEach { audit(principal, "DOCUMENT_TERMINATED_BY_REVOCATION", "DOCUMENT", it.documentId, "SUCCESS") }
             audit(principal, "CONSENT_REVOKED", "CONSENT", consentId, "SUCCESS", consent.purposeCode)
+            val keys = terminated.flatMap { it.objectKeys }
+            if (keys.isNotEmpty()) {
+                TransactionSynchronizationManager.registerSynchronization(
+                    object : TransactionSynchronization {
+                        override fun afterCommit() {
+                            // Best effort: a file that survives here is an orphan the janitor (Task 22) removes.
+                            runCatching { documentStorage.deleteAll(keys) }
+                        }
+                    },
+                )
+            }
         }
         return consentReceipt(checkNotNull(repository.findConsent(principal.subjectId, consentId)))
     }

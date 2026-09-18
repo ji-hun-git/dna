@@ -163,6 +163,12 @@ describe("Korean UX language boundary", () => {
     expect(source("components/integrated/IntegratedHealthExperience.tsx")).not.toContain("labelAbstentionReason(item.reason)");
   });
 
+  it("tells the person a revoked consent ended review and in-flight processing, not just a generic failure", () => {
+    const experience = source("components/integrated/IntegratedHealthExperience.tsx");
+    expect(experience).toContain("동의를 철회해서 결과지 처리를 종료했어요. 다시 동의한 뒤 새로 올려 주세요.");
+    expect(experience).toMatch(/processingState === "TERMINATED_BY_REVOCATION"/);
+  });
+
   it("describes the recent changes as two values without a judgement", () => {
     const recent = source("components/integrated/RecentChanges.tsx");
     expect(recent).toContain("최근 변화");

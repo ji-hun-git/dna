@@ -6,6 +6,7 @@ import kr.co.genomecompanion.documentboundary.InspectionDecision
 import kr.co.genomecompanion.documentboundary.InspectionReport
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.jdbc.datasource.DataSourceUtils
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.stereotype.Repository
@@ -24,6 +25,8 @@ sealed interface IdempotencyClaim {
     data object Inserted : IdempotencyClaim
     data class Existing(val resourceId: UUID, val requestSha256: String?) : IdempotencyClaim
 }
+
+data class TerminatedDocument(val documentId: UUID, val objectKeys: List<Pair<StorageTrustZone, String>>)
 
 data class FoundationSessionRow(
     val sessionId: UUID,
@@ -461,44 +464,47 @@ class FoundationRepository(
             subjectId,
         ) == 1
 
-    fun terminateDocumentJobsForRevokedConsent(subjectId: String, consentId: UUID, now: Instant) {
-        jdbc.update(
-            """
-            UPDATE gc_document_job j
-            SET status = 'DEAD_LETTER', failure_code = 'consent_revoked',
-                lease_token_hash = NULL, lease_expires_at = NULL, worker_id_hash = NULL, updated_at = ?
-            FROM gc_document d
-            WHERE d.document_id = j.document_id AND d.subject_id = ? AND d.consent_id = ?
-              AND j.status IN ('QUEUED', 'LEASED', 'FAILED_RETRYABLE')
-            """.trimIndent(),
-            now.atOffset(ZoneOffset.UTC),
-            subjectId,
-            consentId,
-        )
-        jdbc.update(
+    /** Founder decision 2026-09-18: revocation ends every document that has not been reviewed to completion. Returns the object keys to delete after commit. */
+    fun terminateDocumentsForRevokedConsent(subjectId: String, consentId: UUID, now: Instant): List<TerminatedDocument> {
+        val terminated = jdbc.query(
             """
             UPDATE gc_document
-            SET status = 'FAILED_TERMINAL', failure_code = 'consent_revoked',
-                state_version = state_version + 1, updated_at = ?
+            SET status = 'TERMINATED_BY_REVOCATION', failure_code = 'consent_revoked',
+                preview_object_key = NULL, state_version = state_version + 1, updated_at = ?
             WHERE subject_id = ? AND consent_id = ? AND status IN (
                 'UPLOAD_PENDING', 'UNTRUSTED_OBJECT', 'SECURITY_INSPECTION', 'SECURITY_APPROVED',
-                'EXTRACTION_QUEUED', 'EXTRACTION_RUNNING', 'FAILED_RETRYABLE'
+                'EXTRACTION_QUEUED', 'EXTRACTION_RUNNING', 'REVIEW_REQUIRED', 'FAILED_RETRYABLE'
             )
+            RETURNING document_id, object_key, approved_object_key,
+                      (SELECT object_key FROM gc_preview_artifact p WHERE p.document_id = gc_document.document_id) AS preview_key
             """.trimIndent(),
-            now.atOffset(ZoneOffset.UTC),
-            subjectId,
-            consentId,
+            RowMapper { result, _ ->
+                TerminatedDocument(
+                    documentId = result.getObject("document_id", UUID::class.java),
+                    objectKeys = listOfNotNull(
+                        result.getString("object_key")?.let { StorageTrustZone.UNTRUSTED to it },
+                        result.getString("approved_object_key")?.let { StorageTrustZone.APPROVED_SOURCE to it },
+                        result.getString("preview_key")?.let { StorageTrustZone.DERIVED_SAFE_ARTIFACT to it },
+                    ),
+                )
+            },
+            now.atOffset(ZoneOffset.UTC), subjectId, consentId,
         )
+        if (terminated.isEmpty()) return emptyList()
+        val ids = terminated.map { it.documentId }.toTypedArray()
+        val connection = DataSourceUtils.getConnection(checkNotNull(jdbc.dataSource))
+        val idsArray = connection.createArrayOf("uuid", ids)
         jdbc.update(
             """
-            UPDATE gc_upload_capability c SET revoked_at = COALESCE(c.revoked_at, ?)
-            FROM gc_document d
-            WHERE d.document_id = c.document_id AND d.subject_id = ? AND d.consent_id = ?
+            UPDATE gc_document_job SET status = 'DEAD_LETTER', failure_code = 'consent_revoked',
+                lease_token_hash = NULL, lease_expires_at = NULL, worker_id_hash = NULL, updated_at = ?
+            WHERE document_id = ANY(?) AND status IN ('QUEUED', 'LEASED', 'FAILED_RETRYABLE')
             """.trimIndent(),
-            now.atOffset(ZoneOffset.UTC),
-            subjectId,
-            consentId,
+            now.atOffset(ZoneOffset.UTC), idsArray,
         )
+        jdbc.update("UPDATE gc_upload_capability SET revoked_at = COALESCE(revoked_at, ?) WHERE document_id = ANY(?)", now.atOffset(ZoneOffset.UTC), idsArray)
+        jdbc.update("DELETE FROM gc_preview_artifact WHERE document_id = ANY(?)", idsArray)
+        return terminated
     }
 
     /** Insert-or-read in one statement so two racing requests see one winner. Expired rows are replaced. */
@@ -630,7 +636,7 @@ class FoundationRepository(
                    state_version, failure_code
             FROM gc_document
             WHERE subject_id = ? AND status NOT IN (
-                'COMPLETED', 'SECURITY_REJECTED', 'FAILED_TERMINAL', 'DELETED'
+                'COMPLETED', 'SECURITY_REJECTED', 'FAILED_TERMINAL', 'DELETED', 'TERMINATED_BY_REVOCATION'
             )
             ORDER BY created_at DESC
             LIMIT 1

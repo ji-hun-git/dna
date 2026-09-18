@@ -739,6 +739,44 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun revokingDocumentExtractionTerminatesReviewAndInFlightDocumentsAndDeletesTheirFiles() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val reviewing = requestDocument(alice, consentId, fixturePdf, "revoke-review")
+        uploadDocument(alice, reviewing, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$reviewing/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(reviewing)
+        val confirmed = importSyntheticDocument(alice, consentId, januaryFixturePdf, januaryFixtureDigest, "revoke-done")
+        confirmEveryCandidate(alice, confirmed, "revoke-done")
+        val inFlight = requestDocument(alice, consentId, fixturePdf, "revoke-inflight")
+        uploadDocument(alice, inFlight, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$inFlight/finalization"), alice).andExpect(status().isAccepted)
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$reviewing.pdf"))).isTrue()
+
+        mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+
+        assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+        assertThat(documentStatus(inFlight)).isEqualTo("TERMINATED_BY_REVOCATION")
+        assertThat(documentStatus(confirmed.first()["documentId"].asText().let(UUID::fromString))).isEqualTo("COMPLETED")
+        assertThat(jdbc.queryForList("SELECT status FROM gc_document_job WHERE document_id IN (?, ?)", String::class.java, reviewing, inFlight)).allMatch { it in setOf("DEAD_LETTER", "COMPLETED") }
+        assertThat(jdbc.queryForObject("SELECT failure_code FROM gc_document WHERE document_id = ?", String::class.java, reviewing)).isEqualTo("consent_revoked")
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$reviewing.pdf"))).isFalse()
+        assertThat(Files.list(quarantineRoot.resolve("approved_source")).filter { it.fileName.toString().startsWith(reviewing.toString()) }.count()).isZero()
+        assertThat(Files.list(quarantineRoot.resolve("derived_safe_artifact")).filter { it.fileName.toString().startsWith(reviewing.toString()) }.count()).isZero()
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$inFlight.pdf"))).isFalse()
+        // The person can still see the terminated document and its status; candidates are no longer reachable.
+        read(get("/api/foundation/documents/$reviewing"), alice).andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("TERMINATED_BY_REVOCATION")).andExpect(jsonPath("$.previewAvailable").value(false))
+        read(get("/api/foundation/documents/$reviewing/candidates"), alice).andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("consent_revoked"))
+        read(get("/api/foundation/records"), alice).andExpect(jsonPath("$.length()").value(3))
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'DOCUMENT_TERMINATED_BY_REVOCATION'", Long::class.java)).isEqualTo(2L)
+        // Re-consent: a new grant works, the terminated documents stay terminated, a new upload is required.
+        val newConsent = grantConsent(alice)
+        assertThat(newConsent).isNotEqualTo(consentId)
+        assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+    }
+
+    @Test
     fun theWorkerRequestDecidesTheCandidatesOfEachDocumentNotConfiguration() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
