@@ -108,10 +108,13 @@ class CheckupCorpusGeneratorTest {
         val birthDateFirst = generator.generate(Layout.HOSPITAL_TWO_COLUMN, CheckupCorpusGenerator.BIRTH_DATE_VARIANT)
         assertThat(birthDateFirst.documentId).isEqualTo("synthetic-hospital-two-column-v6")
         assertThat(birthDateFirst.observedOn).isEqualTo("2026-01-20")
+        // The subject line and its same-baseline exam-date cell are now two positional columns
+        // (label at x=56, date at x=320; PositionalLineGrouper splits them, NativeTextExtractionProvider.parse
+        // rejoins them later) rather than one pre-joined physical line, so this checks the date cell directly.
         val printed = NativeTextExtractionProvider.extractLines(birthDateFirst.bytes).map { it.text }
         assertThat(printed).contains("생년월일: 1987-03-14")
         assertThat(printed.indexOfFirst { it.startsWith("생년월일") })
-            .isLessThan(printed.indexOfFirst { it.startsWith("수검자 합성-6") && it.endsWith("검사일: 2026-01-20") })
+            .isLessThan(printed.indexOfFirst { it.startsWith("검사일: 2026-01-20") })
         val parsedBirthDateFirst = NativeTextExtractionProvider.extract(birthDateFirst.bytes)
         assertThat(parsedBirthDateFirst.observedOn).isEqualTo(java.time.LocalDate.of(2026, 1, 20))
         assertThat(parsedBirthDateFirst.candidates).hasSize(8)

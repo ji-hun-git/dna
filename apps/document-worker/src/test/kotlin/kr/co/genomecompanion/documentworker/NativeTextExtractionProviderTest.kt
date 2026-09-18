@@ -443,6 +443,41 @@ class NativeTextExtractionProviderTest {
         assertThat(outcome.candidates.map { it.originalLabel }).containsExactly("혈압", "혈압", null)
     }
 
+    @Test
+    fun `a label on its own line continues onto the next line of the same column`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("저밀도", y = 0.20),
+                positioned("콜레스테롤 110 mg/dL", y = 0.22),
+                positioned("HbA1c 5.4 %", y = 0.24),
+            ),
+        )
+        assertThat(outcome.candidates.map { it.label to it.value }).containsExactly("저밀도 콜레스테롤" to "110", "HbA1c" to "5.4")
+        assertThat(outcome.candidates[0].sourceTextSha256).isEqualTo(sha256Of("저밀도 콜레스테롤 110 mg/dL"))
+        assertThat(outcome.candidates[0].evidenceBox.y).isEqualTo(0.20)
+    }
+
+    @Test
+    fun `a table with a previous-result column yields this-time candidates and previous_column abstentions`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("항목", y = 0.10, column = 0), positioned("이번", y = 0.10, column = 1), positioned("이전", y = 0.10, column = 2),
+                positioned("혈당", y = 0.14, column = 0), positioned("95 mg/dL", y = 0.14, column = 1), positioned("101 mg/dL", y = 0.14, column = 2, previous = true),
+            ),
+        )
+        assertThat(outcome.candidates.map { it.label to it.value }).containsExactly("혈당" to "95")
+        assertThat(outcome.abstentions.map { it.label to it.reason }).containsExactly("혈당" to AbstentionReason.PREVIOUS_COLUMN)
+    }
+
+    private fun positioned(text: String, y: Double, column: Int = 0, previous: Boolean = false, page: Int = 1) =
+        TextLine(page, text, TextBox(0.05 + column * 0.3, y, 0.25, 0.012), column, previous)
+
+    private fun sha256Of(text: String) = java.util.HexFormat.of().formatHex(
+        java.security.MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)),
+    )
+
     private fun lines(vararg texts: String): List<TextLine> = lines(texts.toList())
 
     private fun lines(texts: List<String>): List<TextLine> =

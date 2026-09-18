@@ -12,7 +12,7 @@ import java.util.HexFormat
 data class TextBox(val x: Double, val y: Double, val width: Double, val height: Double)
 
 
-data class TextLine(val page: Int, val text: String, val box: TextBox)
+data class TextLine(val page: Int, val text: String, val box: TextBox, val columnIndex: Int = 0, val previousColumn: Boolean = false)
 
 
 enum class AbstentionReason(val code: String) {
@@ -96,9 +96,9 @@ object NativeTextExtractionProvider {
 
     fun extractLines(pdf: ByteArray): List<TextLine> = Loader.loadPDF(pdf).use { document ->
         require(document.numberOfPages in 1..20) { "page count out of bounds" }
-        val stripper = LineCollectingStripper()
+        val stripper = TokenCollectingStripper()
         stripper.getText(document)
-        stripper.lines.toList()
+        PositionalLineGrouper.group(stripper.tokens)
     }
 
     internal fun parse(lines: List<TextLine>): ExtractionOutcome {
@@ -110,7 +110,8 @@ object NativeTextExtractionProvider {
         }
         val candidates = mutableListOf<ParsedCandidate>()
         val abstentions = mutableListOf<ParsedAbstention>()
-        for (line in lines) {
+        val prepared = joinValueColumns(mergeContinuedLabels(lines))
+        for (line in prepared) {
             for (row in parseRowAll(line.text)) {
                 when (row) {
                     RowParse.Skipped -> continue
@@ -123,6 +124,8 @@ object NativeTextExtractionProvider {
                             abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.MISSING_EVIDENCE, line.page)
                         row.label.length > MAX_LABEL || row.value.length > MAX_VALUE || row.unit.length > MAX_UNIT ->
                             abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.UNREADABLE, line.page)
+                        line.previousColumn ->
+                            abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.PREVIOUS_COLUMN, line.page)
                         candidates.size >= MAX_CANDIDATES -> continue
                         else -> candidates += ParsedCandidate(
                             ordinal = candidates.size + 1,
@@ -170,6 +173,104 @@ object NativeTextExtractionProvider {
     internal fun parseRow(raw: String): RowParse = parseRowAll(raw).single()
     internal fun parseRowAll(raw: String): List<RowParse> = RowGrammar.parse(raw)
 
+    /** A line with no numeric token whose next line (same page, same column, ≤ 0.03 below) is a measurement row: one row with the label prefixed. */
+    internal fun mergeContinuedLabels(lines: List<TextLine>): List<TextLine> {
+        val merged = mutableListOf<TextLine>()
+        var index = 0
+        while (index < lines.size) {
+            val line = lines[index]
+            val next = lines.getOrNull(index + 1)
+            val labelOnly = RowGrammar.tokenize(line.text).none { RowGrammar.valueToken.matches(it) } &&
+                RowGrammar.parse(line.text).singleOrNull() == RowParse.Skipped &&
+                !dateLabel.containsMatchIn(line.text) &&
+                datePatterns.none { it.containsMatchIn(line.text) }
+            if (labelOnly && next != null && next.page == line.page && next.columnIndex == line.columnIndex &&
+                next.box.y - line.box.y in 0.0..0.03 && RowGrammar.parse(next.text).any { it is RowParse.Measurement }
+            ) {
+                merged += TextLine(
+                    page = line.page,
+                    text = line.text + " " + next.text,
+                    box = TextBox(minOf(line.box.x, next.box.x), line.box.y, maxOf(line.box.width, next.box.width), next.box.y + next.box.height - line.box.y),
+                    columnIndex = line.columnIndex,
+                    previousColumn = next.previousColumn,
+                )
+                index += 2
+            } else {
+                merged += line
+                index += 1
+            }
+        }
+        return merged
+    }
+
+    private val leadingComparisonSign = Regex("^[<>≤≥].*")
+
+    /**
+     * A column-0 cell is a row's label; every cell to its right on the same baseline either (a)
+     * starts a new value (numeric-like or comparison-signed leading token: `177`, `<0.3 mg/L`) —
+     * one joined row per such cell, so a this-time/previous-time pair of value cells stays two rows
+     * — or (b) is a bare fragment with no numeric-like token of its own (a unit or 참고치 cell:
+     * `mg/dL`, `70-199`), which extends the value cell immediately to its left (unchanged legacy
+     * wide-table layout: label | 결과 | 단위 | 참고치 as four separate columns joins back into one
+     * row). A cell that already carries its own label before a number (`총콜레스테롤 188 mg/dL`,
+     * a second result panel on the same baseline) is self-sufficient and is left untouched — it
+     * parses as its own row without ever touching column 0.
+     */
+    internal fun joinValueColumns(lines: List<TextLine>): List<TextLine> {
+        val result = mutableListOf<TextLine>()
+        var index = 0
+        while (index < lines.size) {
+            val line = lines[index]
+            if (line.columnIndex != 0) {
+                result += line
+                index += 1
+                continue
+            }
+            var lookahead = index + 1
+            val trailing = mutableListOf<TextLine>()
+            while (lookahead < lines.size && lines[lookahead].page == line.page && lines[lookahead].columnIndex > 0 &&
+                kotlin.math.abs(lines[lookahead].box.y - line.box.y) <= 0.004
+            ) {
+                trailing += lines[lookahead]
+                lookahead += 1
+            }
+            if (trailing.isEmpty()) {
+                result += line
+                index += 1
+                continue
+            }
+            val groups = mutableListOf<MutableList<TextLine>>()
+            val standalone = mutableListOf<TextLine>()
+            trailing.forEach { cell ->
+                val startsValue = startsNumericOrSigned(cell.text)
+                val hasOwnLabel = !startsValue && RowGrammar.parse(cell.text).any { it is RowParse.Measurement || it is RowParse.Ambiguous }
+                when {
+                    hasOwnLabel -> standalone += cell
+                    startsValue || groups.isEmpty() -> groups += mutableListOf(cell)
+                    else -> groups.last() += cell
+                }
+            }
+            groups.forEach { group ->
+                val anchor = group.first()
+                val left = minOf(line.box.x, group.minOf { it.box.x })
+                val right = group.maxOf { it.box.x + it.box.width }
+                result += TextLine(
+                    page = line.page,
+                    text = (listOf(line.text) + group.map { it.text }).joinToString(" "),
+                    box = TextBox(left, minOf(line.box.y, anchor.box.y), right - left, maxOf(line.box.height, group.maxOf { it.box.height })),
+                    columnIndex = anchor.columnIndex,
+                    previousColumn = anchor.previousColumn,
+                )
+            }
+            standalone.forEach { result += it }
+            index = lookahead
+        }
+        return result
+    }
+
+    private fun startsNumericOrSigned(text: String): Boolean =
+        RowGrammar.tokenize(text).firstOrNull()?.let { RowGrammar.valueToken.matches(it) || leadingComparisonSign.matches(it) } == true
+
     internal sealed interface DateResolution {
         data object Missing : DateResolution
         data class Found(val date: LocalDate) : DateResolution
@@ -214,17 +315,13 @@ object NativeTextExtractionProvider {
     private fun sha256(text: String): String =
         HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)))
 
-    /** Collects one [TextLine] per stripper line with a normalized (0..1, top-left origin) box. */
-    private class LineCollectingStripper : PDFTextStripper() {
-        val lines = mutableListOf<TextLine>()
-        private val buffer = StringBuilder()
-        private val positions = mutableListOf<TextPosition>()
+    /** Collects one [PositionedToken] per run of non-blank glyphs, with a normalized (0..1, top-left origin) box. */
+    private class TokenCollectingStripper : PDFTextStripper() {
+        val tokens = mutableListOf<PositionedToken>()
         private var pageWidth = 1f
         private var pageHeight = 1f
 
-        init {
-            sortByPosition = true
-        }
+        init { sortByPosition = true }
 
         override fun startPage(page: PDPage) {
             super.startPage(page)
@@ -232,43 +329,29 @@ object NativeTextExtractionProvider {
             pageHeight = page.cropBox.height
         }
 
+        /** One token per run of non-blank glyphs; PDFBox calls this once per word group it detects. */
         override fun writeString(text: String, textPositions: List<TextPosition>) {
-            buffer.append(text)
-            positions += textPositions
-        }
-
-        override fun writeWordSeparator() {
-            buffer.append(' ')
-        }
-
-        override fun writeLineSeparator() {
-            flush()
-        }
-
-        override fun endPage(page: PDPage) {
-            flush()
-            super.endPage(page)
-        }
-
-        private fun flush() {
-            val text = buffer.toString().trim()
-            if (text.isNotEmpty() && positions.isNotEmpty()) {
-                val left = positions.minOf { it.xDirAdj }
-                val right = positions.maxOf { it.xDirAdj + it.widthDirAdj }
-                val top = positions.minOf { it.yDirAdj - it.heightDir }
-                val bottom = positions.maxOf { it.yDirAdj }
-                val x = clamp(left / pageWidth)
-                val y = clamp(top / pageHeight)
-                lines += TextLine(
+            var run = mutableListOf<TextPosition>()
+            fun flush() {
+                if (run.isEmpty()) return
+                val left = run.minOf { it.xDirAdj }
+                val right = run.maxOf { it.xDirAdj + it.widthDirAdj }
+                val top = run.minOf { it.yDirAdj - it.heightDir }
+                val bottom = run.maxOf { it.yDirAdj }
+                val x = (left / pageWidth).toDouble().coerceIn(0.0, 1.0)
+                val y = (top / pageHeight).toDouble().coerceIn(0.0, 1.0)
+                tokens += PositionedToken(
                     page = currentPageNo,
-                    text = text,
-                    box = TextBox(x, y, clamp((right - left) / pageWidth, 1.0 - x), clamp((bottom - top) / pageHeight, 1.0 - y)),
+                    text = run.joinToString("") { it.unicode },
+                    x = x,
+                    y = y,
+                    width = ((right - left) / pageWidth).toDouble().coerceIn(0.0, 1.0 - x),
+                    height = ((bottom - top) / pageHeight).toDouble().coerceIn(0.0, 1.0 - y),
                 )
+                run = mutableListOf()
             }
-            buffer.clear()
-            positions.clear()
+            textPositions.forEach { position -> if (position.unicode.isBlank()) flush() else run += position }
+            flush()
         }
-
-        private fun clamp(value: Float, max: Double = 1.0): Double = value.toDouble().coerceIn(0.0, max)
     }
 }
