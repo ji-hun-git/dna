@@ -599,7 +599,7 @@ fun main(args: Array<String>) {
         },
     )
     loop.join()
-    fatal.get()?.let { haltOnFatalLoopError(it, healthServer) }
+    fatal.get()?.let { haltOnFatalLoopError(it) }
 }
 
 
@@ -614,18 +614,21 @@ fun main(args: Array<String>) {
  * loop thread is already dead, so the hook's `join` has nothing to wait for, and after an
  * OutOfMemoryError we do not want to run more Kotlin than we must.
  *
+ * This deliberately does not call `server.stop(0)` first: `HttpServer.stop` joins its
+ * `HTTP-Dispatcher` thread with no bound, so a wedged dispatcher would block the halt that exists
+ * to escape exactly that kind of wedge. `Runtime.halt` tears the whole JVM down regardless, so the
+ * health server's socket closes with it -- there is nothing `stop(0)` would still buy here.
+ *
  * The stack trace goes to stderr in full. A `VirtualMachineError`'s trace is JDK and worker frames --
  * no document bytes, no file name, no job content -- so it is the one place the worker prints more
  * than a [WorkerLog] code, and an operator needs it to tell an OOM from a `StackOverflowError`.
  */
 internal fun haltOnFatalLoopError(
     fatal: Throwable,
-    server: HttpServer?,
     stderr: java.io.PrintStream = System.err,
     exit: (Int) -> Unit = { Runtime.getRuntime().halt(it) },
 ) {
     runCatching { fatal.printStackTrace(stderr); stderr.flush() }
-    runCatching { server?.stop(0) }
     exit(1)
 }
 

@@ -153,36 +153,46 @@ class WorkerHealthTest {
     }
 
     /**
+     * A raising core probe is a `core` phase failure, not a `false` result folded into
+     * `core-unreachable`: only a probe that returns false (the host answered "no") means that.
+     */
+    @Test
+    fun `a core probe that raises is reported with the core phase, not core-unreachable`() {
+        val health = WorkerHealth(
+            coreProbe = { throw IllegalStateException("boom") },
+            signatureDir = null,
+            loopHeartbeat = { now },
+            clock = clock,
+        )
+        val thrown = org.junit.jupiter.api.assertThrows<HealthCheckFailure> { health.check() }
+        assertThat(thrown.phase).isEqualTo("core")
+        assertThat(healthCheckErrorCode(thrown)).isEqualTo("core_illegalstateexception")
+    }
+
+    /**
      * A fatal Error in the loop thread has to end the process, and rethrowing out of `main` does not:
      * HttpServer's HTTP-Dispatcher thread is non-daemon (it inherits that from `main`), so the JVM stays
      * up with a dead loop. Tested through the exit seam rather than by forking a JVM.
      */
     @Test
-    fun `a fatal loop error stops the health server and halts with exit code 1`() {
-        val server = startLoopbackHealthServer(0) { HealthReport(true, "ready") }
-        val port = server.address.port
+    fun `a fatal loop error halts with exit code 1`() {
         val exits = mutableListOf<Int>()
         val trace = java.io.ByteArrayOutputStream()
         haltOnFatalLoopError(
             OutOfMemoryError("synthetic"),
-            server,
             java.io.PrintStream(trace, true, Charsets.UTF_8),
         ) { exits.add(it) }
 
         assertThat(exits).containsExactly(1)
         assertThat(trace.toString(Charsets.UTF_8)).contains("OutOfMemoryError")
-        // stop(0) really unbound the port, so nothing is left listening once we halt.
-        assertThat(runCatching { ServerSocket(port, 1, java.net.InetAddress.getLoopbackAddress()).close() }.isSuccess)
-            .isTrue()
     }
 
-    /** A null health server (GC_WORKER_HEALTH_PORT unset) must not stop the halt. */
+    /** A second fatal Error shape halts the same way -- no health server dependency. */
     @Test
     fun `a fatal loop error halts even when no health server was started`() {
         val exits = mutableListOf<Int>()
         haltOnFatalLoopError(
             StackOverflowError(),
-            null,
             java.io.PrintStream(java.io.ByteArrayOutputStream(), true, Charsets.UTF_8),
         ) { exits.add(it) }
         assertThat(exits).containsExactly(1)

@@ -70,7 +70,7 @@ class WorkerHealth(
     private val maxHeartbeatAge: Duration = WorkerLoopBudget.MAX_HEARTBEAT_AGE,
 ) {
     fun check(): HealthReport {
-        if (!inPhase("core") { runCatching { coreProbe() }.getOrDefault(false) }) {
+        if (!inPhase("core") { coreProbe() }) {
             return HealthReport(false, "core-unreachable")
         }
         if (signatureDir != null) {
