@@ -30,6 +30,11 @@ application {
     mainClass.set("kr.co.genomecompanion.documentworker.DocumentWorkerMainKt")
 }
 
-tasks.withType<Test>().configureEach { useJUnitPlatform() }
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    // A synthetic stand-in for the worker credential, so PageRenderSubprocessTest can prove that the
+    // render child does not inherit it. Not a secret and not used to authenticate anything.
+    environment("GC_WORKER_CREDENTIAL", "synthetic-not-a-secret")
+}
 
 dependencyLocking { lockAllConfigurations() }
