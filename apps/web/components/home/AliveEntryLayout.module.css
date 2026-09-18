@@ -19,8 +19,8 @@
   grid-area: left;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px 0 24px 24px;
+  gap: 16px;
+  padding: 16px 0 24px 24px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -194,8 +194,11 @@
 
   .center {
     order: 1;
-    height: 52vh;
-    min-height: 320px;
+    /* Reduced height so the copy block's button stays reachable without scrolling on short
+       phones (e.g. 320x720); the floor is well under the old 320px so it does not cancel the
+       reduction on the shortest supported viewport. */
+    height: 40vh;
+    min-height: 220px;
   }
 
   .left {
