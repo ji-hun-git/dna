@@ -404,6 +404,28 @@ class NativeTextExtractionProviderTest {
     }
 
     @Test
+    fun `an English date preceded by reported is not the exam date`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Reported Date: 2026-08-01")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Reported Date: 2026-08-01", "검사일: 2026-07-28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Found(java.time.LocalDate.of(2026, 7, 28)))
+    }
+
+    @Test
+    fun `English dates preceded by generated or received are not the exam date`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Generated Date: 2026-08-01")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("Received Date: 2026-08-01")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
+    }
+
+    @Test
+    fun `finds a labelled date with the 검사일자 spelling`() {
+        assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("검사일자 2026.07.28")))
+            .isEqualTo(NativeTextExtractionProvider.DateResolution.Found(java.time.LocalDate.of(2026, 7, 28)))
+    }
+
+    @Test
     fun `two-digit years are not dates`() {
         assertThat(NativeTextExtractionProvider.resolveObservedOn(lines("검사일: 26-07-28", "검사일 26.7.28")))
             .isEqualTo(NativeTextExtractionProvider.DateResolution.Missing)
