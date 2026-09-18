@@ -32,6 +32,8 @@ data class FoundationProperties(
     val sessionFailureLockThreshold: Int = 5,
     val sessionFailureLockDuration: Duration = Duration.ofMinutes(15),
     val workerRateLimitPerMinute: Int = 600,
+    /** How often [FoundationJanitor] sweeps. Also its initial delay, so no sweep runs at startup. */
+    val janitorInterval: Duration = Duration.ofMinutes(5),
 ) {
     fun validateEnabledConfiguration() {
         if (!enabled) return
@@ -81,6 +83,9 @@ data class FoundationProperties(
         }
         require(workerRateLimitPerMinute in 1..1_000_000) {
             "foundation worker rate limit per minute must be between one and one million"
+        }
+        require(janitorInterval in Duration.ofMinutes(1)..Duration.ofHours(24)) {
+            "foundation janitor interval must be between one minute and one day"
         }
     }
 }

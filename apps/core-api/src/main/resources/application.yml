@@ -45,6 +45,10 @@ spring:
     log-request-details: false
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  task:
+    scheduling:
+      pool:
+        size: 1
 
 gc:
   consent:
@@ -67,3 +71,4 @@ gc:
     allowed-document-sha256: ${GC_ALLOWED_DOCUMENT_SHA256:}
     session-rate-limit-per-minute: ${GC_SESSION_RATE_LIMIT_PER_MINUTE:10}
     worker-rate-limit-per-minute: ${GC_WORKER_RATE_LIMIT_PER_MINUTE:600}
+    janitor-interval: 5m

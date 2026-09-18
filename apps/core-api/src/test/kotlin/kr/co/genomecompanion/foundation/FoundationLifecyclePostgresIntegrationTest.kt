@@ -74,6 +74,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     @Autowired
     private lateinit var sessionRateLimiter: SessionRateLimiter
 
+    @Autowired
+    private lateinit var janitor: FoundationJanitor
+
     private val uploadCapabilities = mutableMapOf<UUID, TestUploadCapability>()
 
     private val faultyDocumentStorage: FaultInjectingFoundationDocumentStorage
@@ -112,7 +115,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             RESTART IDENTITY CASCADE
             """.trimIndent(),
         )
+        // The quarantine root outlives a single test, but the database does not: leaving a previous
+        // test's files on disk would make every one of them an orphan to the janitor (nothing points
+        // at them after the TRUNCATE above), so disk and database are reset together.
         Files.createDirectories(quarantineRoot)
+        Files.walk(quarantineRoot).use { paths ->
+            paths.filter(Files::isRegularFile).forEach(Files::delete)
+        }
         uploadCapabilities.clear()
     }
 
@@ -3158,6 +3167,98 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("worker_job_lease_invalid"))
         assertThat(count("gc_document_inspection")).isEqualTo(1)
+    }
+
+    /**
+     * The janitor is the one place that removes what nothing else will: sessions past their expiry or
+     * already revoked, upload capabilities past their expiry, idempotency claims past their 24h TTL,
+     * quarantine files no database row points at any more (the retry path for a delete that failed
+     * after commit), and jobs that were queued and never leased. It is idempotent by construction —
+     * the second sweep in this test finds nothing — and it never runs on its own during the suite:
+     * `gc.foundation.janitor-interval` is `PT24H` under test, so the only sweep is the explicit one.
+     */
+    @Test
+    fun theJanitorSweepsExpiredRowsOrphanFilesAndStaleQueuedJobs() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "janitor-doc")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        // created_at moves with it: gc_session_expiry checks expires_at > created_at.
+        jdbc.update(
+            "UPDATE gc_session SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                " created_at = CURRENT_TIMESTAMP - INTERVAL '2 minute'",
+        )
+        jdbc.update(
+            "UPDATE gc_upload_capability SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                " issued_at = CURRENT_TIMESTAMP - INTERVAL '2 minute'",
+        )
+        jdbc.update("UPDATE gc_idempotency SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'")
+        jdbc.update("UPDATE gc_document_job SET created_at = CURRENT_TIMESTAMP - INTERVAL '25 hours'")
+        val orphan = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf")
+        Files.writeString(orphan, "%PDF-1.7\norphan synthetic\n%%EOF\n")
+        // A part file still being written must survive; only one older than the in-flight window is swept.
+        val freshPart = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf.part")
+        Files.writeString(freshPart, "%PDF-1.7\nin-flight synthetic\n")
+        val stalePart = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf.part")
+        Files.writeString(stalePart, "%PDF-1.7\nabandoned synthetic\n")
+        Files.setLastModifiedTime(
+            stalePart,
+            java.nio.file.attribute.FileTime.from(java.time.Instant.now(clock).minusSeconds(7_200)),
+        )
+
+        val report = janitor.sweep()
+
+        assertThat(report.sessions).isEqualTo(1)
+        assertThat(report.capabilities).isEqualTo(1)
+        assertThat(report.idempotencyKeys).isEqualTo(1)
+        assertThat(report.orphanFiles).isEqualTo(2)
+        assertThat(report.staleJobs).isEqualTo(1)
+        assertThat(Files.exists(orphan)).isFalse()
+        assertThat(Files.exists(stalePart)).isFalse()
+        assertThat(Files.exists(freshPart)).isTrue()
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$documentId.pdf"))).isTrue()
+        assertThat(documentStatus(documentId)).isEqualTo("FAILED_TERMINAL")
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT failure_code FROM gc_document WHERE document_id = ?",
+                String::class.java,
+                documentId,
+            ),
+        ).isEqualTo("stale")
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM gc_document_job WHERE document_id = ?",
+                String::class.java,
+                documentId,
+            ),
+        ).isEqualTo("FAILED_TERMINAL")
+        assertThat(count("gc_session")).isZero()
+        assertThat(count("gc_upload_capability")).isZero()
+        read(get("/api/foundation/records"), alice).andExpect(status().isUnauthorized)
+
+        Files.delete(freshPart)
+        assertThat(janitor.sweep()).isEqualTo(JanitorReport(0, 0, 0, 0, 0))
+    }
+
+    /** A document still waiting for its upload owns its untrusted key even before the row records it:
+     * a sweep racing the upload's atomic move must never delete the file it just landed. */
+    @Test
+    fun theJanitorLeavesAnUploadPendingDocumentsFileAlone() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "janitor-pending")
+        val landed = quarantineRoot.resolve("untrusted").resolve("$documentId.pdf")
+        Files.createDirectories(landed.parent)
+        Files.write(landed, fixturePdf)
+        assertThat(
+            jdbc.queryForObject("SELECT object_key FROM gc_document WHERE document_id = ?", String::class.java, documentId),
+        ).isNull()
+
+        assertThat(janitor.sweep().orphanFiles).isZero()
+
+        assertThat(Files.exists(landed)).isTrue()
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
     }
 
     private fun login(subjectId: String): TestClient {

@@ -64,6 +64,9 @@ object FoundationTestProperties {
         registry.add("gc.foundation.allowed-document-sha256") { "$fixtureDigest,$januaryFixtureDigest" }
         registry.add("gc.foundation.session-rate-limit-per-minute") { "10000" }
         registry.add("gc.foundation.worker-rate-limit-per-minute") { "100000" }
+        // The janitor must never fire on its own during a test: one day of both initial delay and
+        // interval means the only sweep that ever runs is the one a test calls directly.
+        registry.add("gc.foundation.janitor-interval") { "PT24H" }
         registry.add("gc.foundation.local-identities[0].subject-id") { "synthetic-alice" }
         registry.add("gc.foundation.local-identities[0].credential-sha256") { FoundationHashing.sha256(ALICE_CREDENTIAL) }
         registry.add("gc.foundation.local-identities[1].subject-id") { "synthetic-bob" }

@@ -14,6 +14,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.time.Instant
 import java.util.UUID
 import java.util.zip.CRC32
 
@@ -169,6 +170,66 @@ class FoundationDocumentStorage(
         Files.deleteIfExists(resolve(zone, key))
     }
 
+    /**
+     * Every object that exists on disk, by zone — the other half of the janitor's orphan comparison
+     * (the other half is `FoundationRepository.listKnownObjectKeys`). Only names that are valid object
+     * keys are returned: anything else in a zone directory was not written by this class, and a file
+     * this class cannot even address is not the janitor's to delete. A missing zone directory is
+     * simply empty, never an error.
+     */
+    fun listObjectKeys(): List<Pair<StorageTrustZone, String>> =
+        StorageTrustZone.entries.flatMap { zone ->
+            val zoneRoot = root.resolve(zone.name.lowercase())
+            if (!Files.isDirectory(zoneRoot)) {
+                emptyList()
+            } else {
+                Files.list(zoneRoot).use { entries ->
+                    entries.filter(Files::isRegularFile)
+                        .map { it.fileName.toString() }
+                        .filter { it.matches(objectKeyPattern) }
+                        .map { zone to it }
+                        .toList()
+                }
+            }
+        }
+
+    /**
+     * Deletes abandoned `<key>.part` files — an upload that died between `CREATE_NEW` and the atomic
+     * move, whose `finally` never ran (a killed process, a lost container). Only a part file untouched
+     * since [olderThan] is swept: a younger one belongs to an upload that may still be streaming right
+     * now, and deleting it would break a live request. Each delete is attempted on its own and a real
+     * I/O failure is logged with the exception's class name only — never the path — exactly as
+     * [deleteAll] does.
+     *
+     * @return the number of part files actually removed.
+     */
+    fun sweepStalePartFiles(olderThan: Instant): Int {
+        var removed = 0
+        for (zone in StorageTrustZone.entries) {
+            val zoneRoot = root.resolve(zone.name.lowercase())
+            if (!Files.isDirectory(zoneRoot)) continue
+            val parts = Files.list(zoneRoot).use { entries ->
+                entries.filter(Files::isRegularFile)
+                    .filter { it.fileName.toString().endsWith(".part") }
+                    .toList()
+            }
+            for (path in parts) {
+                try {
+                    if (Files.getLastModifiedTime(path).toInstant().isAfter(olderThan)) continue
+                    if (Files.deleteIfExists(path)) removed += 1
+                } catch (exception: Exception) {
+                    phiSafeLogger.emitResourceFailure(
+                        TelemetryEvent.QUARANTINE_FILE_DELETE_FAILED,
+                        CorrelationFilter.currentCorrelationId() ?: UUID.randomUUID(),
+                        documentIdFromKey(path.fileName.toString()) ?: UUID(0, 0),
+                        exception.javaClass.simpleName,
+                    )
+                }
+            }
+        }
+        return removed
+    }
+
     private fun documentIdFromKey(key: String): UUID? =
         if (key.length >= 36) runCatching { UUID.fromString(key.substring(0, 36)) }.getOrNull() else null
 
@@ -184,8 +245,11 @@ class FoundationDocumentStorage(
             sha256 = sha256,
         )
 
+    /** The one object-key shape this class will address: `<uuid>[-<sha256>].{pdf,png}`. */
+    private val objectKeyPattern = Regex("^[a-f0-9-]{36,110}\\.(pdf|png)$")
+
     private fun resolve(zone: StorageTrustZone, objectKey: String): Path {
-        if (!objectKey.matches(Regex("^[a-f0-9-]{36,110}\\.(pdf|png)$"))) {
+        if (!objectKey.matches(objectKeyPattern)) {
             throw FoundationForbiddenException("object_key_denied")
         }
         val zoneRoot = root.resolve(zone.name.lowercase()).normalize()

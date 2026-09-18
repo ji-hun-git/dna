@@ -29,6 +29,9 @@ enum class TelemetryEvent(val code: String) {
     WORKER_JOB_COMPLETED("worker_job_completed"),
     WORKER_JOB_FAILED("worker_job_failed"),
 
+    /** One scheduled janitor sweep completed (Task 23). Carries no subject and no route. */
+    JANITOR_SWEEP("janitor_sweep"),
+
     /**
      * A lifecycle line was dropped because its context failed [PhiSafeLogger]'s own validation. Emitted
      * instead of the rejected line, carrying only the event code that was attempted — never the

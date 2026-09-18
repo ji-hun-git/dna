@@ -381,6 +381,29 @@ class FoundationRepository(
             sessionId,
         ) == 1
 
+    /**
+     * Janitor sweep (Task 23): a session row is dead either way — `findActiveSession` requires both
+     * `revoked_at IS NULL` and a future `expires_at`, so neither kind can authenticate anything again
+     * and keeping them only grows the table. Deleted by predicate with no explicit row lock and in its
+     * own short transaction, so it can never sit between the target-row and idempotency locks that the
+     * lifecycle paths take (see [lockDocument]) and deadlock against them.
+     */
+    @Transactional
+    fun deleteExpiredSessions(now: Instant): Int =
+        jdbc.update(
+            "DELETE FROM gc_session WHERE expires_at <= ? OR revoked_at IS NOT NULL",
+            now.atOffset(ZoneOffset.UTC),
+        )
+
+    /** Janitor sweep: an expired capability can no longer be presented ([findActiveUploadCapability]
+     * requires `expires_at > now`), revoked or not. */
+    @Transactional
+    fun deleteExpiredUploadCapabilities(now: Instant): Int =
+        jdbc.update(
+            "DELETE FROM gc_upload_capability WHERE expires_at <= ?",
+            now.atOffset(ZoneOffset.UTC),
+        )
+
     fun grantConsent(consentId: UUID, subjectId: String, purposeCode: String, policyVersion: String, now: Instant) {
         jdbc.update(
             """
@@ -1613,6 +1636,78 @@ class FoundationRepository(
             },
             subjectId,
         ).flatten().distinct()
+
+    /**
+     * Every object key any row still points at, across all subjects — the janitor's definition of
+     * "not an orphan". It is deliberately a superset of [listObjectKeys]:
+     *
+     * - `gc_document`'s three key columns and the `gc_preview_artifact` row that can outlive
+     *   `preview_object_key` (see [deletePreviewArtifactIfExists]).
+     * - the *reserved* untrusted key of every `UPLOAD_PENDING` document. That file lands on disk
+     *   (an atomic move out of `<key>.part`) a moment before `markDocumentUploaded` records
+     *   `object_key`, so a sweep running inside that window would otherwise delete a perfectly live
+     *   upload. Reserving the key for the pending state only — not for every document ever created —
+     *   keeps the retry path intact: once a document is terminated or its key cleared, a file left
+     *   behind by a failed post-commit delete is an orphan again and gets swept.
+     */
+    fun listKnownObjectKeys(): Set<Pair<StorageTrustZone, String>> =
+        jdbc.query(
+            """
+            SELECT 'UNTRUSTED' AS zone, object_key AS key FROM gc_document WHERE object_key IS NOT NULL
+            UNION
+            SELECT 'APPROVED_SOURCE', approved_object_key FROM gc_document WHERE approved_object_key IS NOT NULL
+            UNION
+            SELECT 'DERIVED_SAFE_ARTIFACT', preview_object_key FROM gc_document WHERE preview_object_key IS NOT NULL
+            UNION
+            SELECT 'DERIVED_SAFE_ARTIFACT', object_key FROM gc_preview_artifact
+            UNION
+            SELECT 'UNTRUSTED', document_id || '.pdf' FROM gc_document WHERE status = 'UPLOAD_PENDING'
+            """.trimIndent(),
+            RowMapper { result, _ ->
+                StorageTrustZone.valueOf(result.getString("zone")) to result.getString("key")
+            },
+        ).toSet()
+
+    /**
+     * Janitor sweep: a job that was queued (or left retryable) and never picked up before [olderThan]
+     * is never going to be — its document would otherwise wait forever in a non-terminal state with no
+     * worker coming. Both statements run in one short transaction in the same order every worker path
+     * uses — job rows first, then documents ([terminateDocumentsForRevokedConsent]'s KDoc) — and take
+     * no explicit row locks, so a worker completing mid-sweep blocks rather than deadlocks.
+     *
+     * Leased jobs are untouched (a worker holds them; lease expiry is [leaseNextDocumentJob]'s job) and
+     * so are terminal ones. The document update skips documents that already reached a terminal or
+     * completed state, so a sweep can never walk a finished document backwards.
+     */
+    @Transactional
+    fun failStaleQueuedJobs(olderThan: Instant, now: Instant): List<UUID> {
+        val staleDocumentIds = jdbc.query(
+            """
+            UPDATE gc_document_job
+            SET status = 'FAILED_TERMINAL', failure_code = 'stale',
+                lease_token_hash = NULL, lease_expires_at = NULL, worker_id_hash = NULL, updated_at = ?
+            WHERE status IN ('QUEUED', 'FAILED_RETRYABLE') AND created_at < ?
+            RETURNING document_id
+            """.trimIndent(),
+            RowMapper { result, _ -> result.getObject("document_id", UUID::class.java) },
+            now.atOffset(ZoneOffset.UTC),
+            olderThan.atOffset(ZoneOffset.UTC),
+        ).distinct()
+        if (staleDocumentIds.isEmpty()) return emptyList()
+        val placeholders = staleDocumentIds.joinToString(", ") { "?" }
+        jdbc.update(
+            """
+            UPDATE gc_document
+            SET status = 'FAILED_TERMINAL', failure_code = 'stale',
+                state_version = state_version + 1, updated_at = ?
+            WHERE document_id IN ($placeholders)
+              AND status NOT IN ('COMPLETED', 'DELETED', 'DELETION_PENDING', 'FAILED_TERMINAL', 'TERMINATED_BY_REVOCATION')
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            *staleDocumentIds.toTypedArray(),
+        )
+        return staleDocumentIds
+    }
 
     fun completeDeletion(subjectId: String, subjectHash: String, deletionId: UUID, now: Instant): UUID {
         jdbc.update(
