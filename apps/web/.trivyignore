@@ -1,0 +1,36 @@
+# Accepted unfixed Critical CVEs for the apps/web runtime image only.
+#
+# Scope: this file is passed to the blocking Trivy step (`severity: CRITICAL`,
+# `ignore-unfixed: false`) for the `web` matrix entry alone. `apps/core-api` and
+# `apps/document-worker` carry no ignore file, and `ignore-unfixed` stays `false`
+# for all three images -- the gate is not weakened, four named findings are accepted.
+#
+# Every entry below is Critical, has no fixed version in Debian 12 (bookworm), and
+# therefore cannot be cleared by the `apt-get upgrade` step in the runtime stage.
+# Founder-only acceptance; recorded as finding F7b-25 in
+# docs/status/2026-09-18/wave7.md. Delete an entry the moment Debian ships a fix.
+
+# perl-base -- Trivy status: affected (no fixed version in Debian 12).
+# Not reachable: the runtime stage's only process is `node apps/web/server.js`
+# (Next.js standalone); no perl interpreter is ever invoked in this image.
+# review-by: 2026-10-18
+CVE-2026-13221
+
+# perl-base -- Trivy status: fix_deferred (Debian has deferred the bookworm fix).
+# Not reachable: perl-base is present only as a base-image dependency and is never
+# executed by the Next.js standalone server or by this image's CMD.
+# review-by: 2026-10-18
+CVE-2026-42496
+
+# perl-base -- Trivy status: affected (no fixed version in Debian 12); reported
+# against 32-bit builds. Not reachable: the image is built `--platform linux/amd64`
+# and, as above, perl is never invoked by the Next.js standalone runtime.
+# review-by: 2026-10-18
+CVE-2026-8376
+
+# zlib1g -- Trivy status: will_not_fix (not fixed in Debian 12).
+# Not reachable: the flaw is in minizip's `zipOpenNewFileInZip4_6` contrib code.
+# Node's zlib bindings use the deflate/inflate core, not minizip, and the Next.js
+# standalone server opens no zip archives.
+# review-by: 2026-10-18
+CVE-2023-45853

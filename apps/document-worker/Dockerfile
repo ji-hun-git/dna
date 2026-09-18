@@ -21,7 +21,7 @@ RUN mkdir --parents /opt/clamav \
 # without network access fails here on purpose; pass --build-arg GC_ALLOW_OFFLINE_SIGNATURES=true to get
 # an image with no signatures, whose /healthz then reports scan-unavailable rather than pretending to scan.
 ARG GC_ALLOW_OFFLINE_SIGNATURES=false
-RUN printf 'DatabaseMirror database.clamav.net\nDatabaseDirectory /opt/clamav/share\nLogVerbose no\n' > /opt/clamav/freshclam.conf \
+RUN printf 'DatabaseMirror database.clamav.net\nDatabaseDirectory /opt/clamav/share\nDatabaseOwner root\nLogVerbose no\n' > /opt/clamav/freshclam.conf \
     && mkdir --parents /opt/clamav/share \
     && ( LD_LIBRARY_PATH=/opt/clamav/usr/local/lib64:/opt/clamav/usr/local/lib CVD_CERTS_DIR=/opt/clamav/usr/local/etc/certs \
          /opt/clamav/usr/local/bin/freshclam --config-file=/opt/clamav/freshclam.conf --stdout \

@@ -216,12 +216,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # `trivyignore` is the only accepted-risk channel here: a non-empty value names a file
+          # of CVE ids the blocking Critical step below is allowed to pass over, and it is set for
+          # the web image alone. `ignore-unfixed` stays `false` for all three images.
           - name: web
             dockerfile: apps/web/Dockerfile
+            trivyignore: apps/web/.trivyignore
           - name: core-api
             dockerfile: apps/core-api/Dockerfile
+            trivyignore: ""
           - name: document-worker
             dockerfile: apps/document-worker/Dockerfile
+            trivyignore: ""
     env:
       IMAGE_REF: genome-companion/${{ matrix.name }}:${{ github.sha }}
       DOCKER_BUILDKIT: "1"
@@ -290,6 +296,10 @@ jobs:
           ignore-unfixed: false
           exit-code: "1"
           format: table
+          # Empty for core-api and document-worker; `apps/web/.trivyignore` for web, where four
+          # Debian 12 Criticals (perl-base x3, zlib1g) have no fixed version and are accepted
+          # in-repo with a review date rather than silenced by flipping `ignore-unfixed`.
+          trivyignores: ${{ matrix.trivyignore }}
       # High findings move to a non-blocking report: blocking on every unfixed High in a JRE or Node
       # base image would make the pipeline red for reasons no change in this repository can clear,
       # and a gate that is always red stops being read. The table still prints in the job log.

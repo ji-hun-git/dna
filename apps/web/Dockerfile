@@ -11,6 +11,9 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm tokens
 RUN pnpm --dir apps/web build
 
+# Debian 12 base: four Critical CVEs here (perl-base x3, zlib1g) have no fixed version upstream
+# and are accepted, with reasons and a review date, in apps/web/.trivyignore. Replacing this base
+# image is what retires that file.
 FROM node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS runtime
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
