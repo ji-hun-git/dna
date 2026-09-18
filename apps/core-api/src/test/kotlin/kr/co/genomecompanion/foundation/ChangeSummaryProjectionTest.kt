@@ -389,13 +389,30 @@ class ChangeSummaryProjectionTest {
     }
 
     @Test
-    fun keepsTheDeltaWhenThePreviousDateEqualsTheLatestDate() {
+    fun omitsTheDeltaWhenThePreviousDateEqualsTheLatestDateLikeSeriesDoes() {
+        // Same-day points have no defined order (see SeriesProjection): /changes omits the delta
+        // here exactly as /series omits lastDifference, while both values stay listed.
         val previous = row("총콜레스테롤", "194", LocalDate.of(2026, 7, 28), januaryDocument)
         val latest = row("총콜레스테롤", "188", LocalDate.of(2026, 7, 28), julyDocument)
         val documents = listOf(completed(januaryDocument, "2026-01-16T00:00:00Z"), completed(julyDocument, "2026-07-28T10:00:00Z"))
 
         val item = ChangeSummaryProjection.project(listOf(previous, latest), documents).items.single()
 
-        assertThat(item.delta).isEqualTo(ChangeDelta("-6", "-3.1"))
+        assertThat(item.previous?.value).isEqualTo("194")
+        assertThat(item.delta).isNull()
+    }
+
+    @Test
+    fun `a previous value observed on the same day lists both values but omits the delta like series does`() {
+        val today = LocalDate.of(2026, 7, 28)
+        val previous = row("총콜레스테롤", "190", today, januaryDocument, confirmedAt = Instant.parse("2026-07-28T01:00:00Z"))
+        val latest = row("총콜레스테롤", "188", today, julyDocument, confirmedAt = Instant.parse("2026-07-28T02:00:00Z"))
+        val summary = ChangeSummaryProjection.project(
+            listOf(previous, latest),
+            listOf(completed(januaryDocument, "2026-07-28T01:00:00Z"), completed(julyDocument, "2026-07-28T02:00:00Z")),
+        )
+        val item = summary.items.single()
+        assertThat(item.previous?.value).isEqualTo("190")
+        assertThat(item.delta).isNull()
     }
 }

@@ -886,7 +886,7 @@ class FoundationLifecycleService(
             candidateId = record.candidateId,
             documentId = record.documentId,
             status = record.status,
-            reviewDecision = if (record.currentValue == record.originalValue && record.originalObservedOn == null) "CONFIRMED" else "CORRECTED",
+            reviewDecision = if (RecordReview.isCorrected(record)) "CORRECTED" else "CONFIRMED",
             label = record.label,
             value = record.currentValue,
             originalValue = record.originalValue,

@@ -613,9 +613,9 @@ class FoundationRepository(
 
     /**
      * Locks the document row before any status check. Lock order across this repository is always:
-     * idempotency claim (Task 7's `INSERT ... ON CONFLICT`) first, then at most one target row of
-     * `gc_candidate`, `gc_health_record`, or `gc_document` (never more than one — no path locks two of
-     * these tables in the same transaction), so no two request paths can deadlock against each other.
+     * at most one target row of `gc_candidate`, `gc_health_record`, or `gc_document` first (never more
+     * than one — no path locks two of these tables in the same transaction), then the idempotency claim
+     * (Task 7's `INSERT ... ON CONFLICT`), so no two request paths can deadlock against each other.
      */
     fun lockDocument(subjectId: String, documentId: UUID): FoundationDocumentRow? {
         jdbc.query("SELECT document_id FROM gc_document WHERE document_id = ? AND subject_id = ? FOR UPDATE", { _, _ -> Unit }, documentId, subjectId)
@@ -1378,9 +1378,13 @@ class FoundationRepository(
             versionId,
         ).firstOrNull()
 
+    // Ordered by exam date, then by the record's own immutable confirmed_at (set once when the
+    // candidate was confirmed): a later correction only ever touches v.changed_at on a new
+    // gc_health_record_version row, never r.confirmed_at, so /records and the JSON export that
+    // reads it never reorder because of a correction.
     fun listRecords(subjectId: String): List<FoundationRecordRow> =
         jdbc.query(
-            "$recordProjection WHERE r.subject_id = ? AND v.status = 'CURRENT' ORDER BY v.changed_at, r.record_id",
+            "$recordProjection WHERE r.subject_id = ? AND v.status = 'CURRENT' ORDER BY r.observed_on, r.confirmed_at, r.record_id",
             recordMapper,
             subjectId,
         )

@@ -1207,6 +1207,41 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun recordOrderFollowsExamDateThenConfirmationAndACorrectionBackToTheOriginalStaysCorrected() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val july = importSyntheticDocument(alice, consentId, fixturePdf, fixtureDigest, "order-july")
+        confirmEveryCandidate(alice, july, "order-july")
+        val january = importSyntheticDocument(alice, consentId, januaryFixturePdf, januaryFixtureDigest, "order-jan")
+        confirmEveryCandidate(alice, january, "order-jan")
+        val before = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray).map { it["observedOn"].asText() }
+        assertThat(before).isSorted()
+        assertThat(before.first()).isEqualTo("2026-01-15")
+        val recordId = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray).first()["recordId"].asText()
+        fun correct(value: String, key: String) = mutate(
+            post("/api/foundation/records/$recordId/corrections").header("Idempotency-Key", key).contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to value, "reason" to "정정 $key"))),
+            alice,
+        ).andExpect(status().isOk)
+        correct("195", "order-correct-1")
+        correct("194", "order-correct-2")
+        read(get("/api/foundation/records/$recordId"), alice)
+            .andExpect(jsonPath("$.value").value("194"))
+            .andExpect(jsonPath("$.originalValue").value("194"))
+            .andExpect(jsonPath("$.reviewDecision").value("CORRECTED"))
+        val after = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray)
+        assertThat(after.map { it["observedOn"].asText() }).isEqualTo(before)
+        assertThat(after.first()["recordId"].asText()).isEqualTo(recordId)
+        // health-events is sorted by observedOn/concept/confirmedAt (unchanged by this task), not
+        // by recordId, so the corrected record is not necessarily $[0]; find it by recordId instead
+        // of assuming its position, and assert its corrected flag stuck through the round trip.
+        val correctedEvent = responseJson(
+            read(get("/api/foundation/health-events"), alice).andReturn().response.contentAsByteArray,
+        ).single { it["recordId"].asText() == recordId }
+        assertThat(correctedEvent["corrected"].asBoolean()).isTrue()
+    }
+
+    @Test
     fun seriesListCurrentValuesInTimeOrderWithThreeComputedNumbersAndNoRangeText() {
         mockMvc.perform(get("/api/foundation/series")).andExpect(status().isUnauthorized)
         val alice = login("synthetic-alice")

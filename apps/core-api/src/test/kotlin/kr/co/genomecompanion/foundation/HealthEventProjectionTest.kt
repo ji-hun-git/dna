@@ -104,6 +104,16 @@ class HealthEventProjectionTest {
     }
 
     @Test
+    fun staysCorrectedWhenACorrectionRestoresTheOriginalValue() {
+        val restored = row("총콜레스테롤", "188", original = "188", observedOn = LocalDate.of(2026, 7, 28))
+            .copy(supersedesVersionId = UUID.randomUUID())
+
+        val event = HealthEventProjection.project(listOf(restored), setOf(docWithPreview)).single()
+
+        assertThat(event.corrected).isTrue()
+    }
+
+    @Test
     fun marksUncertainWhenTheSourcePreviewIsMissing() {
         val orphan = row("비타민 D", "42", observedOn = LocalDate.of(2026, 7, 28), documentId = docWithoutPreview)
 
