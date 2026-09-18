@@ -3204,6 +3204,25 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         uploadDocument(bob, bobDocumentId, fixturePdf).andExpect(status().isOk)
         mutate(post("/api/foundation/documents/$bobDocumentId/finalization"), bob).andExpect(status().isAccepted)
 
+        // A second document whose job a worker already holds a live lease on: the stale-job UPDATE only
+        // touches 'QUEUED' and 'FAILED_RETRYABLE', so an old LEASED row -- a worker actually holding it
+        // -- must survive the sweep even when it is far older than the 24h threshold. Lease expiry, not
+        // age, is what reclaims a leased job, and that is a different code path entirely, so the row is
+        // put straight into 'LEASED' shape rather than raced through the real lease-next endpoint.
+        val carolDocumentId = requestDocument(bob, bobConsentId, fixturePdf, "janitor-leased-doc")
+        uploadDocument(bob, carolDocumentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$carolDocumentId/finalization"), bob).andExpect(status().isAccepted)
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_document_job SET status = 'LEASED', lease_token_hash = ?, worker_id_hash = ?," +
+                    " lease_expires_at = CURRENT_TIMESTAMP + INTERVAL '1 hour'," +
+                    " created_at = CURRENT_TIMESTAMP - INTERVAL '25 hours' WHERE document_id = ?",
+                "a".repeat(64),
+                "b".repeat(64),
+                carolDocumentId,
+            ),
+        ).isEqualTo(1)
+
         // created_at moves with it: gc_session_expiry checks expires_at > created_at.
         assertThat(
             jdbc.update(
@@ -3282,10 +3301,16 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$bobDocumentId.pdf"))).isTrue()
         assertThat(count("gc_session")).isEqualTo(1)
         assertThat(countForSubject("gc_session", "synthetic-bob")).isEqualTo(1)
-        assertThat(count("gc_upload_capability")).isEqualTo(1)
+        // Two live capabilities now: bob's own document plus the second one made for the LEASED-job
+        // fixture above, neither of them expired.
+        assertThat(count("gc_upload_capability")).isEqualTo(2)
         assertThat(
-            jdbc.queryForObject("SELECT document_id FROM gc_upload_capability", UUID::class.java),
-        ).isEqualTo(bobDocumentId)
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM gc_upload_capability WHERE document_id = ?",
+                Long::class.java,
+                bobDocumentId,
+            ),
+        ).isEqualTo(1)
         assertThat(count("gc_idempotency")).isEqualTo(liveIdempotencyKeys)
         assertThat(
             jdbc.queryForObject(
@@ -3296,6 +3321,16 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ).isEqualTo("QUEUED")
         assertThat(documentStatus(bobDocumentId)).isNotEqualTo("FAILED_TERMINAL")
         read(get("/api/foundation/records"), bob).andExpect(status().isOk)
+        // Carol's job is LEASED and 25h old, yet the stale-job sweep only ever touches QUEUED and
+        // FAILED_RETRYABLE rows -- a worker holding the lease is untouched by age alone.
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM gc_document_job WHERE document_id = ?",
+                String::class.java,
+                carolDocumentId,
+            ),
+        ).isEqualTo("LEASED")
+        assertThat(documentStatus(carolDocumentId)).isNotEqualTo("FAILED_TERMINAL")
 
         // The file that survived only because it was young is swept once it has settled — the same file,
         // the same sweep, nothing but its age changed.
@@ -3393,6 +3428,10 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val landed = quarantineRoot.resolve("untrusted").resolve("$documentId.pdf")
         Files.createDirectories(landed.parent)
         Files.write(landed, fixturePdf)
+        // Past the one-hour in-flight grace: without the UPLOAD_PENDING reservation this file would
+        // read as a settled orphan, so a zero orphan count here proves the reservation, not the grace
+        // period that the other janitor test already covers on its own.
+        backdateBeyondTheInFlightWindow(landed)
         assertThat(
             jdbc.queryForObject("SELECT object_key FROM gc_document WHERE document_id = ?", String::class.java, documentId),
         ).isNull()
