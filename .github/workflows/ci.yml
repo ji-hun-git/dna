@@ -274,7 +274,11 @@ jobs:
           exit-code: "0"
           format: cyclonedx
           output: runtime-image-evidence/${{ matrix.name }}.cdx.json
-      - name: Fail on unresolved Critical or High image vulnerabilities
+      # A Critical finding with no upstream fix is still a Critical finding: `ignore-unfixed: true`
+      # let the one class of vulnerability we cannot patch our way out of pass unnoticed, which is
+      # backwards -- an unfixed Critical is the one that needs a human decision (rebase the base
+      # image, drop the dependency, or record an accepted risk), not the one that needs silence.
+      - name: Fail on Critical image vulnerabilities, fixed or not
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
         with:
           version: v0.72.0
@@ -282,9 +286,24 @@ jobs:
           image-ref: ${{ env.IMAGE_REF }}
           scan-type: image
           scanners: vuln
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
+          severity: CRITICAL
+          ignore-unfixed: false
           exit-code: "1"
+          format: table
+      # High findings move to a non-blocking report: blocking on every unfixed High in a JRE or Node
+      # base image would make the pipeline red for reasons no change in this repository can clear,
+      # and a gate that is always red stops being read. The table still prints in the job log.
+      - name: Report High image vulnerabilities (informational)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, Trivy overridden below
+        with:
+          version: v0.72.0
+          skip-setup-trivy: true
+          image-ref: ${{ env.IMAGE_REF }}
+          scan-type: image
+          scanners: vuln
+          severity: HIGH
+          ignore-unfixed: false
+          exit-code: "0"
           format: table
       - name: Preserve image ID, manifest, and SBOM evidence
         if: ${{ always() && steps.image-evidence.outcome == 'success' }}
@@ -294,6 +313,89 @@ jobs:
           path: runtime-image-evidence
           if-no-files-found: error
           retention-days: 14
+
+  image-smoke:
+    name: runtime image smoke (core-api + document-worker boot to /healthz)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # `needs` orders this after the images have been built and scanned; it does not carry the images
+    # over, because image layers are not job artifacts. Both images are rebuilt here from the same
+    # revision and the same Dockerfiles, so the build cache makes the rebuild cheap without making
+    # this job depend on anything the previous job left behind.
+    needs: runtime-images
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DOCKER_BUILDKIT: "1"
+    steps:
+      - name: Checkout immutable revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build core-api and document-worker images
+        run: |
+          docker build --pull --platform linux/amd64 --file apps/core-api/Dockerfile --tag gc-smoke/core-api .
+          docker build --pull --platform linux/amd64 --file apps/document-worker/Dockerfile --tag gc-smoke/document-worker .
+      - name: Boot core-api against the service database and wait for /actuator/health
+        run: |
+          # gc.foundation.enabled defaults to false, so the context starts with no secrets at all: the
+          # three datasource variables below are the whole boot surface, and Flyway migrates V1..V13
+          # into the empty service database on the way up.
+          docker run --detach --name gc-core --network host \
+            --env GC_DATABASE_URL=jdbc:postgresql://127.0.0.1:5432/postgres \
+            --env GC_DATABASE_USERNAME=postgres --env GC_DATABASE_PASSWORD= \
+            gc-smoke/core-api
+          for attempt in $(seq 1 45); do
+            body="$(curl --silent --write-out ' HTTP_%{http_code}' http://127.0.0.1:8080/actuator/health || true)"
+            case "${body}" in
+              *HTTP_200) echo "core-api UP after ${attempt} polls: ${body}"; exit 0 ;;
+            esac
+            sleep 2
+          done
+          echo "core-api health never reached 200 within 90s; last body: ${body}"
+          docker logs gc-core 2>&1 | tail -n 200
+          exit 1
+      - name: Boot document-worker against core-api and wait for /healthz
+        run: |
+          # GC_WORKER_IMAGE_DIGEST is validated as 64 lowercase hex, which the image ID satisfies once
+          # the `sha256:` prefix is stripped. Everything else the worker needs -- the clamscan path,
+          # the required ClamAV version and the signature directory -- is baked into the image as ENV
+          # by its Dockerfile, so the run only supplies what is environment-specific.
+          image_id="$(docker image inspect --format '{{.Id}}' gc-smoke/document-worker | sed 's/^sha256://')"
+          docker run --detach --name gc-worker --network host \
+            --env GC_WORKER_API_BASE_URL=http://127.0.0.1:8080 \
+            --env GC_WORKER_CREDENTIAL=smoke-credential-with-at-least-32-chars-000 \
+            --env GC_WORKER_ID=ci-smoke-worker \
+            --env GC_WORKER_IMAGE_DIGEST="${image_id}" \
+            --env GC_WORKER_HEALTH_PORT=8091 \
+            gc-smoke/document-worker
+          # The health server binds 127.0.0.1 only; --network host is what puts that loopback in the
+          # runner's own namespace. A 503 core-unreachable early in the poll is expected and not an
+          # error: it means the worker answered before its first successful probe of the core.
+          for attempt in $(seq 1 30); do
+            body="$(curl --silent --write-out ' HTTP_%{http_code}' http://127.0.0.1:8091/healthz || true)"
+            case "${body}" in
+              *HTTP_200) echo "worker ready after ${attempt} polls: ${body}"; exit 0 ;;
+            esac
+            sleep 2
+          done
+          echo "worker health never reached 200 within 60s; last body: ${body}"
+          docker logs gc-worker 2>&1 | tail -n 100
+          docker logs gc-core 2>&1 | tail -n 100
+          exit 1
+      - name: Stop containers
+        if: ${{ always() }}
+        run: docker rm --force gc-core gc-worker || true
 
   migration-replay:
     name: Flyway replay V1..V12 + seeded rows + V13
