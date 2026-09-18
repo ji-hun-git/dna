@@ -15,6 +15,9 @@
   ],
   "abstentions": [
     { "label": "요단백", "reason": "qualitative" },
+    { "label": "신장", "reason": "previous_column" },
+    { "label": "체중", "reason": "previous_column" },
+    { "label": "혈압", "reason": "previous_column" },
     { "label": "혈색소", "reason": "previous_column" },
     { "label": "공복혈당", "reason": "previous_column" },
     { "label": "총콜레스테롤", "reason": "previous_column" }
