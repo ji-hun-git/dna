@@ -27,6 +27,7 @@ import java.time.Instant
 import java.util.Base64
 import java.util.HexFormat
 import java.time.Clock
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -130,6 +131,17 @@ class BoundaryApiClient(
         .connectTimeout(Duration.ofSeconds(5))
         .followRedirects(HttpClient.Redirect.NEVER)
         .build(),
+    /**
+     * The probe gets its own client so its budget is its own. Sharing the job client meant inheriting a
+     * 5 s connect timeout, which a 2 s request timeout cannot shorten when the host is black-holed rather
+     * than refusing: the probe then outlived the readiness poll that asked for it and probes queued behind
+     * each other. 1 s to connect and 2 s end to end keeps a /healthz answer inside ~3 s in the worst case,
+     * and keeps probe traffic out of the connection pool the job requests use.
+     */
+    private val probeClient: HttpClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(1))
+        .followRedirects(HttpClient.Redirect.NEVER)
+        .build(),
 ) {
     /**
      * Liveness of the core API, for /healthz only: no credential, no job state, and a 2 s budget so a
@@ -141,7 +153,7 @@ class BoundaryApiClient(
             .timeout(Duration.ofSeconds(2))
             .GET()
             .build()
-        httpClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() == 200
+        probeClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() == 200
     }.getOrDefault(false)
 
     fun lease(): WorkerLease? {
@@ -377,32 +389,37 @@ class ClamAvCommandScanner(
         signature,
     )
 
-    /** A signature directory has no single digest of its own, so fold its files' digests into one. */
-    private fun sha256Database(path: Path): String {
-        if (Files.isRegularFile(path)) return sha256File(path)
-        val digest = MessageDigest.getInstance("SHA-256")
-        Files.list(path).use { entries ->
-            entries.filter(Files::isRegularFile).sorted().forEach {
-                digest.update(sha256File(it).toByteArray(StandardCharsets.UTF_8))
-            }
-        }
-        return HexFormat.of().formatHex(digest.digest())
-    }
-
-    private fun sha256File(path: Path): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        Files.newInputStream(path).use { input ->
-            val buffer = ByteArray(8_192)
-            while (true) {
-                val read = input.read(buffer)
-                if (read < 0) break
-                digest.update(buffer, 0, read)
-            }
-        }
-        return HexFormat.of().formatHex(digest.digest())
-    }
-
     private data class ClamAvVersion(val engine: String, val signatures: String)
+}
+
+
+/**
+ * A signature directory has no single digest of its own, so fold its files' digests into one. The
+ * fold is over the sorted paths, so the result is the same whatever order the filesystem lists them
+ * in; a regular file is just its own digest.
+ */
+internal fun sha256Database(path: Path): String {
+    if (Files.isRegularFile(path)) return sha256File(path)
+    val digest = MessageDigest.getInstance("SHA-256")
+    Files.list(path).use { entries ->
+        entries.filter(Files::isRegularFile).sorted().forEach {
+            digest.update(sha256File(it).toByteArray(StandardCharsets.UTF_8))
+        }
+    }
+    return HexFormat.of().formatHex(digest.digest())
+}
+
+internal fun sha256File(path: Path): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    Files.newInputStream(path).use { input ->
+        val buffer = ByteArray(8_192)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return HexFormat.of().formatHex(digest.digest())
 }
 
 
@@ -421,6 +438,14 @@ class DocumentWorker(
     private val configuration: WorkerConfiguration,
     private val client: BoundaryApiClient,
     private val inspector: PdfSecurityInspector,
+    /**
+     * Called at every phase boundary of an iteration. The loop's heartbeat is what /healthz reads to
+     * decide `loop-stalled`, and a heartbeat set once per iteration cannot tell a wedged loop from a
+     * slow but honest job: lease, fetch, a 60 s render and the result POST legitimately add up past a
+     * two-minute bound. Ticking here means a phase that is still making progress keeps the worker
+     * ready, while a phase that has genuinely hung still ages the heartbeat out.
+     */
+    private val heartbeat: () -> Unit = {},
 ) {
     private val transientFailures = mutableSetOf<String>()
 
@@ -428,11 +453,16 @@ class DocumentWorker(
         // An empty lease is the idle case and is not logged: the loop polls once a second, so a line
         // per empty poll would be a line per second of nothing happening.
         val lease = client.lease() ?: return false
+        heartbeat()
         WorkerLog.emit("job_leased", lease.jobId)
         val source = client.source(lease)
+        heartbeat()
         when (lease.jobType) {
             "SECURITY_INSPECTION" -> {
-                client.inspectionResult(lease, inspector.inspect(source, lease.sourceSha256))
+                val report = inspector.inspect(source, lease.sourceSha256)
+                heartbeat()
+                client.inspectionResult(lease, report)
+                heartbeat()
                 WorkerLog.emit("job_completed", lease.jobId)
             }
             "SYNTHETIC_EXTRACTION" -> {
@@ -451,9 +481,11 @@ class DocumentWorker(
                     // discipline as PageRenderSubprocess itself).
                     val rendered = runCatching { PageRenderSubprocess.render(source) }
                         .getOrElse { RenderResult.Failed(UNUSABLE_RENDER_OUTCOME) }
+                    heartbeat()
                     when (rendered) {
                         is RenderResult.Png -> {
                             client.extractionResult(lease, rendered.bytes, NativeTextExtractionProvider.extract(source))
+                            heartbeat()
                             WorkerLog.emit("job_completed", lease.jobId)
                         }
                         RenderResult.OutOfMemory -> {
@@ -483,25 +515,31 @@ fun main(args: Array<String>) {
         ?.let { ClamAvCommandScanner(it, configuration.requiredClamAvVersion, configuration.signatureDir) }
         ?: SyntheticManifestScanner()
     val client = BoundaryApiClient(configuration)
+    val heartbeat = AtomicReference(Instant.now())
     val worker = DocumentWorker(
         configuration,
         client,
         PdfSecurityInspector(policy = PdfInspectionPolicy(), malwareScanner = scanner),
+        heartbeat = { heartbeat.set(Instant.now()) },
     )
-    val heartbeat = AtomicReference(Instant.now())
     val health = WorkerHealth(
         coreProbe = client::probe,
         signatureDir = configuration.signatureDir,
         loopHeartbeat = heartbeat::get,
         clock = Clock.systemUTC(),
     )
-    configuration.healthPort?.let { startLoopbackHealthServer(it, health) }
+    configuration.healthPort?.let { startLoopbackHealthServer(it, health::check) }
     if (args.contains("--once")) {
         worker.runOnce()
         return
     }
     val running = AtomicBoolean(true)
     val fatal = AtomicReference<Throwable?>(null)
+    // Guards the one window in which an interrupt is welcome. The shutdown hook only interrupts while
+    // `sleeping` is true and it holds this lock, so the interrupt can land on the backoff sleep and
+    // nowhere else -- never on a leased job's HTTP call, which an interrupt would tear in half.
+    val sleepLock = Any()
+    var sleeping = false
     val loop = Thread {
         var failures = 0
         while (running.get()) {
@@ -521,8 +559,24 @@ fun main(args: Array<String>) {
                 false
             }
             // Idle polling stays at a second; consecutive errors back off 1, 2, 4 ... 30 s so a core that is
-            // down is not asked for work once a second until it comes back.
-            if (!processed) Thread.sleep(minOf(30_000L, 1_000L shl minOf(failures, 5)))
+            // down is not asked for work once a second until it comes back. The first failure waits 1 s,
+            // not 2: the exponent counts the failures *before* this one.
+            if (!processed) {
+                val exponent = minOf(maxOf(failures - 1, 0), 5)
+                val backoffMillis = minOf(30_000L, 1_000L shl exponent)
+                try {
+                    synchronized(sleepLock) { sleeping = running.get() }
+                    if (sleeping) Thread.sleep(backoffMillis)
+                } catch (_: InterruptedException) {
+                    // Shutdown, not failure: end the wait now and let the `while (running)` check exit.
+                } finally {
+                    synchronized(sleepLock) {
+                        sleeping = false
+                        // Clear a flag set just after the sleep returned, so it cannot reach the next job.
+                        Thread.interrupted()
+                    }
+                }
+            }
         }
     }.also {
         it.name = "document-worker-loop"
@@ -535,6 +589,10 @@ fun main(args: Array<String>) {
     Runtime.getRuntime().addShutdownHook(
         Thread {
             running.set(false)
+            // Without the interrupt SIGTERM waits out a backoff that is already up to 30 s long, which is
+            // the whole join budget spent doing nothing. Interrupting only while the loop is inside its
+            // sleep keeps an in-flight job untouched: it finishes, then the loop sees `running == false`.
+            synchronized(sleepLock) { if (sleeping) loop.interrupt() }
             loop.join(30_000)
             WorkerLog.emit("shutdown_complete", null)
         },
@@ -548,12 +606,27 @@ private fun configuredObjectMapper(): ObjectMapper = jacksonObjectMapper()
     .registerModule(JavaTimeModule())
 
 
-private fun startLoopbackHealthServer(port: Int, health: WorkerHealth) {
+internal fun startLoopbackHealthServer(port: Int, check: () -> HealthReport): HttpServer {
     // Loopback only: this is a supervisor's readiness probe, not a service. The image-smoke container runs
     // in the host network namespace, so the probe reaches it there without exposing it to anything else.
     val server = HttpServer.create(InetSocketAddress("127.0.0.1", port), 0)
+    // A null executor runs every request on HttpServer's single dispatcher thread, so one probe waiting on
+    // the core blocks the next one behind it. Two daemon threads: enough that a slow probe and the poll
+    // that follows it do not serialise, few enough that /healthz can never become a work queue.
+    server.executor = Executors.newFixedThreadPool(2) { runnable ->
+        Thread(runnable, "document-worker-healthz").apply { isDaemon = true }
+    }
     server.createContext("/healthz") { exchange ->
-        val report = health.check()
+        // Fail closed. A check that throws -- a signature file deleted between two calls, a probe that
+        // raises rather than returns -- must read as "not ready", never as a 500 the supervisor may treat
+        // as a transport blip. Class name only in the log, for the same reason WorkerLog exists at all.
+        val report = try {
+            check()
+        } catch (exception: Exception) {
+            val code = exception.javaClass.simpleName.lowercase().filter { it.isLetterOrDigit() }.take(80)
+            WorkerLog.emit("health_check_error", null, if (code.length < 3) "unknown_error" else code)
+            HealthReport(false, "scan-unavailable")
+        }
         val body = report.code.toByteArray(StandardCharsets.UTF_8)
         exchange.responseHeaders.set("Content-Type", "text/plain; charset=utf-8")
         exchange.responseHeaders.set("Cache-Control", "no-store")
@@ -561,6 +634,7 @@ private fun startLoopbackHealthServer(port: Int, health: WorkerHealth) {
         exchange.responseBody.use { it.write(body) }
     }
     server.start()
+    return server
 }
 
 
