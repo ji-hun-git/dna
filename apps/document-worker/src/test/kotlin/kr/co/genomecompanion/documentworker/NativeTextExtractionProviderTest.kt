@@ -409,6 +409,22 @@ class NativeTextExtractionProviderTest {
     }
 
     @Test
+    fun `a spaced-dash range with a repeated trailing unit stays a measurement, not a second value`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            lines(
+                "검사일 2026-07-28",
+                "AST 22 U/L 15 - 35 U/L",
+                "혈당 95 mg/dL 70 - 99 mg/dL",
+            ),
+        )
+
+        assertThat(outcome.abstentions).isEmpty()
+        assertThat(outcome.candidates.map { it.value }).containsExactly("22", "95")
+        assertThat(outcome.candidates.map { it.unit }).containsExactly("U/L", "mg/dL")
+        assertThat(outcome.candidates.map { it.referenceRangeText }).containsExactly("15 - 35", "70 - 99")
+    }
+
+    @Test
     fun `a row whose first numeric token has no label before it is skipped, not abstained`() {
         assertThat(NativeTextExtractionProvider.parseRow("3")).isEqualTo(NativeTextExtractionProvider.RowParse.Skipped)
         assertThat(NativeTextExtractionProvider.parseRow("- 2 -")).isEqualTo(NativeTextExtractionProvider.RowParse.Skipped)

@@ -172,6 +172,9 @@ object NativeTextExtractionProvider {
         val text = raw.replace(separators, " ").trim().replace(leadingBullets, "").trim()
         val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
         val valueIndex = tokens.indexOfFirst { valueToken.matches(it) }
+        // `<`/`≤`/`>` qualified values, qualitative results (음성/양성/정상/이상) and value-first rows
+        // still have no label before their numeric token and fall through to Skipped here until the
+        // new grammar in Tasks 2-3 gives them a label to attach to.
         if (valueIndex < 1) return RowParse.Skipped
         val label = tokens.subList(0, valueIndex).joinToString(" ")
         val value = tokens[valueIndex]
@@ -187,10 +190,16 @@ object NativeTextExtractionProvider {
         val rest = tokens.drop(valueIndex + 2)
         val restText = rest.joinToString(" ")
         val restIsRange = rest.isNotEmpty() && rangeText.matches(restText)
+        // A genuine range boundary (a comparison sign, or two numbers joined by a dash/tilde, spaces
+        // allowed either side) means the rest is a reference range, however it is later followed by a
+        // repeated unit word ("15 - 35 U/L") — that trailing unit is not a second result.
+        val restHasRangeBoundary = rangeBoundaryMarker.containsMatchIn(restText)
         // A second full "value unit" pair in the rest (e.g. "100 mg/dL") is a second result printed on
         // the same row, not a reference range: the permissive rangeText pattern would otherwise absorb
-        // it silently, so this is checked ahead of the range classification.
-        val restHasSecondMeasurement = rest.zipWithNext()
+        // it silently, so this is checked ahead of the range classification. It is only checked when
+        // the rest has no range boundary of its own, so a range's own trailing repeated unit (matched
+        // pairwise against the range's last number by zipWithNext) is never mistaken for a second value.
+        val restHasSecondMeasurement = !restHasRangeBoundary && rest.zipWithNext()
             .any { (candidateValue, candidateUnit) -> valueToken.matches(candidateValue) && MedicalUnitSpelling.canonical(candidateUnit) != null }
         if (rest.isNotEmpty() && (restHasSecondMeasurement || (!restIsRange && rest.any { valueToken.matches(it) }))) {
             return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
