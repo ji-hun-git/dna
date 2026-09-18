@@ -1270,9 +1270,10 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val after = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray)
         assertThat(after.map { it["observedOn"].asText() }).isEqualTo(before)
         assertThat(after.first()["recordId"].asText()).isEqualTo(recordId)
-        // health-events is sorted by observedOn/concept/confirmedAt (unchanged by this task), not
-        // by recordId, so the corrected record is not necessarily $[0]; find it by recordId instead
-        // of assuming its position, and assert its corrected flag stuck through the round trip.
+        // health-events is sorted by observedOn/confirmedAt(mutable version_changed_at)/recordId,
+        // and this correction just pushed the record's confirmedAt to "now" (the largest in its
+        // observedOn group), so it is not necessarily $[0]; find it by recordId instead of
+        // assuming its position, and assert its corrected flag stuck through the round trip.
         val correctedEvent = responseJson(
             read(get("/api/foundation/health-events"), alice).andReturn().response.contentAsByteArray,
         ).single { it["recordId"].asText() == recordId }

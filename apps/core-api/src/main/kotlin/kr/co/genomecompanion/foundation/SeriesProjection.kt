@@ -43,7 +43,7 @@ object SeriesProjection {
     private val thirty = BigDecimal(30)
     private val three = BigDecimal(3)
     private val chronological = compareBy<FoundationRecordRow> { it.observedOn }
-        .thenBy { it.confirmedAt }
+        .thenBy { it.versionChangedAt }
         .thenBy { it.recordId.toString() }
 
     /**
@@ -97,14 +97,14 @@ object SeriesProjection {
         if (rows.size < 2) return SeriesDerived()
         val last = rows[rows.size - 1]
         val previous = rows[rows.size - 2]
-        // Same-day points have no defined order: which is "last" depends on click order, so the
-        // difference (and, transitively, per30Days) is omitted rather than sign-flipping.
-        val sameDay = last.observedOn == previous.observedOn
-        val lastDifference = if (sameDay) {
-            null
-        } else {
+        // Same-day points have no defined order (shared SameDayRule): which is "last" depends on
+        // click order, so the difference (and, transitively, per30Days) is omitted rather than
+        // sign-flipping.
+        val lastDifference = if (SameDayRule.hasDefinedOrder(previous.observedOn, last.observedOn)) {
             ChangeDeltaCalculator.compute(last.currentValue, previous.currentValue)
                 ?.let { delta -> if (last.unit.trim() == "%") delta.copy(percent = null) else delta }
+        } else {
+            null
         }
         return SeriesDerived(
             lastDifference = lastDifference,

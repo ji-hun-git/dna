@@ -36,7 +36,7 @@ class ChangeSummaryProjectionTest {
         originalValue = value,
         unit = unit,
         observedOn = observedOn,
-        confirmedAt = confirmedAt,
+        versionChangedAt = confirmedAt,
         correctionReason = null,
         evidencePage = 1,
         sourceTextSha256 = "b".repeat(64),

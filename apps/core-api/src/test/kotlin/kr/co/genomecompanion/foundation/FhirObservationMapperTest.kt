@@ -42,7 +42,7 @@ class FhirObservationMapperTest {
         unit = unit,
         observedOn = LocalDate.parse(observedOn),
         originalObservedOn = originalObservedOn,
-        confirmedAt = Instant.parse("2026-08-01T00:00:00Z"),
+        versionChangedAt = Instant.parse("2026-08-01T00:00:00Z"),
         correctionReason = null,
         evidencePage = 1,
         sourceTextSha256 = "b".repeat(64),

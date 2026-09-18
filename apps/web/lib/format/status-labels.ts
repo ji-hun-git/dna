@@ -90,12 +90,21 @@ function correctedParts(record: ReviewedRecord) {
   };
 }
 
+/**
+ * Sticky CORRECTED (server-side RecordReview.isCorrected) stays true even when a later
+ * correction lands back on the original value and date — a `supersedesVersionId` trail exists,
+ * but `value`/`date` here are both false. Say what actually happened instead of claiming a
+ * difference that no longer exists.
+ */
+const REVERTED_TO_ORIGINAL = "수정 이력이 있지만 지금 값은 원래 값과 같아요";
+
 /** Short outcome for the review summary list. */
 export function labelReviewOutcome(record: ReviewedRecord) {
   const { value, date } = correctedParts(record);
   if (value && date) return "값과 검사일을 수정함";
   if (date) return "검사일을 수정함";
-  if (value || record.reviewDecision === "CORRECTED") return "값을 수정함";
+  if (value) return "값을 수정함";
+  if (record.reviewDecision === "CORRECTED") return REVERTED_TO_ORIGINAL;
   return "원문과 같음";
 }
 
@@ -105,6 +114,7 @@ export function describeReviewDecision(record: ReviewedRecord) {
   const originalDate = formatKoreanDate(record.originalObservedOn);
   if (value && date) return `사용자가 값과 검사일을 수정함 · 원래 ${originalDate}`;
   if (date) return `사용자가 검사일을 수정함 · 원래 ${originalDate}`;
-  if (value || record.reviewDecision === "CORRECTED") return "사용자가 값을 수정함";
+  if (value) return "사용자가 값을 수정함";
+  if (record.reviewDecision === "CORRECTED") return REVERTED_TO_ORIGINAL;
   return "사용자가 원문과 같다고 확인함";
 }

@@ -32,7 +32,7 @@ class SeriesProjectionTest {
         originalValue = value,
         unit = unit,
         observedOn = LocalDate.parse(observedOn),
-        confirmedAt = Instant.parse(confirmedAt),
+        versionChangedAt = Instant.parse(confirmedAt),
         correctionReason = null,
         evidencePage = 1,
         sourceTextSha256 = "b".repeat(64),

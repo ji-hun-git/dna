@@ -229,6 +229,10 @@ describe("Korean UX language boundary", () => {
     expect(source("components/integrated/IntegratedRecords.tsx")).toContain("describeReviewDecision(record)");
   });
 
+  it("says a correction happened without claiming a difference once sticky CORRECTED reverts to the original value and date", () => {
+    expect(source("lib/format/status-labels.ts")).toContain("수정 이력이 있지만 지금 값은 원래 값과 같아요");
+  });
+
   it("states that research consent is optional, stored only, and asked again per project", () => {
     const control = source("components/integrated/IntegratedDataControl.tsx");
     for (const sentence of [

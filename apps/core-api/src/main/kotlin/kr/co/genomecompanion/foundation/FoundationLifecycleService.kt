@@ -905,7 +905,7 @@ class FoundationLifecycleService(
             unit = record.unit,
             observedOn = record.observedOn.toString(),
             originalObservedOn = (record.originalObservedOn ?: record.observedOn).toString(),
-            confirmedAt = record.confirmedAt,
+            confirmedAt = record.versionChangedAt,
             correctionReason = record.correctionReason,
             evidencePage = record.evidencePage,
             sourceTextSha256 = record.sourceTextSha256,

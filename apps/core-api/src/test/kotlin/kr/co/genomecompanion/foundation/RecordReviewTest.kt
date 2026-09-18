@@ -26,7 +26,7 @@ class RecordReviewTest {
         unit = "mg/dL",
         observedOn = LocalDate.of(2026, 7, 28),
         originalObservedOn = originalObservedOn,
-        confirmedAt = Instant.parse("2026-07-28T09:10:00Z"),
+        versionChangedAt = Instant.parse("2026-07-28T09:10:00Z"),
         correctionReason = null,
         evidencePage = 1,
         sourceTextSha256 = "b".repeat(64),

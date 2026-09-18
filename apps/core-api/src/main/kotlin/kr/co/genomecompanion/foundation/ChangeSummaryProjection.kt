@@ -66,7 +66,7 @@ object ChangeSummaryProjection {
         // equivalent (e.g. differing only in trailing whitespace before trimming elsewhere) may
         // therefore sort differently than a human reader expects.
         val items = latestRecords
-            .sortedWith(compareBy<FoundationRecordRow> { it.label }.thenBy { it.confirmedAt }.thenBy { it.recordId.toString() })
+            .sortedWith(compareBy<FoundationRecordRow> { it.label }.thenBy { it.versionChangedAt }.thenBy { it.recordId.toString() })
             .map { record ->
                 // The latest observation of the same concept in any other document. A different
                 // unit is not converted: the item is shown alone and counted as new. Ties on
@@ -76,7 +76,7 @@ object ChangeSummaryProjection {
                     .filter { conceptsMatch(it, record) }
                     .maxWithOrNull(
                         compareBy<FoundationRecordRow> { it.observedOn }
-                            .thenBy { it.confirmedAt }
+                            .thenBy { it.versionChangedAt }
                             .thenBy { it.documentId.toString() }
                             .thenBy { it.recordId.toString() },
                     )
@@ -87,13 +87,12 @@ object ChangeSummaryProjection {
                     unit = record.unit,
                     latest = ChangeValue(record.recordVersionId, record.currentValue, record.observedOn.toString()),
                     previous = previous?.let { ChangeValue(it.recordVersionId, it.currentValue, it.observedOn.toString()) },
-                    // Only when the previous value is strictly earlier than the latest one: a
-                    // signed difference computed against an out-of-order previous document would
-                    // run against chronology. Same-day points have no defined order — series omits
-                    // too — so the delta is omitted there as well. Both values and dates stay
-                    // listed either way.
+                    // Only when the previous value is strictly earlier than the latest one (shared
+                    // SameDayRule): a signed difference computed against an out-of-order previous
+                    // document would run against chronology, and same-day points have no defined
+                    // order — series omits too. Both values and dates stay listed either way.
                     delta = previous
-                        ?.takeIf { it.observedOn < record.observedOn }
+                        ?.takeIf { SameDayRule.hasDefinedOrder(it.observedOn, record.observedOn) }
                         ?.let { ChangeDeltaCalculator.compute(record.currentValue, it.currentValue) }
                         ?.let { delta -> if (record.unit.trim() == "%") delta.copy(percent = null) else delta },
                 )

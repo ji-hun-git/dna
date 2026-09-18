@@ -61,7 +61,7 @@ object HealthEventProjection {
                     observedOn = record.observedOn.toString(),
                     verification = if (previewAvailable) VERIFIED else UNCERTAIN,
                     corrected = RecordReview.isCorrected(record),
-                    confirmedAt = record.confirmedAt,
+                    confirmedAt = record.versionChangedAt,
                     originalValue = record.originalValue,
                     correctionReason = record.correctionReason,
                     originalObservedOn = record.originalObservedOn?.toString(),
@@ -75,5 +75,8 @@ object HealthEventProjection {
                     originalLabel = record.originalLabel,
                 )
             }
-            .sortedWith(compareBy<HealthEvent> { it.observedOn }.thenBy { it.concept }.thenBy { it.confirmedAt })
+            // observedOn, confirmedAt, recordId — the same shape /records and the exports use
+            // (series points already do), so a correction (which only ever bumps confirmedAt via
+            // a new version) can shuffle same-day ties but never crosses an observedOn boundary.
+            .sortedWith(compareBy<HealthEvent> { it.observedOn }.thenBy { it.confirmedAt }.thenBy { it.recordId.toString() })
 }
