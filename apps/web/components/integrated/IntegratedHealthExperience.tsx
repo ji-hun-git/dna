@@ -505,6 +505,9 @@ export function IntegratedHealthExperience() {
             <p className="gc-import__eyebrow">2. 서버 처리 상태</p>
             <h1 id="server-processing-title">서버가 알려준 상태를<br />그대로 보여드려요</h1>
             <p className="gc-import__lead" role="status" aria-live="polite">{processingCopy[processingState]}</p>
+            {processingState === "FAILED_TERMINAL" && documentReceipt?.failureCode === "render_error" && (
+              <p className="gc-import__lead">미리보기를 만들다 메모리 한도를 넘어 처리를 중단했어요.</p>
+            )}
             {documentReceipt && (
               <dl className="gc-integrated-facts">
                 <div><dt>문서 상태</dt><dd>{processingCopy[documentReceipt.status]} <code aria-label="서버 상태 코드">{documentReceipt.status}</code></dd></div>

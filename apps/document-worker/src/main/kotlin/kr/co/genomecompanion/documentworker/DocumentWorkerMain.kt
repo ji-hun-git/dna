@@ -13,10 +13,6 @@ import kr.co.genomecompanion.documentboundary.MalwareScanner
 import kr.co.genomecompanion.documentboundary.PdfSecurityInspector
 import kr.co.genomecompanion.documentboundary.PdfInspectionPolicy
 import kr.co.genomecompanion.documentboundary.WorkerIdentity
-import org.apache.pdfbox.Loader
-import org.apache.pdfbox.rendering.ImageType
-import org.apache.pdfbox.rendering.PDFRenderer
-import java.io.ByteArrayOutputStream
 import java.net.URI
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
@@ -31,7 +27,6 @@ import java.time.Instant
 import java.util.Base64
 import java.util.HexFormat
 import java.util.concurrent.TimeUnit
-import javax.imageio.ImageIO
 
 
 private const val WORKER_VERSION = "document-worker-v2"
@@ -395,24 +390,19 @@ class DocumentWorker(
                 if (configuration.failFirstExtraction && transientFailures.add(lease.jobId)) {
                     client.failure(lease, "simulated_transient_preview_failure", retryable = true)
                 } else {
-                    runCatching { renderFirstPage(source) }
-                        .onSuccess { preview -> client.extractionResult(lease, preview, NativeTextExtractionProvider.extract(source)) }
-                        .onFailure { client.failure(lease, "preview_generation_failed", retryable = true) }
+                    // Rendering is the one step that runs attacker-shaped bytes through a decoder, so it
+                    // runs in a child JVM: a page that exhausts the heap costs that child, not the worker.
+                    when (val rendered = PageRenderSubprocess.render(source)) {
+                        is RenderResult.Png ->
+                            client.extractionResult(lease, rendered.bytes, NativeTextExtractionProvider.extract(source))
+                        RenderResult.OutOfMemory -> client.failure(lease, "render_error", retryable = false)
+                        is RenderResult.Failed -> client.failure(lease, "preview_generation_failed", retryable = true)
+                    }
                 }
             }
             else -> client.failure(lease, "unsupported_job_type", retryable = false)
         }
         return true
-    }
-
-    private fun renderFirstPage(source: ByteArray): ByteArray = Loader.loadPDF(source).use { document ->
-        require(document.numberOfPages in 1..20)
-        val image = PDFRenderer(document).renderImageWithDPI(0, 110f, ImageType.RGB)
-        require(image.width.toLong() * image.height.toLong() <= 20_000_000)
-        ByteArrayOutputStream().use { output ->
-            check(ImageIO.write(image, "png", output))
-            output.toByteArray().also { require(it.size in 67..2_097_152) }
-        }
     }
 }
 

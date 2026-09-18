@@ -169,6 +169,12 @@ describe("Korean UX language boundary", () => {
     expect(experience).toMatch(/processingState === "TERMINATED_BY_REVOCATION"/);
   });
 
+  it("names the memory limit when the preview render was stopped, not just a generic terminal failure", () => {
+    const experience = source("components/integrated/IntegratedHealthExperience.tsx");
+    expect(experience).toContain("미리보기를 만들다 메모리 한도를 넘어 처리를 중단했어요.");
+    expect(experience).toMatch(/documentReceipt\?\.failureCode === "render_error"/);
+  });
+
   it("describes the recent changes as two values without a judgement", () => {
     const recent = source("components/integrated/RecentChanges.tsx");
     expect(recent).toContain("최근 변화");
