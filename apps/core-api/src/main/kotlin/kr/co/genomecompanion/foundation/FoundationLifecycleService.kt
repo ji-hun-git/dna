@@ -756,7 +756,6 @@ class FoundationLifecycleService(
     fun deleteProfile(principal: FoundationPrincipal): DeletionReceipt {
         val subjectHash = subjectHash(principal.subjectId)
         val objectKeys = repository.listObjectKeys(principal.subjectId)
-        documentStorage.deleteAll(objectKeys)
         audit(principal, "PROFILE_DELETION_REQUESTED", "PROFILE", null, "SUCCESS")
         val deletionId = repository.completeDeletion(
             principal.subjectId,
@@ -773,6 +772,18 @@ class FoundationLifecycleService(
             "SUCCESS",
             Instant.now(clock),
         )
+        if (objectKeys.isNotEmpty()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                object : TransactionSynchronization {
+                    override fun afterCommit() {
+                        // Rows are gone; a file that cannot be removed now is an orphan the Task 22
+                        // janitor sweeps. deleteAll already retries every key past a failing one and
+                        // logs each failure (event, correlation id, document id, exception class only).
+                        runCatching { documentStorage.deleteAll(objectKeys) }
+                    }
+                },
+            )
+        }
         return DeletionReceipt(
             deletionId = deletionId,
             status = "COMPLETED",

@@ -1490,9 +1490,18 @@ class FoundationRepository(
             RowMapper { result, _ -> result.getObject("deletion_id", UUID::class.java) },
             subjectHash,
         ).single()
+        jdbc.update(
+            """
+            DELETE FROM gc_upload_capability c
+            USING gc_document d
+            WHERE d.document_id = c.document_id AND d.subject_id = ?
+            """.trimIndent(),
+            subjectId,
+        )
         jdbc.update("DELETE FROM gc_document WHERE subject_id = ?", subjectId)
         jdbc.update("DELETE FROM gc_consent_grant WHERE subject_id = ?", subjectId)
         jdbc.update("DELETE FROM gc_session WHERE subject_id = ?", subjectId)
+        deleteIdempotencyForSubject(subjectHash)
         jdbc.update("UPDATE gc_subject SET deleted_at = ? WHERE subject_id = ?", now.atOffset(ZoneOffset.UTC), subjectId)
         return durableId
     }

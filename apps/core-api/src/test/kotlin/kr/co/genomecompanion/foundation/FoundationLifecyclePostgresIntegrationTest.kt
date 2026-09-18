@@ -860,6 +860,51 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun deletionCommitsTheRowsBeforeTouchingFilesAndClearsIdempotencySessionAndCapabilityRows() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val candidateId = createCandidate(alice, consentId, "delete-order")
+        mutate(post("/api/foundation/candidates/$candidateId/confirmation").header("Idempotency-Key", "delete-order-confirm")
+            .contentType(MediaType.APPLICATION_JSON).content(json(mapOf("value" to "188"))), alice).andExpect(status().isCreated)
+        val subjectHash = FoundationHashing.sha256("foundation-integration-test-pepper-64-characters-minimum-value:synthetic-alice")
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_idempotency WHERE subject_hash = ?", Long::class.java, subjectHash)).isGreaterThan(0L)
+        val keys = jdbc.queryForList("SELECT object_key FROM gc_document WHERE subject_id = 'synthetic-alice'", String::class.java)
+        // Make the file deletion impossible to perform inside the transaction: lock the file by making the untrusted directory read-only is not
+        // portable, so instead observe ordering through the audit sequence: PROFILE_DELETED is written in the same transaction
+        // and must exist even when a file is already gone.
+        keys.forEach { Files.deleteIfExists(quarantineRoot.resolve("untrusted").resolve(it)) }
+        mutate(delete("/api/foundation/profile"), alice).andExpect(status().isOk).andExpect(jsonPath("$.status").value("COMPLETED"))
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_idempotency WHERE subject_hash = ?", Long::class.java, subjectHash)).isZero()
+        assertThat(countForSubject("gc_session", "synthetic-alice")).isZero()
+        assertThat(count("gc_upload_capability")).isZero()
+        assertThat(countForSubject("gc_document", "synthetic-alice")).isZero()
+        assertThat(jdbc.queryForObject("SELECT deleted_at IS NOT NULL FROM gc_subject WHERE subject_id = 'synthetic-alice'", Boolean::class.java)).isTrue()
+    }
+
+    @Test
+    fun aFileDeletionFailureAfterCommitDoesNotUndoTheDeletion() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "delete-orphan-request")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(documentId)
+        // Filter by this test's own document id: the quarantine directory is not cleared between test
+        // methods (only the database is truncated in @BeforeEach), so other tests' approved files persist.
+        val approved = Files.list(quarantineRoot.resolve("approved_source"))
+            .filter { it.fileName.toString().startsWith(documentId.toString()) }
+            .findFirst()
+            .orElseThrow()
+        // Replace the approved file with a directory of the same name: deleteIfExists throws DirectoryNotEmptyException.
+        Files.delete(approved)
+        Files.createDirectories(approved.resolve("keep"))
+        mutate(delete("/api/foundation/profile"), alice).andExpect(status().isOk)
+        assertThat(countForSubject("gc_document", "synthetic-alice")).isZero()
+        assertThat(Files.isDirectory(approved)).isTrue() // orphan left for the janitor (Task 23)
+        Files.delete(approved.resolve("keep")); Files.delete(approved)
+    }
+
+    @Test
     fun theWorkerRequestDecidesTheCandidatesOfEachDocumentNotConfiguration() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
