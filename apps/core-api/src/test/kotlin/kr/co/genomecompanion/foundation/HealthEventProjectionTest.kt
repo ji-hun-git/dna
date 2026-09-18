@@ -19,6 +19,7 @@ class HealthEventProjectionTest {
         status: String = "CURRENT",
         documentId: UUID = docWithPreview,
         versionChangedAt: Instant = Instant.parse("2026-07-28T09:10:00Z"),
+        confirmedAt: Instant = versionChangedAt,
         conceptCode: String? = "total-cholesterol",
         originalLabel: String? = null,
         recordId: UUID = UUID.randomUUID(),
@@ -37,6 +38,7 @@ class HealthEventProjectionTest {
         observedOn = observedOn,
         originalObservedOn = originalObservedOn,
         versionChangedAt = versionChangedAt,
+        confirmedAt = confirmedAt,
         correctionReason = if (original == value) null else "원문 재확인",
         evidencePage = 1,
         sourceTextSha256 = "b".repeat(64),
@@ -108,6 +110,32 @@ class HealthEventProjectionTest {
 
         assertThat(forwardOrder.map { it.concept }).containsExactly("총콜레스테롤", "당화혈색소")
         assertThat(reverseOrder.map { it.concept }).containsExactly("총콜레스테롤", "당화혈색소")
+    }
+
+    @Test
+    fun ordersByTheImmutableConfirmedAtNotTheMutableVersionChangedAtACorrectionBumps() {
+        // Same observedOn day: a correction on the first record bumps its versionChangedAt far
+        // into the future (what the correction endpoint does), but confirmed_at never moves. The
+        // read model must keep ordering on confirmedAt, or a correction would silently reshuffle
+        // same-day records relative to /records (F4).
+        val day = LocalDate.of(2026, 7, 28)
+        val correctedButConfirmedFirst = row(
+            "총콜레스테롤", "194", observedOn = day,
+            confirmedAt = Instant.parse("2026-07-28T09:00:00Z"),
+            versionChangedAt = Instant.parse("2026-09-19T12:00:00Z"),
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000001"),
+        )
+        val neverCorrectedButConfirmedSecond = row(
+            "당화혈색소", "5.2", observedOn = day,
+            confirmedAt = Instant.parse("2026-07-28T09:05:00Z"),
+            versionChangedAt = Instant.parse("2026-07-28T09:05:00Z"),
+            conceptCode = "hba1c",
+            recordId = UUID.fromString("00000000-0000-4000-8000-000000000002"),
+        )
+
+        val events = HealthEventProjection.project(listOf(neverCorrectedButConfirmedSecond, correctedButConfirmedFirst), setOf(docWithPreview))
+
+        assertThat(events.map { it.concept }).containsExactly("총콜레스테롤", "당화혈색소")
     }
 
     @Test

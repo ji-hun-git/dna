@@ -22,6 +22,7 @@ class ChangeSummaryProjectionTest {
         conceptCode: String? = "total-cholesterol",
         status: String = "CURRENT",
         confirmedAt: Instant = Instant.parse("2026-07-28T09:10:00Z"),
+        versionChangedAt: Instant = confirmedAt,
         recordId: UUID = UUID.randomUUID(),
     ) = FoundationRecordRow(
         recordId = recordId,
@@ -36,7 +37,8 @@ class ChangeSummaryProjectionTest {
         originalValue = value,
         unit = unit,
         observedOn = observedOn,
-        versionChangedAt = confirmedAt,
+        versionChangedAt = versionChangedAt,
+        confirmedAt = confirmedAt,
         correctionReason = null,
         evidencePage = 1,
         sourceTextSha256 = "b".repeat(64),
@@ -299,6 +301,33 @@ class ChangeSummaryProjectionTest {
         assertThat(forwardOrder.items.map { it.conceptCode })
             .containsExactly("total-cholesterol-a", "total-cholesterol-b")
         assertThat(reverseOrder.items.map { it.conceptCode })
+            .containsExactly("total-cholesterol-a", "total-cholesterol-b")
+    }
+
+    @Test
+    fun ordersItemsAndPicksThePreviousValueByTheImmutableConfirmedAtNotByAVersionChangedAtACorrectionBumps() {
+        // A correction on one of two same-label items in the latest document bumps only its
+        // versionChangedAt far into the future; confirmed_at never moves. Both the items list and
+        // the "previous value" pick (which also breaks ties on this instant) must stay ordered by
+        // confirmedAt (F4), or a correction would silently reorder the change summary.
+        val latestDocument = UUID.fromString("77777777-7777-4777-8777-777777777777")
+        val correctedButConfirmedFirst = row(
+            "총콜레스테롤", "150", LocalDate.of(2026, 8, 1), latestDocument,
+            conceptCode = "total-cholesterol-a",
+            confirmedAt = Instant.parse("2026-08-01T09:00:00Z"),
+            versionChangedAt = Instant.parse("2026-09-19T12:00:00Z"),
+        )
+        val neverCorrectedButConfirmedSecond = row(
+            "총콜레스테롤", "151", LocalDate.of(2026, 8, 1), latestDocument,
+            conceptCode = "total-cholesterol-b",
+            confirmedAt = Instant.parse("2026-08-01T09:05:00Z"),
+            versionChangedAt = Instant.parse("2026-08-01T09:05:00Z"),
+        )
+        val documents = listOf(completed(latestDocument, "2026-08-01T10:00:00Z"))
+
+        val summary = ChangeSummaryProjection.project(listOf(neverCorrectedButConfirmedSecond, correctedButConfirmedFirst), documents)
+
+        assertThat(summary.items.map { it.conceptCode })
             .containsExactly("total-cholesterol-a", "total-cholesterol-b")
     }
 

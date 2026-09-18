@@ -66,7 +66,7 @@ object ChangeSummaryProjection {
         // equivalent (e.g. differing only in trailing whitespace before trimming elsewhere) may
         // therefore sort differently than a human reader expects.
         val items = latestRecords
-            .sortedWith(compareBy<FoundationRecordRow> { it.label }.thenBy { it.versionChangedAt }.thenBy { it.recordId.toString() })
+            .sortedWith(compareBy<FoundationRecordRow> { it.label }.thenBy { it.confirmedAt }.thenBy { it.recordId.toString() })
             .map { record ->
                 // The latest observation of the same concept in any other document. A different
                 // unit is not converted: the item is shown alone and counted as new. Ties on
@@ -76,7 +76,7 @@ object ChangeSummaryProjection {
                     .filter { conceptsMatch(it, record) }
                     .maxWithOrNull(
                         compareBy<FoundationRecordRow> { it.observedOn }
-                            .thenBy { it.versionChangedAt }
+                            .thenBy { it.confirmedAt }
                             .thenBy { it.documentId.toString() }
                             .thenBy { it.recordId.toString() },
                     )

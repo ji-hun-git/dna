@@ -725,28 +725,37 @@ class FoundationLifecycleService(
             terminated.forEach { audit(principal, "DOCUMENT_TERMINATED_BY_REVOCATION", "DOCUMENT", it.documentId, "SUCCESS") }
             audit(principal, "CONSENT_REVOKED", "CONSENT", consentId, "SUCCESS", consent.purposeCode)
             if (terminated.any { it.objectKeys.isNotEmpty() }) {
-                TransactionSynchronizationManager.registerSynchronization(
-                    object : TransactionSynchronization {
-                        override fun afterCommit() {
-                            // Best effort: a key that still fails after FoundationDocumentStorage.deleteAll's own
-                            // per-item retry-free attempt is an orphan the Task 22 janitor removes later; deleteAll
-                            // itself logs every such failure (event, correlation id, document id, exception class).
-                            val failedKeys = runCatching { documentStorage.deleteAll(terminated.flatMap { it.objectKeys }) }
-                                .getOrElse { terminated.flatMap { it.objectKeys } }
-                                .toSet()
-                            // The preview row must only be deleted once its file is confirmed gone (deleted here,
-                            // or already absent — both are "not in failedKeys"); a failed file delete leaves the
-                            // row in place so the janitor can retry against it. See
-                            // FoundationRepository.deletePreviewArtifactIfExists's contract doc.
-                            terminated.forEach { document ->
-                                val previewKey = document.objectKeys.firstOrNull { it.first == StorageTrustZone.DERIVED_SAFE_ARTIFACT }
-                                if (previewKey == null || previewKey !in failedKeys) {
-                                    runCatching { repository.deletePreviewArtifactIfExists(document.documentId) }
-                                }
-                            }
+                fun deleteTerminatedFiles() {
+                    // Best effort: a key that still fails after FoundationDocumentStorage.deleteAll's own
+                    // per-item retry-free attempt is an orphan the Task 22 janitor removes later; deleteAll
+                    // itself logs every such failure (event, correlation id, document id, exception class).
+                    val failedKeys = runCatching { documentStorage.deleteAll(terminated.flatMap { it.objectKeys }) }
+                        .getOrElse { terminated.flatMap { it.objectKeys } }
+                        .toSet()
+                    // The preview row must only be deleted once its file is confirmed gone (deleted here,
+                    // or already absent — both are "not in failedKeys"); a failed file delete leaves the
+                    // row in place so the janitor can retry against it. See
+                    // FoundationRepository.deletePreviewArtifactIfExists's contract doc.
+                    terminated.forEach { document ->
+                        val previewKey = document.objectKeys.firstOrNull { it.first == StorageTrustZone.DERIVED_SAFE_ARTIFACT }
+                        if (previewKey == null || previewKey !in failedKeys) {
+                            runCatching { repository.deletePreviewArtifactIfExists(document.documentId) }
                         }
-                    },
-                )
+                    }
+                }
+                // registerSynchronization throws IllegalStateException when no transaction
+                // synchronization is active (e.g. this service invoked directly, bypassing the
+                // @Transactional proxy). Guard it: with no commit to wait for, there is nothing
+                // wrong with deleting the files right now instead, with the same logging.
+                if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(
+                        object : TransactionSynchronization {
+                            override fun afterCommit() = deleteTerminatedFiles()
+                        },
+                    )
+                } else {
+                    deleteTerminatedFiles()
+                }
             }
         }
         return consentReceipt(checkNotNull(repository.findConsent(principal.subjectId, consentId)))
@@ -773,16 +782,24 @@ class FoundationLifecycleService(
             Instant.now(clock),
         )
         if (objectKeys.isNotEmpty()) {
-            TransactionSynchronizationManager.registerSynchronization(
-                object : TransactionSynchronization {
-                    override fun afterCommit() {
-                        // Rows are gone; a file that cannot be removed now is an orphan the Task 22
-                        // janitor sweeps. deleteAll already retries every key past a failing one and
-                        // logs each failure (event, correlation id, document id, exception class only).
-                        runCatching { documentStorage.deleteAll(objectKeys) }
-                    }
-                },
-            )
+            fun deleteProfileFiles() {
+                // Rows are gone; a file that cannot be removed now is an orphan the Task 22
+                // janitor sweeps. deleteAll already retries every key past a failing one and
+                // logs each failure (event, correlation id, document id, exception class only).
+                runCatching { documentStorage.deleteAll(objectKeys) }
+            }
+            // Same guard as revokeConsent above: outside an active transaction synchronization
+            // there is no commit to defer to, so the deletion runs immediately instead of letting
+            // registerSynchronization throw.
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(
+                    object : TransactionSynchronization {
+                        override fun afterCommit() = deleteProfileFiles()
+                    },
+                )
+            } else {
+                deleteProfileFiles()
+            }
         }
         return DeletionReceipt(
             deletionId = deletionId,

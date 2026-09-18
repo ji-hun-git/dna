@@ -136,8 +136,17 @@ data class FoundationRecordRow(
     val observedOn: LocalDate,
     val originalObservedOn: LocalDate? = null,
     /** `v.changed_at` of the CURRENT version: mutable — a correction sets this to the correction
-     * instant. Never confuse with the immutable `r.confirmed_at` used to order `listRecords`. */
+     * instant. Never confuse with [confirmedAt], the immutable `r.confirmed_at` used to order
+     * every read model (`/records`, health events, series, the FHIR export and the change
+     * summary). */
     val versionChangedAt: Instant,
+    /** `r.confirmed_at`: set once, at first confirmation, never touched by a later correction.
+     * The one instant every read model orders on, so a correction can shuffle same-day ties but
+     * never reorders records across an `observedOn` boundary, and never differs between models.
+     * Defaults to [versionChangedAt] only so pre-existing test constructions that never model a
+     * correction (and therefore never need the two instants to differ) keep compiling unchanged;
+     * the mapper below always supplies the real `r.confirmed_at` explicitly. */
+    val confirmedAt: Instant = versionChangedAt,
     val correctionReason: String?,
     val evidencePage: Int,
     val sourceTextSha256: String,
@@ -241,6 +250,7 @@ class FoundationRepository(
             observedOn = result.getObject("observed_on", LocalDate::class.java),
             originalObservedOn = result.getObject("original_observed_on", LocalDate::class.java),
             versionChangedAt = result.getObject("version_changed_at", OffsetDateTime::class.java).toInstant(),
+            confirmedAt = result.getObject("confirmed_at", OffsetDateTime::class.java).toInstant(),
             correctionReason = result.getString("correction_reason"),
             evidencePage = result.getInt("evidence_page"),
             sourceTextSha256 = result.getString("source_text_sha256"),
@@ -280,7 +290,8 @@ class FoundationRepository(
         SELECT r.record_id, v.version_id AS record_version_id, v.supersedes_version_id,
                r.candidate_id, r.document_id, r.subject_id, v.status AS version_status,
                r.label, v.value AS current_value, c.candidate_value AS original_value,
-               r.unit, r.observed_on, r.original_observed_on, v.changed_at AS version_changed_at, v.correction_reason,
+               r.unit, r.observed_on, r.original_observed_on, v.changed_at AS version_changed_at,
+               r.confirmed_at AS confirmed_at, v.correction_reason,
                c.evidence_page, c.source_text_sha256, d.sha256 AS document_sha256, v.concept_code, v.reference_range_text, v.original_label
         FROM gc_health_record r
         JOIN gc_health_record_version v ON v.record_id = r.record_id
@@ -466,17 +477,54 @@ class FoundationRepository(
             subjectId,
         ) == 1
 
-    /** Founder decision 2026-09-18: revocation ends every document that has not been reviewed to completion. Returns the object keys to delete after commit. */
+    private val terminableDocumentStatuses = """(
+        'UPLOAD_PENDING', 'UNTRUSTED_OBJECT', 'SECURITY_INSPECTION', 'SECURITY_APPROVED',
+        'EXTRACTION_QUEUED', 'EXTRACTION_RUNNING', 'REVIEW_REQUIRED', 'FAILED_RETRYABLE'
+    )""".trimIndent()
+
+    /**
+     * Founder decision 2026-09-18: revocation ends every document that has not been reviewed to
+     * completion. Returns the object keys to delete after commit.
+     *
+     * Lock order: `gc_document_job` rows are located and locked (`FOR UPDATE`) *before* the
+     * `gc_document` update below acquires its own row locks — the same order every worker
+     * completion path uses (`DocumentWorkerBoundary.requireLeasedJob` calls `lockLeasedJob`
+     * — `FOR UPDATE OF j` — before `markInspectionCompleted`/`markExtractionCompleted`/
+     * `markJobFailed` update `gc_document`). Locking documents first here (the previous order)
+     * could deadlock against a worker transaction doing job-then-document in the opposite order.
+     * See [lockDocument]'s KDoc for the full picture across every path.
+     */
     fun terminateDocumentsForRevokedConsent(subjectId: String, consentId: UUID, now: Instant): List<TerminatedDocument> {
+        val candidateIds = jdbc.query(
+            "SELECT document_id FROM gc_document WHERE subject_id = ? AND consent_id = ? AND status IN $terminableDocumentStatuses",
+            { result, _ -> result.getObject("document_id", UUID::class.java) },
+            subjectId, consentId,
+        )
+        if (candidateIds.isEmpty()) return emptyList()
+        val connection = DataSourceUtils.getConnection(checkNotNull(jdbc.dataSource))
+        val candidateIdsArray = connection.createArrayOf("uuid", candidateIds.toTypedArray())
+        // Lock every in-flight job for these documents before touching gc_document at all — a
+        // worker mid-completion holds this same job row locked until its own transaction commits
+        // or rolls back, so this blocks (never deadlocks) until that resolves.
+        jdbc.query(
+            "SELECT job_id FROM gc_document_job WHERE document_id = ANY(?) FOR UPDATE",
+            { _, _ -> Unit },
+            candidateIdsArray,
+        )
+        jdbc.update(
+            """
+            UPDATE gc_document_job SET status = 'DEAD_LETTER', failure_code = 'consent_revoked',
+                lease_token_hash = NULL, lease_expires_at = NULL, worker_id_hash = NULL, updated_at = ?
+            WHERE document_id = ANY(?) AND status IN ('QUEUED', 'LEASED', 'FAILED_RETRYABLE')
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC), candidateIdsArray,
+        )
         val terminated = jdbc.query(
             """
             UPDATE gc_document
             SET status = 'TERMINATED_BY_REVOCATION', failure_code = 'consent_revoked',
                 preview_object_key = NULL, state_version = state_version + 1, updated_at = ?
-            WHERE subject_id = ? AND consent_id = ? AND status IN (
-                'UPLOAD_PENDING', 'UNTRUSTED_OBJECT', 'SECURITY_INSPECTION', 'SECURITY_APPROVED',
-                'EXTRACTION_QUEUED', 'EXTRACTION_RUNNING', 'REVIEW_REQUIRED', 'FAILED_RETRYABLE'
-            )
+            WHERE subject_id = ? AND consent_id = ? AND status IN $terminableDocumentStatuses
             -- The gc_preview_artifact row is read here but intentionally NOT deleted in this transaction:
             -- its file is only deleted after this transaction commits (FoundationLifecycleService.revokeConsent's
             -- afterCommit hook), and the row itself must outlive that file until the delete is confirmed. If the
@@ -499,16 +547,7 @@ class FoundationRepository(
         )
         if (terminated.isEmpty()) return emptyList()
         val ids = terminated.map { it.documentId }.toTypedArray()
-        val connection = DataSourceUtils.getConnection(checkNotNull(jdbc.dataSource))
         val idsArray = connection.createArrayOf("uuid", ids)
-        jdbc.update(
-            """
-            UPDATE gc_document_job SET status = 'DEAD_LETTER', failure_code = 'consent_revoked',
-                lease_token_hash = NULL, lease_expires_at = NULL, worker_id_hash = NULL, updated_at = ?
-            WHERE document_id = ANY(?) AND status IN ('QUEUED', 'LEASED', 'FAILED_RETRYABLE')
-            """.trimIndent(),
-            now.atOffset(ZoneOffset.UTC), idsArray,
-        )
         jdbc.update("UPDATE gc_upload_capability SET revoked_at = COALESCE(revoked_at, ?) WHERE document_id = ANY(?)", now.atOffset(ZoneOffset.UTC), idsArray)
         return terminated
     }
@@ -636,10 +675,31 @@ class FoundationRepository(
         ).firstOrNull()
 
     /**
-     * Locks the document row before any status check. Lock order across this repository is always:
-     * at most one target row of `gc_candidate`, `gc_health_record`, or `gc_document` first (never more
-     * than one — no path locks two of these tables in the same transaction), then the idempotency claim
-     * (Task 7's `INSERT ... ON CONFLICT`), so no two request paths can deadlock against each other.
+     * Locks the document row before any status check. Lock order across every path that reaches
+     * this repository, none of which can cycle against any other because each falls into exactly
+     * one of these two disjoint groups and no path ever mixes them:
+     *
+     * 1. **Confirm, exclude, correct, and the document-request/upload path**: at most one target
+     *    row of `gc_candidate` ([lockCandidate], confirm/exclude), `gc_health_record`
+     *    ([lockRecord], correct), or `gc_document` (this method, the document-request/upload path)
+     *    is locked first — never more than one of these three tables in the same transaction —
+     *    then the idempotency claim (Task 7's `gc_idempotency INSERT ... ON CONFLICT`). None of
+     *    these paths ever locks `gc_document_job`.
+     * 2. **Revocation and every worker completion path**: `gc_document_job` rows are located and
+     *    locked (`FOR UPDATE`) *before* any `gc_document` row lock in the same transaction —
+     *    `DocumentWorkerBoundary.requireLeasedJob` calls `lockLeasedJob` (`FOR UPDATE OF j`) before
+     *    `markInspectionCompleted`/`markExtractionCompleted`/`markJobFailed` update `gc_document`;
+     *    [terminateDocumentsForRevokedConsent] (F5) locks the affected jobs the same way before its
+     *    own `gc_document` update. Neither of these two paths ever locks `gc_candidate`,
+     *    `gc_health_record`, or the idempotency table.
+     *
+     * Because group 1 never touches `gc_document_job` and group 2 never touches
+     * `gc_candidate`/`gc_health_record`/`gc_idempotency`, and within group 2 both members agree on
+     * job-before-document, no two of these transactions can ever hold a lock the other is waiting
+     * for while waiting on a lock the other holds — the necessary condition for a deadlock.
+     * `deleteProfile`'s bulk deletion locks no single target row from either group (it deletes
+     * every row for the subject across tables without a prior per-row `SELECT ... FOR UPDATE`), so
+     * it cannot enter either cycle either.
      */
     fun lockDocument(subjectId: String, documentId: UUID): FoundationDocumentRow? {
         jdbc.query("SELECT document_id FROM gc_document WHERE document_id = ? AND subject_id = ? FOR UPDATE", { _, _ -> Unit }, documentId, subjectId)
@@ -1457,21 +1517,33 @@ class FoundationRepository(
         return true
     }
 
+    /**
+     * Every object key deletion must remove for the subject. `gc_document`'s own three columns are
+     * not the whole story: revocation nulls `gc_document.preview_object_key` but deliberately
+     * leaves the `gc_preview_artifact` row behind when the preview file's own delete failed (see
+     * [deletePreviewArtifactIfExists]'s contract), so that row's `object_key` is the only remaining
+     * pointer to that orphaned file. Left-joining it here (distinct, non-null — `gc_preview_artifact`
+     * is at most one row per document, so no fan-out) means a later full-profile deletion still
+     * finds and removes it instead of leaving it behind forever (F6).
+     */
     fun listObjectKeys(subjectId: String): List<Pair<StorageTrustZone, String>> =
         jdbc.query(
             """
-            SELECT object_key, approved_object_key, preview_object_key
-            FROM gc_document WHERE subject_id = ?
+            SELECT d.object_key, d.approved_object_key, d.preview_object_key, p.object_key AS orphaned_preview_object_key
+            FROM gc_document d
+            LEFT JOIN gc_preview_artifact p ON p.document_id = d.document_id
+            WHERE d.subject_id = ?
             """.trimIndent(),
             RowMapper { result, _ ->
                 listOfNotNull(
                     result.getString("object_key")?.let { StorageTrustZone.UNTRUSTED to it },
                     result.getString("approved_object_key")?.let { StorageTrustZone.APPROVED_SOURCE to it },
                     result.getString("preview_object_key")?.let { StorageTrustZone.DERIVED_SAFE_ARTIFACT to it },
+                    result.getString("orphaned_preview_object_key")?.let { StorageTrustZone.DERIVED_SAFE_ARTIFACT to it },
                 )
             },
             subjectId,
-        ).flatten()
+        ).flatten().distinct()
 
     fun completeDeletion(subjectId: String, subjectHash: String, deletionId: UUID, now: Instant): UUID {
         jdbc.update(

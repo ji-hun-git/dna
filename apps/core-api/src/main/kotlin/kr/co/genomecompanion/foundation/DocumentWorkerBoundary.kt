@@ -139,8 +139,11 @@ data class ExtractedCandidate(
     val sourceTextSha256: String,
     @field:Size(max = 40) @field:Pattern(regexp = "^[0-9.,\\s\\-~–<>≤≥]{1,40}$")
     val referenceRangeText: String? = null,
-    /** The printed label before a worker-side split (blood pressure's `혈압`), verbatim; null when the row was not split. */
-    @field:Size(max = 80)
+    /** The printed label before a worker-side split (blood pressure's `혈압`), verbatim; null when
+     * the row was not split. `min = 1`: a blank string is not a valid label and must be rejected
+     * here (400) rather than reach the V11 `CHECK (original_label IS NULL OR char_length(...)
+     * BETWEEN 1 AND 80)` constraint as a raw SQL failure (F8). */
+    @field:Size(min = 1, max = 80)
     val originalLabel: String? = null,
 )
 

@@ -43,7 +43,7 @@ object SeriesProjection {
     private val thirty = BigDecimal(30)
     private val three = BigDecimal(3)
     private val chronological = compareBy<FoundationRecordRow> { it.observedOn }
-        .thenBy { it.versionChangedAt }
+        .thenBy { it.confirmedAt }
         .thenBy { it.recordId.toString() }
 
     /**

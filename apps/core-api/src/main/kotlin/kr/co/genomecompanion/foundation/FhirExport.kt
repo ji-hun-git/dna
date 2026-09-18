@@ -106,7 +106,7 @@ object FhirObservationMapper {
             .filter { it.status == "CURRENT" }
             .sortedWith(
                 compareBy<FoundationRecordRow> { it.observedOn }
-                    .thenBy { it.versionChangedAt }
+                    .thenBy { it.confirmedAt }
                     .thenBy { it.recordId.toString() },
             )
             .map { FhirBundleEntry(observation(it, concepts)) }

@@ -58,6 +58,15 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     @Autowired
     private lateinit var repository: FoundationRepository
 
+    @Autowired
+    private lateinit var documentStorage: FoundationDocumentStorage
+
+    @Autowired
+    private lateinit var foundationProperties: FoundationProperties
+
+    @Autowired
+    private lateinit var clock: java.time.Clock
+
     private val uploadCapabilities = mutableMapOf<UUID, TestUploadCapability>()
 
     @BeforeEach
@@ -784,6 +793,122 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun revocationRacingWorkerCompletionNeverDeadlocksAndAlwaysEndsTerminatedNotCompletedWithReadableCandidates() {
+        // Before F5, terminateDocumentsForRevokedConsent locked gc_document then gc_document_job,
+        // while every worker completion path (via requireLeasedJob's lockLeasedJob, `FOR UPDATE OF
+        // j`) locks gc_document_job then gc_document — a lock-order cycle that Postgres's deadlock
+        // detector could abort either side of. After F5 both paths lock jobs before documents, so
+        // this race must resolve without either thread ever seeing a deadlock, and — because this
+        // fixture's extraction always yields non-empty candidates (REVIEW_REQUIRED, itself still a
+        // terminable status) — revocation must always eventually re-catch and terminate the
+        // document, regardless of which thread's transaction commits first.
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "f5-race-document")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        val inspectionLease = checkNotNull(workerService.lease("a".repeat(64)))
+        workerService.completeInspection(inspectionLease.jobId, inspectionLease.leaseToken, approvedInspectionRequest())
+        val extractionLease = checkNotNull(workerService.lease("a".repeat(64)))
+        val resultRequest = ExtractionResultRequest(
+            sourceSha256 = fixtureDigest,
+            workerImageDigest = "b".repeat(64),
+            generatorVersion = "test-worker-v1",
+            previewPngBase64 = onePixelPngBase64,
+            candidates = julyCandidates,
+        )
+
+        val results = race(2) { index ->
+            if (index == 0) {
+                workerService.completeExtraction(extractionLease.jobId, extractionLease.leaseToken, resultRequest)
+            } else {
+                service.revokeConsent(FoundationPrincipal("synthetic-alice", UUID.randomUUID(), "a".repeat(64)), consentId)
+            }
+        }
+
+        // Neither side ever observes a Postgres deadlock/lock-timeout abort.
+        assertThat(results.mapNotNull { it.exceptionOrNull() }).noneMatch { it is DataAccessException }
+        // The worker either completed cleanly before revocation caught the document, or lost its
+        // lease to revocation's dead-letter (an ordinary domain exception, not a deadlock).
+        assertThat(results[0].exceptionOrNull()).matches { it == null || it is FoundationForbiddenException }
+        // Revocation itself never fails.
+        assertThat(results[1].isSuccess).isTrue()
+        assertThat(documentStatus(documentId)).isEqualTo("TERMINATED_BY_REVOCATION")
+        read(get("/api/foundation/documents/$documentId/candidates"), alice)
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("consent_revoked"))
+    }
+
+    @Test
+    fun deletingTheProfileRemovesAPreviewFileOrphanedByAFailedRevocationDelete() {
+        // Revocation nulls gc_document.preview_object_key but deliberately keeps the
+        // gc_preview_artifact row when the file delete itself fails (see the janitor-retry test
+        // above). Before F6, deleteProfile's listObjectKeys read only gc_document's own three
+        // columns, so once that column is null it never saw this key again — the file (and, after
+        // this same deletion cascades gc_preview_artifact away, even the row a janitor could have
+        // used to find it) would be orphaned forever. listObjectKeys must also see it via a
+        // gc_preview_artifact left join.
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val reviewing = requestDocument(alice, consentId, fixturePdf, "f6-orphan-preview")
+        uploadDocument(alice, reviewing, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$reviewing/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(reviewing)
+        val previewPath = Files.list(quarantineRoot.resolve("derived_safe_artifact"))
+            .filter { it.fileName.toString().startsWith(reviewing.toString()) }
+            .findFirst()
+            .orElseThrow()
+        assertThat(previewPath.toFile().setReadOnly()).isTrue()
+        try {
+            mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+            assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+            assertThat(
+                jdbc.queryForObject("SELECT preview_object_key FROM gc_document WHERE document_id = ?", String::class.java, reviewing),
+            ).isNull()
+            assertThat(count("gc_preview_artifact")).isEqualTo(1)
+            assertThat(Files.exists(previewPath)).isTrue()
+        } finally {
+            previewPath.toFile().setWritable(true)
+        }
+
+        mutate(delete("/api/foundation/profile"), alice).andExpect(status().isOk)
+
+        assertThat(Files.exists(previewPath)).isFalse()
+    }
+
+    @Test
+    fun revokeConsentAndDeleteProfileDeleteFilesImmediatelyWhenCalledOutsideATransaction() {
+        // Both revokeConsent and deleteProfile defer their file deletes to an afterCommit
+        // TransactionSynchronization, which throws IllegalStateException if no transaction
+        // synchronization is active. Bypass the @Transactional Spring proxy by constructing a raw
+        // instance of the service directly (reusing the real, autowired repository/storage/clock),
+        // so there genuinely is no active transaction — the guard must fall back to deleting the
+        // files immediately instead of throwing (F7).
+        val rawService = FoundationLifecycleService(repository, documentStorage, foundationProperties, clock, conceptSource)
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val untrusted = requestDocument(alice, consentId, fixturePdf, "f7-revoke-untrusted")
+        uploadDocument(alice, untrusted, fixturePdf).andExpect(status().isOk)
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$untrusted.pdf"))).isTrue()
+        val principal = FoundationPrincipal(subjectId = "synthetic-alice", sessionId = UUID.randomUUID(), sessionTokenHash = "a".repeat(64))
+
+        val receipt = rawService.revokeConsent(principal, consentId)
+
+        assertThat(receipt.status).isEqualTo("REVOKED")
+        assertThat(documentStatus(untrusted)).isEqualTo("TERMINATED_BY_REVOCATION")
+        // Deleted synchronously, inline — not deferred to a commit that will never come.
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$untrusted.pdf"))).isFalse()
+
+        val secondUntrusted = requestDocument(alice, grantConsent(alice), fixturePdf, "f7-delete-untrusted")
+        uploadDocument(alice, secondUntrusted, fixturePdf).andExpect(status().isOk)
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$secondUntrusted.pdf"))).isTrue()
+
+        val deletionReceipt = rawService.deleteProfile(principal)
+
+        assertThat(deletionReceipt.status).isEqualTo("COMPLETED")
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$secondUntrusted.pdf"))).isFalse()
+    }
+
+    @Test
     fun aFailedPreviewFileDeleteLeavesItsRowForTheJanitorAndASuccessfulOneRemovesIt() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
@@ -1398,13 +1523,14 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val after = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray)
         assertThat(after.map { it["observedOn"].asText() }).isEqualTo(before)
         assertThat(after.first()["recordId"].asText()).isEqualTo(recordId)
-        // health-events is sorted by observedOn/confirmedAt(mutable version_changed_at)/recordId,
-        // and this correction just pushed the record's confirmedAt to "now" (the largest in its
-        // observedOn group), so it is not necessarily $[0]; find it by recordId instead of
-        // assuming its position, and assert its corrected flag stuck through the round trip.
-        val correctedEvent = responseJson(
-            read(get("/api/foundation/health-events"), alice).andReturn().response.contentAsByteArray,
-        ).single { it["recordId"].asText() == recordId }
+        // health-events, series and the FHIR export all order on the record's own immutable
+        // observedOn/confirmed_at/recordId, exactly like /records above — a correction bumps only
+        // the mutable version_changed_at (still surfaced as the API's own `confirmedAt` field on
+        // each event), so it can never reorder any of these five read models relative to one
+        // another or relative to /records.
+        val healthEvents = responseJson(read(get("/api/foundation/health-events"), alice).andReturn().response.contentAsByteArray)
+        assertThat(healthEvents.map { it["recordId"].asText() }).isEqualTo(after.map { it["recordId"].asText() })
+        val correctedEvent = healthEvents.single { it["recordId"].asText() == recordId }
         assertThat(correctedEvent["corrected"].asBoolean()).isTrue()
     }
 

@@ -48,10 +48,14 @@ class ExtractionResultRequestValidationTest {
     }
 
     @Test
-    fun acceptsANullOrShortOriginalLabelButRejectsOneOverEightyCharacters() {
+    fun acceptsANullOrShortOriginalLabelButRejectsOneOverEightyCharactersOrBlank() {
         assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = null))))).isEmpty()
         assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = "혈압"))))).isEmpty()
         assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = "가".repeat(81)))))).isNotEmpty()
+        // F8: a blank (but non-null) originalLabel must be rejected here (400) rather than reach
+        // the V11 `CHECK (original_label IS NULL OR char_length(...) BETWEEN 1 AND 80)` constraint
+        // as a raw, unmapped SQL failure.
+        assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = ""))))).isNotEmpty()
         assertThat(candidate().originalLabel).isNull()
     }
 
