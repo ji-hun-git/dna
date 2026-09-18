@@ -1823,14 +1823,15 @@ class FoundationRepository(
      * constant `true` — the same coincidence the log-capture test masks for. A leaked value would
      * have to land inside a UUID or a hex digest to hide here.
      *
-     * The alternation is built by escaping `.` only; callers pass a fixed list with no other regex
-     * metacharacter in it.
+     * Each needle is escaped with [escapePosixRegexLiteral] before it joins the alternation, so a
+     * caller may pass any literal -- `HbA1c (%)`, `120-199`, `5.2` -- without part of it being read
+     * as POSIX regex syntax. Only the `|` this method inserts itself is meant as an operator.
      */
     fun countRawHealthValuesInAudit(forbidden: List<String>): Long =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM gc_audit_event a WHERE $AUDIT_CONTENT_TEXT ~ ?",
             Long::class.java,
-            forbidden.joinToString("|") { Regex.escape(it).removePrefix("\\Q").removeSuffix("\\E").replace(".", "\\.") },
+            forbidden.joinToString("|") { escapePosixRegexLiteral(it) },
         ) ?: 0L
 
     companion object {
@@ -1842,5 +1843,24 @@ class FoundationRepository(
         const val AUDIT_CONTENT_TEXT: String =
             "(to_jsonb(a) - 'audit_sequence' - 'event_id' - 'resource_id' " +
                 "- 'subject_hash' - 'actor_session_hash' - 'occurred_at')::text"
+
+        /**
+         * Every character PostgreSQL's POSIX regular expressions treat as syntax. `Regex.escape` is
+         * the wrong tool here: it emits Java's `\Q...\E` quoting, which PostgreSQL does not
+         * implement, and stripping those markers back off again leaves every metacharacter live. A
+         * needle such as `HbA1c (%)` would then compile as a group and match the *different* text
+         * `HbA1c %`, and an unbalanced one such as `f(x` would make the query throw rather than
+         * find nothing.
+         */
+        private val POSIX_REGEX_METACHARACTERS: Set<Char> =
+            setOf('[', ']', '(', ')', '{', '}', '.', '*', '+', '?', '^', '$', '|', '\\')
+
+        /** [literal] as a POSIX ERE that matches exactly [literal] and nothing else. */
+        fun escapePosixRegexLiteral(literal: String): String = buildString(literal.length) {
+            literal.forEach { character ->
+                if (character in POSIX_REGEX_METACHARACTERS) append('\\')
+                append(character)
+            }
+        }
     }
 }

@@ -79,13 +79,22 @@ object PageRenderSubprocess {
         // The buffer is owned by the reader thread; the parent only reads it after joining that thread,
         // so the write and the read are ordered by Thread.join's happens-before.
         val captured = AtomicReference(ByteArray(0))
+        // An Error inside either thread -- OutOfMemoryError or StackOverflowError in *this* JVM -- is
+        // not a pipe accident. runCatching would swallow it and the thread would end normally, so the
+        // reader would publish a short buffer and render() would return a plausible-looking PNG or a
+        // retryable Failed out of a JVM whose heap is already gone. Record the first one and rethrow it
+        // from render() after the join, where the worker loop's Exception-only catch lets it halt the
+        // process. IOExceptions stay swallowed: a broken pipe is the normal end of a killed child.
+        val threadError = AtomicReference<Throwable?>(null)
         val reader = Thread({
             val buffer = ByteArrayOutputStream()
             runCatching { process.inputStream.use { buffer.write(it.readNBytes(MAX_PNG_BYTES + 1)) } }
+                .onFailure { if (it is Error) threadError.compareAndSet(null, it) }
             captured.set(buffer.toByteArray())
         }, stdoutThreadName).also { it.isDaemon = true; it.start() }
         val writer = Thread({
             runCatching { process.outputStream.use { it.write(pdf) } }
+                .onFailure { if (it is Error) threadError.compareAndSet(null, it) }
         }, stdinThreadName).also { it.isDaemon = true; it.start() }
 
         if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
@@ -94,10 +103,12 @@ object PageRenderSubprocess {
             process.waitFor(REAP_MILLIS, TimeUnit.MILLISECONDS)
             writer.join(JOIN_MILLIS)
             reader.join(JOIN_MILLIS)
+            threadError.get()?.let { throw it }
             return RenderResult.Failed(TIMED_OUT)
         }
         writer.join(JOIN_MILLIS)
         reader.join(JOIN_MILLIS)
+        threadError.get()?.let { throw it }
         val output = if (reader.isAlive) ByteArray(0) else captured.get()
         val exitCode = process.exitValue()
         return when {

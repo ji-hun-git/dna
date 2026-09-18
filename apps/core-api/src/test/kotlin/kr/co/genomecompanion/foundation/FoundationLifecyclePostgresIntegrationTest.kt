@@ -3608,6 +3608,34 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             documentId,
         )
 
+    @Test
+    fun `audit leak needles are matched as literal text and never as regular expression syntax`() {
+        // countRawHealthValuesInAudit joins its needles into one POSIX alternation, so anything not
+        // escaped is read as syntax by PostgreSQL: `HbA1c (%)` compiles to a group that matches the
+        // different text `HbA1c %`, and a lone `(` does not compile at all and throws instead of
+        // finding nothing. Both make the receipt field lie about what is in the audit trail.
+        jdbc.update(
+            """
+            INSERT INTO gc_audit_event(event_id, subject_hash, event_type, resource_type, outcome, occurred_at)
+            VALUES (?, ?, ?, ?, 'SUCCESS', ?)
+            """.trimIndent(),
+            UUID.randomUUID(),
+            "c".repeat(64),
+            "PROBE_HbA1c (%)",
+            "PROBE",
+            java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC),
+        )
+
+        // Present in the row exactly as written, parentheses and percent sign included.
+        assertThat(repository.countRawHealthValuesInAudit(listOf("PROBE_HbA1c (%)"))).isEqualTo(1)
+        // What the old escape would have matched in its place is not in the row at all.
+        assertThat(repository.countRawHealthValuesInAudit(listOf("PROBE_HbA1c %"))).isZero()
+        // An unbalanced metacharacter is a needle, not a syntax error.
+        assertThat(repository.countRawHealthValuesInAudit(listOf("PROBE_HbA1c ("))).isEqualTo(1)
+        // ...and a needle that contains `|` is one literal, not two alternatives.
+        assertThat(repository.countRawHealthValuesInAudit(listOf("PROBE|NOT_A_REAL_EVENT"))).isZero()
+    }
+
     private fun count(table: String): Long =
         jdbc.queryForObject("SELECT COUNT(*) FROM $table", Long::class.java) ?: 0L
 
@@ -3624,7 +3652,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             "SELECT ${FoundationRepository.AUDIT_CONTENT_TEXT} FROM gc_audit_event a " +
                 "WHERE ${FoundationRepository.AUDIT_CONTENT_TEXT} ~ ?",
             String::class.java,
-            needles.joinToString("|") { it.replace(".", "\\.") },
+            needles.joinToString("|") { FoundationRepository.escapePosixRegexLiteral(it) },
         )
         // Positive control: an all-zero result only means something if the haystack can match at
         // all. `outcome` is one of the searched columns and 'SUCCESS' is in it on every lifecycle,

@@ -929,7 +929,12 @@ class FoundationLifecycleService(
             deletionId = deletionId,
             status = "COMPLETED",
             auditEventTypes = repository.listAuditEventTypes(subjectHash),
-            rawHealthValuesPresentInAudit = repository.countRawHealthValuesInAudit(listOf("mg/dL", "g/dL", "mmol/L", "2026-")) > 0,
+            // The units this synthetic corpus actually writes (mg/dL for cholesterol, % for HbA1c,
+            // ng/mL for vitamin D, mmol/L for the metric variants) plus the exam-date prefix. "g/dL"
+            // was dropped: it is a suffix of "mg/dL", so it could never match a row that needle did
+            // not already catch. "%" is safe to search now that needles are escaped as literals.
+            rawHealthValuesPresentInAudit =
+                repository.countRawHealthValuesInAudit(listOf("mg/dL", "mmol/L", "ng/mL", "%", "2026-")) > 0,
         )
     }
 

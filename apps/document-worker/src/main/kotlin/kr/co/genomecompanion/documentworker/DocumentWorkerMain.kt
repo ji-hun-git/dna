@@ -479,8 +479,19 @@ class DocumentWorker(
                     // its lease expires. Route it to the same retryable outcome as the subprocess's own
                     // unusable-output failure (class-only, no message content, to keep the same content
                     // discipline as PageRenderSubprocess itself).
+                    // An Error is not a job failure. OutOfMemoryError or StackOverflowError here is
+                    // *this* JVM's heap or stack, not the child's (the child's own exhaustion comes back
+                    // as RenderResult.OutOfMemory, exit code 3). Downgrading one to a retryable failure
+                    // would leave a poisoned JVM leasing jobs it can never finish; rethrow so it reaches
+                    // the loop's Exception-only catch below, which deliberately lets it out and halts.
+                    // An InterruptedException means shutdown asked this thread to stop: runCatching
+                    // swallows the flag, so re-set it before returning the retryable failure.
                     val rendered = runCatching { PageRenderSubprocess.render(source) }
-                        .getOrElse { RenderResult.Failed(UNUSABLE_RENDER_OUTCOME) }
+                        .getOrElse { failure ->
+                            if (failure is Error) throw failure
+                            if (failure is InterruptedException) Thread.currentThread().interrupt()
+                            RenderResult.Failed(UNUSABLE_RENDER_OUTCOME)
+                        }
                     heartbeat()
                     when (rendered) {
                         is RenderResult.Png -> {
