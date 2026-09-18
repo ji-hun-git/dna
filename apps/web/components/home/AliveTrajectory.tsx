@@ -109,8 +109,15 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
 
     const controlPoints: ControlPoint[] = createControlPoints(BASE_CONTROL_POINTS);
     const drum = createDrum();
-    const draw = new Spring(reduced ? 1 : 0, DRAW);
+    // The composition is complete at rest: the arrow, phase markers, rings and nodes must all be
+    // fully opaque on the very first frame (a screenshot can land before any animation has had a
+    // chance to run). `draw` therefore starts AT its target, not at 0. The only entrance flourish
+    // lives in `haloFlourish` below, and it touches the halo glow alone — never a ring, node or
+    // label.
+    const draw = new Spring(1, DRAW);
     draw.set(1);
+    const haloFlourish = new Spring(reduced ? 1 : 0, DRAW);
+    haloFlourish.set(1);
 
     const ranges = phaseRanges(PHASE_LABELS, T_END);
     const phaseSegments: PhaseSegmentRefs[] = ranges.map((range, i) => {
@@ -279,12 +286,13 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
         stepControlPoints(controlPoints, dt);
         halo!.setAttribute("d", d);
         flow!.setAttribute("d", d);
-        const length = 3200; // stable approximate length; only used for the halo dash draw-in effect.
-        const drawn = draw.step(dt);
+        const length = 3200; // stable approximate length; only used for the halo dash flourish.
+        const drawn = draw.step(dt); // stays 1: never gates a ring, node, label or phase segment.
+        const haloIn = haloFlourish.step(dt); // 0 -> 1 entrance flourish, halo only.
         for (const segment of phaseSegments) layoutPhaseSegment(segment, drawn);
         halo!.style.strokeDasharray = String(length);
-        halo!.style.strokeDashoffset = String(length * (1 - drawn));
-        halo!.style.opacity = String(0.25 + 0.15 * Math.sin(time * 1.3));
+        halo!.style.strokeDashoffset = String(length * (1 - haloIn));
+        halo!.style.opacity = String((0.25 + 0.15 * Math.sin(time * 1.3)) * haloIn);
         flowOffset -= dt * 70;
         flow!.style.strokeDashoffset = String(flowOffset);
         flow!.style.opacity = String(drawn);
@@ -335,7 +343,10 @@ export function AliveTrajectory({ className }: AliveTrajectoryProps) {
     if (reduced) {
       renderStill();
     } else {
-      frameId = requestAnimationFrame(frame);
+      // Run the first frame synchronously, in this effect, before any observer has had a chance
+      // to fire: a screenshot or first paint must already show the complete composition, not a
+      // blank hero waiting on requestAnimationFrame. `frame` schedules its own next call.
+      frame(performance.now());
     }
 
     return () => {

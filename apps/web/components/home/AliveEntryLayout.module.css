@@ -213,6 +213,9 @@
 
   .strip {
     order: 4;
-    padding: 0 16px 16px;
+    /* The bottom nav is position: fixed at the viewport bottom on every mobile screen (see
+       globals.css's @media (max-width: 42rem) .gc-shell--unified .gc-shell__nav); reserve the
+       same clearance here so the last stacked item is never hidden underneath it. */
+    padding: 0 16px calc(6rem + env(safe-area-inset-bottom));
   }
 }

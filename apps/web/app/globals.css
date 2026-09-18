@@ -609,13 +609,16 @@ html {
   padding: 0;
   min-width: 0;
 }
+/* v4: square this to the same 1px-rule panel style as the identity/records panels
+   (AliveEntryLayout.module.css's .panel) instead of the old rounded translucent card. */
 .gc-demo-entry .gc-integrated-auth {
   position: relative;
   z-index: 1;
   max-width: 43rem;
   padding: clamp(1.5rem, 4vw, 3rem);
-  background: rgba(0, 0, 0, 0.62);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 0;
   color: #fff;
   box-shadow: none;
   min-width: 0;

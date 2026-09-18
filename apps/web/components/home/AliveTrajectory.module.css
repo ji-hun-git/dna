@@ -11,8 +11,14 @@
 
 .svg {
   position: absolute;
-  /* 24px clearance from the caption/boundary text and from any panel beside the hero. */
-  inset: 24px;
+  /* An <svg> is a replaced element: `inset` alone does not stretch it the way it would a normal
+     block box (the browser falls back to its intrinsic/default size instead, which made the
+     whole hero render as a ~20x20px speck). Give it explicit width/height so the 24px clearance
+     from the caption/boundary text and from any panel beside the hero actually takes effect. */
+  top: 24px;
+  left: 24px;
+  width: calc(100% - 48px);
+  height: calc(100% - 48px);
   display: block;
   text-rendering: geometricPrecision;
   shape-rendering: geometricPrecision;
