@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import toneStyles from "@/components/home/AliveShellTone.module.css";
 
 export type IntegratedRoute = "home" | "my-data" | "records" | "prepare" | "data-control";
 
@@ -32,38 +33,58 @@ type IntegratedShellProps = {
   current: IntegratedRoute;
   status?: string;
   children: ReactNode;
+  /**
+   * "dark" is opt-in and used only by the pre-login entry view, so its black hero reads edge to
+   * edge instead of showing the light bar/bottom-nav above and below it. Every other screen keeps
+   * the default light shell untouched.
+   */
+  tone?: "light" | "dark";
 };
 
 /**
  * The shared app bar. It carries the brand, the two product destinations and
  * an optional server-state pill; it never shows a health value or a judgement.
  */
-export function IntegratedShell({ current, status, children }: IntegratedShellProps) {
+export function IntegratedShell({ current, status, children, tone = "light" }: IntegratedShellProps) {
+  const dark = tone === "dark";
+  const header = (
+    <header className={["gc-shell", "gc-shell--unified", dark ? toneStyles.dark : ""].filter(Boolean).join(" ")}>
+      <div className="gc-shell__bar">
+        <a className="gc-shell__brand" href="/" aria-label="앎 건강 홈">
+          <span aria-hidden="true">앎</span>
+          <strong>앎</strong>
+        </a>
+        <nav className="gc-shell__nav" aria-label="주요 메뉴">
+          {routes.map((route) => (
+            <a
+              key={route.key}
+              href={route.href}
+              aria-current={route.key === navGroup[current] ? "page" : undefined}
+            >
+              <svg className="gc-shell__nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d={routeIconPaths[route.key]} />
+              </svg>
+              <span>{route.label}</span>
+            </a>
+          ))}
+        </nav>
+        {status ? <span className="gc-shell__status">{status}</span> : null}
+      </div>
+    </header>
+  );
+
+  if (dark) {
+    return (
+      <div className={toneStyles.page}>
+        {header}
+        {children}
+      </div>
+    );
+  }
+
   return (
     <>
-      <header className="gc-shell gc-shell--unified">
-        <div className="gc-shell__bar">
-          <a className="gc-shell__brand" href="/" aria-label="앎 건강 홈">
-            <span aria-hidden="true">앎</span>
-            <strong>앎</strong>
-          </a>
-          <nav className="gc-shell__nav" aria-label="주요 메뉴">
-            {routes.map((route) => (
-              <a
-                key={route.key}
-                href={route.href}
-                aria-current={route.key === navGroup[current] ? "page" : undefined}
-              >
-                <svg className="gc-shell__nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d={routeIconPaths[route.key]} />
-                </svg>
-                <span>{route.label}</span>
-              </a>
-            ))}
-          </nav>
-          {status ? <span className="gc-shell__status">{status}</span> : null}
-        </div>
-      </header>
+      {header}
       {children}
     </>
   );

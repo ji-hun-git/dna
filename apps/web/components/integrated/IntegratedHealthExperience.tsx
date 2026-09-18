@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AliveTrajectory } from "@/components/home/AliveTrajectory";
+import { AliveEntryLayout } from "@/components/home/AliveEntryLayout";
 import { CandidateReview } from "@/components/integrated/CandidateReview";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { RecentChanges } from "@/components/integrated/RecentChanges";
@@ -389,9 +389,9 @@ export function IntegratedHealthExperience() {
       );
     }
     return (
-      <IntegratedShell current="home" status="예시 데이터로 체험">
+      <IntegratedShell current="home" status="예시 데이터로 체험" tone="dark">
       <main className="gc-integrated-shell gc-integrated-shell--center gc-demo-entry">
-        <AliveTrajectory />
+        <AliveEntryLayout>
         <section className="gc-integrated-auth" aria-labelledby="synthetic-login-title">
           <p className="gc-import__eyebrow">체험 데이터로 시작하기</p>
           <h1 id="synthetic-login-title">흩어진 결과지를,<br />출처가 보이는<br />내 건강 기록으로.</h1>
@@ -402,6 +402,7 @@ export function IntegratedHealthExperience() {
           <p className="gc-demo-entry__limit">이 브라우저의 체험 시간 동안 기록을 이어서 볼 수 있어요. 시간이 끝나거나 쿠키를 지우면 이전 체험에 다시 들어갈 수 없어요.</p>
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
         </section>
+        </AliveEntryLayout>
       </main>
       </IntegratedShell>
     );
