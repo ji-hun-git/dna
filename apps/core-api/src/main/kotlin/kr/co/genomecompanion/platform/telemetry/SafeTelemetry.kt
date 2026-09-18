@@ -11,6 +11,7 @@ enum class TelemetryEvent(val code: String) {
     DELETION_COMPLETED("deletion_completed"),
     INTERNAL_ERROR("internal_error"),
     STORAGE_UNAVAILABLE("storage_unavailable"),
+    QUARANTINE_FILE_DELETE_FAILED("quarantine_file_delete_failed"),
 }
 
 data class SafeTelemetryContext(

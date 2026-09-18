@@ -1,10 +1,14 @@
 package kr.co.genomecompanion.foundation
 
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.slf4j.LoggerFactory
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Base64
 import java.util.UUID
@@ -64,6 +68,37 @@ class FoundationDocumentStorageTest {
         assertThatThrownBy {
             storage.putDerivedPreview(UUID.randomUUID(), "a".repeat(64), corruptCrc)
         }.isInstanceOf(FoundationBadRequestException::class.java)
+    }
+
+    @Test
+    fun `deleteAll continues past a failing key, deletes the rest, and logs only event, correlation id, document id and exception class`() {
+        val storage = storage()
+        val goodDocumentId = UUID.randomUUID()
+        val badDocumentId = UUID.randomUUID()
+        val goodKey = storage.putUntrusted(goodDocumentId, "synthetic-pdf-bytes".toByteArray()).descriptor.objectKey
+        // Fault injection without mocks: make the "file" at the bad key a non-empty directory so the real
+        // filesystem's own Files.deleteIfExists throws DirectoryNotEmptyException, a genuine I/O failure.
+        val badKey = "$badDocumentId.pdf"
+        val badPath = root.resolve("untrusted").resolve(badKey)
+        Files.createDirectories(badPath)
+        Files.writeString(badPath.resolve("occupied"), "x")
+
+        val logger = LoggerFactory.getLogger(FoundationDocumentStorage::class.java) as ch.qos.logback.classic.Logger
+        val appender = ListAppender<ILoggingEvent>().also { it.start() }
+        logger.addAppender(appender)
+        val failed = try {
+            storage.deleteAll(listOf(StorageTrustZone.UNTRUSTED to badKey, StorageTrustZone.UNTRUSTED to goodKey))
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(failed).containsExactly(StorageTrustZone.UNTRUSTED to badKey)
+        assertThat(Files.exists(root.resolve("untrusted").resolve(goodKey))).isFalse()
+        assertThat(Files.exists(badPath)).isTrue()
+
+        val rendered = appender.list.joinToString("\n") { it.formattedMessage }
+        assertThat(rendered).contains("quarantine_file_delete_failed", "DirectoryNotEmptyException", badDocumentId.toString())
+        assertThat(rendered).doesNotContain(badKey, goodKey, goodDocumentId.toString(), ".pdf")
     }
 
     private fun storage() = FoundationDocumentStorage(FoundationProperties(quarantineRoot = root))

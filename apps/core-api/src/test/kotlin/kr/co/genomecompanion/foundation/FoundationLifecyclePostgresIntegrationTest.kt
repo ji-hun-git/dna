@@ -55,6 +55,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     @Autowired
     private lateinit var conceptSource: JdbcMedicalConceptSource
 
+    @Autowired
+    private lateinit var repository: FoundationRepository
+
     private val uploadCapabilities = mutableMapOf<UUID, TestUploadCapability>()
 
     @BeforeEach
@@ -764,6 +767,10 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(Files.list(quarantineRoot.resolve("approved_source")).filter { it.fileName.toString().startsWith(reviewing.toString()) }.count()).isZero()
         assertThat(Files.list(quarantineRoot.resolve("derived_safe_artifact")).filter { it.fileName.toString().startsWith(reviewing.toString()) }.count()).isZero()
         assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$inFlight.pdf"))).isFalse()
+        // The preview file delete succeeded (asserted above), so reviewing's gc_preview_artifact row is gone
+        // too — the row must never outlive a confirmed-deleted file (see deletePreviewArtifactIfExists's
+        // contract). The still-COMPLETED January document's own preview row is untouched by revocation.
+        assertThat(count("gc_preview_artifact")).isEqualTo(1)
         // The person can still see the terminated document and its status; candidates are no longer reachable.
         read(get("/api/foundation/documents/$reviewing"), alice).andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("TERMINATED_BY_REVOCATION")).andExpect(jsonPath("$.previewAvailable").value(false))
@@ -774,6 +781,82 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val newConsent = grantConsent(alice)
         assertThat(newConsent).isNotEqualTo(consentId)
         assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+    }
+
+    @Test
+    fun aFailedPreviewFileDeleteLeavesItsRowForTheJanitorAndASuccessfulOneRemovesIt() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val reviewing = requestDocument(alice, consentId, fixturePdf, "revoke-preview-review")
+        uploadDocument(alice, reviewing, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$reviewing/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(reviewing)
+        assertThat(count("gc_preview_artifact")).isEqualTo(1)
+        val previewPath = Files.list(quarantineRoot.resolve("derived_safe_artifact"))
+            .filter { it.fileName.toString().startsWith(reviewing.toString()) }
+            .findFirst()
+            .orElseThrow()
+        // Fault injection without mocks: mark the real preview file read-only so the after-commit hook's own
+        // Files.deleteIfExists fails with a genuine AccessDeniedException, not a simulated one.
+        assertThat(previewPath.toFile().setReadOnly()).isTrue()
+
+        try {
+            mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+
+            assertThat(documentStatus(reviewing)).isEqualTo("TERMINATED_BY_REVOCATION")
+            // The file delete failed, so the row must still be here for the Task 22 janitor to retry against.
+            assertThat(Files.exists(previewPath)).isTrue()
+            assertThat(count("gc_preview_artifact")).isEqualTo(1)
+        } finally {
+            previewPath.toFile().setWritable(true)
+        }
+
+        // Simulating the janitor's later retry: once the file is actually gone, the row is safe to remove.
+        Files.delete(previewPath)
+        repository.deletePreviewArtifactIfExists(reviewing)
+        assertThat(count("gc_preview_artifact")).isZero()
+    }
+
+    @Test
+    fun reGrantingConsentAfterRevocationRequiresAFreshUploadAndTheNewDocumentReviewsNormally() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val terminated = requestDocument(alice, consentId, fixturePdf, "regrant-terminated")
+        uploadDocument(alice, terminated, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$terminated/finalization"), alice).andExpect(status().isAccepted)
+
+        mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+        assertThat(documentStatus(terminated)).isEqualTo("TERMINATED_BY_REVOCATION")
+
+        val newConsent = grantConsent(alice)
+        assertThat(newConsent).isNotEqualTo(consentId)
+        // findLatestActiveDocument excludes TERMINATED_BY_REVOCATION, so re-consent alone never resumes it.
+        read(get("/api/foundation/documents/active"), alice).andExpect(status().isOk)
+            .andExpect(jsonPath("$.document").doesNotExist())
+
+        val freshDocument = requestDocument(alice, newConsent, fixturePdf, "regrant-fresh")
+        assertThat(freshDocument).isNotEqualTo(terminated)
+        uploadDocument(alice, freshDocument, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$freshDocument/finalization"), alice).andExpect(status().isAccepted)
+        runWorkerPipeline(freshDocument)
+        val candidateId = UUID.fromString(
+            responseJson(
+                read(get("/api/foundation/documents/$freshDocument/candidate"), alice)
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andReturn()
+                    .response
+                    .contentAsByteArray,
+            )["candidateId"].asText(),
+        )
+        mutate(
+            post("/api/foundation/candidates/$candidateId/confirmation")
+                .header("Idempotency-Key", "regrant-fresh-confirm")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("value" to "188"))),
+            alice,
+        ).andExpect(status().isCreated)
+        assertThat(documentStatus(terminated)).isEqualTo("TERMINATED_BY_REVOCATION")
     }
 
     @Test

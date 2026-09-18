@@ -2,6 +2,7 @@ package kr.co.genomecompanion.platform.telemetry
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.UUID
 
 class PhiSafeLogger(
     private val logger: Logger,
@@ -47,6 +48,22 @@ class PhiSafeLogger(
                 exceptionClass,
             )
         }
+    }
+
+    /**
+     * One line for a background (non-request) resource-scoped failure — currently only a quarantine file
+     * delete that failed after a commit. [exceptionClass] must be the failing exception's simple class
+     * name only, and [resourceId] a resource id (e.g. a document id) — never a path, filename, or any
+     * other value that could echo request content.
+     */
+    fun emitResourceFailure(event: TelemetryEvent, correlationId: UUID, resourceId: UUID, exceptionClass: String) {
+        logger.warn(
+            "event={} correlation_id={} resource_id={} exception_class={}",
+            event.code,
+            correlationId,
+            resourceId,
+            exceptionClass,
+        )
     }
 
     companion object {

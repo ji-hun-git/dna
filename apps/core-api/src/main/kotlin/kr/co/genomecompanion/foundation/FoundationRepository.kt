@@ -477,6 +477,11 @@ class FoundationRepository(
                 'UPLOAD_PENDING', 'UNTRUSTED_OBJECT', 'SECURITY_INSPECTION', 'SECURITY_APPROVED',
                 'EXTRACTION_QUEUED', 'EXTRACTION_RUNNING', 'REVIEW_REQUIRED', 'FAILED_RETRYABLE'
             )
+            -- The gc_preview_artifact row is read here but intentionally NOT deleted in this transaction:
+            -- its file is only deleted after this transaction commits (FoundationLifecycleService.revokeConsent's
+            -- afterCommit hook), and the row itself must outlive that file until the delete is confirmed. If the
+            -- file delete fails, the row is deliberately left behind so it still points at an orphaned file that
+            -- the Task 22 janitor can find and retry — see deletePreviewArtifactIfExists below.
             RETURNING document_id, object_key, approved_object_key,
                       (SELECT object_key FROM gc_preview_artifact p WHERE p.document_id = gc_document.document_id) AS preview_key
             """.trimIndent(),
@@ -505,8 +510,19 @@ class FoundationRepository(
             now.atOffset(ZoneOffset.UTC), idsArray,
         )
         jdbc.update("UPDATE gc_upload_capability SET revoked_at = COALESCE(revoked_at, ?) WHERE document_id = ANY(?)", now.atOffset(ZoneOffset.UTC), idsArray)
-        jdbc.update("DELETE FROM gc_preview_artifact WHERE document_id = ANY(?)", idsArray)
         return terminated
+    }
+
+    /**
+     * Contract: call this only after the preview file itself has been confirmed deleted (or was already
+     * absent) — never before, and never unconditionally alongside the file delete. A file-delete failure
+     * must leave this row in place, still pointing at the orphaned file, so the Task 22 janitor can find
+     * and retry it later; deleting the row first (or regardless of the file outcome) would orphan the file
+     * with nothing left pointing at it. See `FoundationLifecycleService.revokeConsent`'s afterCommit hook,
+     * the only caller.
+     */
+    fun deletePreviewArtifactIfExists(documentId: UUID) {
+        jdbc.update("DELETE FROM gc_preview_artifact WHERE document_id = ?", documentId)
     }
 
     /** Insert-or-read in one statement so two racing requests see one winner. Expired rows are replaced. */

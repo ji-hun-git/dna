@@ -2,6 +2,9 @@ package kr.co.genomecompanion.foundation
 
 import kr.co.genomecompanion.documentboundary.ObjectDescriptor
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
+import kr.co.genomecompanion.platform.telemetry.CorrelationFilter
+import kr.co.genomecompanion.platform.telemetry.PhiSafeLogger
+import kr.co.genomecompanion.platform.telemetry.TelemetryEvent
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import java.nio.file.Files
@@ -25,6 +28,7 @@ class FoundationDocumentStorage(
     properties: FoundationProperties,
 ) {
     private val root = properties.quarantineRoot!!.toAbsolutePath().normalize()
+    private val phiSafeLogger = PhiSafeLogger.forClass(FoundationDocumentStorage::class.java)
 
     fun putUntrusted(documentId: UUID, content: ByteArray): StoredObjectWrite {
         val key = "$documentId.pdf"
@@ -90,9 +94,35 @@ class FoundationDocumentStorage(
         )
     }
 
-    fun deleteAll(objectKeys: Collection<Pair<StorageTrustZone, String>>) {
-        objectKeys.forEach { (zone, key) -> Files.deleteIfExists(resolve(zone, key)) }
+    /**
+     * Deletes every key, one at a time. A failing key (a real I/O error — `Files.deleteIfExists` treats
+     * an already-absent file as success, not a failure) never stops the rest from being attempted: it is
+     * logged once via [PhiSafeLogger] (event code, correlation id, the document id parsed from the key's
+     * own `<documentId>[-...].{pdf,png}` naming convention, and the exception's class name only — never
+     * the key/path/filename itself) and collected into the returned list so the caller (and ultimately the
+     * Task 22 janitor) can retry it later.
+     */
+    fun deleteAll(objectKeys: Collection<Pair<StorageTrustZone, String>>): List<Pair<StorageTrustZone, String>> {
+        val failed = mutableListOf<Pair<StorageTrustZone, String>>()
+        for (entry in objectKeys) {
+            val (zone, key) = entry
+            try {
+                Files.deleteIfExists(resolve(zone, key))
+            } catch (exception: Exception) {
+                failed.add(entry)
+                phiSafeLogger.emitResourceFailure(
+                    TelemetryEvent.QUARANTINE_FILE_DELETE_FAILED,
+                    CorrelationFilter.currentCorrelationId() ?: UUID.randomUUID(),
+                    documentIdFromKey(key) ?: UUID(0, 0),
+                    exception.javaClass.simpleName,
+                )
+            }
+        }
+        return failed
     }
+
+    private fun documentIdFromKey(key: String): UUID? =
+        if (key.length >= 36) runCatching { UUID.fromString(key.substring(0, 36)) }.getOrNull() else null
 
     private fun descriptor(zone: StorageTrustZone, key: String, bytes: ByteArray): ObjectDescriptor =
         ObjectDescriptor(

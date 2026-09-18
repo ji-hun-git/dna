@@ -724,13 +724,26 @@ class FoundationLifecycleService(
             val terminated = repository.terminateDocumentsForRevokedConsent(principal.subjectId, consentId, now)
             terminated.forEach { audit(principal, "DOCUMENT_TERMINATED_BY_REVOCATION", "DOCUMENT", it.documentId, "SUCCESS") }
             audit(principal, "CONSENT_REVOKED", "CONSENT", consentId, "SUCCESS", consent.purposeCode)
-            val keys = terminated.flatMap { it.objectKeys }
-            if (keys.isNotEmpty()) {
+            if (terminated.any { it.objectKeys.isNotEmpty() }) {
                 TransactionSynchronizationManager.registerSynchronization(
                     object : TransactionSynchronization {
                         override fun afterCommit() {
-                            // Best effort: a file that survives here is an orphan the janitor (Task 22) removes.
-                            runCatching { documentStorage.deleteAll(keys) }
+                            // Best effort: a key that still fails after FoundationDocumentStorage.deleteAll's own
+                            // per-item retry-free attempt is an orphan the Task 22 janitor removes later; deleteAll
+                            // itself logs every such failure (event, correlation id, document id, exception class).
+                            val failedKeys = runCatching { documentStorage.deleteAll(terminated.flatMap { it.objectKeys }) }
+                                .getOrElse { terminated.flatMap { it.objectKeys } }
+                                .toSet()
+                            // The preview row must only be deleted once its file is confirmed gone (deleted here,
+                            // or already absent — both are "not in failedKeys"); a failed file delete leaves the
+                            // row in place so the janitor can retry against it. See
+                            // FoundationRepository.deletePreviewArtifactIfExists's contract doc.
+                            terminated.forEach { document ->
+                                val previewKey = document.objectKeys.firstOrNull { it.first == StorageTrustZone.DERIVED_SAFE_ARTIFACT }
+                                if (previewKey == null || previewKey !in failedKeys) {
+                                    runCatching { repository.deletePreviewArtifactIfExists(document.documentId) }
+                                }
+                            }
                         }
                     },
                 )
