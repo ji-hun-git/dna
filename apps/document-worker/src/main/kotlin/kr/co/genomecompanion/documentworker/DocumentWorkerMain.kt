@@ -26,7 +26,10 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Base64
 import java.util.HexFormat
+import java.time.Clock
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 
 private const val WORKER_VERSION = "document-worker-v2"
@@ -49,6 +52,7 @@ data class WorkerConfiguration(
     val workerImageDigest: String,
     val failFirstExtraction: Boolean,
     val healthPort: Int?,
+    val signatureDir: Path? = null,
 ) {
     init {
         require(apiBaseUri.userInfo == null && apiBaseUri.query == null && apiBaseUri.fragment == null)
@@ -65,18 +69,26 @@ data class WorkerConfiguration(
     }
 
     companion object {
-        fun fromEnvironment(environment: Map<String, String> = System.getenv()): WorkerConfiguration =
-            WorkerConfiguration(
+        fun fromEnvironment(environment: Map<String, String> = System.getenv()): WorkerConfiguration {
+            val clamscanPath = environment["GC_WORKER_CLAMSCAN_PATH"]?.let(Path::of)
+            return WorkerConfiguration(
                 apiBaseUri = URI.create(environment.getValue("GC_WORKER_API_BASE_URL")),
                 credential = environment.getValue("GC_WORKER_CREDENTIAL"),
                 workerId = environment.getOrDefault("GC_WORKER_ID", "document-worker-local"),
-                clamscanPath = environment["GC_WORKER_CLAMSCAN_PATH"]?.let(Path::of),
+                clamscanPath = clamscanPath,
                 requiredClamAvVersion = environment.getOrDefault("GC_WORKER_CLAMAV_VERSION", "1.5.4"),
                 allowSyntheticScanner = environment["GC_WORKER_ALLOW_SYNTHETIC_SCANNER"] == "true",
                 workerImageDigest = environment.getValue("GC_WORKER_IMAGE_DIGEST"),
                 failFirstExtraction = environment["GC_WORKER_FAIL_FIRST_EXTRACTION"] == "true",
                 healthPort = environment["GC_WORKER_HEALTH_PORT"]?.toInt(),
+                // Only a real ClamAV worker has signatures to check; with the synthetic scanner there is
+                // no signature directory and /healthz skips the signature checks entirely.
+                signatureDir = environment["GC_WORKER_SIGNATURE_DIR"]?.let(Path::of)
+                    ?: clamscanPath?.let { DEFAULT_SIGNATURE_DIR },
             )
+        }
+
+        private val DEFAULT_SIGNATURE_DIR: Path = Path.of("/usr/local/share/clamav")
 
         private fun isLoopbackHttp(uri: URI): Boolean =
             uri.scheme == "http" && uri.host in setOf("127.0.0.1", "localhost", "::1")
@@ -119,6 +131,19 @@ class BoundaryApiClient(
         .followRedirects(HttpClient.Redirect.NEVER)
         .build(),
 ) {
+    /**
+     * Liveness of the core API, for /healthz only: no credential, no job state, and a 2 s budget so a
+     * health poll cannot hang behind a lease request. A refused connection is an answer ("no"), not a
+     * failure, so the transport exception is folded into `false` here.
+     */
+    fun probe(): Boolean = runCatching {
+        val request = HttpRequest.newBuilder(configuration.apiBaseUri.resolve("/actuator/health"))
+            .timeout(Duration.ofSeconds(2))
+            .GET()
+            .build()
+        httpClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() == 200
+    }.getOrDefault(false)
+
     fun lease(): WorkerLease? {
         val response = send(
             HttpRequest.newBuilder(resolve("/internal/document-boundary/jobs/lease"))
@@ -280,7 +305,11 @@ class ClamAvCommandScanner(
 ) : MalwareScanner {
     override fun scan(bytes: ByteArray): MalwareScanResult {
         if (!Files.isRegularFile(executable)) return unavailable("executable-missing")
-        if (database != null && !Files.isRegularFile(database)) return unavailable("database-missing")
+        // The image points this at the signature *directory*; clamscan's --database takes either a
+        // directory of CVDs or a single database file, so accept both.
+        if (database != null && !Files.isRegularFile(database) && !Files.isDirectory(database)) {
+            return unavailable("database-missing")
+        }
         val version = readVersion() ?: return unavailable("version-unavailable")
         if (version.engine != requiredVersion) return unavailable("version-mismatch")
         val command = mutableListOf(executable.toString(), "--no-summary", "--stdout")
@@ -332,7 +361,7 @@ class ClamAvCommandScanner(
             val match = Regex("^ClamAV ([0-9]+[.][0-9]+[.][0-9]+)(?:/(.+))?$")
                 .matchEntire(output.lineSequence().firstOrNull() ?: return null) ?: return null
             val signatureVersion = match.groupValues[2].takeIf(String::isNotBlank)?.take(120)
-                ?: database?.let { "sha256:${sha256File(it)}" }
+                ?: database?.let { "sha256:${sha256Database(it)}" }
                 ?: return null
             ClamAvVersion(match.groupValues[1], signatureVersion)
         } finally {
@@ -347,6 +376,18 @@ class ClamAvCommandScanner(
         "unavailable",
         signature,
     )
+
+    /** A signature directory has no single digest of its own, so fold its files' digests into one. */
+    private fun sha256Database(path: Path): String {
+        if (Files.isRegularFile(path)) return sha256File(path)
+        val digest = MessageDigest.getInstance("SHA-256")
+        Files.list(path).use { entries ->
+            entries.filter(Files::isRegularFile).sorted().forEach {
+                digest.update(sha256File(it).toByteArray(StandardCharsets.UTF_8))
+            }
+        }
+        return HexFormat.of().formatHex(digest.digest())
+    }
 
     private fun sha256File(path: Path): String {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -439,30 +480,67 @@ class DocumentWorker(
 fun main(args: Array<String>) {
     val configuration = WorkerConfiguration.fromEnvironment()
     val scanner = configuration.clamscanPath
-        ?.let { ClamAvCommandScanner(it, configuration.requiredClamAvVersion) }
+        ?.let { ClamAvCommandScanner(it, configuration.requiredClamAvVersion, configuration.signatureDir) }
         ?: SyntheticManifestScanner()
+    val client = BoundaryApiClient(configuration)
     val worker = DocumentWorker(
         configuration,
-        BoundaryApiClient(configuration),
+        client,
         PdfSecurityInspector(policy = PdfInspectionPolicy(), malwareScanner = scanner),
     )
-    configuration.healthPort?.let(::startLoopbackHealthServer)
+    val heartbeat = AtomicReference(Instant.now())
+    val health = WorkerHealth(
+        coreProbe = client::probe,
+        signatureDir = configuration.signatureDir,
+        loopHeartbeat = heartbeat::get,
+        clock = Clock.systemUTC(),
+    )
+    configuration.healthPort?.let { startLoopbackHealthServer(it, health) }
     if (args.contains("--once")) {
         worker.runOnce()
         return
     }
-    while (true) {
-        val processed = runCatching { worker.runOnce() }
-            // The exception's class name only: its message can quote a file name, a URL or a page of a
-            // person's document. An anonymous class has an empty simple name, so fall back to a constant
-            // rather than letting WorkerLog's own `require` turn a logged loop error into a crash.
-            .onFailure { failure ->
-                val code = failure.javaClass.simpleName.lowercase().filter { it.isLetterOrDigit() }.take(80)
+    val running = AtomicBoolean(true)
+    val fatal = AtomicReference<Throwable?>(null)
+    val loop = Thread {
+        var failures = 0
+        while (running.get()) {
+            heartbeat.set(Instant.now())
+            val processed = try {
+                worker.runOnce().also { failures = 0 }
+            } catch (exception: Exception) {
+                // Exception, never Throwable: an OutOfMemoryError or any other VirtualMachineError has to
+                // leave this loop and end the process so the supervisor restarts it with a fresh heap.
+                // Catching one would leave a poisoned JVM leasing jobs it can never finish.
+                failures += 1
+                // The exception's class name only: its message can quote a file name, a URL or a page of a
+                // person's document. An anonymous class has an empty simple name, so fall back to a constant
+                // rather than letting WorkerLog's own `require` turn a logged loop error into a crash.
+                val code = exception.javaClass.simpleName.lowercase().filter { it.isLetterOrDigit() }.take(80)
                 WorkerLog.emit("loop_error", null, if (code.length < 3) "unknown_error" else code)
+                false
             }
-            .getOrDefault(false)
-        if (!processed) Thread.sleep(1_000)
+            // Idle polling stays at a second; consecutive errors back off 1, 2, 4 ... 30 s so a core that is
+            // down is not asked for work once a second until it comes back.
+            if (!processed) Thread.sleep(minOf(30_000L, 1_000L shl minOf(failures, 5)))
+        }
+    }.also {
+        it.name = "document-worker-loop"
+        // Without this an OutOfMemoryError would be printed and main would still exit 0: a container that
+        // has quietly stopped taking work instead of restarting. Rethrowing makes the exit non-zero.
+        it.setUncaughtExceptionHandler { _, throwable -> fatal.set(throwable) }
+        it.start()
     }
+    // SIGTERM must not tear a leased job in half: stop polling, then let the in-flight iteration finish.
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            running.set(false)
+            loop.join(30_000)
+            WorkerLog.emit("shutdown_complete", null)
+        },
+    )
+    loop.join()
+    fatal.get()?.let { throw it }
 }
 
 
@@ -470,13 +548,16 @@ private fun configuredObjectMapper(): ObjectMapper = jacksonObjectMapper()
     .registerModule(JavaTimeModule())
 
 
-private fun startLoopbackHealthServer(port: Int) {
+private fun startLoopbackHealthServer(port: Int, health: WorkerHealth) {
+    // Loopback only: this is a supervisor's readiness probe, not a service. The image-smoke container runs
+    // in the host network namespace, so the probe reaches it there without exposing it to anything else.
     val server = HttpServer.create(InetSocketAddress("127.0.0.1", port), 0)
     server.createContext("/healthz") { exchange ->
-        val body = "ready".toByteArray(StandardCharsets.UTF_8)
+        val report = health.check()
+        val body = report.code.toByteArray(StandardCharsets.UTF_8)
         exchange.responseHeaders.set("Content-Type", "text/plain; charset=utf-8")
         exchange.responseHeaders.set("Cache-Control", "no-store")
-        exchange.sendResponseHeaders(200, body.size.toLong())
+        exchange.sendResponseHeaders(if (report.ready) 200 else 503, body.size.toLong())
         exchange.responseBody.use { it.write(body) }
     }
     server.start()
