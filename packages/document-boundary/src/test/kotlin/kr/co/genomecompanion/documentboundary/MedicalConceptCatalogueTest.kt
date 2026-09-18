@@ -101,6 +101,13 @@ class MedicalConceptCatalogueTest {
     }
 
     @Test
+    fun `the blood-pressure split labels resolve to the two pressure concepts`() {
+        assertThat(MedicalConceptCatalogue.resolve("혈압(수축기)", "mmHg")?.conceptCode).isEqualTo("systolic-blood-pressure")
+        assertThat(MedicalConceptCatalogue.resolve("혈압(이완기)", "mmHg")?.conceptCode).isEqualTo("diastolic-blood-pressure")
+        assertThat(MedicalConceptCatalogue.find("혈압")).isNull()
+    }
+
+    @Test
     fun `carries no interpretation fields`() {
         val fields = MedicalConcept::class.java.declaredFields.map { it.name }
         assertThat(fields).containsExactlyInAnyOrder(

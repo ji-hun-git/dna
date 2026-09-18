@@ -431,6 +431,17 @@ class NativeTextExtractionProviderTest {
         assertThat(NativeTextExtractionProvider.parseRow("예시 검진센터")).isEqualTo(NativeTextExtractionProvider.RowParse.Skipped)
     }
 
+    @Test
+    fun `a blood pressure row yields two ordered candidates that keep one hash and one box`() {
+        val outcome = NativeTextExtractionProvider.parse(lines("검사일: 2026-07-28", "혈압 120/80 mmHg", "맥박 64 회/분"))
+        assertThat(outcome.candidates.map { Triple(it.ordinal, it.label, it.value) }).containsExactly(
+            Triple(1, "혈압(수축기)", "120"), Triple(2, "혈압(이완기)", "80"), Triple(3, "맥박", "64"),
+        )
+        assertThat(outcome.candidates[0].sourceTextSha256).isEqualTo(outcome.candidates[1].sourceTextSha256)
+        assertThat(outcome.candidates[0].evidenceBox).isEqualTo(outcome.candidates[1].evidenceBox)
+        assertThat(outcome.abstentions).isEmpty()
+    }
+
     private fun lines(vararg texts: String): List<TextLine> = lines(texts.toList())
 
     private fun lines(texts: List<String>): List<TextLine> =

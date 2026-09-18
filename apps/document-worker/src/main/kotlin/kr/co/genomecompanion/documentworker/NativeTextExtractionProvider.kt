@@ -1,6 +1,5 @@
 package kr.co.genomecompanion.documentworker
 
-import kr.co.genomecompanion.documentboundary.MedicalUnitSpelling
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.text.PDFTextStripper
@@ -77,19 +76,7 @@ object NativeTextExtractionProvider {
     private const val MAX_LABEL = 80
     private const val MAX_VALUE = 64
     private const val MAX_UNIT = 32
-    private const val MAX_REFERENCE_RANGE = 40
 
-    private val valueToken = Regex("^-?(\\d{1,3}(,\\d{3})+|\\d+)(\\.\\d+)?$")
-    private val rangeText = Regex(
-        "^\\(?\\s*(?:참고치?|기준치?|정상\\s*범위|reference|ref\\.?)?\\s*[:：]?\\s*[<>≤≥]?\\s*" +
-            "\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-–~]\\s*\\d[\\d,]*(?:\\.\\d+)?)?\\s*[^\\s()]*\\s*\\)?$",
-    )
-    /** The range body inside a matched [rangeText]: optional comparison sign, number, optional separator and second number. */
-    private val rangeBody = Regex("[<>≤≥]?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-–~]\\s*\\d[\\d,]*(?:\\.\\d+)?)?")
-    /** A range body is only kept as text when it actually bounds a value: a comparison sign, or two numbers joined by a separator. A bare number (e.g. a previous-result column) is not a range. */
-    private val rangeBoundaryMarker = Regex("[<>≤≥]|\\d\\s*[-–~]\\s*\\d")
-    private val separators = Regex("[:：\\t]")
-    private val leadingBullets = Regex("^[·•\\-*]+\\s*")
     private val dateLabel = Regex(
         "(?:(?:검사\\s*일자|검진\\s*일자|채취\\s*일자|검사일|검진일|채취일)(?![가-힣])|" +
             "(?<![A-Za-z])(?<!birth\\s{1,10})(?:exam\\s+|test\\s+|collection\\s+)?date(?![A-Za-z])" +
@@ -122,29 +109,31 @@ object NativeTextExtractionProvider {
         val candidates = mutableListOf<ParsedCandidate>()
         val abstentions = mutableListOf<ParsedAbstention>()
         for (line in lines) {
-            when (val row = parseRow(line.text)) {
-                RowParse.Skipped -> continue
-                is RowParse.Ambiguous -> {
-                    val reason = if (observedOn == null) AbstentionReason.MISSING_EVIDENCE else row.reason
-                    abstentions += ParsedAbstention(row.label.take(MAX_LABEL), reason, line.page)
-                }
-                is RowParse.Measurement -> when {
-                    observedOn == null ->
-                        abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.MISSING_EVIDENCE, line.page)
-                    row.label.length > MAX_LABEL || row.value.length > MAX_VALUE || row.unit.length > MAX_UNIT ->
-                        abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.UNREADABLE, line.page)
-                    candidates.size >= MAX_CANDIDATES -> continue
-                    else -> candidates += ParsedCandidate(
-                        ordinal = candidates.size + 1,
-                        label = row.label,
-                        value = row.value,
-                        unit = row.unit,
-                        observedOn = observedOn,
-                        evidencePage = line.page,
-                        evidenceBox = line.box,
-                        sourceTextSha256 = sha256(line.text.trim()),
-                        referenceRangeText = row.referenceRangeText,
-                    )
+            for (row in parseRowAll(line.text)) {
+                when (row) {
+                    RowParse.Skipped -> continue
+                    is RowParse.Ambiguous -> {
+                        val reason = if (observedOn == null) AbstentionReason.MISSING_EVIDENCE else row.reason
+                        abstentions += ParsedAbstention(row.label.take(MAX_LABEL), reason, line.page)
+                    }
+                    is RowParse.Measurement -> when {
+                        observedOn == null ->
+                            abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.MISSING_EVIDENCE, line.page)
+                        row.label.length > MAX_LABEL || row.value.length > MAX_VALUE || row.unit.length > MAX_UNIT ->
+                            abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.UNREADABLE, line.page)
+                        candidates.size >= MAX_CANDIDATES -> continue
+                        else -> candidates += ParsedCandidate(
+                            ordinal = candidates.size + 1,
+                            label = row.label,
+                            value = row.value,
+                            unit = row.unit,
+                            observedOn = observedOn,
+                            evidencePage = line.page,
+                            evidenceBox = line.box,
+                            sourceTextSha256 = sha256(line.text.trim()),
+                            referenceRangeText = row.referenceRangeText,
+                        )
+                    }
                 }
             }
         }
@@ -168,55 +157,8 @@ object NativeTextExtractionProvider {
         data object Skipped : RowParse
     }
 
-    internal fun parseRow(raw: String): RowParse {
-        val text = raw.replace(separators, " ").trim().replace(leadingBullets, "").trim()
-        val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
-        val valueIndex = tokens.indexOfFirst { valueToken.matches(it) }
-        // `<`/`≤`/`>` qualified values, qualitative results (음성/양성/정상/이상) and value-first rows
-        // still have no label before their numeric token and fall through to Skipped here until the
-        // new grammar in Tasks 2-3 gives them a label to attach to.
-        if (valueIndex < 1) return RowParse.Skipped
-        val label = tokens.subList(0, valueIndex).joinToString(" ")
-        val value = tokens[valueIndex]
-        val unitToken = tokens.getOrNull(valueIndex + 1)
-        val unit = when {
-            unitToken == null -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
-            MedicalUnitSpelling.canonical(unitToken) != null -> unitToken
-            valueToken.matches(unitToken) -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
-            // A bare range right after the value ("120-199") with no unit word: the row showed a label
-            // and a number, so it is reported as ambiguous_unit instead of being dropped silently.
-            else -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
-        }
-        val rest = tokens.drop(valueIndex + 2)
-        val restText = rest.joinToString(" ")
-        val restIsRange = rest.isNotEmpty() && rangeText.matches(restText)
-        // A genuine range boundary (a comparison sign, or two numbers joined by a dash/tilde, spaces
-        // allowed either side) means the rest is a reference range, however it is later followed by a
-        // repeated unit word ("15 - 35 U/L") — that trailing unit is not a second result.
-        val restHasRangeBoundary = rangeBoundaryMarker.containsMatchIn(restText)
-        // A second full "value unit" pair in the rest (e.g. "100 mg/dL") is a second result printed on
-        // the same row, not a reference range: the permissive rangeText pattern would otherwise absorb
-        // it silently, so this is checked ahead of the range classification. It is only checked when
-        // the rest has no range boundary of its own, so a range's own trailing repeated unit (matched
-        // pairwise against the range's last number by zipWithNext) is never mistaken for a second value.
-        val restHasSecondMeasurement = !restHasRangeBoundary && rest.zipWithNext()
-            .any { (candidateValue, candidateUnit) -> valueToken.matches(candidateValue) && MedicalUnitSpelling.canonical(candidateUnit) != null }
-        if (rest.isNotEmpty() && (restHasSecondMeasurement || (!restIsRange && rest.any { valueToken.matches(it) }))) {
-            return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
-        }
-        // Two ranges on one row ("70-99 100-200") are both document text: keep them verbatim, joined
-        // by one space. Only when the row already parses as a measurement (restIsRange), only when
-        // both bodies really bound a value and nothing else is left over; otherwise the single rule.
-        val bodies = if (restIsRange) rangeBody.findAll(restText).map { it.value.trim() }.toList() else emptyList()
-        val twoRanges = bodies.size == 2 &&
-            bodies.all { rangeBoundaryMarker.containsMatchIn(it) } &&
-            bodies.fold(restText) { remaining, body -> remaining.replaceFirst(body, "") }.isBlank()
-        val rangeBodyMatch = if (twoRanges) bodies.joinToString(" ") else bodies.firstOrNull()
-        val referenceRangeText = rangeBodyMatch?.takeIf {
-            it.length <= MAX_REFERENCE_RANGE && rangeBoundaryMarker.containsMatchIn(it)
-        }
-        return RowParse.Measurement(label, value, unit, referenceRangeText)
-    }
+    internal fun parseRow(raw: String): RowParse = parseRowAll(raw).single()
+    internal fun parseRowAll(raw: String): List<RowParse> = RowGrammar.parse(raw)
 
     internal sealed interface DateResolution {
         data object Missing : DateResolution
