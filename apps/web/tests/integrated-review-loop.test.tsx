@@ -309,7 +309,7 @@ it("names the consent state in Korean before the person has agreed", async () =>
   expect(screen.queryByText("NOT_GRANTED")).toBeNull();
 });
 
-it("names the state of the latest saved value in Korean on the home screen", async () => {
+it("shows the latest saved value's record row on the home screen with a humanised state, never the raw server enum", async () => {
   records = [{
     recordId: "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c40",
     recordVersionId: "8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d50",
@@ -332,8 +332,12 @@ it("names the state of the latest saved value in Korean on the home screen", asy
 
   render(<IntegratedHealthExperience />);
 
+  // v5: the home screen is the alive-trajectory grid; the latest record now renders as a row
+  // in the records panel's table (state column always "직접 확인함"), not a standalone metric
+  // card, but a CURRENT record must still appear and the raw server enum must still never leak.
   expect(await screen.findByRole("heading", { name: "가장 최근에 확인한 값" })).toBeVisible();
-  expect(screen.getByText("현재 값")).toBeVisible();
+  expect(screen.getByRole("cell", { name: "총콜레스테롤" })).toBeVisible();
+  expect(screen.getByRole("cell", { name: "직접 확인함" })).toBeVisible();
   expect(screen.queryByText("CURRENT")).toBeNull();
 });
 

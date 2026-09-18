@@ -65,6 +65,23 @@
   margin: 0 0 10px;
 }
 
+.panelHeading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.panelAction {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 .identityList {
   margin: 0;
   display: grid;
@@ -194,11 +211,13 @@
 
   .center {
     order: 1;
-    /* Reduced height so the copy block's button stays reachable without scrolling on short
-       phones (e.g. 320x720); the floor is well under the old 320px so it does not cancel the
-       reduction on the shortest supported viewport. */
-    height: 40vh;
-    min-height: 220px;
+    /* Reduced height so the copy block's button stays reachable WITHOUT the fixed bottom nav
+       covering it on short phones (e.g. 320x720). The `- 4.5rem` reserves roughly the nav's own
+       height (padding + 56px min-height links) out of the hero's budget, shifting every stacked
+       item below it up by the same amount, instead of only capping total page height. The floor
+       is well under the old 320px so it does not cancel the reduction on the shortest viewport. */
+    height: calc(40vh - 4.5rem);
+    min-height: 180px;
   }
 
   .left {

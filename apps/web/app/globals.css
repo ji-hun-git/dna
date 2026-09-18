@@ -630,6 +630,12 @@ html {
    produced a ~64px heading inside a ~230px column, wrapping one syllable per line and pushing
    the button far below the fold). Scale against a much smaller vw share instead. */
 .gc-demo-entry h1 { font-size: clamp(1.6rem, 1.8vw, 2.4rem); line-height: 1.18; letter-spacing: -0.055em; word-break: keep-all; color: #fff; }
+/* v5: the boundary panel (현재 허용 범위) and any other h2 inside a .gc-integrated-auth panel on
+   this dark, narrow-column screen must not use the browser's large default h2 size — it wrapped
+   into the "데이터 관리" button below it. Also drop the default disc bullets in favour of a plain
+   list, matching the rest of this screen's typographic, no-colour convention. */
+.gc-demo-entry .gc-integrated-auth h2 { font-size: 1.05rem; line-height: 1.35; margin: 4px 0 10px; word-break: keep-all; }
+.gc-demo-entry .gc-integrated-auth ul { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; font-size: 0.8rem; color: rgba(255, 255, 255, 0.85); }
 .gc-demo-entry .gc-integrated-auth p { color: rgba(255, 255, 255, 0.85); }
 .gc-demo-entry__limit { font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); }
 .gc-demo-entry .gc-button { width: 100%; margin-block: 1rem; min-height: 48px; }
@@ -701,7 +707,7 @@ html {
 @media (max-width: 42rem) {
   .gc-shell--unified .gc-shell__nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%; border: 0; border-top: 1px solid var(--gc-color-line-subtle); border-radius: 0;
     padding: .5rem max(.75rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left));
     box-shadow: 0 -4px 20px rgb(0 0 0 / 3%);
