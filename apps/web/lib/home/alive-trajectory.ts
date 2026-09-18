@@ -243,10 +243,18 @@ export function halfEllipsePath(
 /** End of the drawable path in the [0, 1] curve parameter; matches the reference's T_END. */
 export const T_END = 0.97;
 
-/** Time periods only. Never a life-stage or health-stage word. */
-export const PHASE_LABELS: readonly string[] = ["2024 검진", "2025 검진", "2026 검진", "다음 검진"];
-
 export type PhaseRange = { label: string; t0: number; t1: number };
+
+/**
+ * The tallest vertical extent any of these rings occupies. Rings are drawn rotated so the path's
+ * tangent (near-horizontal here) becomes the ellipse's major axis and `rx` — not `ry` — becomes
+ * the vertical half-extent. Used to place a phase label safely above every ring regardless of
+ * which rings are actually passed in (the entry screen's four example rings, a person's own
+ * variable-length set of document rings, or none at all).
+ */
+export function maxRingVerticalExtent(rings: ReadonlyArray<{ rx: number }>): number {
+  return rings.reduce((max, ring) => Math.max(max, ring.rx), 0);
+}
 
 /** Divides [0, tEnd] into `labels.length` equal, contiguous ranges. */
 export function phaseRanges(labels: readonly string[], tEnd: number): PhaseRange[] {

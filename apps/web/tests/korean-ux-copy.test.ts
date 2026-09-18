@@ -97,6 +97,13 @@ describe("Korean UX language boundary", () => {
     }
   });
 
+  // Direction/trend glyphs were previously banned in only three files (RecentChanges,
+  // RecordComparison, and the history screen); a value or change must never be implied by an
+  // arrow anywhere user-facing, so the ban applies to every file in this list.
+  it.each(userFacingFiles)("never uses a direction/trend glyph in %s", (path) => {
+    expect(source(path)).not.toMatch(/[↑↓▲▼→←]/);
+  });
+
   it("states the example, connection, and medical limits in direct Korean", () => {
     expect(source("components/concept/RecordImportConcept.tsx")).toContain(
       "선택한 파일에서 읽은 값은 아니에요",

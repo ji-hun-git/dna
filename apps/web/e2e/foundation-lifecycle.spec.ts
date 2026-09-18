@@ -149,8 +149,9 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
 
   await page.getByRole("button", { name: "체험 시작" }).click();
   // v5: the logged-in home is the same alive-trajectory grid as the entry screen (no more
-  // "값보다 먼저 / 출처를 확인하세요" card copy) — assert the hero and the records heading instead.
-  await expect(page.getByRole("img")).toBeVisible();
+  // "값보다 먼저 / 출처를 확인하세요" card copy) — assert a home-only marker (the entry screen's
+  // hero is also `role="img"`, so that alone never discriminates logged-in from logged-out).
+  await expect(page.getByRole("button", { name: "결과지 추가" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "아직 저장된 기록이 없어요" })).toBeVisible();
   await captureMatrix(page, info, "home");
 
@@ -284,7 +285,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.screenshot({ path: info.outputPath("home-restore-error-390x844.png") });
   await page.unroute("**/api/foundation/records");
   await page.getByRole("button", { name: "체험 상태 다시 확인" }).click();
-  await expect(page.getByRole("img")).toBeVisible(); // v5: home is the alive-trajectory grid, no card heading
+  await expect(page.getByRole("button", { name: "결과지 추가" })).toBeVisible(); // v5: home-only marker, not the entry screen too
   expect(await browserApi(page, "/api/foundation/session")).toEqual(sessionBeforeRecovery);
 
   // Research consent is stored only: granting and revoking it changes nothing else. This
@@ -315,7 +316,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
 
   // The second allow-listed document carries the 2026-01 date in its text layer, so the
   // same three items come back with their own values and observation date.
-  await expect(page.getByRole("img")).toBeVisible(); // v5: home is the alive-trajectory grid, no card heading
+  await expect(page.getByRole("button", { name: "결과지 추가" })).toBeVisible(); // v5: home-only marker, not the entry screen too
   await page.getByRole("button", { name: "결과지 추가" }).click();
   await expect(page.getByRole("heading", { name: /허용된 합성 PDF를\s*선택해 주세요/ })).toBeVisible();
   await page.getByRole("button", {name: "1월 예시 결과지로 시작"}).click();
@@ -651,7 +652,7 @@ test(`server states remain keyboard operable at a ${zoom} percent equivalent vie
 
   await page.getByRole("button", {name: "체험 시작"}).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("img")).toBeVisible(); // v5: home is the alive-trajectory grid, no card heading
+  await expect(page.getByRole("button", { name: "결과지 추가" })).toBeVisible(); // v5: home-only marker, not the entry screen too
 
   await page.getByRole("button", { name: "결과지 추가" }).focus();
   await page.keyboard.press("Enter");

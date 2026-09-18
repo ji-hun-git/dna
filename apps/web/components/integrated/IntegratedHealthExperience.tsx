@@ -99,6 +99,36 @@ export function IntegratedHealthExperience() {
   const [pollingPaused, setPollingPaused] = useState(false);
   const [pollingNonce, setPollingNonce] = useState(0);
 
+  // Memoised on the record identities that actually feed them: `records` itself changes
+  // identity on every fetch/poll even when its contents don't, and every other piece of state in
+  // this component (busy, errorMessage, ...) also re-renders it; both were plain function calls
+  // returning fresh arrays every render — which are the hero's own effect deps below, so an
+  // unrelated re-render was restarting the breathing animation from scratch every time. Computed
+  // unconditionally (not inside the "home" branch further down) because this component has
+  // several early `return`s for other views, and a hook cannot be called conditionally.
+  const currentRecords = useMemo(() => records.filter((record) => record.status === "CURRENT"), [records]);
+  const homePhases = useMemo(() => buildHomePhases(currentRecords), [currentRecords]);
+  const identityCounts = useMemo(() => homeIdentityCounts(currentRecords), [currentRecords]);
+  // Exam-date descending (then confirmation time descending): the most recently examined result
+  // first, never the server's own `changed_at` insertion order.
+  const homeRows = useMemo(
+    () =>
+      [...currentRecords]
+        .sort((a, b) => (b.observedOn === a.observedOn
+          ? b.confirmedAt.localeCompare(a.confirmedAt)
+          : b.observedOn.localeCompare(a.observedOn)))
+        .map((record) => ({
+          item: record.label,
+          value: record.value,
+          unit: record.unit,
+          observedOn: record.observedOn,
+          shape: "circle" as const,
+          size: 0,
+          phase: 0,
+        })),
+    [currentRecords],
+  );
+
   const loadProductTruth = useCallback(async () => {
     // A failed or schema-rejected /changes read must not break the home
     // screen: its own .catch() isolates it from the core loads below, so a
@@ -591,9 +621,9 @@ export function IntegratedHealthExperience() {
   // person's completed documents in exam-date order, plus a trailing open "다음 결과지" phase;
   // nodes are the person's CURRENT health events, capped at 4 per ring with the rest folded into
   // a "+N개" marker (see lib/home/alive-home-data.ts — never dropped silently).
-  const currentRecords = records.filter((record) => record.status === "CURRENT");
-  const homePhases = buildHomePhases(currentRecords);
-  const identityCounts = homeIdentityCounts(currentRecords);
+  // `currentRecords`/`homePhases`/`identityCounts`/`homeRows` are computed once, unconditionally,
+  // near the top of this component (see the memoised block above the other hooks) so they can be
+  // real `useMemo`s despite this component's several early `return`s for other views.
   const homeIdentity: AliveIdentity = {
     name: "예시 사용자",
     age: 25,
@@ -602,15 +632,6 @@ export function IntegratedHealthExperience() {
     recordCount: identityCounts.recordCount,
     resultSheetCount: identityCounts.resultSheetCount,
   };
-  const homeRows = currentRecords.map((record) => ({
-    item: record.label,
-    value: record.value,
-    unit: record.unit,
-    observedOn: record.observedOn,
-    shape: "circle" as const,
-    size: 0,
-    phase: 0,
-  }));
 
   return (
     <IntegratedShell current="home" status={session ? "예시 데이터로 체험 중" : undefined} tone="dark">
@@ -637,7 +658,9 @@ export function IntegratedHealthExperience() {
           }
           rings={homePhases.rings}
           phaseLabels={homePhases.labels}
-          currentPhaseIndex={Math.max(0, homePhases.rings.length - 1)}
+          // No ring means no current phase to mark (the trailing open "다음 결과지" phase must
+          // never claim the marker just because Math.max(0, -1) would otherwise land on it).
+          currentPhaseIndex={homePhases.rings.length > 0 ? homePhases.rings.length - 1 : -1}
           heroCaption="예시 데이터로 체험 중이에요"
         >
           <section className="gc-integrated-auth" aria-label="빠른 실행">
@@ -653,8 +676,8 @@ export function IntegratedHealthExperience() {
             </div>
             <p><strong>예시 데이터로 체험 중이에요</strong></p>
             <p>외부 기관 연결 0곳 · 직접 확인한 예시 기록 {records.length}개</p>
-            <a href="/data-control">동의와 삭제 상태 보기</a>
-            <a href="/prepare">진료 때 물어볼 내용 준비</a>
+            <p><a href="/data-control">동의와 삭제 상태 보기</a></p>
+            <p><a href="/prepare">진료 때 물어볼 내용 준비</a></p>
             {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
           </section>
         </AliveEntryLayout>

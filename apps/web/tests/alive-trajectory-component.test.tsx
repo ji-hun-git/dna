@@ -2,6 +2,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { afterEach, expect, it, vi } from "vitest";
 import { AliveTrajectory } from "@/components/home/AliveTrajectory";
+import { buildExamplePhases } from "@/lib/home/alive-home-data";
+import { RINGS } from "@/lib/home/alive-example-data";
+import { maxRingVerticalExtent, pathPoint, phaseRanges, T_END, createControlPoints, BASE_CONTROL_POINTS } from "@/lib/home/alive-trajectory";
 import { FORBIDDEN_JUDGEMENT_WORDS } from "./fixtures/forbidden-words";
 
 afterEach(cleanup);
@@ -70,14 +73,31 @@ it("uses identical stroke and fill rules for every node regardless of item (no v
 
 it("renders a still, non-looping frame under prefers-reduced-motion", async () => {
   stubReducedMotion(true);
+  const addSpy = vi.spyOn(HTMLElement.prototype, "addEventListener");
+  const removeSpy = vi.spyOn(HTMLElement.prototype, "removeEventListener");
   const { container } = render(<AliveTrajectory />);
   const root = container.firstElementChild as HTMLElement;
   expect(root).toHaveAttribute("data-reduced-motion", "true");
-  const arrow = container.querySelector("svg path");
-  const firstD = arrow?.getAttribute("d");
+  // The `<defs><pattern>` background path has a constant `d` regardless of whether the loop
+  // runs, so it would pass this test even with a live animation. Select the halo/axis path
+  // instead: it is the one path whose `d` is actually recomputed every animation frame.
+  const axis = container.querySelector('svg [data-role="axis"]');
+  expect(axis).not.toBeNull();
+  const firstD = axis?.getAttribute("d");
   expect(firstD).toBeTruthy();
   await new Promise((resolve) => setTimeout(resolve, 80));
-  expect(arrow?.getAttribute("d")).toBe(firstD);
+  expect(axis?.getAttribute("d")).toBe(firstD);
+  // No scroll-driven drum motion is left wired up on the component's own root once reduced
+  // motion has settled: `usePrefersReducedMotion` starts false and flips true on its own first
+  // effect, so the animation effect can transiently attach a "wheel" listener on its first,
+  // stale-`reduced` run before its own cleanup removes it — net adds minus removes must be 0.
+  // (React's event-delegation listeners on the render container are unrelated "wheel"
+  // registrations on a different element, so this is scoped to `root` via `mock.instances`.)
+  const countOn = (spy: typeof addSpy, type: string) =>
+    spy.mock.calls.filter(([t], i) => t === type && spy.mock.instances[i] === root).length;
+  expect(countOn(addSpy, "wheel") - countOn(removeSpy, "wheel")).toBe(0);
+  addSpy.mockRestore();
+  removeSpy.mockRestore();
   clearReducedMotionStub();
 });
 
@@ -108,9 +128,35 @@ it("draws the axis as separate phase segments, each with its own dash pattern, w
   expect(svg.querySelector('g[transform*="rotate"]')).toBeNull();
 });
 
-it("labels each phase with a time period only, never a life-stage or health-stage word", () => {
+it("labels each phase with a time period only, derived from the example rings' own dates", () => {
   render(<AliveTrajectory />);
-  for (const label of ["2024 검진", "2025 검진", "2026 검진", "다음 검진"]) {
+  const { labels } = buildExamplePhases(RINGS);
+  for (const label of labels) {
     expect(screen.getByText(label)).toBeInTheDocument();
   }
+});
+
+it("never lets a phase label box intersect any ring's bounding box for the example data", () => {
+  // Reduced motion renders a deterministic still frame (springs sitting exactly at their base
+  // targets), so the geometry below matches `renderStill`/`layoutPhaseSegment` exactly.
+  stubReducedMotion(true);
+  render(<AliveTrajectory />);
+
+  const { labels, rings } = buildExamplePhases(RINGS);
+  const ranges = phaseRanges(labels, T_END);
+  const controlPoints = createControlPoints(BASE_CONTROL_POINTS, () => 0.5);
+  const maxRx = maxRingVerticalExtent(rings);
+
+  for (const range of ranges) {
+    const tick = pathPoint(controlPoints, range.t0);
+    const labelY = tick.y - maxRx - 24;
+    // Every ring's bounding box (rotated onto the near-horizontal axis, so its vertical extent
+    // is its own rx) must sit entirely below the label — i.e. its top edge is a larger y.
+    for (const ring of rings) {
+      const ringCenter = pathPoint(controlPoints, ring.t);
+      const ringTop = ringCenter.y - ring.rx;
+      expect(ringTop).toBeGreaterThan(labelY);
+    }
+  }
+  clearReducedMotionStub();
 });

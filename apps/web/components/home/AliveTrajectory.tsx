@@ -6,7 +6,6 @@ import {
   BASE_CONTROL_POINTS,
   DRAW,
   DRIFT,
-  PHASE_LABELS,
   PICKER,
   Spring,
   T_END,
@@ -16,6 +15,7 @@ import {
   createDrum,
   fadeEdge,
   halfEllipsePath,
+  maxRingVerticalExtent,
   pathPoint,
   phaseRanges,
   phaseSegmentPath,
@@ -26,6 +26,7 @@ import {
   type PhaseRange,
 } from "@/lib/home/alive-trajectory";
 import { RINGS, nodeLabel, type ExampleNode, type ExampleRing } from "@/lib/home/alive-example-data";
+import { buildExamplePhases } from "@/lib/home/alive-home-data";
 import { usePrefersReducedMotion } from "@/lib/my-data/reduced-motion";
 import styles from "@/components/home/AliveTrajectory.module.css";
 
@@ -37,6 +38,12 @@ const EXAMPLE_CAPTION = "예시 데이터 · 실제 사람의 기록이 아니�
 
 /** All white; the dash pattern only marks a time boundary, never a value. */
 const PHASE_DASH_PATTERNS: readonly string[] = ["", "16 8", "3 7", "1 6"];
+
+/**
+ * No phase is ever empty by construction: derived once from the example rings' own node dates,
+ * not a hand-picked label list that could drift out of sync with the data (see the v5 report).
+ */
+const EXAMPLE_PHASES = buildExamplePhases(RINGS);
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -100,8 +107,8 @@ export type AliveTrajectoryProps = {
  */
 export function AliveTrajectory({
   className,
-  phaseLabels = PHASE_LABELS,
-  rings: ringSpecs = RINGS,
+  phaseLabels = EXAMPLE_PHASES.labels,
+  rings: ringSpecs = EXAMPLE_PHASES.rings,
   caption = EXAMPLE_CAPTION,
 }: AliveTrajectoryProps) {
   const reduced = usePrefersReducedMotion();
@@ -125,6 +132,10 @@ export function AliveTrajectory({
 
     const controlPoints: ControlPoint[] = createControlPoints(BASE_CONTROL_POINTS);
     const drum = createDrum();
+    // Rings are drawn rotated so the path's (near-horizontal) tangent becomes the ellipse's major
+    // axis: the vertical extent a ring actually occupies is its `rx`, not its `ry`. Phase labels
+    // must clear the tallest ring actually passed in, not a hard-coded constant.
+    const maxRx = maxRingVerticalExtent(ringSpecs);
     // The composition is complete at rest: the arrow, phase markers, rings and nodes must all be
     // fully opaque on the very first frame (a screenshot can land before any animation has had a
     // chance to run). `draw` therefore starts AT its target, not at 0. The only entrance flourish
@@ -259,8 +270,9 @@ export function AliveTrajectory({
         // "above" is simply a smaller y, clearing the tallest ring's stroke.
         const pathPointAtTick = pathPoint(controlPoints, segment.range.t0);
         segment.label.setAttribute("x", String(pathPointAtTick.x));
-        // Clears the tallest ring (ry up to 46) plus its node's own offset comfortably.
-        segment.label.setAttribute("y", String(pathPointAtTick.y - 100));
+        // Clears the tallest ring's actual vertical extent (rx, since rings are rotated onto the
+        // near-horizontal axis) plus a fixed margin for the ring's own node/label offset.
+        segment.label.setAttribute("y", String(pathPointAtTick.y - maxRx - 24));
         segment.label.removeAttribute("transform");
         segment.label.style.opacity = String(opacity);
       }
@@ -403,7 +415,7 @@ export function AliveTrajectory({
         <rect width={VIEW_W} height={VIEW_H} fill="url(#alive-grid-40)" />
         <rect width={VIEW_W} height={VIEW_H} fill="url(#alive-grid-200)" />
         <g ref={backLayerRef} />
-        <path ref={haloRef} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth={10} strokeLinecap="round" />
+        <path ref={haloRef} data-role="axis" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth={10} strokeLinecap="round" />
         <g ref={phasesLayerRef} />
         <path ref={flowRef} fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={3} strokeLinecap="round" strokeDasharray="1 26" />
         {/* No tip marker, gate or arrowhead: the horizontal time axis simply continues to the

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   BASE_CONTROL_POINTS,
-  PHASE_LABELS,
   PICKER,
   Spring,
   buildPath,
@@ -11,6 +10,7 @@ import {
   ellipsePoint,
   fadeEdge,
   halfEllipsePath,
+  maxRingVerticalExtent,
   pathPoint,
   phaseRanges,
   phaseSegmentPath,
@@ -19,6 +19,9 @@ import {
   stepControlPoints,
   stepDrum,
 } from "@/lib/home/alive-trajectory";
+
+/** A stand-in label set for pure geometry tests that don't care about actual dates. */
+const PHASE_LABELS: readonly string[] = ["a 검진", "b 검진", "c 검진", "다음 검진"];
 
 describe("Spring", () => {
   it("converges to its target without overshooting past a bound", () => {
@@ -201,6 +204,16 @@ describe("phaseTick", () => {
     // The tick has nonzero length and the label sits further out along the same normal.
     const tickLength = Math.hypot(tick.x2 - tick.x1, tick.y2 - tick.y1);
     expect(tickLength).toBeGreaterThan(0);
+  });
+});
+
+describe("maxRingVerticalExtent", () => {
+  it("returns the largest rx (the rotated ring's vertical extent), not ry", () => {
+    expect(maxRingVerticalExtent([{ rx: 90 }, { rx: 210 }, { rx: 120 }])).toBe(210);
+  });
+
+  it("returns 0 for no rings", () => {
+    expect(maxRingVerticalExtent([])).toBe(0);
   });
 });
 
