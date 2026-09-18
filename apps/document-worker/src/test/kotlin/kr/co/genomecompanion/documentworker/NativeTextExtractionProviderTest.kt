@@ -385,6 +385,36 @@ class NativeTextExtractionProviderTest {
         assertThat(outcome.abstentions).containsExactly(ParsedAbstention("AST", AbstentionReason.MISSING_EVIDENCE, 1))
     }
 
+    @Test
+    fun `the abstention reason set is exactly the seven closed codes`() {
+        assertThat(AbstentionReason.CODES).containsExactly(
+            "unreadable", "ambiguous_value", "ambiguous_unit", "missing_evidence",
+            "qualified_value", "qualitative", "previous_column",
+        )
+    }
+
+    @Test
+    fun `every row that shows a label and a numeric token either becomes a candidate or an abstention`() {
+        val rows = listOf(
+            "혈당 95 mg/dL",            // measurement
+            "혈당 95",                  // no unit → ambiguous_unit
+            "혈당 95 100",              // two numbers, no unit → ambiguous_value
+            "혈당 95 120-199",          // bare range right after the value → ambiguous_unit, never dropped
+            "혈당 95 mg/dL 100 mg/dL",  // two values → ambiguous_value
+        )
+        val outcome = NativeTextExtractionProvider.parse(lines(listOf("검사일: 2026-07-28") + rows))
+        assertThat(outcome.candidates).hasSize(1)
+        assertThat(outcome.abstentions.map { it.reason.code })
+            .containsExactly("ambiguous_unit", "ambiguous_value", "ambiguous_unit", "ambiguous_value")
+    }
+
+    @Test
+    fun `a row whose first numeric token has no label before it is skipped, not abstained`() {
+        assertThat(NativeTextExtractionProvider.parseRow("3")).isEqualTo(NativeTextExtractionProvider.RowParse.Skipped)
+        assertThat(NativeTextExtractionProvider.parseRow("- 2 -")).isEqualTo(NativeTextExtractionProvider.RowParse.Skipped)
+        assertThat(NativeTextExtractionProvider.parseRow("예시 검진센터")).isEqualTo(NativeTextExtractionProvider.RowParse.Skipped)
+    }
+
     private fun lines(vararg texts: String): List<TextLine> = lines(texts.toList())
 
     private fun lines(texts: List<String>): List<TextLine> =

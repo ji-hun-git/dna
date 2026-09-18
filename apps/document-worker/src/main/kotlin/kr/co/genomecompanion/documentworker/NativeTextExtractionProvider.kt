@@ -21,6 +21,16 @@ enum class AbstentionReason(val code: String) {
     AMBIGUOUS_VALUE("ambiguous_value"),
     AMBIGUOUS_UNIT("ambiguous_unit"),
     MISSING_EVIDENCE("missing_evidence"),
+    /** `<0.3`, `≤5.6`, `>60`: the printed number carries a comparison sign, so it is not stored as a value. */
+    QUALIFIED_VALUE("qualified_value"),
+    /** `음성`, `양성`, `정상`, `이상`: a printed judgement word, never a value; nothing is stored. */
+    QUALITATIVE("qualitative"),
+    /** A value that sits in a previous-result column (`이전`, `전회`, an earlier year header). */
+    PREVIOUS_COLUMN("previous_column");
+
+    companion object {
+        val CODES: List<String> = entries.map { it.code }
+    }
 }
 
 
@@ -113,7 +123,7 @@ object NativeTextExtractionProvider {
         val abstentions = mutableListOf<ParsedAbstention>()
         for (line in lines) {
             when (val row = parseRow(line.text)) {
-                null -> continue
+                RowParse.Skipped -> continue
                 is RowParse.Ambiguous -> {
                     val reason = if (observedOn == null) AbstentionReason.MISSING_EVIDENCE else row.reason
                     abstentions += ParsedAbstention(row.label.take(MAX_LABEL), reason, line.page)
@@ -154,13 +164,15 @@ object NativeTextExtractionProvider {
     internal sealed interface RowParse {
         data class Measurement(val label: String, val value: String, val unit: String, val referenceRangeText: String?) : RowParse
         data class Ambiguous(val label: String, val reason: AbstentionReason) : RowParse
+        /** No label precedes the first numeric token (page numbers, headers): not a measurement row at all. */
+        data object Skipped : RowParse
     }
 
-    internal fun parseRow(raw: String): RowParse? {
+    internal fun parseRow(raw: String): RowParse {
         val text = raw.replace(separators, " ").trim().replace(leadingBullets, "").trim()
         val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
         val valueIndex = tokens.indexOfFirst { valueToken.matches(it) }
-        if (valueIndex < 1) return null
+        if (valueIndex < 1) return RowParse.Skipped
         val label = tokens.subList(0, valueIndex).joinToString(" ")
         val value = tokens[valueIndex]
         val unitToken = tokens.getOrNull(valueIndex + 1)
@@ -168,15 +180,19 @@ object NativeTextExtractionProvider {
             unitToken == null -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
             MedicalUnitSpelling.canonical(unitToken) != null -> unitToken
             valueToken.matches(unitToken) -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
-            // A bare range right after the value (e.g. "120-199") with no unit word at all is not a
-            // measurement row we can label ambiguous-unit about; leave it unrecognised, as before.
-            rangeText.matches(unitToken) -> return null
+            // A bare range right after the value ("120-199") with no unit word: the row showed a label
+            // and a number, so it is reported as ambiguous_unit instead of being dropped silently.
             else -> return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_UNIT)
         }
         val rest = tokens.drop(valueIndex + 2)
         val restText = rest.joinToString(" ")
         val restIsRange = rest.isNotEmpty() && rangeText.matches(restText)
-        if (rest.isNotEmpty() && !restIsRange && rest.any { valueToken.matches(it) }) {
+        // A second full "value unit" pair in the rest (e.g. "100 mg/dL") is a second result printed on
+        // the same row, not a reference range: the permissive rangeText pattern would otherwise absorb
+        // it silently, so this is checked ahead of the range classification.
+        val restHasSecondMeasurement = rest.zipWithNext()
+            .any { (candidateValue, candidateUnit) -> valueToken.matches(candidateValue) && MedicalUnitSpelling.canonical(candidateUnit) != null }
+        if (rest.isNotEmpty() && (restHasSecondMeasurement || (!restIsRange && rest.any { valueToken.matches(it) }))) {
             return RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE)
         }
         // Two ranges on one row ("70-99 100-200") are both document text: keep them verbatim, joined
