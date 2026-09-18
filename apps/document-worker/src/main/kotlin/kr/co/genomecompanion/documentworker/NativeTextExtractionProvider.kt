@@ -114,6 +114,7 @@ object NativeTextExtractionProvider {
         }
         val candidates = mutableListOf<ParsedCandidate>()
         val abstentions = mutableListOf<ParsedAbstention>()
+        var candidateOverflow = false
         val prepared = joinValueColumns(mergeContinuedLabels(lines))
         for (line in prepared) {
             for (row in parseRowAll(line.text)) {
@@ -130,7 +131,7 @@ object NativeTextExtractionProvider {
                             abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.UNREADABLE, line.page)
                         line.previousColumn ->
                             abstentions += ParsedAbstention(row.label.take(MAX_LABEL), AbstentionReason.PREVIOUS_COLUMN, line.page)
-                        candidates.size >= MAX_CANDIDATES -> continue
+                        candidates.size >= MAX_CANDIDATES -> { candidateOverflow = true }
                         else -> candidates += ParsedCandidate(
                             ordinal = candidates.size + 1,
                             label = row.label,
@@ -157,7 +158,23 @@ object NativeTextExtractionProvider {
                 observedOn = observedOn,
             )
         }
-        return ExtractionOutcome(candidates.toList(), abstentions.take(MAX_ABSTENTIONS), observedOn)
+        return ExtractionOutcome(candidates.toList(), capAbstentions(abstentions, candidateOverflow), observedOn)
+    }
+
+    /**
+     * Never silently truncates: a row past [MAX_CANDIDATES] candidates or [MAX_ABSTENTIONS]
+     * abstentions is not dropped without a trace — one [AbstentionReason.UNREADABLE] abstention
+     * labelled [UNREADABLE_ROWS_LABEL] is emitted for the overflow (counted once, no matter how many
+     * rows overflowed either cap), itself kept within [MAX_ABSTENTIONS] by displacing the last real
+     * abstention when the list is already full.
+     */
+    private fun capAbstentions(abstentions: List<ParsedAbstention>, candidateOverflow: Boolean): List<ParsedAbstention> {
+        val overflowMarker = ParsedAbstention(UNREADABLE_ROWS_LABEL, AbstentionReason.UNREADABLE, null)
+        return when {
+            !candidateOverflow && abstentions.size <= MAX_ABSTENTIONS -> abstentions
+            abstentions.size >= MAX_ABSTENTIONS -> abstentions.take(MAX_ABSTENTIONS - 1) + overflowMarker
+            else -> abstentions + overflowMarker
+        }
     }
 
     internal sealed interface RowParse {
@@ -306,7 +323,10 @@ object NativeTextExtractionProvider {
     }
 
     private fun startsNumericOrSigned(text: String): Boolean =
-        RowGrammar.tokenize(text).firstOrNull()?.let { RowGrammar.valueToken.matches(it) || leadingComparisonSign.matches(it) } == true
+        // Includes pressurePair-shaped tokens (`121/79`) via RowGrammar.isNumericLike, so a second,
+        // headered pressure-pair cell starts its own group instead of being folded into the first
+        // value cell's group (which would silently drop the previous-time pair's abstention).
+        RowGrammar.tokenize(text).firstOrNull()?.let { RowGrammar.isNumericLike(it) || leadingComparisonSign.matches(it) } == true
 
     internal sealed interface DateResolution {
         data object Missing : DateResolution

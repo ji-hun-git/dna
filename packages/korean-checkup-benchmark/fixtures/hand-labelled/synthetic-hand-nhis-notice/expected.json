@@ -4,22 +4,87 @@
   "layout": "공단 일반검진 결과통보서형 (2단, 판정 컬럼, 이전 결과 컬럼, 혈압 120/80, 신체계측·혈액·소변 섹션, 머리글·바닥글 날짜)",
   "observedOn": "2026-05-12",
   "candidates": [
-    { "label": "신장", "value": "171.2", "unit": "cm", "conceptCode": "height" },
-    { "label": "체중", "value": "66.4", "unit": "kg", "conceptCode": "weight" },
-    { "label": "혈압(수축기)", "value": "118", "unit": "mmHg", "conceptCode": "systolic-blood-pressure" },
-    { "label": "혈압(이완기)", "value": "76", "unit": "mmHg", "conceptCode": "diastolic-blood-pressure" },
-    { "label": "혈색소", "value": "14.1", "unit": "g/dL", "conceptCode": "hemoglobin" },
-    { "label": "공복혈당", "value": "94", "unit": "mg/dL", "conceptCode": "fasting-glucose" },
-    { "label": "총콜레스테롤", "value": "183", "unit": "mg/dL", "conceptCode": "total-cholesterol" },
-    { "label": "크레아티닌", "value": "0.9", "unit": "mg/dL", "conceptCode": "creatinine" }
+    {
+      "label": "신장",
+      "value": "171.2",
+      "unit": "cm",
+      "conceptCode": "height"
+    },
+    {
+      "label": "체중",
+      "value": "66.4",
+      "unit": "kg",
+      "conceptCode": "weight"
+    },
+    {
+      "label": "혈압(수축기)",
+      "value": "118",
+      "unit": "mmHg",
+      "conceptCode": "systolic-blood-pressure"
+    },
+    {
+      "label": "혈압(이완기)",
+      "value": "76",
+      "unit": "mmHg",
+      "conceptCode": "diastolic-blood-pressure"
+    },
+    {
+      "label": "혈색소",
+      "value": "14.1",
+      "unit": "g/dL",
+      "conceptCode": "hemoglobin"
+    },
+    {
+      "label": "공복혈당",
+      "value": "94",
+      "unit": "mg/dL",
+      "conceptCode": "fasting-glucose"
+    },
+    {
+      "label": "총콜레스테롤",
+      "value": "183",
+      "unit": "mg/dL",
+      "conceptCode": "total-cholesterol"
+    },
+    {
+      "label": "크레아티닌",
+      "value": "0.9",
+      "unit": "mg/dL",
+      "conceptCode": "creatinine"
+    }
   ],
   "abstentions": [
-    { "label": "요단백", "reason": "qualitative" },
-    { "label": "신장", "reason": "previous_column" },
-    { "label": "체중", "reason": "previous_column" },
-    { "label": "혈압", "reason": "previous_column" },
-    { "label": "혈색소", "reason": "previous_column" },
-    { "label": "공복혈당", "reason": "previous_column" },
-    { "label": "총콜레스테롤", "reason": "previous_column" }
+    {
+      "label": "요단백",
+      "reason": "qualitative"
+    },
+    {
+      "label": "신장",
+      "reason": "previous_column"
+    },
+    {
+      "label": "체중",
+      "reason": "previous_column"
+    },
+    {
+      "label": "혈압(수축기)",
+      "reason": "previous_column"
+    },
+    {
+      "label": "혈압(이완기)",
+      "reason": "previous_column"
+    },
+    {
+      "label": "혈색소",
+      "reason": "previous_column"
+    },
+    {
+      "label": "공복혈당",
+      "reason": "previous_column"
+    },
+    {
+      "label": "총콜레스테롤",
+      "reason": "previous_column"
+    }
   ]
 }

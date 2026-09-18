@@ -74,6 +74,22 @@ class RowGrammarTest {
     }
 
     @Test
+    fun `a headerless second pressure pair after the unit abstains instead of silently dropping it`() {
+        assertThat(RowGrammar.parse("혈압 118/76 mmHg 121/79 mmHg"))
+            .containsExactly(RowParse.Ambiguous("혈압", AbstentionReason.AMBIGUOUS_VALUE))
+    }
+
+    @Test
+    fun `value-first rows with a qualified, pressure, or unknown-unit leading token abstain instead of skipping`() {
+        assertThat(RowGrammar.parse("<0.3 mg/L hs-CRP"))
+            .containsExactly(RowParse.Ambiguous("hs-CRP (<0.3 mg/L)", AbstentionReason.QUALIFIED_VALUE))
+        assertThat(RowGrammar.parse("120/80 mmHg 혈압"))
+            .containsExactly(RowParse.Ambiguous("혈압", AbstentionReason.AMBIGUOUS_VALUE))
+        assertThat(RowGrammar.parse("120 xyz 혈당"))
+            .containsExactly(RowParse.Ambiguous("혈당", AbstentionReason.AMBIGUOUS_UNIT))
+    }
+
+    @Test
     fun `plain rows still parse exactly as before`() {
         assertThat(RowGrammar.parse("Cholesterol: 188 mg/dL 120-199"))
             .containsExactly(RowParse.Measurement("Cholesterol", "188", "mg/dL", "120-199"))

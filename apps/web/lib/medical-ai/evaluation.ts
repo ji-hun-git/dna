@@ -244,12 +244,13 @@ export type HandLabelledReport = {
 
 /**
  * Regression floor: the measured value, from docs/status/2026-09-18/wave7.md
- * (corpusId synthetic-ko-hand-labelled-4b20bf06922a7e0a, re-measured 2026-09-18 after Task 13
- * review fix 1 completed the nhis-notice gold set with the three previously-missing
- * `previous_column` abstentions for 신장, 체중 and 혈압). Never rounded up — a future improvement
- * in the parser can raise this constant, a regression must not silently pass.
+ * (corpusId synthetic-ko-hand-labelled-4b20bf06922a7e0a, re-measured 2026-09-19 after PR 7a
+ * review fix 1 (F1) completed the nhis-notice gold set with the split `혈압(수축기)`/`혈압(이완기)`
+ * `previous_column` abstentions the fixed pressure-pair-in-a-previous-column parse now produces,
+ * replacing the single unsplit `혈압` abstention). Never rounded up — a future improvement in the
+ * parser can raise this constant, a regression must not silently pass.
  */
-export const handLabelledFloor = 0.8695652173913043;
+export const handLabelledFloor = 0.9166666666666666;
 
 export function evaluateHandLabelled(corpusInput: unknown, runsInput: readonly unknown[], floor = handLabelledFloor): HandLabelledReport {
   const corpus = handLabelledCorpusSchema.parse(corpusInput);

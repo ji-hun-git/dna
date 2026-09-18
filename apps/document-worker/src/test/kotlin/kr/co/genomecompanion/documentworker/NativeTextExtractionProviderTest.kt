@@ -518,6 +518,23 @@ class NativeTextExtractionProviderTest {
     }
 
     @Test
+    fun `a blood-pressure row with a headered previous-result column splits into this-time candidates and previous_column abstentions, not a dropped pair`() {
+        val outcome = NativeTextExtractionProvider.parse(
+            listOf(
+                positioned("검사일: 2026-07-28", y = 0.05),
+                positioned("항목", y = 0.10, column = 0), positioned("이번", y = 0.10, column = 1), positioned("이전", y = 0.10, column = 2),
+                positioned("혈압", y = 0.14, column = 0), positioned("118/76 mmHg", y = 0.14, column = 1), positioned("121/79 mmHg", y = 0.14, column = 2, previous = true),
+            ),
+        )
+        assertThat(outcome.candidates.map { it.label to it.value }).containsExactly(
+            "혈압(수축기)" to "118", "혈압(이완기)" to "76",
+        )
+        assertThat(outcome.abstentions.map { it.label to it.reason }).containsExactly(
+            "혈압(수축기)" to AbstentionReason.PREVIOUS_COLUMN, "혈압(이완기)" to AbstentionReason.PREVIOUS_COLUMN,
+        )
+    }
+
+    @Test
     fun `two value cells on one row with no recognized previous-column marking abstain as one ambiguous row, not two candidates`() {
         val outcome = NativeTextExtractionProvider.parse(
             listOf(
@@ -574,6 +591,24 @@ class NativeTextExtractionProviderTest {
         val narrowOutcome = NativeTextExtractionProvider.parse(listOf(positioned("검사일: 2026-07-28", y = 0.05)) + narrowLines)
         assertThat(narrowOutcome.candidates).isEmpty()
         assertThat(narrowOutcome.abstentions).hasSize(1)
+    }
+
+    @Test
+    fun `overflowing the candidate cap emits one overflow abstention instead of silently truncating`() {
+        val rows = (1..101).map { "항목$it 12$it mg/dL" }
+        val outcome = NativeTextExtractionProvider.parse(lines(listOf("검사일: 2026-07-28") + rows))
+        assertThat(outcome.candidates).hasSize(100)
+        assertThat(outcome.abstentions.filter { it.label == NativeTextExtractionProvider.UNREADABLE_ROWS_LABEL && it.reason == AbstentionReason.UNREADABLE })
+            .hasSize(1)
+    }
+
+    @Test
+    fun `overflowing the abstention cap truncates but keeps exactly one overflow marker inside the cap`() {
+        val rows = (1..150).map { "항목$it <0.$it mg/dL" }
+        val outcome = NativeTextExtractionProvider.parse(lines(listOf("검사일: 2026-07-28") + rows))
+        assertThat(outcome.abstentions).hasSize(100)
+        assertThat(outcome.abstentions.filter { it.label == NativeTextExtractionProvider.UNREADABLE_ROWS_LABEL && it.reason == AbstentionReason.UNREADABLE })
+            .hasSize(1)
     }
 
     private fun positioned(text: String, y: Double, column: Int = 0, previous: Boolean = false, page: Int = 1) =

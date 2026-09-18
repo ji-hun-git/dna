@@ -81,10 +81,19 @@ object RowGrammar {
         }
         pressurePair.matchEntire(value)?.let { pair ->
             if (unitToken != null && MedicalUnitSpelling.canonical(unitToken) == "mmHg") {
-                val ranges = tokens.drop(numericIndex + 2).singleOrNull()?.let { pressureRangePair.matchEntire(it) }
+                val trailing = tokens.drop(numericIndex + 2)
+                val rangePair = trailing.singleOrNull()?.let { pressureRangePair.matchEntire(it) }
+                // A non-empty tail that is not exactly one this/previous range pair (e.g. a second,
+                // unheadered pressure pair printed right after: "118/76 mmHg 121/79 mmHg") is not
+                // silently dropped: without a recognized previous-result header there is no way to
+                // tell which pair is current, so the whole row abstains honestly instead of only
+                // keeping the first pair.
+                if (trailing.isNotEmpty() && rangePair == null) {
+                    return listOf(RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE))
+                }
                 return listOf(
-                    RowParse.Measurement("$label(수축기)", pair.groupValues[1], unitToken, ranges?.groupValues?.get(1), label),
-                    RowParse.Measurement("$label(이완기)", pair.groupValues[2], unitToken, ranges?.groupValues?.get(2), label),
+                    RowParse.Measurement("$label(수축기)", pair.groupValues[1], unitToken, rangePair?.groupValues?.get(1), label),
+                    RowParse.Measurement("$label(이완기)", pair.groupValues[2], unitToken, rangePair?.groupValues?.get(2), label),
                 )
             }
             return listOf(RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE))
@@ -99,11 +108,28 @@ object RowGrammar {
         return listOf(finish(label, value, unit, tokens.drop(numericIndex + 2)))
     }
 
-    /** `120 mg/dL 혈당`: number, unit, then the label up to the next range or number. */
+    /**
+     * `120 mg/dL 혈당`: number, unit, then the label up to the next range or number. A qualified
+     * (`<0.3 mg/L hs-CRP`) or otherwise numeric-like-but-not-plain (`120/80 mmHg 혈압`) leading
+     * token, or a plain value followed by an unrecognized unit token but a real label further down
+     * the row, is never silently `Skipped` when a label is actually present: it abstains with the
+     * matching reason instead.
+     */
     private fun valueFirst(tokens: List<String>): List<RowParse> {
         val value = tokens[0]
-        if (!valueToken.matches(value)) return listOf(RowParse.Skipped)
-        val unit = tokens.getOrNull(1)?.takeIf { MedicalUnitSpelling.canonical(it) != null } ?: return listOf(RowParse.Skipped)
+        if (qualifiedToken.matches(value)) return valueFirstAmbiguous(tokens, AbstentionReason.QUALIFIED_VALUE, wrapPrinted = true)
+        if (!valueToken.matches(value)) {
+            if (!isNumericLike(value)) return listOf(RowParse.Skipped)
+            return valueFirstAmbiguous(tokens, AbstentionReason.AMBIGUOUS_VALUE, wrapPrinted = false)
+        }
+        val unitToken = tokens.getOrNull(1)
+        val unit = unitToken?.takeIf { MedicalUnitSpelling.canonical(it) != null }
+        if (unitToken != null && unit == null) {
+            val label = tokens.drop(2).joinToString(" ")
+            if (label.isEmpty()) return listOf(RowParse.Skipped)
+            return listOf(RowParse.Ambiguous(label.take(MAX_LABEL), AbstentionReason.AMBIGUOUS_UNIT))
+        }
+        if (unit == null) return listOf(RowParse.Skipped)
         val rest = tokens.drop(2)
         val labelEnd = rest.indexOfFirst { rangeText.matches(it) || isNumericLike(it) }.let { if (it < 0) rest.size else it }
         val label = rest.take(labelEnd).joinToString(" ")
@@ -111,7 +137,18 @@ object RowGrammar {
         return listOf(finish(label, value, unit, rest.drop(labelEnd)))
     }
 
-    private fun isNumericLike(token: String): Boolean =
+    /** Shared tail for a value-first row whose leading token cannot become a stored value. */
+    private fun valueFirstAmbiguous(tokens: List<String>, reason: AbstentionReason, wrapPrinted: Boolean): List<RowParse> {
+        val value = tokens[0]
+        val unitToken = tokens.getOrNull(1)?.takeIf { MedicalUnitSpelling.canonical(it) != null }
+        val consumed = if (unitToken != null) 2 else 1
+        val label = tokens.drop(consumed).joinToString(" ")
+        if (label.isEmpty()) return listOf(RowParse.Skipped)
+        val finalLabel = if (wrapPrinted) "$label (${tokens.take(consumed).joinToString(" ")})" else label
+        return listOf(RowParse.Ambiguous(finalLabel.take(MAX_LABEL), reason))
+    }
+
+    internal fun isNumericLike(token: String): Boolean =
         valueToken.matches(token) || qualifiedToken.matches(token) || pressurePair.matches(token) ||
             fractionLike.matches(token) || comparisonSign.matches(token)
 
