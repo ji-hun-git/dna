@@ -5,6 +5,13 @@
             <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX,UTC} level=%level logger=%logger{36} correlation_id=%X{correlation_id:-none} %msg%n</pattern>
         </encoder>
     </appender>
+    <!-- Task 21: neither category may reach a log line with request or document content in it.
+         org.springframework.web at DEBUG prints request bodies and resolved exception messages (a
+         Jackson parse failure quotes the offending request text verbatim); PDFBox warns with the
+         content of the object it could not parse. Both are pinned above those levels here so that a
+         stray `logging.level` change cannot reintroduce the echo. -->
+    <logger name="org.springframework.web" level="WARN"/>
+    <logger name="org.apache.pdfbox" level="ERROR"/>
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>

@@ -1020,7 +1020,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         // instance of the service directly (reusing the real, autowired repository/storage/clock),
         // so there genuinely is no active transaction — the guard must fall back to deleting the
         // files immediately instead of throwing (F7).
-        val rawService = FoundationLifecycleService(repository, documentStorage, foundationProperties, clock, conceptSource, sessionRateLimiter)
+        val rawService = FoundationLifecycleService(repository, documentStorage, foundationProperties, clock, conceptSource, sessionRateLimiter, FoundationLogging())
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
         val untrusted = requestDocument(alice, consentId, fixturePdf, "f7-revoke-untrusted")
@@ -2868,6 +2868,70 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         val timestamp = java.time.Instant.parse(responseJson(fhir.contentAsByteArray)["timestamp"].asText())
         assertThat(fhir.getHeader(HttpHeaders.CONTENT_DISPOSITION))
             .isEqualTo("attachment; filename=\"alm-health-events-${seoulDate(timestamp)}.fhir.json\"")
+    }
+
+    /**
+     * PHI-safe logging as a property, not a habit: one whole lifecycle (session, consent, document,
+     * candidates, confirmation, correction, export, revocation, deletion) plus a malformed-body failure
+     * runs with a `ListAppender` on the *root* logger, so every category — the foundation service, the
+     * worker boundary, Spring, PDFBox, the driver — is captured, and nothing a person uploaded or typed
+     * may appear in any of it.
+     */
+    @Test
+    fun aFullLifecycleLogsNoValueLabelFilenameOrDate() {
+        val root = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME) as Logger
+        val appender = ListAppender<ILoggingEvent>().also { it.start(); root.addAppender(it) }
+        val stdout = java.io.ByteArrayOutputStream()
+        val originalOut = System.out
+        System.setOut(java.io.PrintStream(stdout, true, Charsets.UTF_8))
+        try {
+            val alice = login("synthetic-alice")
+            val consentId = grantConsent(alice)
+            val candidates = importJulyWithRange(alice, consentId, "log-capture")
+            confirmEveryCandidate(alice, candidates, "log-capture")
+            val recordId = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray)
+                .first()["recordId"].asText()
+            mutate(
+                post("/api/foundation/records/$recordId/corrections")
+                    .header("Idempotency-Key", "log-capture-correct")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json(mapOf("value" to "190", "reason" to "결과지에 190으로 적혀 있음"))),
+                alice,
+            ).andExpect(status().isOk)
+            read(get("/api/foundation/health-events/export"), alice).andExpect(status().isOk)
+            mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+            mutate(delete("/api/foundation/profile"), alice).andExpect(status().isOk)
+            // A failure path too: malformed JSON with a value-looking payload.
+            mockMvc.perform(
+                post("/api/foundation/session")
+                    .header(HttpHeaders.ORIGIN, allowedOrigin)
+                    .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"subjectId\":\"synthetic-alice\",\"credential\":\"188 mg/dL Cholesterol"),
+            ).andExpect(status().isBadRequest)
+        } finally {
+            System.setOut(originalOut)
+            root.detachAppender(appender)
+            appender.stop()
+        }
+        // Console lines carry `logback-spring.xml`'s prefix (an instant, a level, a logger name and the
+        // correlation id). None of it is request-derived, and all of it is full of incidental digits — a
+        // millisecond field alone reads as "5.2" roughly every other line — so the prefix is stripped and
+        // the assertions below run against what the code actually chose to say. A line that does *not*
+        // match the prefix (a stray println, a stack trace) is kept whole and asserted on in full.
+        val consolePrefix = Regex("""^\d{4}-\d{2}-\d{2}T[0-9:.]+Z level=\S+ logger=\S+ correlation_id=\S+ """)
+        val lines = appender.list.map { it.formattedMessage + it.throwableProxy?.message.orEmpty() } +
+            stdout.toString(Charsets.UTF_8).lines().map { it.replace(consolePrefix, "") }
+        assertThat(lines).isNotEmpty()
+        assertThat(lines.count { it.contains("event=") }).isGreaterThanOrEqualTo(8)
+        for (
+            forbidden in listOf(
+                "188", "5.2", "42", "190", "Cholesterol", "HbA1c", "Vitamin D", "2026-07-28", "120-199",
+                ".pdf", ".png", "synthetic-alice", "결과지에 190으로",
+            )
+        ) {
+            assertThat(lines.filter { it.contains(forbidden) }).describedAs("log lines containing '$forbidden'").isEmpty()
+        }
     }
 
     private fun seoulDate(instant: java.time.Instant): String =

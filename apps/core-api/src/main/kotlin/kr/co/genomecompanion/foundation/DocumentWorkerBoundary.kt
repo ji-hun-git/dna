@@ -208,6 +208,7 @@ class DocumentWorkerBoundaryService(
     private val properties: FoundationProperties,
     private val normalizer: MedicalConceptNormalizer,
     private val clock: Clock,
+    private val logging: FoundationLogging,
 ) {
     @Transactional
     fun lease(workerIdHash: String): WorkerLeaseResponse? {
@@ -219,6 +220,9 @@ class DocumentWorkerBoundaryService(
             now = now,
             leaseExpiresAt = now.plus(properties.workerLeaseTtl),
         ) ?: return null
+        // No subject hash on the worker boundary: a job belongs to a document, and tying a worker line
+        // to a person is neither needed to operate the queue nor safe to write down.
+        logging.event(TelemetryEvent.WORKER_JOB_LEASED, "/internal/document-boundary/jobs/lease", null)
         return WorkerLeaseResponse(
             jobId = job.jobId,
             jobType = job.jobType,
@@ -361,6 +365,7 @@ class DocumentWorkerBoundaryService(
             if (request.decision == InspectionDecision.APPROVED) "SUCCESS" else "REJECTED",
             now,
         )
+        logging.event(TelemetryEvent.WORKER_JOB_COMPLETED, "/internal/document-boundary/jobs/{jobId}/inspection-result", null)
         return WorkerResultReceipt(jobId, "COMPLETED")
     }
 
@@ -413,6 +418,7 @@ class DocumentWorkerBoundaryService(
         )
         // Count only: the audit row names the extraction job, never a value.
         audit(job, if (candidates.isEmpty()) "EXTRACTION_NO_CANDIDATES" else "EXTRACTION_CANDIDATES_CREATED", "SUCCESS", now)
+        logging.event(TelemetryEvent.WORKER_JOB_COMPLETED, "/internal/document-boundary/jobs/{jobId}/extraction-result", null)
         return WorkerResultReceipt(jobId, "COMPLETED")
     }
 
@@ -423,6 +429,7 @@ class DocumentWorkerBoundaryService(
             ?: throw FoundationForbiddenException("worker_job_lease_invalid")
         repository.markJobFailed(job, request.code, request.retryable, now)
         audit(job, "DOCUMENT_JOB_FAILED", "REJECTED", now)
+        logging.event(TelemetryEvent.WORKER_JOB_FAILED, "/internal/document-boundary/jobs/{jobId}/failure", null)
         val retryScheduled = request.retryable && job.attempt < job.maxAttempts
         return WorkerResultReceipt(jobId, if (retryScheduled) "RETRY_SCHEDULED" else "DEAD_LETTER")
     }

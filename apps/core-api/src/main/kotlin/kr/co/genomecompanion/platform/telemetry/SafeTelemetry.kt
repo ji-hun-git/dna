@@ -12,6 +12,22 @@ enum class TelemetryEvent(val code: String) {
     INTERNAL_ERROR("internal_error"),
     STORAGE_UNAVAILABLE("storage_unavailable"),
     QUARANTINE_FILE_DELETE_FAILED("quarantine_file_delete_failed"),
+
+    // Lifecycle state changes (Task 21). One code per state change the foundation service commits;
+    // the line carries the code, the route template and a truncated subject hash, never a value.
+    SESSION_CREATED("session_created"),
+    SESSION_ENDED("session_ended"),
+    DOCUMENT_REQUESTED("document_requested"),
+    DOCUMENT_UPLOADED("document_uploaded"),
+    DOCUMENT_FINALIZED("document_finalized"),
+    DOCUMENT_TERMINATED("document_terminated"),
+    CANDIDATE_CONFIRMED("candidate_confirmed"),
+    CANDIDATE_EXCLUDED("candidate_excluded"),
+    RECORD_CORRECTED("record_corrected"),
+    EXPORT_COMPLETED("export_completed"),
+    WORKER_JOB_LEASED("worker_job_leased"),
+    WORKER_JOB_COMPLETED("worker_job_completed"),
+    WORKER_JOB_FAILED("worker_job_failed"),
 }
 
 data class SafeTelemetryContext(

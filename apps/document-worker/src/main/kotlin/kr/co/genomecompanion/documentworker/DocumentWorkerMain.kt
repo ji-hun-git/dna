@@ -384,16 +384,20 @@ class DocumentWorker(
     private val transientFailures = mutableSetOf<String>()
 
     fun runOnce(): Boolean {
+        // An empty lease is the idle case and is not logged: the loop polls once a second, so a line
+        // per empty poll would be a line per second of nothing happening.
         val lease = client.lease() ?: return false
+        WorkerLog.emit("job_leased", lease.jobId)
         val source = client.source(lease)
         when (lease.jobType) {
-            "SECURITY_INSPECTION" -> client.inspectionResult(
-                lease,
-                inspector.inspect(source, lease.sourceSha256),
-            )
+            "SECURITY_INSPECTION" -> {
+                client.inspectionResult(lease, inspector.inspect(source, lease.sourceSha256))
+                WorkerLog.emit("job_completed", lease.jobId)
+            }
             "SYNTHETIC_EXTRACTION" -> {
                 if (configuration.failFirstExtraction && transientFailures.add(lease.jobId)) {
                     client.failure(lease, "simulated_transient_preview_failure", retryable = true)
+                    WorkerLog.emit("job_failed", lease.jobId, "simulated_transient_preview_failure")
                 } else {
                     // Rendering is the one step that runs attacker-shaped bytes through a decoder, so it
                     // runs in a child JVM: a page that exhausts the heap costs that child, not the worker.
@@ -407,14 +411,25 @@ class DocumentWorker(
                     val rendered = runCatching { PageRenderSubprocess.render(source) }
                         .getOrElse { RenderResult.Failed(UNUSABLE_RENDER_OUTCOME) }
                     when (rendered) {
-                        is RenderResult.Png ->
+                        is RenderResult.Png -> {
                             client.extractionResult(lease, rendered.bytes, NativeTextExtractionProvider.extract(source))
-                        RenderResult.OutOfMemory -> client.failure(lease, "render_error", retryable = false)
-                        is RenderResult.Failed -> client.failure(lease, "preview_generation_failed", retryable = true)
+                            WorkerLog.emit("job_completed", lease.jobId)
+                        }
+                        RenderResult.OutOfMemory -> {
+                            client.failure(lease, "render_error", retryable = false)
+                            WorkerLog.emit("job_failed", lease.jobId, "render_error")
+                        }
+                        is RenderResult.Failed -> {
+                            client.failure(lease, "preview_generation_failed", retryable = true)
+                            WorkerLog.emit("job_failed", lease.jobId, "preview_generation_failed")
+                        }
                     }
                 }
             }
-            else -> client.failure(lease, "unsupported_job_type", retryable = false)
+            else -> {
+                client.failure(lease, "unsupported_job_type", retryable = false)
+                WorkerLog.emit("job_failed", lease.jobId, "unsupported_job_type")
+            }
         }
         return true
     }
@@ -437,7 +452,15 @@ fun main(args: Array<String>) {
         return
     }
     while (true) {
-        val processed = runCatching { worker.runOnce() }.getOrDefault(false)
+        val processed = runCatching { worker.runOnce() }
+            // The exception's class name only: its message can quote a file name, a URL or a page of a
+            // person's document. An anonymous class has an empty simple name, so fall back to a constant
+            // rather than letting WorkerLog's own `require` turn a logged loop error into a crash.
+            .onFailure { failure ->
+                val code = failure.javaClass.simpleName.lowercase().filter { it.isLetterOrDigit() }.take(80)
+                WorkerLog.emit("loop_error", null, if (code.length < 3) "unknown_error" else code)
+            }
+            .getOrDefault(false)
         if (!processed) Thread.sleep(1_000)
     }
 }

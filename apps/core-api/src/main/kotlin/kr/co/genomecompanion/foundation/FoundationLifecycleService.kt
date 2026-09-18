@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped
 import kr.co.genomecompanion.documentboundary.BoundedUploadCapability
 import kr.co.genomecompanion.documentboundary.MedicalConcept
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
+import kr.co.genomecompanion.platform.telemetry.TelemetryEvent
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -195,6 +196,7 @@ class FoundationLifecycleService(
     private val clock: Clock,
     private val conceptSource: MedicalConceptSource,
     private val rateLimiter: SessionRateLimiter,
+    private val logging: FoundationLogging,
 ) {
     private val subjectPattern = Regex("^synthetic-[a-z0-9-]+$")
     private val idempotencyPattern = Regex("^[A-Za-z0-9._:-]{8,80}$")
@@ -242,7 +244,7 @@ class FoundationLifecycleService(
             throw FoundationForbiddenException("subject_deleted")
         }
         rateLimiter.recordSuccess(subjectKey, clientIp)
-        return issueSession(subjectId, now)
+        return issueSession(subjectId, now, "/api/foundation/session")
     }
 
     /**
@@ -254,6 +256,7 @@ class FoundationLifecycleService(
     fun logout(principal: FoundationPrincipal) {
         if (repository.revokeSession(principal.sessionId, Instant.now(clock))) {
             audit(principal, "SESSION_ENDED", "SESSION", principal.sessionId, "SUCCESS")
+            logging.event(TelemetryEvent.SESSION_ENDED, "/api/foundation/session/logout", subjectHash(principal.subjectId))
         }
     }
 
@@ -269,10 +272,10 @@ class FoundationLifecycleService(
         // No caller-chosen identity, reusable credential, implicit consent, or shared demo account.
         val subjectId = "synthetic-demo-${UUID.randomUUID()}"
         check(repository.ensureActiveSyntheticSubject(subjectId, now))
-        return subjectId to issueSession(subjectId, now)
+        return subjectId to issueSession(subjectId, now, "/api/foundation/demo-session")
     }
 
-    private fun issueSession(subjectId: String, now: Instant): IssuedFoundationSession {
+    private fun issueSession(subjectId: String, now: Instant, routeTemplate: String): IssuedFoundationSession {
         val rawToken = FoundationHashing.randomToken()
         val rawCsrf = FoundationHashing.randomToken()
         val sessionId = UUID.randomUUID()
@@ -286,6 +289,7 @@ class FoundationLifecycleService(
             expiresAt = expiresAt,
         )
         audit(subjectId, FoundationHashing.sha256(rawToken), "SESSION_CREATED", "SESSION", sessionId, "SUCCESS")
+        logging.event(TelemetryEvent.SESSION_CREATED, routeTemplate, subjectHash(subjectId))
         return IssuedFoundationSession(sessionId, rawToken, rawCsrf, expiresAt)
     }
 
@@ -335,6 +339,7 @@ class FoundationLifecycleService(
         }
         repository.grantConsent(consentId, principal.subjectId, purposeCode, ConsentPurpose.policyVersion(purposeCode), now)
         audit(principal, "CONSENT_GRANTED", "CONSENT", consentId, "SUCCESS", purposeCode)
+        logging.event(TelemetryEvent.CONSENT_GRANTED, "/api/foundation/consents/{purposeCode}", subjectHash)
         return consentReceipt(checkNotNull(repository.findConsent(principal.subjectId, consentId)))
     }
 
@@ -411,6 +416,7 @@ class FoundationLifecycleService(
             now,
         )
         audit(principal, "DOCUMENT_REQUESTED", "DOCUMENT", documentId, "SUCCESS")
+        logging.event(TelemetryEvent.DOCUMENT_REQUESTED, "/api/foundation/documents", subjectHash)
         return issueDocumentTicket(requireDocument(principal, documentId))
     }
 
@@ -472,6 +478,11 @@ class FoundationLifecycleService(
             throw exception
         }
         audit(principal, "UNTRUSTED_OBJECT_RECEIVED", "DOCUMENT", documentId, "SUCCESS")
+        logging.event(
+            TelemetryEvent.DOCUMENT_UPLOADED,
+            "/api/foundation/documents/{documentId}/content",
+            subjectHash(principal.subjectId),
+        )
         return documentReceipt(requireDocument(principal, documentId))
     }
 
@@ -500,6 +511,11 @@ class FoundationLifecycleService(
             throw FoundationConflictException("document_state_changed")
         }
         audit(principal, "DOCUMENT_FINALIZED", "DOCUMENT", documentId, "SUCCESS")
+        logging.event(
+            TelemetryEvent.DOCUMENT_FINALIZED,
+            "/api/foundation/documents/{documentId}/finalization",
+            subjectHash(principal.subjectId),
+        )
         return documentReceipt(requireDocument(principal, documentId))
     }
 
@@ -571,6 +587,7 @@ class FoundationLifecycleService(
             throw FoundationConflictException("candidate_state_changed")
         }
         audit(principal, "CANDIDATE_EXCLUDED", "CANDIDATE", candidateId, "SUCCESS")
+        logging.event(TelemetryEvent.CANDIDATE_EXCLUDED, "/api/foundation/candidates/{candidateId}/exclusion", subjectHash)
         return candidateReceipt(requireCandidate(principal, candidateId))
     }
 
@@ -614,6 +631,9 @@ class FoundationLifecycleService(
         }
         val unchanged = confirmedValue == candidate.candidateValue && observedOn == candidate.observedOn
         audit(principal, if (unchanged) "CANDIDATE_CONFIRMED" else "CANDIDATE_CORRECTED", "RECORD", recordId, "SUCCESS")
+        // One code for both audit shapes: whether the person kept or edited the extracted value is
+        // exactly the kind of content this line must not carry.
+        logging.event(TelemetryEvent.CANDIDATE_CONFIRMED, "/api/foundation/candidates/{candidateId}/confirmation", subjectHash)
         return recordReceipt(requireRecord(principal, recordId))
     }
 
@@ -722,6 +742,7 @@ class FoundationLifecycleService(
         }
         // The audit row says that an export happened. It carries no count, no value and no date.
         audit(principal, "HEALTH_EVENTS_EXPORTED", "EXPORT", null, "SUCCESS")
+        logging.event(TelemetryEvent.EXPORT_COMPLETED, "/api/foundation/health-events/export", subjectHash(principal.subjectId))
         val filename = "alm-health-events-${LocalDate.ofInstant(now, seoul).format(DateTimeFormatter.BASIC_ISO_DATE)}.json"
         return HealthEventExportEnvelope(
             filename = filename,
@@ -736,6 +757,11 @@ class FoundationLifecycleService(
         val bundle = FhirObservationMapper.bundle(repository.listRecords(principal.subjectId), conceptByCode, now)
         // Same event as the JSON export; the format is a value-free resource-type code. No count, value or date.
         audit(principal, "HEALTH_EVENTS_EXPORTED", "EXPORT_FHIR", null, "SUCCESS")
+        logging.event(
+            TelemetryEvent.EXPORT_COMPLETED,
+            "/api/foundation/health-events/export/fhir",
+            subjectHash(principal.subjectId),
+        )
         val filename = "alm-health-events-${LocalDate.ofInstant(now, seoul).format(DateTimeFormatter.BASIC_ISO_DATE)}.fhir.json"
         return FhirExportEnvelope(filename = filename, bundle = bundle)
     }
@@ -798,6 +824,7 @@ class FoundationLifecycleService(
             throw FoundationConflictException("record_state_changed")
         }
         audit(principal, "RECORD_CORRECTED", "RECORD", recordId, "SUCCESS")
+        logging.event(TelemetryEvent.RECORD_CORRECTED, "/api/foundation/records/{recordId}/corrections", subjectHash)
         return recordReceipt(requireRecord(principal, recordId))
     }
 
@@ -812,8 +839,14 @@ class FoundationLifecycleService(
         if (repository.revokeConsent(principal.subjectId, consentId, now)) {
             // Only DOCUMENT_EXTRACTION documents reference a consent; research/project purposes terminate nothing.
             val terminated = repository.terminateDocumentsForRevokedConsent(principal.subjectId, consentId, now)
-            terminated.forEach { audit(principal, "DOCUMENT_TERMINATED_BY_REVOCATION", "DOCUMENT", it.documentId, "SUCCESS") }
+            val revocationRoute = "/api/foundation/consents/{consentId}/revocation"
+            val revokerHash = subjectHash(principal.subjectId)
+            terminated.forEach {
+                audit(principal, "DOCUMENT_TERMINATED_BY_REVOCATION", "DOCUMENT", it.documentId, "SUCCESS")
+                logging.event(TelemetryEvent.DOCUMENT_TERMINATED, revocationRoute, revokerHash)
+            }
             audit(principal, "CONSENT_REVOKED", "CONSENT", consentId, "SUCCESS", consent.purposeCode)
+            logging.event(TelemetryEvent.CONSENT_REVOKED, revocationRoute, revokerHash)
             if (terminated.any { it.objectKeys.isNotEmpty() }) {
                 fun deleteTerminatedFiles() {
                     // Best effort: a key that still fails after FoundationDocumentStorage.deleteAll's own
@@ -871,6 +904,7 @@ class FoundationLifecycleService(
             "SUCCESS",
             Instant.now(clock),
         )
+        logging.event(TelemetryEvent.DELETION_COMPLETED, "/api/foundation/profile", subjectHash)
         if (objectKeys.isNotEmpty()) {
             fun deleteProfileFiles() {
                 // Rows are gone; a file that cannot be removed now is an orphan the Task 22

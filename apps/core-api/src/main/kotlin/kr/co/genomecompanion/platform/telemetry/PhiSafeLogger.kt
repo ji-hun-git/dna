@@ -19,6 +19,30 @@ class PhiSafeLogger(
     }
 
     /**
+     * One line per committed lifecycle state change: the event code, the route template that produced it
+     * and a truncated, peppered subject hash. Deliberately narrower than [emit]:
+     *
+     *  - no correlation id in the *message*. `logback-spring.xml` already prints
+     *    `correlation_id=%X{correlation_id:-none}` from the MDC on every line, so the id is still there
+     *    for an operator; repeating the raw UUID inside the message would add 32 attacker-uncontrolled
+     *    hex characters per line, which any "this substring never appears in a log" assertion (see
+     *    `FoundationLifecyclePostgresIntegrationTest.aFullLifecycleLogsNoValueLabelFilenameOrDate`) would
+     *    then trip over by coincidence rather than by a real leak.
+     *  - [subjectHash] is a prefix of a peppered SHA-256 of the subject id, never the subject id itself,
+     *    and is length-capped and charset-checked here so a caller cannot smuggle text through it.
+     */
+    fun emitLifecycle(event: TelemetryEvent, routeTemplate: String?, subjectHash: String?) {
+        require(routeTemplate == null || routeTemplate.matches(ROUTE_TEMPLATE_PATTERN))
+        require(subjectHash == null || subjectHash.matches(SUBJECT_HASH_PATTERN))
+        logger.info(
+            "event={} route_template={} subject_hash={}",
+            event.code,
+            routeTemplate ?: "none",
+            subjectHash ?: "none",
+        )
+    }
+
+    /**
      * One line for a framework-level failure the caller has no [ExceptionHandler]-specific telemetry for
      * (currently `internal_error`/`storage_unavailable` from `FoundationProblemAdvice`). [exceptionClass]
      * must be the failing exception's simple class name only — never its `message`, since the message of
@@ -67,6 +91,13 @@ class PhiSafeLogger(
     }
 
     companion object {
+        private val ROUTE_TEMPLATE_PATTERN = Regex("^/[A-Za-z0-9_/{}-]{1,127}$")
+        private val SUBJECT_HASH_PATTERN = Regex("^[0-9a-f]{1,12}$")
+
+        /** A `PhiSafeLogger` writing under the named category, for the one caller that logs for a whole
+         * package rather than for a single class. Kept here so that caller needs no `org.slf4j` import. */
+        fun forCategory(category: String): PhiSafeLogger = PhiSafeLogger(LoggerFactory.getLogger(category))
+
         /** A `PhiSafeLogger` writing under [clazz]'s own logger category — kept inside this package so
          * that callers elsewhere never need their own `org.slf4j` import (`ModuleBoundaryTest
          * .loggingIsAvailableOnlyBehindPhiSafeTelemetry` forbids that outside `..platform.telemetry..`). */
