@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AliveTrajectory } from "@/components/home/AliveTrajectory";
 import { CandidateReview } from "@/components/integrated/CandidateReview";
 import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 import { RecentChanges } from "@/components/integrated/RecentChanges";
@@ -390,6 +391,7 @@ export function IntegratedHealthExperience() {
     return (
       <IntegratedShell current="home" status="예시 데이터로 체험">
       <main className="gc-integrated-shell gc-integrated-shell--center gc-demo-entry">
+        <AliveTrajectory />
         <section className="gc-integrated-auth" aria-labelledby="synthetic-login-title">
           <p className="gc-import__eyebrow">체험 데이터로 시작하기</p>
           <h1 id="synthetic-login-title">흩어진 결과지를,<br />출처가 보이는<br />내 건강 기록으로.</h1>

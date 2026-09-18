@@ -31,6 +31,7 @@ const userFacingFiles = [
   "components/my-data/history/MeasurementHistory.tsx",
   "components/my-data/history/HistoryGraph.tsx",
   "lib/format/original-label.ts",
+  "components/home/AliveTrajectory.tsx",
 ] as const;
 
 const forbiddenUserTerms = [
@@ -118,6 +119,12 @@ describe("Korean UX language boundary", () => {
       "이 값은 예시 결과지의 글자 정보에서 읽어 직접 확인한 값이에요. 실제 기관에서 가져오지 않았어요.",
     );
     expect(source("components/my-data/MyData.tsx")).toContain("값의 의미나 변화의 방향은 판단하지 않아요.");
+  });
+
+  it("labels the pre-login hero animation as example data with no health meaning", () => {
+    const hero = source("components/home/AliveTrajectory.tsx");
+    expect(hero).toContain("예시 데이터 · 실제 사람의 기록이 아니에요");
+    expect(hero).toContain("선의 모양과 움직임은 건강 상태를 뜻하지 않아요.");
   });
 
   it("tells the reviewer the candidate came from the text layer, not from image recognition, and never from a fixture", () => {
