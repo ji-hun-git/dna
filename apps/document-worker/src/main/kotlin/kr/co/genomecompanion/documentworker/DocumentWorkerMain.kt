@@ -33,6 +33,11 @@ private const val WORKER_VERSION = "document-worker-v2"
 private const val MAX_SOURCE_BYTES = 10_485_760
 private const val MAX_RESPONSE_BYTES = 3_000_000
 
+// Mirrors PageRenderSubprocess's own private UNUSABLE_OUTPUT exit code: an exception starting or
+// running the render subprocess is not a different failure from an unusable render, it is just an
+// earlier place for the same one to happen.
+private const val UNUSABLE_RENDER_OUTCOME = -2
+
 
 data class WorkerConfiguration(
     val apiBaseUri: URI,
@@ -392,7 +397,16 @@ class DocumentWorker(
                 } else {
                     // Rendering is the one step that runs attacker-shaped bytes through a decoder, so it
                     // runs in a child JVM: a page that exhausts the heap costs that child, not the worker.
-                    when (val rendered = PageRenderSubprocess.render(source)) {
+                    // Starting that child JVM can itself throw (e.g. an IOException from
+                    // ProcessBuilder.start()) before render() ever returns a RenderResult; without this
+                    // catch that exception would escape runOnce, and the caller's own runCatching around
+                    // runOnce() would swallow it silently -- the job posts no failure and just sits until
+                    // its lease expires. Route it to the same retryable outcome as the subprocess's own
+                    // unusable-output failure (class-only, no message content, to keep the same content
+                    // discipline as PageRenderSubprocess itself).
+                    val rendered = runCatching { PageRenderSubprocess.render(source) }
+                        .getOrElse { RenderResult.Failed(UNUSABLE_RENDER_OUTCOME) }
+                    when (rendered) {
                         is RenderResult.Png ->
                             client.extractionResult(lease, rendered.bytes, NativeTextExtractionProvider.extract(source))
                         RenderResult.OutOfMemory -> client.failure(lease, "render_error", retryable = false)
