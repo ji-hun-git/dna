@@ -440,6 +440,7 @@ class NativeTextExtractionProviderTest {
         assertThat(outcome.candidates[0].sourceTextSha256).isEqualTo(outcome.candidates[1].sourceTextSha256)
         assertThat(outcome.candidates[0].evidenceBox).isEqualTo(outcome.candidates[1].evidenceBox)
         assertThat(outcome.abstentions).isEmpty()
+        assertThat(outcome.candidates.map { it.originalLabel }).containsExactly("혈압", "혈압", null)
     }
 
     private fun lines(vararg texts: String): List<TextLine> = lines(texts.toList())

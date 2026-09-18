@@ -48,6 +48,14 @@ class ExtractionResultRequestValidationTest {
     }
 
     @Test
+    fun acceptsANullOrShortOriginalLabelButRejectsOneOverEightyCharacters() {
+        assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = null))))).isEmpty()
+        assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = "혈압"))))).isEmpty()
+        assertThat(validator.validate(request(candidates = listOf(candidate(originalLabel = "가".repeat(81)))))).isNotEmpty()
+        assertThat(candidate().originalLabel).isNull()
+    }
+
+    @Test
     fun rejectsUnknownAbstentionReasonsAndOversizedLists() {
         assertThat(validator.validate(request(abstentions = listOf(abstention(reason = "low_confidence"))))).isNotEmpty()
         assertThat(validator.validate(request(candidates = (1..101).map { candidate(ordinal = it) }))).isNotEmpty()
@@ -78,7 +86,10 @@ class ExtractionResultRequestValidationTest {
         evidenceBox: EvidenceBox? = EvidenceBox(0.08, 0.1, 0.3, 0.02),
         sourceTextSha256: String = "1".repeat(64),
         referenceRangeText: String? = null,
-    ) = ExtractedCandidate(ordinal, label, value, unit, observedOn, evidencePage, evidenceBox, sourceTextSha256, referenceRangeText)
+        originalLabel: String? = null,
+    ) = ExtractedCandidate(
+        ordinal, label, value, unit, observedOn, evidencePage, evidenceBox, sourceTextSha256, referenceRangeText, originalLabel,
+    )
 
     private fun abstention(reason: String = "unreadable") = ExtractionAbstention("문서 전체", reason, null)
 

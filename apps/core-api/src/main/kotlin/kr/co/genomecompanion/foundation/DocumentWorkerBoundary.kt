@@ -139,6 +139,9 @@ data class ExtractedCandidate(
     val sourceTextSha256: String,
     @field:Size(max = 40) @field:Pattern(regexp = "^[0-9.,\\s\\-~–<>≤≥]{1,40}$")
     val referenceRangeText: String? = null,
+    /** The printed label before a worker-side split (blood pressure's `혈압`), verbatim; null when the row was not split. */
+    @field:Size(max = 80)
+    val originalLabel: String? = null,
 )
 
 

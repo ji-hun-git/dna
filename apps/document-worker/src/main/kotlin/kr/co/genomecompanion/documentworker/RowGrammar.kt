@@ -30,18 +30,40 @@ object RowGrammar {
     )
     private val rangeBody = Regex("[<>≤≥]?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-–~]\\s*\\d[\\d,]*(?:\\.\\d+)?)?")
     private val rangeBoundaryMarker = Regex("[<>≤≥]|\\d\\s*[-–~]\\s*\\d")
+    private val bareNumber = Regex("^\\d+$")
 
     fun tokenize(text: String): List<String> =
-        text.replace(separators, " ").trim().replace(leadingBullets, "").trim()
-            .split(Regex("\\s+")).filter { it.isNotEmpty() }
-            .flatMap { token ->
-                val glued = gluedUnit.matchEntire(token)
-                if (glued != null && MedicalUnitSpelling.canonical(glued.groupValues[2]) != null) {
-                    listOf(glued.groupValues[1], glued.groupValues[2])
-                } else {
-                    listOf(token)
-                }
+        joinSpacedSlashPairs(
+            text.replace(separators, " ").trim().replace(leadingBullets, "").trim()
+                .split(Regex("\\s+")).filter { it.isNotEmpty() }
+                .flatMap { token ->
+                    val glued = gluedUnit.matchEntire(token)
+                    if (glued != null && MedicalUnitSpelling.canonical(glued.groupValues[2]) != null) {
+                        listOf(glued.groupValues[1], glued.groupValues[2])
+                    } else {
+                        listOf(token)
+                    }
+                },
+        )
+
+    /** `120 / 80` printed with spaces around the slash joins into one `120/80` token, same as `120/80`. */
+    private fun joinSpacedSlashPairs(tokens: List<String>): List<String> {
+        val joined = mutableListOf<String>()
+        var index = 0
+        while (index < tokens.size) {
+            val left = tokens[index]
+            val slash = tokens.getOrNull(index + 1)
+            val right = tokens.getOrNull(index + 2)
+            if (slash == "/" && bareNumber.matches(left) && right != null && bareNumber.matches(right)) {
+                joined += "$left/$right"
+                index += 3
+            } else {
+                joined += left
+                index += 1
             }
+        }
+        return joined
+    }
 
     internal fun parse(raw: String): List<RowParse> {
         val tokens = tokenize(raw)
@@ -61,8 +83,8 @@ object RowGrammar {
             if (unitToken != null && MedicalUnitSpelling.canonical(unitToken) == "mmHg") {
                 val ranges = tokens.drop(numericIndex + 2).singleOrNull()?.let { pressureRangePair.matchEntire(it) }
                 return listOf(
-                    RowParse.Measurement("$label(수축기)", pair.groupValues[1], unitToken, ranges?.groupValues?.get(1)),
-                    RowParse.Measurement("$label(이완기)", pair.groupValues[2], unitToken, ranges?.groupValues?.get(2)),
+                    RowParse.Measurement("$label(수축기)", pair.groupValues[1], unitToken, ranges?.groupValues?.get(1), label),
+                    RowParse.Measurement("$label(이완기)", pair.groupValues[2], unitToken, ranges?.groupValues?.get(2), label),
                 )
             }
             return listOf(RowParse.Ambiguous(label, AbstentionReason.AMBIGUOUS_VALUE))

@@ -61,6 +61,17 @@ class MedicalConceptNormalizerTest {
     }
 
     @Test
+    fun usesTheWorkerOriginalLabelWhenPresentButFallsBackToTheCandidateLabel() {
+        val split = normalizer.normalize(candidate(label = "혈압(수축기)", unit = "mmHg", originalLabel = "혈압"))
+        assertThat(split.conceptCode).isEqualTo("systolic-blood-pressure")
+        assertThat(split.label).isEqualTo("수축기 혈압")
+        assertThat(split.originalLabel).isEqualTo("혈압")
+
+        val unsplit = normalizer.normalize(candidate(label = "Cholesterol", originalLabel = null))
+        assertThat(unsplit.originalLabel).isEqualTo("Cholesterol")
+    }
+
+    @Test
     fun attachesNoConceptWhenTheUnitIsNotOneTheConceptAccepts() {
         val mismatched = normalizer.normalize(candidate(label = "UA", value = "1.2", unit = "g/dL"))
         assertThat(mismatched.conceptCode).isNull()
@@ -112,5 +123,9 @@ class MedicalConceptNormalizerTest {
         value: String = "188",
         unit: String = "mg/dL",
         observedOn: String = "2026-07-28",
-    ) = ExtractedCandidate(1, label, value, unit, observedOn, 1, EvidenceBox(0.08, 0.1, 0.3, 0.02), "1".repeat(64))
+        originalLabel: String? = null,
+    ) = ExtractedCandidate(
+        1, label, value, unit, observedOn, 1, EvidenceBox(0.08, 0.1, 0.3, 0.02), "1".repeat(64),
+        referenceRangeText = null, originalLabel = originalLabel,
+    )
 }

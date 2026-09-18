@@ -44,6 +44,8 @@ data class ParsedCandidate(
     val sourceTextSha256: String,
     /** The range body printed on the same row (`70-99`, `<200`, `≤5.6`), verbatim, or null. Never interpreted. */
     val referenceRangeText: String? = null,
+    /** The printed label before a blood-pressure split (`혈압`), null for every other candidate. */
+    val originalLabel: String? = null,
 )
 
 
@@ -132,6 +134,7 @@ object NativeTextExtractionProvider {
                             evidenceBox = line.box,
                             sourceTextSha256 = sha256(line.text.trim()),
                             referenceRangeText = row.referenceRangeText,
+                            originalLabel = row.originalLabel,
                         )
                     }
                 }
@@ -151,7 +154,14 @@ object NativeTextExtractionProvider {
     }
 
     internal sealed interface RowParse {
-        data class Measurement(val label: String, val value: String, val unit: String, val referenceRangeText: String?) : RowParse
+        /** [originalLabel] is the printed label before a blood-pressure split (`혈압`), null for every other row. */
+        data class Measurement(
+            val label: String,
+            val value: String,
+            val unit: String,
+            val referenceRangeText: String?,
+            val originalLabel: String? = null,
+        ) : RowParse
         data class Ambiguous(val label: String, val reason: AbstentionReason) : RowParse
         /** No label precedes the first numeric token (page numbers, headers): not a measurement row at all. */
         data object Skipped : RowParse

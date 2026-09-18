@@ -45,14 +45,32 @@ class RowGrammarTest {
     @Test
     fun `splits blood pressure into a systolic and a diastolic candidate`() {
         assertThat(RowGrammar.parse("혈압 120/80 mmHg")).containsExactly(
-            RowParse.Measurement("혈압(수축기)", "120", "mmHg", null),
-            RowParse.Measurement("혈압(이완기)", "80", "mmHg", null),
+            RowParse.Measurement("혈압(수축기)", "120", "mmHg", null, "혈압"),
+            RowParse.Measurement("혈압(이완기)", "80", "mmHg", null, "혈압"),
         )
         assertThat(RowGrammar.parse("Blood Pressure 118/76 mmHg 90-120/60-80")).containsExactly(
-            RowParse.Measurement("Blood Pressure(수축기)", "118", "mmHg", "90-120"),
-            RowParse.Measurement("Blood Pressure(이완기)", "76", "mmHg", "60-80"),
+            RowParse.Measurement("Blood Pressure(수축기)", "118", "mmHg", "90-120", "Blood Pressure"),
+            RowParse.Measurement("Blood Pressure(이완기)", "76", "mmHg", "60-80", "Blood Pressure"),
         )
         assertThat(RowGrammar.parse("비율 3/4 %")).containsExactly(RowParse.Ambiguous("비율", AbstentionReason.AMBIGUOUS_VALUE))
+    }
+
+    @Test
+    fun `only the blood-pressure split carries an originalLabel while every other row leaves it null`() {
+        val plain = RowGrammar.parse("Cholesterol: 188 mg/dL 120-199").single() as RowParse.Measurement
+        assertThat(plain.originalLabel).isNull()
+        val valueFirst = RowGrammar.parse("120 mg/dL 혈당").single() as RowParse.Measurement
+        assertThat(valueFirst.originalLabel).isNull()
+        assertThat(RowGrammar.parse("혈압 120/80 mmHg").map { (it as RowParse.Measurement).originalLabel })
+            .containsExactly("혈압", "혈압")
+    }
+
+    @Test
+    fun `joins a spaced slash into one pressure pair before matching`() {
+        assertThat(RowGrammar.parse("혈압 120 / 80 mmHg")).containsExactly(
+            RowParse.Measurement("혈압(수축기)", "120", "mmHg", null, "혈압"),
+            RowParse.Measurement("혈압(이완기)", "80", "mmHg", null, "혈압"),
+        )
     }
 
     @Test
