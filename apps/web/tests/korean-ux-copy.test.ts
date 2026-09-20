@@ -169,6 +169,12 @@ describe("Korean UX language boundary", () => {
     expect(experience).toMatch(/processingState === "TERMINATED_BY_REVOCATION"/);
   });
 
+  it("names the memory limit when the preview render was stopped, not just a generic terminal failure", () => {
+    const experience = source("components/integrated/IntegratedHealthExperience.tsx");
+    expect(experience).toContain("미리보기를 만들다 메모리 한도를 넘어 처리를 중단했어요.");
+    expect(experience).toMatch(/documentReceipt\?\.failureCode === "render_error"/);
+  });
+
   it("describes the recent changes as two values without a judgement", () => {
     const recent = source("components/integrated/RecentChanges.tsx");
     expect(recent).toContain("최근 변화");
@@ -286,5 +292,11 @@ describe("Korean UX language boundary", () => {
     for (const path of ["components/integrated/CandidateReview.tsx", "components/integrated/IntegratedRecords.tsx", "components/my-data/EvidenceDrawer.tsx", "components/my-data/history/MeasurementHistory.tsx"]) {
       expect(source(path), `${path} does not use the shared helper`).toContain("originalLabelLine(");
     }
+  });
+
+  it("tells the user in Korean that a stalled request was stopped, not left spinning", () => {
+    expect(source("lib/foundation/messages.ts")).toContain(
+      "서버 응답이 늦어져 요청을 멈췄어요. 잠시 후 다시 시도해 주세요.",
+    );
   });
 });

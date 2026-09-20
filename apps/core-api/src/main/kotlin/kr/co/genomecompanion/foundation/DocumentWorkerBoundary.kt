@@ -16,6 +16,11 @@ import kr.co.genomecompanion.documentboundary.InspectionDecision
 import kr.co.genomecompanion.documentboundary.InspectionReason
 import kr.co.genomecompanion.documentboundary.InspectionReport
 import kr.co.genomecompanion.documentboundary.StorageTrustZone
+import kr.co.genomecompanion.documentboundary.WorkerIdentity
+import kr.co.genomecompanion.platform.telemetry.CorrelationFilter
+import kr.co.genomecompanion.platform.telemetry.PhiSafeLogger
+import kr.co.genomecompanion.platform.telemetry.SafeTelemetryContext
+import kr.co.genomecompanion.platform.telemetry.TelemetryEvent
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -52,7 +57,14 @@ import java.util.UUID
 private const val WORKER_ID_HASH_ATTRIBUTE = "gc.document.worker.id-hash"
 private const val WORKER_CREDENTIAL_HEADER = "X-GC-Worker-Credential"
 private const val WORKER_ID_HEADER = "X-GC-Worker-Id"
+private const val WORKER_ID_MAC_HEADER = "X-GC-Worker-Id-Mac"
 private const val JOB_LEASE_HEADER = "X-GC-Job-Lease"
+
+// Route *templates* for the worker-boundary log lines: constants, never a request URI.
+private const val LEASE_ROUTE = "/internal/document-boundary/jobs/lease"
+private const val INSPECTION_RESULT_ROUTE = "/internal/document-boundary/jobs/{jobId}/inspection-result"
+private const val EXTRACTION_RESULT_ROUTE = "/internal/document-boundary/jobs/{jobId}/extraction-result"
+private const val FAILURE_ROUTE = "/internal/document-boundary/jobs/{jobId}/failure"
 
 
 data class WorkerLeaseResponse(
@@ -202,6 +214,7 @@ class DocumentWorkerBoundaryService(
     private val properties: FoundationProperties,
     private val normalizer: MedicalConceptNormalizer,
     private val clock: Clock,
+    private val logging: FoundationLogging,
 ) {
     @Transactional
     fun lease(workerIdHash: String): WorkerLeaseResponse? {
@@ -213,6 +226,9 @@ class DocumentWorkerBoundaryService(
             now = now,
             leaseExpiresAt = now.plus(properties.workerLeaseTtl),
         ) ?: return null
+        // No subject hash on the worker boundary: a job belongs to a document, and tying a worker line
+        // to a person is neither needed to operate the queue nor safe to write down.
+        logging.event(TelemetryEvent.WORKER_JOB_LEASED, LEASE_ROUTE, null)
         return WorkerLeaseResponse(
             jobId = job.jobId,
             jobType = job.jobType,
@@ -248,31 +264,28 @@ class DocumentWorkerBoundaryService(
         val now = Instant.now(clock)
         val job = requireLeasedJob(jobId, rawLease, now, "SECURITY_INSPECTION")
         if (!FoundationHashing.constantTimeHexEquals(request.sourceSha256, job.sourceSha256)) {
-            repository.markJobFailed(job, "inspection_digest_mismatch", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_digest_mismatch", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (
             request.decision == InspectionDecision.RETRYABLE_FAILURE &&
             request.reason != InspectionReason.SCANNER_UNAVAILABLE
         ) {
-            repository.markJobFailed(job, "inspection_result_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_result_invalid", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (request.decision == InspectionDecision.RETRYABLE_FAILURE) {
-            repository.markJobFailed(job, request.reason.name.lowercase(), retryable = true, now)
+            // The reason is one of our own enum constants, not a worker-supplied message.
+            val receipt = failAndLog(job, request.reason.name.lowercase(), retryable = true, now, INSPECTION_RESULT_ROUTE)
             audit(job, "DOCUMENT_INSPECTION_RETRY", "REJECTED", now)
-            return WorkerResultReceipt(jobId, if (job.attempt < job.maxAttempts) "RETRY_SCHEDULED" else "DEAD_LETTER")
+            return receipt
         }
         if (request.decision == InspectionDecision.APPROVED && request.reason != InspectionReason.CLEAN) {
-            repository.markJobFailed(job, "inspection_result_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_result_invalid", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (
             request.decision == InspectionDecision.REJECTED &&
             request.reason in setOf(InspectionReason.CLEAN, InspectionReason.SCANNER_UNAVAILABLE)
         ) {
-            repository.markJobFailed(job, "inspection_result_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_result_invalid", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         val approvedScanner = when (request.scannerName) {
             "ClamAV" -> request.scannerVersion == properties.requiredClamAvVersion
@@ -281,15 +294,13 @@ class DocumentWorkerBoundaryService(
             else -> false
         }
         if (request.decision == InspectionDecision.APPROVED && !approvedScanner) {
-            repository.markJobFailed(job, "unapproved_scanner", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "unapproved_scanner", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (
             request.decision == InspectionDecision.APPROVED &&
             request.policyVersion != "pdf-security-v1"
         ) {
-            repository.markJobFailed(job, "inspection_policy_mismatch", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_policy_mismatch", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         if (
             request.decision == InspectionDecision.APPROVED &&
@@ -303,16 +314,14 @@ class DocumentWorkerBoundaryService(
                     request.embeddedFiles != false
             )
         ) {
-            repository.markJobFailed(job, "inspection_evidence_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_evidence_invalid", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         val bytes = storage.read(StorageTrustZone.UNTRUSTED, job.sourceObjectKey)
         if (
             bytes.size.toLong() != job.sourceLength ||
             !FoundationHashing.constantTimeHexEquals(FoundationHashing.sha256(bytes), job.sourceSha256)
         ) {
-            repository.markJobFailed(job, "inspection_source_changed", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "inspection_source_changed", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }
         val report = InspectionReport(
             decision = request.decision,
@@ -355,6 +364,7 @@ class DocumentWorkerBoundaryService(
             if (request.decision == InspectionDecision.APPROVED) "SUCCESS" else "REJECTED",
             now,
         )
+        logging.event(TelemetryEvent.WORKER_JOB_COMPLETED, INSPECTION_RESULT_ROUTE, null)
         return WorkerResultReceipt(jobId, "COMPLETED")
     }
 
@@ -363,34 +373,29 @@ class DocumentWorkerBoundaryService(
         val now = Instant.now(clock)
         val job = requireLeasedJob(jobId, rawLease, now, "SYNTHETIC_EXTRACTION")
         if (!FoundationHashing.constantTimeHexEquals(request.sourceSha256, job.sourceSha256)) {
-            repository.markJobFailed(job, "extraction_digest_mismatch", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "extraction_digest_mismatch", retryable = false, now, EXTRACTION_RESULT_ROUTE)
         }
         val source = storage.read(StorageTrustZone.APPROVED_SOURCE, job.sourceObjectKey)
         if (
             source.size.toLong() != job.sourceLength ||
             !FoundationHashing.constantTimeHexEquals(FoundationHashing.sha256(source), job.sourceSha256)
         ) {
-            repository.markJobFailed(job, "approved_source_changed", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "approved_source_changed", retryable = false, now, EXTRACTION_RESULT_ROUTE)
         }
         val ordinals = request.candidates.map { it.ordinal }
         val candidates = runCatching {
             require(ordinals.distinct().size == ordinals.size) { "duplicate ordinal" }
             request.candidates.sortedBy { it.ordinal }.map(normalizer::normalize)
         }.getOrElse {
-            repository.markJobFailed(job, "extraction_candidates_invalid", retryable = false, now)
-            return WorkerResultReceipt(jobId, "DEAD_LETTER")
+            return failAndLog(job, "extraction_candidates_invalid", retryable = false, now, EXTRACTION_RESULT_ROUTE)
         }
         val previewBytes = runCatching { Base64.getDecoder().decode(request.previewPngBase64) }
             .getOrElse {
-                repository.markJobFailed(job, "preview_base64_invalid", retryable = false, now)
-                return WorkerResultReceipt(jobId, "DEAD_LETTER")
+                return failAndLog(job, "preview_base64_invalid", retryable = false, now, EXTRACTION_RESULT_ROUTE)
             }
         val preview = runCatching { storage.putDerivedPreview(job.documentId, job.sourceSha256, previewBytes) }
             .getOrElse {
-                repository.markJobFailed(job, "preview_artifact_invalid", retryable = false, now)
-                return WorkerResultReceipt(jobId, "DEAD_LETTER")
+                return failAndLog(job, "preview_artifact_invalid", retryable = false, now, EXTRACTION_RESULT_ROUTE)
             }
         registerRollbackDelete(preview, StorageTrustZone.DERIVED_SAFE_ARTIFACT)
         repository.markExtractionCompleted(
@@ -407,6 +412,7 @@ class DocumentWorkerBoundaryService(
         )
         // Count only: the audit row names the extraction job, never a value.
         audit(job, if (candidates.isEmpty()) "EXTRACTION_NO_CANDIDATES" else "EXTRACTION_CANDIDATES_CREATED", "SUCCESS", now)
+        logging.event(TelemetryEvent.WORKER_JOB_COMPLETED, EXTRACTION_RESULT_ROUTE, null)
         return WorkerResultReceipt(jobId, "COMPLETED")
     }
 
@@ -415,10 +421,37 @@ class DocumentWorkerBoundaryService(
         val now = Instant.now(clock)
         val job = repository.lockLeasedJob(jobId, FoundationHashing.sha256(rawLease), now)
             ?: throw FoundationForbiddenException("worker_job_lease_invalid")
+        // `request.code` comes from the worker and is validated by `WorkerFailureRequest`, but it is not
+        // ours, so it is written to the job row (which is not a log) and never to the log line.
         repository.markJobFailed(job, request.code, request.retryable, now)
         audit(job, "DOCUMENT_JOB_FAILED", "REJECTED", now)
+        logging.failure(TelemetryEvent.WORKER_JOB_FAILED, FAILURE_ROUTE, "worker_reported_failure")
         val retryScheduled = request.retryable && job.attempt < job.maxAttempts
         return WorkerResultReceipt(jobId, if (retryScheduled) "RETRY_SCHEDULED" else "DEAD_LETTER")
+    }
+
+    /**
+     * Every server-side dead-letter: mark the job failed **and** say so on one line.
+     *
+     * Before this existed each of the fourteen validation failures in `completeInspection`/
+     * `completeExtraction` marked the job failed and returned silently, so only a worker-reported
+     * failure (`failJob`) ever produced a `worker_job_failed` line — exactly inverting the operational
+     * need, since a dead letter the server decided on is the one a human has to explain. The line
+     * carries the same safe context as `failJob`'s (event code, route template, no subject hash, plus
+     * the correlation id `logback-spring.xml` prints from the MDC) and, in addition, [reasonCode]:
+     * always a constant from this file or one of our own enum names, never a worker message.
+     */
+    private fun failAndLog(
+        job: DocumentJobRow,
+        reasonCode: String,
+        retryable: Boolean,
+        now: Instant,
+        routeTemplate: String,
+    ): WorkerResultReceipt {
+        repository.markJobFailed(job, reasonCode, retryable, now)
+        logging.failure(TelemetryEvent.WORKER_JOB_FAILED, routeTemplate, reasonCode)
+        val retryScheduled = retryable && job.attempt < job.maxAttempts
+        return WorkerResultReceipt(job.jobId, if (retryScheduled) "RETRY_SCHEDULED" else "DEAD_LETTER")
     }
 
     private fun requireLeasedJob(
@@ -583,12 +616,36 @@ class DocumentWorkerSecurityConfiguration {
 )
 class DocumentWorkerCredentialFilter(
     private val properties: FoundationProperties,
+    clock: Clock,
 ) : OncePerRequestFilter() {
     private val workerIdPattern = Regex("^[A-Za-z0-9._:-]{3,80}$")
+    private val phiSafeLogger = PhiSafeLogger.forClass(DocumentWorkerCredentialFilter::class.java)
+
+    /**
+     * Per-worker-id budget, keyed by the *hashed* worker id so the raw id never becomes a map key an
+     * operator could read out of a heap dump. It is deliberately the same mechanism the session
+     * limiter uses (see [TokenBucketWindow]) rather than a second copy of the eviction rules.
+     */
+    private val workerBuckets = TokenBucketWindow(clock) { properties.workerRateLimitPerMinute }
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
         !request.requestURI.startsWith("/internal/document-boundary/")
 
+    /**
+     * Three checks, in this order, and the order is the point:
+     *
+     * 1. **Credential.** A caller that cannot present the shared credential is not a worker at all.
+     * 2. **Identity proof.** `X-GC-Worker-Id-Mac` must be HMAC-SHA256(key = sha256(credential),
+     *    message = workerId) — see [WorkerIdentity]. Without it the worker id is a self-asserted
+     *    header, so any credential holder could claim any id, spend another worker's budget, and
+     *    scatter that id through the audit trail.
+     * 3. **Rate limit.** Only now is a request counted against the worker's bucket: counting before
+     *    step 1 or 2 would let an unauthenticated caller exhaust a *real* worker's budget by simply
+     *    naming it — a denial of service handed over for free.
+     *
+     * A denial logs one structured line with no credential, no MAC, and no worker id in it; the raw
+     * header values exist only as locals here.
+     */
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -604,16 +661,46 @@ class DocumentWorkerCredentialFilter(
                 properties.workerCredentialSha256,
             )
         ) {
-            response.status = HttpServletResponse.SC_FORBIDDEN
-            response.contentType = MediaType.APPLICATION_PROBLEM_JSON_VALUE
-            response.characterEncoding = StandardCharsets.UTF_8.name()
-            response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store")
-            response.writer.write("{\"code\":\"worker_identity_denied\"}")
+            deny(response, HttpServletResponse.SC_FORBIDDEN, "worker_identity_denied")
             return
         }
-        request.setAttribute(WORKER_ID_HASH_ATTRIBUTE, FoundationHashing.sha256(workerId))
+        val presentedMac = request.getHeader(WORKER_ID_MAC_HEADER).orEmpty()
+        if (
+            !FoundationHashing.constantTimeHexEquals(
+                presentedMac,
+                WorkerIdentity.macFromCredentialDigest(properties.workerCredentialSha256, workerId),
+            )
+        ) {
+            phiSafeLogger.emit(TelemetryEvent.AUTHENTICATION_DENIED, denialContext())
+            deny(response, HttpServletResponse.SC_FORBIDDEN, "worker_identity_denied")
+            return
+        }
+        val workerIdHash = FoundationHashing.sha256(workerId)
+        if (!workerBuckets.tryAcquire(workerIdHash)) {
+            response.setHeader(HttpHeaders.RETRY_AFTER, "60")
+            deny(response, HttpStatus.TOO_MANY_REQUESTS.value(), "rate_limited")
+            return
+        }
+        request.setAttribute(WORKER_ID_HASH_ATTRIBUTE, workerIdHash)
         filterChain.doFilter(request, response)
     }
+
+    private fun deny(response: HttpServletResponse, status: Int, code: String) {
+        response.status = status
+        response.contentType = MediaType.APPLICATION_PROBLEM_JSON_VALUE
+        response.characterEncoding = StandardCharsets.UTF_8.name()
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store")
+        response.writer.write("{\"code\":\"$code\"}")
+    }
+
+    /** No handler has been chosen this early in the chain, so the route template is the fixed prefix
+     * this filter guards rather than a request-derived path. */
+    private fun denialContext(): SafeTelemetryContext = SafeTelemetryContext(
+        correlationId = CorrelationFilter.currentCorrelationId() ?: UUID.randomUUID(),
+        routeTemplate = "/internal/document-boundary",
+        statusClass = "4xx",
+        latencyMs = null,
+    )
 }
 
 

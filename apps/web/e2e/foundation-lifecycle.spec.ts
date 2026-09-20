@@ -119,6 +119,7 @@ async function browserApi(
       ?.slice("GC_CSRF=".length);
     const headers = new Headers({ "Content-Type": "application/json" });
     if (csrf) headers.set("X-GC-CSRF", decodeURIComponent(csrf));
+    headers.set("X-Requested-With", "GC-Foundation");
     if (requestOptions.idempotencyKey) headers.set("Idempotency-Key", requestOptions.idempotencyKey);
     const response = await fetch(target, {
       method: requestOptions.method ?? "GET",

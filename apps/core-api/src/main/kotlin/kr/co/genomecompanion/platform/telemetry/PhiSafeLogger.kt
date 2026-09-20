@@ -19,6 +19,114 @@ class PhiSafeLogger(
     }
 
     /**
+     * One line per committed lifecycle state change: the event code, the route template that produced it
+     * and a truncated, peppered subject hash. Deliberately narrower than [emit]:
+     *
+     *  - no correlation id in the *message*. `logback-spring.xml` already prints
+     *    `correlation_id=%X{correlation_id:-none}` from the MDC on every line, so the id is still there
+     *    for an operator; repeating the raw UUID inside the message would add 32 attacker-uncontrolled
+     *    hex characters per line, which any "this substring never appears in a log" assertion (see
+     *    `FoundationLifecyclePostgresIntegrationTest.aFullLifecycleLogsNoValueLabelFilenameOrDate`) would
+     *    then trip over by coincidence rather than by a real leak.
+     *  - [subjectHash] is a prefix of a peppered SHA-256 of the subject id, never the subject id itself,
+     *    and is length-capped and charset-checked here so a caller cannot smuggle text through it.
+     *
+     * A context that fails either check **drops the line** and emits [TelemetryEvent
+     * .TELEMETRY_CONTEXT_REJECTED] instead; it does not throw. Every caller logs from inside a
+     * `@Transactional` service method *after* the repository write, so throwing here would roll back a
+     * state change the user already completed — a logging defect must never change what the system did.
+     */
+    fun emitLifecycle(event: TelemetryEvent, routeTemplate: String?, subjectHash: String?) {
+        if (!isSafeRouteTemplate(routeTemplate) || !isSafeSubjectHash(subjectHash)) {
+            emitContextRejected(event)
+            return
+        }
+        logger.info(
+            "event={} route_template={} subject_hash={}",
+            event.code,
+            routeTemplate ?: "none",
+            subjectHash ?: "none",
+        )
+    }
+
+    /**
+     * [emitLifecycle] for a state change that failed, plus the *server's own* reason code for the
+     * failure (a compile-time constant or an enum name from this codebase — never a worker-supplied or
+     * exception-supplied message, which could quote document text). Charset-checked like the rest, and
+     * dropped rather than thrown on a violation for the same transactional reason.
+     */
+    fun emitLifecycleFailure(event: TelemetryEvent, routeTemplate: String?, reasonCode: String) {
+        if (!isSafeRouteTemplate(routeTemplate) || !reasonCode.matches(REASON_CODE_PATTERN)) {
+            emitContextRejected(event)
+            return
+        }
+        logger.info(
+            "event={} route_template={} subject_hash={} reason_code={}",
+            event.code,
+            routeTemplate ?: "none",
+            "none",
+            reasonCode,
+        )
+    }
+
+    /**
+     * The janitor's one line per sweep. Every field is an `Int` by signature, so there is no text here
+     * a caller could smuggle a value through and nothing to charset-check: a count cannot echo a label,
+     * a filename or an exam date. `.part` sweeps keep their own field rather than being folded into
+     * `orphan_files`, because the two mean different things to an operator — an orphan is a file no row
+     * points at (a delete that failed after commit), a part file is an upload that died mid-stream.
+     */
+    fun emitJanitorSweep(
+        event: TelemetryEvent,
+        sessions: Int,
+        capabilities: Int,
+        idempotency: Int,
+        orphanFiles: Int,
+        partFiles: Int,
+        staleJobs: Int,
+    ) {
+        logger.info(
+            "event={} sessions={} capabilities={} idempotency={} orphan_files={} part_files={} stale_jobs={}",
+            event.code,
+            sessions,
+            capabilities,
+            idempotency,
+            orphanFiles,
+            partFiles,
+            staleJobs,
+        )
+    }
+
+    /**
+     * One background category of a multi-category background task failed and was skipped. [category] is
+     * a compile-time constant naming the category and [exceptionClass] the failing exception's simple
+     * class name only — never its message, which for a filesystem or JDBC failure quotes a path or a
+     * bind parameter. Both are charset-checked, and a violation drops the line exactly as
+     * [emitLifecycle] does rather than throwing: a logging defect must not change what the sweep did.
+     */
+    fun emitCategoryFailure(event: TelemetryEvent, category: String, exceptionClass: String) {
+        if (!category.matches(REASON_CODE_PATTERN) || !exceptionClass.matches(EXCEPTION_CLASS_PATTERN)) {
+            emitContextRejected(event)
+            return
+        }
+        logger.warn("event={} category={} exception_class={}", event.code, category, exceptionClass)
+    }
+
+    private fun isSafeRouteTemplate(routeTemplate: String?): Boolean =
+        routeTemplate == null || routeTemplate.matches(ROUTE_TEMPLATE_PATTERN)
+
+    private fun isSafeSubjectHash(subjectHash: String?): Boolean =
+        subjectHash == null || subjectHash.matches(SUBJECT_HASH_PATTERN)
+
+    private fun emitContextRejected(attempted: TelemetryEvent) {
+        logger.warn(
+            "event={} attempted_event={}",
+            TelemetryEvent.TELEMETRY_CONTEXT_REJECTED.code,
+            attempted.code,
+        )
+    }
+
+    /**
      * One line for a framework-level failure the caller has no [ExceptionHandler]-specific telemetry for
      * (currently `internal_error`/`storage_unavailable` from `FoundationProblemAdvice`). [exceptionClass]
      * must be the failing exception's simple class name only — never its `message`, since the message of
@@ -67,6 +175,15 @@ class PhiSafeLogger(
     }
 
     companion object {
+        private val ROUTE_TEMPLATE_PATTERN = Regex("^/[A-Za-z0-9_/{}-]{1,127}$")
+        private val SUBJECT_HASH_PATTERN = Regex("^[0-9a-f]{1,12}$")
+        private val REASON_CODE_PATTERN = Regex("^[a-z0-9_]{3,64}$")
+        private val EXCEPTION_CLASS_PATTERN = Regex("^[A-Za-z0-9_$]{1,96}$")
+
+        /** A `PhiSafeLogger` writing under the named category, for the one caller that logs for a whole
+         * package rather than for a single class. Kept here so that caller needs no `org.slf4j` import. */
+        fun forCategory(category: String): PhiSafeLogger = PhiSafeLogger(LoggerFactory.getLogger(category))
+
         /** A `PhiSafeLogger` writing under [clazz]'s own logger category — kept inside this package so
          * that callers elsewhere never need their own `org.slf4j` import (`ModuleBoundaryTest
          * .loggingIsAvailableOnlyBehindPhiSafeTelemetry` forbids that outside `..platform.telemetry..`). */

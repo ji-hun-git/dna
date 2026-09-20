@@ -28,6 +28,28 @@ const val FOUNDATION_SESSION_COOKIE = "GC_SESSION"
 const val FOUNDATION_CSRF_COOKIE = "GC_CSRF"
 const val FOUNDATION_CSRF_HEADER = "X-GC-CSRF"
 
+/**
+ * A second, forgery-resistant CSRF signal: a cross-site HTML form or `<img>`/navigation cannot set a
+ * custom request header, so a state change that carries this exact value came from our own fetch code.
+ * It is checked in addition to — never instead of — the exact Origin and the session-bound CSRF token.
+ */
+const val FOUNDATION_REQUESTED_WITH_HEADER = "X-Requested-With"
+const val FOUNDATION_REQUESTED_WITH_VALUE = "GC-Foundation"
+
+/**
+ * The one place a foundation filter (running ahead of `FoundationProblemAdvice`, which only sees
+ * exceptions that reach a `DispatcherServlet` handler) writes a `{"code":"…"}` problem response
+ * directly onto the servlet response. Shared by [FoundationSessionFilter] and [RequestBodyLimitFilter]
+ * so a third filter never grows its own slightly-different copy.
+ */
+fun writeProblemResponse(response: HttpServletResponse, status: Int, code: String) {
+    response.status = status
+    response.contentType = "application/problem+json"
+    response.characterEncoding = StandardCharsets.UTF_8.name()
+    response.setHeader("Cache-Control", "no-store")
+    response.writer.write("""{"code":"$code"}""")
+}
+
 
 data class FoundationPrincipal(
     val subjectId: String,
@@ -120,6 +142,12 @@ class FoundationSessionFilter(
                 reject(response, HttpServletResponse.SC_FORBIDDEN, "origin_denied")
                 return
             }
+            // No session exists yet, so there is nobody to attribute an audit row to; the header is
+            // still required so a cross-site page cannot mint a session in someone's browser.
+            if (!requestedWithAllowed(request)) {
+                reject(response, HttpServletResponse.SC_FORBIDDEN, "requested_with_denied")
+                return
+            }
             filterChain.doFilter(request, response)
             return
         }
@@ -165,6 +193,18 @@ class FoundationSessionFilter(
                 reject(response, HttpServletResponse.SC_FORBIDDEN, "csrf_denied")
                 return
             }
+            if (!requestedWithAllowed(request)) {
+                repository.insertDeniedAudit(
+                    subjectHash = subjectHash(session.subjectId),
+                    actorSessionHash = session.tokenHash,
+                    eventType = "REQUEST_REQUESTED_WITH_DENIED",
+                    resourceType = "REQUEST",
+                    resourceId = null,
+                    now = Instant.now(clock),
+                )
+                reject(response, HttpServletResponse.SC_FORBIDDEN, "requested_with_denied")
+                return
+            }
         }
 
         request.setAttribute(
@@ -182,14 +222,12 @@ class FoundationSessionFilter(
     private fun originAllowed(request: HttpServletRequest): Boolean =
         request.getHeader("Origin") == properties.allowedOrigin
 
+    private fun requestedWithAllowed(request: HttpServletRequest): Boolean =
+        request.getHeader(FOUNDATION_REQUESTED_WITH_HEADER) == FOUNDATION_REQUESTED_WITH_VALUE
+
     private fun subjectHash(subjectId: String): String =
         FoundationHashing.sha256("${properties.auditPepper}:$subjectId")
 
-    private fun reject(response: HttpServletResponse, status: Int, code: String) {
-        response.status = status
-        response.contentType = "application/problem+json"
-        response.characterEncoding = StandardCharsets.UTF_8.name()
-        response.setHeader("Cache-Control", "no-store")
-        response.writer.write("""{"code":"$code"}""")
-    }
+    private fun reject(response: HttpServletResponse, status: Int, code: String) =
+        writeProblemResponse(response, status, code)
 }

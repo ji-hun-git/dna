@@ -7,6 +7,7 @@ import ch.qos.logback.core.read.ListAppender
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.Cookie
+import kr.co.genomecompanion.documentboundary.WorkerIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -70,6 +71,12 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     @Autowired
     private lateinit var clock: java.time.Clock
 
+    @Autowired
+    private lateinit var sessionRateLimiter: SessionRateLimiter
+
+    @Autowired
+    private lateinit var janitor: FoundationJanitor
+
     private val uploadCapabilities = mutableMapOf<UUID, TestUploadCapability>()
 
     private val faultyDocumentStorage: FaultInjectingFoundationDocumentStorage
@@ -89,6 +96,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
 
     @BeforeEach
     fun resetSyntheticDatabase() {
+        sessionRateLimiter.clear()
         faultyDocumentStorage.reset()
         jdbc.execute("TRUNCATE TABLE security_audit_event")
         jdbc.execute(
@@ -107,7 +115,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             RESTART IDENTITY CASCADE
             """.trimIndent(),
         )
+        // The quarantine root outlives a single test, but the database does not: leaving a previous
+        // test's files on disk would make every one of them an orphan to the janitor (nothing points
+        // at them after the TRUNCATE above), so disk and database are reset together.
         Files.createDirectories(quarantineRoot)
+        Files.walk(quarantineRoot).use { paths ->
+            paths.filter(Files::isRegularFile).forEach(Files::delete)
+        }
         uploadCapabilities.clear()
     }
 
@@ -117,9 +131,9 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             .andExpect(status().isForbidden)
         mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, "https://attacker.invalid"))
             .andExpect(status().isForbidden)
-        val first = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+        val first = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
             .andExpect(status().isCreated).andReturn().response
-        val second = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+        val second = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
             .andExpect(status().isCreated).andReturn().response
         val firstBody = responseJson(first.contentAsByteArray)
         assertThat(firstBody["subjectId"].asText()).startsWith("synthetic-demo-")
@@ -139,27 +153,139 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     @Test
     fun demoBootstrapHasDurableGlobalProvisioningBudget() {
         repeat(20) {
-            mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+            mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
                 .andExpect(status().isCreated)
         }
-        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
             .andExpect(status().isTooManyRequests)
         assertThat(count("gc_subject")).isEqualTo(20)
     }
 
     @Test
-    fun exhaustedDemoCapacityDoesNotPromiseThatWaitingWillRecoverIt() {
+    fun demoCapacityCountsActiveSubjectsAndReturnsOnDeletion() {
         jdbc.execute("""
             INSERT INTO gc_subject(subject_id, created_at, deleted_at)
-            SELECT 'synthetic-demo-retired-' || n, CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP
+            SELECT 'synthetic-demo-retired-' || n, CURRENT_TIMESTAMP - INTERVAL '1 day', NULL
             FROM generate_series(1, 1000) AS n
         """.trimIndent())
-        val response = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin))
+        val response = mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("demo_capacity_exhausted"))
             .andReturn().response
         assertThat(response.getHeader("Retry-After")).isNull()
         assertThat(count("gc_subject")).isEqualTo(1000)
+
+        jdbc.update("UPDATE gc_subject SET deleted_at = CURRENT_TIMESTAMP WHERE subject_id = 'synthetic-demo-retired-1'")
+        mockMvc.perform(post("/api/foundation/demo-session").header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE))
+            .andExpect(status().isCreated)
+    }
+
+    @Test
+    fun fiveWrongCredentialsLockTheSubjectAndAnUnknownSubjectLeavesNoAuditRow() {
+        // The unknown-subject probe runs from a different client IP: the IP bucket is shared
+        // across subjects (any five failures from one IP lock that IP, by design), so sharing it
+        // with bob's five attempts below would lock bob's IP one attempt early on an unrelated
+        // probe. Isolating the IPs keeps this test about the subject-level lock it names.
+        fun attempt(subject: String, credential: String, remoteAddr: String = "127.0.0.1") = mockMvc.perform(
+            post("/api/foundation/session").header(HttpHeaders.ORIGIN, allowedOrigin)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(mapOf("subjectId" to subject, "credential" to credential)))
+                .with { request -> request.remoteAddr = remoteAddr; request },
+        )
+        attempt("synthetic-nobody", "definitely-not-a-configured-credential-000", remoteAddr = "203.0.113.5")
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("local_identity_denied"))
+        assertThat(count("gc_audit_event")).isZero()
+        repeat(5) { attempt("synthetic-bob", "wrong-credential-value-with-32-characters").andExpect(status().isForbidden) }
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'LOCAL_IDENTITY_DENIED'", Long::class.java)).isEqualTo(5L)
+        attempt("synthetic-bob", bobCredential).andExpect(status().isTooManyRequests).andExpect(jsonPath("$.code").value("login_locked"))
+            .andExpect(header().string("Retry-After", "900"))
+        sessionRateLimiter.clear()
+        attempt("synthetic-bob", bobCredential).andExpect(status().isCreated)
+    }
+
+    @Test
+    fun forwardedForHeaderDoesNotMoveTheLoginLockOffTheRealSocketAddress() {
+        // application.yml pins server.forward-headers-strategy to none, so no ForwardedHeaderFilter
+        // rewrites remoteAddr: a client cannot rotate X-Forwarded-For to escape its own IP bucket.
+        // Each attempt uses a different unknown subject, so only the shared client-IP bucket can
+        // produce the lock: if X-Forwarded-For still decided the key, six rotating values would
+        // each get their own fresh bucket and nothing would ever lock.
+        fun probe(subject: String, forwardedFor: String) = mockMvc.perform(
+            post("/api/foundation/session")
+                .header(HttpHeaders.ORIGIN, allowedOrigin)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
+                .header("X-Forwarded-For", forwardedFor)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    json(
+                        mapOf(
+                            "subjectId" to subject,
+                            "credential" to "wrong-credential-value-with-32-characters",
+                        ),
+                    ),
+                )
+                .with { request -> request.remoteAddr = "198.51.100.7"; request },
+        )
+        repeat(5) { index ->
+            probe("synthetic-forwarded-probe-$index", "203.0.113.${index + 10}")
+                .andExpect(status().isForbidden)
+                .andExpect(jsonPath("$.code").value("local_identity_denied"))
+        }
+        probe("synthetic-forwarded-probe-last", "203.0.113.99")
+            .andExpect(status().isTooManyRequests)
+            .andExpect(jsonPath("$.code").value("login_locked"))
+    }
+
+    @Test
+    fun stateChangesNeedTheRequestedWithHeaderAndLogoutEndsTheSessionWithoutSliding() {
+        val alice = login("synthetic-alice")
+        mockMvc.perform(
+            post("/api/foundation/consents/document-extraction").cookie(alice.cookie)
+                .header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_CSRF_HEADER, alice.csrf),
+        )
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("requested_with_denied"))
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+        mockMvc.perform(
+            post("/api/foundation/consents/document-extraction").cookie(alice.cookie)
+                .header(HttpHeaders.ORIGIN, allowedOrigin).header(FOUNDATION_CSRF_HEADER, alice.csrf)
+                .header("X-Requested-With", "XMLHttpRequest"),
+        )
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("requested_with_denied"))
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'REQUEST_REQUESTED_WITH_DENIED'",
+                Long::class.java,
+            ),
+        ).isEqualTo(2L)
+        grantConsent(alice)
+        val expiresBefore = jdbc.queryForObject(
+            "SELECT expires_at FROM gc_session WHERE subject_id = 'synthetic-alice'",
+            java.time.OffsetDateTime::class.java,
+        )
+        read(get("/api/foundation/session"), alice).andExpect(status().isOk)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT expires_at FROM gc_session WHERE subject_id = 'synthetic-alice'",
+                java.time.OffsetDateTime::class.java,
+            ),
+        ).isEqualTo(expiresBefore)
+        val logout = mutate(post("/api/foundation/session/logout"), alice)
+            .andExpect(status().isNoContent).andReturn().response
+        assertThat(logout.getCookie(FOUNDATION_SESSION_COOKIE)!!.maxAge).isZero()
+        assertThat(logout.getCookie(FOUNDATION_CSRF_COOKIE)!!.maxAge).isZero()
+        assertThat(logout.getHeaders(HttpHeaders.SET_COOKIE)).allMatch { it.contains("SameSite=Strict") }
+        assertThat(logout.getHeaders(HttpHeaders.SET_COOKIE)).noneMatch { it.contains("Secure") }
+        read(get("/api/foundation/session"), alice)
+            .andExpect(status().isUnauthorized).andExpect(jsonPath("$.code").value("session_invalid"))
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT revoked_at IS NOT NULL FROM gc_session WHERE subject_id = 'synthetic-alice'",
+                Boolean::class.java,
+            ),
+        ).isTrue()
+        mockMvc.perform(get("/actuator/prometheus")).andExpect(status().isNotFound)
+        mockMvc.perform(get("/actuator/health")).andExpect(status().isOk)
     }
 
     @Test
@@ -187,6 +313,13 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 "MUTATION_MUST_FAIL",
                 eventId,
             )
+        }.isInstanceOf(DataAccessException::class.java)
+        // The V3 trigger fires `before update or delete`; UPDATE alone only proves half of it, and
+        // `release/readiness.json`'s external_audit_anchor evidence claims both. DELETE is the half
+        // that matters most for an append-only claim, so it is asserted here rather than inferred
+        // from the trigger definition. (The gc_audit_event equivalent already asserts both.)
+        org.assertj.core.api.Assertions.assertThatThrownBy {
+            jdbc.update("DELETE FROM security_audit_event WHERE event_id = ?", eventId)
         }.isInstanceOf(DataAccessException::class.java)
 
         assertThat(
@@ -284,6 +417,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         mockMvc.perform(
             post("/api/foundation/session")
                 .header(HttpHeaders.ORIGIN, allowedOrigin)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     json(
@@ -464,17 +598,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
                 deletionId,
             ),
         ).isEqualTo(1)
-        assertThat(
-            jdbc.queryForObject(
-                """
-                SELECT COUNT(*) FROM gc_audit_event
-                WHERE event_type LIKE '%188%'
-                   OR event_type LIKE '%190%'
-                   OR resource_type LIKE '%mg/dL%'
-                """.trimIndent(),
-                Long::class.java,
-            ),
-        ).isZero()
+        assertThat(auditRowsContaining("2026-07-28")).isEmpty()
         assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$aliceDocumentId.pdf"))).isFalse()
 
         val repeatedDeletion = service.deleteProfile(
@@ -499,7 +623,8 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             post("/api/foundation/consents/$aliceConsentId/revocation")
                 .cookie(bob.cookie)
                 .header(HttpHeaders.ORIGIN, allowedOrigin)
-                .header(FOUNDATION_CSRF_HEADER, bob.csrf),
+                .header(FOUNDATION_CSRF_HEADER, bob.csrf)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE),
         ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("consent_not_found"))
 
@@ -901,7 +1026,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         // instance of the service directly (reusing the real, autowired repository/storage/clock),
         // so there genuinely is no active transaction — the guard must fall back to deleting the
         // files immediately instead of throwing (F7).
-        val rawService = FoundationLifecycleService(repository, documentStorage, foundationProperties, clock, conceptSource)
+        val rawService = FoundationLifecycleService(repository, documentStorage, foundationProperties, clock, conceptSource, sessionRateLimiter, FoundationLogging())
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
         val untrusted = requestDocument(alice, consentId, fixturePdf, "f7-revoke-untrusted")
@@ -1418,9 +1543,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         assertThat(
             jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event WHERE event_type = 'CANDIDATE_CORRECTED'", Long::class.java),
         ).isEqualTo(1L)
-        assertThat(
-            jdbc.queryForObject("SELECT COUNT(*) FROM gc_audit_event a WHERE a::text LIKE '%2026-07-27%' OR a::text LIKE '%2026-07-28%'", Long::class.java),
-        ).isEqualTo(0L)
+        assertThat(auditRowsContaining("2026-07-27", "2026-07-28")).isEmpty()
 
         read(get("/api/foundation/records/$recordId"), alice)
             .andExpect(status().isOk)
@@ -2528,7 +2651,349 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         }
     }
 
+    @Test
+    fun oversizedBodiesAre413BeforeAnyHandlerRuns() {
+        val alice = login("synthetic-alice")
+        val big = "{\"value\":\"" + "1".repeat(262_144) + "\"}"
+        mutate(post("/api/foundation/candidates/${UUID.randomUUID()}/confirmation").header("Idempotency-Key", "too-big-json")
+            .contentType(MediaType.APPLICATION_JSON).content(big), alice)
+            .andExpect(status().isPayloadTooLarge).andExpect(jsonPath("$.code").value("payload_too_large"))
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "too-big-upload")
+        val capability = uploadCapabilities.getValue(documentId)
+        mutate(put("/api/foundation/documents/$documentId/content").header("X-GC-Upload-Capability-Id", capability.capabilityId)
+            .header("X-GC-Upload-Capability", capability.rawToken).contentType(MediaType.APPLICATION_PDF).content(ByteArray(10_485_761)), alice)
+            .andExpect(status().isPayloadTooLarge)
+        assertThat(count("gc_audit_event")).isGreaterThan(0)
+    }
+
+    @Test
+    fun uploadIsStreamedToDiskAndVerifiedWithoutAHeapCopy() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "stream-upload")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        assertThat(Files.list(quarantineRoot.resolve("untrusted")).filter { it.toString().endsWith(".part") }.count()).isZero()
+        assertThat(Files.readAllBytes(quarantineRoot.resolve("untrusted").resolve("$documentId.pdf"))).containsExactly(*fixturePdf)
+        // Wrong bytes of the right length: rejected, and no partial file survives.
+        val other = requestDocument(alice, consentId, januaryFixturePdf, "stream-upload-2")
+        val capability = uploadCapabilities.getValue(other)
+        mutate(put("/api/foundation/documents/$other/content").header("X-GC-Upload-Capability-Id", capability.capabilityId)
+            .header("X-GC-Upload-Capability", capability.rawToken).contentType(MediaType.APPLICATION_PDF)
+            .content(ByteArray(januaryFixturePdf.size) { 'x'.code.toByte() }), alice)
+            .andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("content_digest_mismatch"))
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$other.pdf"))).isFalse()
+        assertThat(Files.list(quarantineRoot.resolve("untrusted")).filter { it.toString().endsWith(".part") }.count()).isZero()
+    }
+
     /** Starts [threads] callables on one latch against the real database and returns their results in submission order. */
+    /**
+     * The page boundary is a keyset, not an offset: page one plus page two plus page three is exactly
+     * the whole list, in the same order, with no row repeated and none skipped, and `X-GC-Next-After`
+     * is present only while more rows follow. The same cursor drives `/health-events`, because both
+     * read the one record order. `limit` outside 1..200 and a malformed cursor are refused in the
+     * product's own error shape rather than silently clamped.
+     */
+    @Test
+    fun recordsAndHealthEventsPaginateWithAnAfterCursorAndTheWholeHistoryReadsRefuseAboveTheCap() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        repeat(3) { round ->
+            confirmEveryCandidate(
+                alice,
+                importSyntheticDocument(alice, consentId, fixturePdf, fixtureDigest, "page-$round"),
+                "page-$round",
+            )
+        }
+
+        val page1 = read(get("/api/foundation/records").param("limit", "4"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(4))
+            .andReturn()
+            .response
+        val next = checkNotNull(page1.getHeader(NEXT_AFTER_HEADER))
+        assertThat(next).isEqualTo(responseJson(page1.contentAsByteArray).last()["recordVersionId"].asText())
+
+        val page2 = read(get("/api/foundation/records").param("limit", "4").param("after", next), alice)
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+        assertThat(responseJson(page2.contentAsByteArray)).hasSize(4)
+        val lastAfter = checkNotNull(page2.getHeader(NEXT_AFTER_HEADER))
+        val page3 = read(get("/api/foundation/records").param("limit", "4").param("after", lastAfter), alice)
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+        assertThat(responseJson(page3.contentAsByteArray)).hasSize(1)
+        assertThat(page3.getHeader(NEXT_AFTER_HEADER)).isNull()
+
+        val whole = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray)
+            .map { it["recordVersionId"].asText() }
+        assertThat(
+            listOf(page1, page2, page3).flatMap { page ->
+                responseJson(page.contentAsByteArray).map { it["recordVersionId"].asText() }
+            },
+        ).isEqualTo(whole)
+
+        read(get("/api/foundation/health-events").param("limit", "4").param("after", next), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(4))
+        // A cursor that is not this subject's own is an empty page, never a window into other rows.
+        read(get("/api/foundation/health-events").param("after", UUID.randomUUID().toString()), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(0))
+
+        // Bob's own, real recordVersionId is just as much "not this subject's own" as a random UUID:
+        // Alice gets an empty page and no next-cursor header, never a peek at Bob's row.
+        val bob = login("synthetic-bob")
+        val bobConsentId = grantConsent(bob)
+        confirmEveryCandidate(bob, importSyntheticDocument(bob, bobConsentId, fixturePdf, fixtureDigest, "bob-page"), "bob-page")
+        val bobRecordVersionId = responseJson(
+            read(get("/api/foundation/records"), bob).andReturn().response.contentAsByteArray,
+        ).first()["recordVersionId"].asText()
+        val aliceWithBobCursor = read(get("/api/foundation/records").param("after", bobRecordVersionId), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(0))
+            .andReturn()
+            .response
+        assertThat(aliceWithBobCursor.getHeader(NEXT_AFTER_HEADER)).isNull()
+
+        // `limit` is one code, `request_invalid`, for every way it can be wrong: non-numeric,
+        // overflowing Int, zero, negative or above the cap — never Spring's own type-mismatch
+        // `request_path_invalid`, which a raw `Int?` binding would otherwise surface for the first two.
+        read(get("/api/foundation/records").param("limit", "abc"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/records").param("limit", "2147483648"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/records").param("limit", "201"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/records").param("limit", "0"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/health-events").param("limit", "abc"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/health-events").param("limit", "2147483648"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_invalid"))
+        read(get("/api/foundation/records").param("after", "not-a-uuid"), alice)
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("request_path_invalid"))
+
+        // 9 real records plus 4,992 synthetic ones is 5,001 CURRENT versions: one past the cap. The
+        // rows are inserted as extra CANDIDATES on the same job first, so gc_health_record's UNIQUE
+        // candidate_id holds throughout and no constraint has to be dropped. Every value is the
+        // digit 1 and every label is `cap-<n>`: nothing here resembles a measurement.
+        val candidateId = jdbc.queryForObject(
+            "SELECT candidate_id FROM gc_candidate WHERE subject_id = ? ORDER BY candidate_id LIMIT 1",
+            UUID::class.java,
+            "synthetic-alice",
+        )
+        jdbc.update(
+            """
+            INSERT INTO gc_candidate(
+                candidate_id, job_id, document_id, subject_id, status, label, candidate_value, unit,
+                observed_on, evidence_page, source_text_sha256, created_at, ordinal, confirmed_at)
+            SELECT gen_random_uuid(), c.job_id, c.document_id, c.subject_id, 'CONFIRMED',
+                   'cap-' || n, '1', 'mg/dL', c.observed_on, 1, repeat('a', 64),
+                   CURRENT_TIMESTAMP, 1000 + n, CURRENT_TIMESTAMP
+            FROM gc_candidate c, generate_series(1, 4992) AS n
+            WHERE c.candidate_id = ?
+            """.trimIndent(),
+            candidateId,
+        )
+        jdbc.update(
+            """
+            INSERT INTO gc_health_record(
+                record_id, candidate_id, document_id, subject_id, label, confirmed_value, unit,
+                observed_on, confirmed_at)
+            SELECT gen_random_uuid(), c.candidate_id, c.document_id, c.subject_id, c.label,
+                   c.candidate_value, c.unit, c.observed_on, CURRENT_TIMESTAMP
+            FROM gc_candidate c
+            WHERE c.subject_id = ? AND c.label LIKE 'cap-%'
+            """.trimIndent(),
+            "synthetic-alice",
+        )
+        jdbc.update(
+            """
+            INSERT INTO gc_health_record_version(version_id, record_id, subject_id, status, value, changed_at)
+            SELECT gen_random_uuid(), r.record_id, r.subject_id, 'CURRENT', r.confirmed_value, CURRENT_TIMESTAMP
+            FROM gc_health_record r
+            WHERE r.subject_id = ? AND r.label LIKE 'cap-%'
+            """.trimIndent(),
+            "synthetic-alice",
+        )
+        assertThat(repository.countCurrentRecords("synthetic-alice")).isEqualTo(5_001L)
+
+        read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isPayloadTooLarge)
+            .andExpect(jsonPath("$.code").value("payload_cap_exceeded"))
+        read(get("/api/foundation/health-events/export/fhir"), alice)
+            .andExpect(status().isPayloadTooLarge)
+            .andExpect(jsonPath("$.code").value("payload_cap_exceeded"))
+        read(get("/api/foundation/changes"), alice)
+            .andExpect(status().isPayloadTooLarge)
+            .andExpect(jsonPath("$.code").value("payload_cap_exceeded"))
+        read(get("/api/foundation/series"), alice)
+            .andExpect(status().isPayloadTooLarge)
+            .andExpect(jsonPath("$.code").value("payload_cap_exceeded"))
+        // The paged reads stay available at any size: the cap bounds one response, not the data.
+        read(get("/api/foundation/records").param("limit", "10"), alice)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(10))
+    }
+
+    /**
+     * The filename and `exportedAt` come from one instant, so they cannot disagree about which side
+     * of midnight in Asia/Seoul the export happened on. The expected filename is derived from the
+     * body the server just returned, so this needs no clock control and cannot itself drift.
+     */
+    @Test
+    fun exportFilenameAndExportedAtComeFromOneInstantInSeoulTime() {
+        val alice = login("synthetic-alice")
+        grantConsent(alice)
+        val response = read(get("/api/foundation/health-events/export"), alice)
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+        val exportedAt = java.time.Instant.parse(responseJson(response.contentAsByteArray)["exportedAt"].asText())
+        assertThat(responseJson(response.contentAsByteArray)["exportedAt"].asText()).endsWith("Z")
+        assertThat(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .isEqualTo("attachment; filename=\"alm-health-events-${seoulDate(exportedAt)}.json\"")
+
+        val fhir = read(get("/api/foundation/health-events/export/fhir"), alice)
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+        val timestamp = java.time.Instant.parse(responseJson(fhir.contentAsByteArray)["timestamp"].asText())
+        assertThat(fhir.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+            .isEqualTo("attachment; filename=\"alm-health-events-${seoulDate(timestamp)}.fhir.json\"")
+    }
+
+    /**
+     * PHI-safe logging as a property, not a habit: one whole lifecycle (session, consent, document,
+     * candidates, confirmation, correction, export, revocation, deletion), a server-decided worker dead
+     * letter and a malformed-body failure run with a `ListAppender` on the *root* logger **with the root
+     * level lowered to TRACE**, so a category that inherits the root level — the foundation service, the
+     * worker boundary, the JDBC template, the driver, Spring's own internals — is captured at every
+     * level it can speak at, not only at INFO, and nothing a person uploaded or typed may appear in any
+     * of it.
+     *
+     * Two categories are *not* widened by this, and deliberately so: `logback-spring.xml` pins
+     * `org.springframework.web` to WARN and `org.apache.pdfbox` to ERROR, and an explicit level on a
+     * logger wins over the root's. Those two pins are themselves the control for those categories (a
+     * `spring.mvc.log-request-details`-style body echo and PDFBox's parse warnings), so the capture
+     * below proves the pins hold rather than re-proving what they exclude. `org.springframework.jdbc`
+     * is pinned to INFO for the same reason: at TRACE, `StatementCreatorUtils` prints every bind
+     * parameter — i.e. every value, label and exam date — so the pin, not this test's filtering, is what
+     * keeps a value out of a log line when someone raises a level in an incident.
+     */
+    @Test
+    fun aFullLifecycleLogsNoValueLabelFilenameOrDate() {
+        val root = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME) as Logger
+        val appender = ListAppender<ILoggingEvent>().also { it.start(); root.addAppender(it) }
+        val originalRootLevel = root.level
+        root.level = ch.qos.logback.classic.Level.TRACE
+        val stdout = java.io.ByteArrayOutputStream()
+        val originalOut = System.out
+        System.setOut(java.io.PrintStream(stdout, true, Charsets.UTF_8))
+        try {
+            val alice = login("synthetic-alice")
+            val consentId = grantConsent(alice)
+            val candidates = importJulyWithRange(alice, consentId, "log-capture")
+            confirmEveryCandidate(alice, candidates, "log-capture")
+            // A server-decided dead letter too: the worker reports a digest that is not the one the
+            // core stored, so `completeInspection` fails the job itself. That path marks the job failed
+            // without the worker ever calling `/failure`, and it must still say `worker_job_failed`.
+            val deadLettered = requestDocument(alice, consentId, fixturePdf, "log-capture-dead-letter")
+            uploadDocument(alice, deadLettered, fixturePdf).andExpect(status().isOk)
+            mutate(post("/api/foundation/documents/$deadLettered/finalization"), alice).andExpect(status().isAccepted)
+            val staleLease = checkNotNull(workerService.lease("a".repeat(64)))
+            assertThat(
+                workerService.completeInspection(
+                    staleLease.jobId,
+                    staleLease.leaseToken,
+                    approvedInspectionRequest("f".repeat(64)),
+                ).status,
+            ).isEqualTo("DEAD_LETTER")
+            val recordId = responseJson(read(get("/api/foundation/records"), alice).andReturn().response.contentAsByteArray)
+                .first()["recordId"].asText()
+            mutate(
+                post("/api/foundation/records/$recordId/corrections")
+                    .header("Idempotency-Key", "log-capture-correct")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json(mapOf("value" to "190", "reason" to "결과지에 190으로 적혀 있음"))),
+                alice,
+            ).andExpect(status().isOk)
+            read(get("/api/foundation/health-events/export"), alice).andExpect(status().isOk)
+            mutate(post("/api/foundation/consents/$consentId/revocation"), alice).andExpect(status().isOk)
+            mutate(delete("/api/foundation/profile"), alice).andExpect(status().isOk)
+            // A failure path too: malformed JSON with a value-looking payload.
+            mockMvc.perform(
+                post("/api/foundation/session")
+                    .header(HttpHeaders.ORIGIN, allowedOrigin)
+                    .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"subjectId\":\"synthetic-alice\",\"credential\":\"188 mg/dL Cholesterol"),
+            ).andExpect(status().isBadRequest)
+        } finally {
+            System.setOut(originalOut)
+            root.level = originalRootLevel
+            root.detachAppender(appender)
+            appender.stop()
+        }
+        // Console lines carry `logback-spring.xml`'s prefix (an instant, a level, a logger name and the
+        // correlation id). None of it is request-derived, and all of it is full of incidental digits — a
+        // millisecond field alone reads as "5.2" roughly every other line — so the prefix is stripped and
+        // the assertions below run against what the code actually chose to say. A line that does *not*
+        // match the prefix (a stray println, a stack trace) is kept whole and asserted on in full.
+        val consolePrefix = Regex("""^\d{4}-\d{2}-\d{2}T[0-9:.]+Z level=\S+ logger=\S+ correlation_id=\S+ """)
+        val lines = appender.list.map { it.formattedMessage + it.throwableProxy?.message.orEmpty() } +
+            stdout.toString(Charsets.UTF_8).lines().map { it.replace(consolePrefix, "") }
+        assertThat(lines).isNotEmpty()
+        assertThat(lines.count { it.contains("event=") }).isGreaterThanOrEqualTo(8)
+        // The server-decided dead letter says so, with its own reason code and nothing else.
+        assertThat(lines.filter { it.contains("event=worker_job_failed") })
+            .describedAs("worker_job_failed lines")
+            .anyMatch { it.contains("reason_code=inspection_digest_mismatch") }
+        // Masked for the digit-only probes ("188", "42", "190") only, because a long hex token hits one
+        // of them by coincidence: the truncated `subject_hash` (a different `AUDIT_PEPPER` would
+        // otherwise red this test without a leak), Java's own `Object.toString()` identity hash
+        // (`PatternValidator@42ea42ba`), and a server-generated UUID — at TRACE, Spring Security and the
+        // test dispatcher echo the request *path*, and `.../documents/166f73f7-ec07-423e-…/content`
+        // contains "42" about a third of the time. None of the three is derived from anything a person
+        // typed or uploaded, and a leaked value would have to land inside one of those exact token
+        // shapes to hide here. Every non-numeric forbidden string is still matched against the whole
+        // line, masks and all.
+        val opaqueIdentifiers = Regex(
+            "subject_hash=[0-9a-f]{1,12}" +
+                "|@[0-9a-f]{6,16}\\b" +
+                "|\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b",
+        )
+        for (
+            forbidden in listOf(
+                "188", "5.2", "42", "190", "Cholesterol", "HbA1c", "Vitamin D", "2026-07-28", "120-199",
+                ".pdf", ".png", "synthetic-alice", "결과지에 190으로",
+            )
+        ) {
+            val haystack = if (forbidden.all { it.isDigit() }) {
+                lines.map { it.replace(opaqueIdentifiers, "<opaque>") }
+            } else {
+                lines
+            }
+            assertThat(haystack.filter { it.contains(forbidden) })
+                .describedAs("log lines containing '$forbidden'").isEmpty()
+        }
+    }
+
+    private fun seoulDate(instant: java.time.Instant): String =
+        java.time.LocalDate.ofInstant(instant, java.time.ZoneId.of("Asia/Seoul"))
+            .format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)
+
     private fun <T> race(threads: Int, action: (Int) -> T): List<Result<T>> {
         val executor = Executors.newFixedThreadPool(threads)
         val ready = CountDownLatch(threads)
@@ -2634,10 +3099,349 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         return UUID.fromString(responseJson(response.contentAsByteArray)["candidateId"].asText())
     }
 
+    /**
+     * The worker's id is only as trustworthy as its proof: a shared credential alone lets any holder
+     * claim any worker id (and so any per-worker budget or audit attribution), so the worker boundary
+     * requires `X-GC-Worker-Id-Mac` = HMAC-SHA256(key = sha256(credential), message = workerId). Core
+     * stores only the credential digest, so it can verify without ever holding the raw secret.
+     *
+     * The same test pins one-shot lease semantics end to end over HTTP: the *identical* completion
+     * request replayed byte for byte (same job, same lease token, same body) is rejected, and exactly
+     * one inspection row exists — a retry storm or a duplicated worker can never double-write.
+     */
+    @Test
+    fun workerIdentityMustBeProvenByHmacAndACompletedLeaseCannotBeReplayed() {
+        fun lease(workerId: String, mac: String?) = mockMvc.perform(
+            post("/internal/document-boundary/jobs/lease")
+                .header("X-GC-Worker-Credential", workerCredential)
+                .header("X-GC-Worker-Id", workerId)
+                .let { if (mac == null) it else it.header("X-GC-Worker-Id-Mac", mac) },
+        )
+        lease("worker-a", null)
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("worker_identity_denied"))
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+        lease("worker-a", "0".repeat(64))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("worker_identity_denied"))
+        // A MAC that is valid, but for a different worker id, must not authenticate "worker-a".
+        lease("worker-a", WorkerIdentity.mac(workerCredential, "worker-b"))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("worker_identity_denied"))
+        lease("worker-a", WorkerIdentity.mac(workerCredential, "worker-a"))
+            .andExpect(status().isNoContent)
+
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "replay-lease")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+
+        val leased = responseJson(
+            lease("worker-a", WorkerIdentity.mac(workerCredential, "worker-a"))
+                .andExpect(status().isOk)
+                .andReturn()
+                .response
+                .contentAsByteArray,
+        )
+        assertThat(leased["jobType"].asText()).isEqualTo("SECURITY_INSPECTION")
+        val jobId = leased["jobId"].asText()
+        val leaseToken = leased["leaseToken"].asText()
+        // Rebuilt, never reused: two requests that are identical on the wire, not two different requests.
+        fun completeInspection() = mockMvc.perform(
+            post("/internal/document-boundary/jobs/$jobId/inspection-result")
+                .header("X-GC-Worker-Credential", workerCredential)
+                .header("X-GC-Worker-Id", "worker-a")
+                .header("X-GC-Worker-Id-Mac", WorkerIdentity.mac(workerCredential, "worker-a"))
+                .header("X-GC-Job-Lease", leaseToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(approvedInspectionRequest())),
+        )
+        completeInspection().andExpect(status().isOk)
+        completeInspection()
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("worker_job_lease_invalid"))
+        assertThat(count("gc_document_inspection")).isEqualTo(1)
+    }
+
+    /**
+     * The janitor is the one place that removes what nothing else will: sessions past their expiry or
+     * already revoked, upload capabilities past their expiry, idempotency claims past their 24h TTL,
+     * quarantine files no database row points at any more (the retry path for a delete that failed
+     * after commit), and jobs that were queued and never leased.
+     *
+     * Every category is asserted in both directions. A second subject holds one live row of each kind —
+     * an unexpired session, an unexpired upload capability, an idempotency claim inside its TTL and a
+     * job queued a moment ago — and the counts after the sweep are exact, because a sweep that deleted
+     * far too much would satisfy a "the dead row is gone" assertion just as well as a correct one.
+     *
+     * Files are asserted in both directions too, and the age threshold is the second half of that: an
+     * unknown file that is *fresh* survives (its row may simply not have committed yet — the worker
+     * writes an approved PDF and its preview to storage before `markInspectionCompleted` commits),
+     * while the same file backdated past the in-flight window is swept.
+     *
+     * The sweep is idempotent by construction — the last sweep here finds nothing — and it never runs
+     * on its own during the suite: `gc.foundation.janitor-interval` is `PT24H` under test, so the only
+     * sweeps are the explicit ones.
+     */
+    @Test
+    fun theJanitorSweepsExpiredRowsOrphanFilesAndStaleQueuedJobs() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "janitor-doc")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        // The live half: a second subject with one row of every swept kind, none of them dead. Nothing
+        // below ages any of these, and the sweep must leave every one of them exactly where it is.
+        val bob = login("synthetic-bob")
+        val bobConsentId = grantConsent(bob)
+        val bobDocumentId = requestDocument(bob, bobConsentId, fixturePdf, "janitor-live-doc")
+        uploadDocument(bob, bobDocumentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$bobDocumentId/finalization"), bob).andExpect(status().isAccepted)
+
+        // A second document whose job a worker already holds a live lease on: the stale-job UPDATE only
+        // touches 'QUEUED' and 'FAILED_RETRYABLE', so an old LEASED row -- a worker actually holding it
+        // -- must survive the sweep even when it is far older than the 24h threshold. Lease expiry, not
+        // age, is what reclaims a leased job, and that is a different code path entirely, so the row is
+        // put straight into 'LEASED' shape rather than raced through the real lease-next endpoint.
+        val carolDocumentId = requestDocument(bob, bobConsentId, fixturePdf, "janitor-leased-doc")
+        uploadDocument(bob, carolDocumentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$carolDocumentId/finalization"), bob).andExpect(status().isAccepted)
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_document_job SET status = 'LEASED', lease_token_hash = ?, worker_id_hash = ?," +
+                    " lease_expires_at = CURRENT_TIMESTAMP + INTERVAL '1 hour'," +
+                    " created_at = CURRENT_TIMESTAMP - INTERVAL '25 hours' WHERE document_id = ?",
+                "a".repeat(64),
+                "b".repeat(64),
+                carolDocumentId,
+            ),
+        ).isEqualTo(1)
+
+        // created_at moves with it: gc_session_expiry checks expires_at > created_at.
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_session SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                    " created_at = CURRENT_TIMESTAMP - INTERVAL '2 minute' WHERE subject_id = ?",
+                "synthetic-alice",
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_upload_capability SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                    " issued_at = CURRENT_TIMESTAMP - INTERVAL '2 minute' WHERE document_id = ?",
+                documentId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_idempotency SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'" +
+                    " WHERE idempotency_key = 'janitor-doc'",
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbc.update(
+                "UPDATE gc_document_job SET created_at = CURRENT_TIMESTAMP - INTERVAL '25 hours' WHERE document_id = ?",
+                documentId,
+            ),
+        ).isEqualTo(1)
+        val liveIdempotencyKeys = count("gc_idempotency") - 1
+        assertThat(liveIdempotencyKeys).isPositive()
+
+        // A settled orphan is swept; an unknown file written moments ago is not, because the row that
+        // will point at it may still be mid-commit. Same for part files, stale versus in-flight.
+        val orphan = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf")
+        Files.writeString(orphan, "%PDF-1.7\norphan synthetic\n%%EOF\n")
+        backdateBeyondTheInFlightWindow(orphan)
+        val freshOrphan = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf")
+        Files.writeString(freshOrphan, "%PDF-1.7\njust-written synthetic\n%%EOF\n")
+        val freshPart = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf.part")
+        Files.writeString(freshPart, "%PDF-1.7\nin-flight synthetic\n")
+        val stalePart = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf.part")
+        Files.writeString(stalePart, "%PDF-1.7\nabandoned synthetic\n")
+        backdateBeyondTheInFlightWindow(stalePart)
+
+        val swept = captureFoundationLogs { janitor.sweep() }
+
+        assertThat(swept.value).isEqualTo(JanitorReport(1, 1, 1, 1, 1, 1))
+        // The sweep line carries all six counts as integers, part files in their own field.
+        assertThat(swept.lines).contains(
+            "event=janitor_sweep sessions=1 capabilities=1 idempotency=1 orphan_files=1 part_files=1 stale_jobs=1",
+        )
+
+        // Swept: the settled orphan, the abandoned part file, alice's rows and her stale job.
+        assertThat(Files.exists(orphan)).isFalse()
+        assertThat(Files.exists(stalePart)).isFalse()
+        assertThat(documentStatus(documentId)).isEqualTo("FAILED_TERMINAL")
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT failure_code FROM gc_document WHERE document_id = ?",
+                String::class.java,
+                documentId,
+            ),
+        ).isEqualTo("stale")
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM gc_document_job WHERE document_id = ?",
+                String::class.java,
+                documentId,
+            ),
+        ).isEqualTo("FAILED_TERMINAL")
+        read(get("/api/foundation/records"), alice).andExpect(status().isUnauthorized)
+
+        // Kept: every live row, and every file something still points at or that is still too young.
+        assertThat(Files.exists(freshOrphan)).isTrue()
+        assertThat(Files.exists(freshPart)).isTrue()
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$documentId.pdf"))).isTrue()
+        assertThat(Files.exists(quarantineRoot.resolve("untrusted").resolve("$bobDocumentId.pdf"))).isTrue()
+        assertThat(count("gc_session")).isEqualTo(1)
+        assertThat(countForSubject("gc_session", "synthetic-bob")).isEqualTo(1)
+        // Two live capabilities now: bob's own document plus the second one made for the LEASED-job
+        // fixture above, neither of them expired.
+        assertThat(count("gc_upload_capability")).isEqualTo(2)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM gc_upload_capability WHERE document_id = ?",
+                Long::class.java,
+                bobDocumentId,
+            ),
+        ).isEqualTo(1)
+        assertThat(count("gc_idempotency")).isEqualTo(liveIdempotencyKeys)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM gc_document_job WHERE document_id = ?",
+                String::class.java,
+                bobDocumentId,
+            ),
+        ).isEqualTo("QUEUED")
+        assertThat(documentStatus(bobDocumentId)).isNotEqualTo("FAILED_TERMINAL")
+        read(get("/api/foundation/records"), bob).andExpect(status().isOk)
+        // Carol's job is LEASED and 25h old, yet the stale-job sweep only ever touches QUEUED and
+        // FAILED_RETRYABLE rows -- a worker holding the lease is untouched by age alone.
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM gc_document_job WHERE document_id = ?",
+                String::class.java,
+                carolDocumentId,
+            ),
+        ).isEqualTo("LEASED")
+        assertThat(documentStatus(carolDocumentId)).isNotEqualTo("FAILED_TERMINAL")
+
+        // The file that survived only because it was young is swept once it has settled — the same file,
+        // the same sweep, nothing but its age changed.
+        backdateBeyondTheInFlightWindow(freshOrphan)
+        assertThat(janitor.sweep()).isEqualTo(JanitorReport(0, 0, 0, 1, 0, 0))
+        assertThat(Files.exists(freshOrphan)).isFalse()
+
+        Files.delete(freshPart)
+        assertThat(janitor.sweep()).isEqualTo(JanitorReport(0, 0, 0, 0, 0, 0))
+    }
+
+    /**
+     * A sweep is five independent categories, not one transaction. When one of them throws — here the
+     * quarantine listing, injected through the storage seam because a read-only bit is not portable
+     * (CI runs as root) — the other four must still run to completion, the failure must be logged as
+     * `janitor_category_failed` with the category name and the exception's *class* only, and the next
+     * sweep must pick up what the failed category left behind. The alternative, a sweep that abandons
+     * everything after the first error, means one unreadable directory quietly stops sessions expiring.
+     */
+    @Test
+    fun aFailedJanitorCategoryIsLoggedAndLeavesTheOtherCategoriesRunning() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "janitor-isolation")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice).andExpect(status().isAccepted)
+        jdbc.update(
+            "UPDATE gc_session SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                " created_at = CURRENT_TIMESTAMP - INTERVAL '2 minute'",
+        )
+        jdbc.update(
+            "UPDATE gc_upload_capability SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'," +
+                " issued_at = CURRENT_TIMESTAMP - INTERVAL '2 minute'",
+        )
+        jdbc.update("UPDATE gc_idempotency SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute'")
+        jdbc.update("UPDATE gc_document_job SET created_at = CURRENT_TIMESTAMP - INTERVAL '25 hours'")
+        val orphan = quarantineRoot.resolve("untrusted").resolve("${UUID.randomUUID()}.pdf")
+        Files.writeString(orphan, "%PDF-1.7\norphan synthetic\n%%EOF\n")
+        backdateBeyondTheInFlightWindow(orphan)
+        faultyDocumentStorage.failNextListObjectKeys()
+
+        val swept = captureFoundationLogs { janitor.sweep() }
+
+        // Four categories ran; the file category contributed zero and touched nothing.
+        assertThat(swept.value).isEqualTo(JanitorReport(1, 1, 1, 0, 0, 1))
+        assertThat(Files.exists(orphan)).isTrue()
+        assertThat(swept.lines).contains("event=janitor_category_failed category=files exception_class=IOException")
+        assertThat(swept.lines).contains(
+            "event=janitor_sweep sessions=1 capabilities=1 idempotency=1 orphan_files=0 part_files=0 stale_jobs=1",
+        )
+        // The exception's message names a path in production; only its class name may be written down.
+        assertThat(swept.lines).noneMatch { it.contains("synthetic-injected-list-failure") }
+        assertThat(count("gc_session")).isZero()
+
+        // Nothing is lost: the next sweep collects what the failed category could not.
+        assertThat(janitor.sweep()).isEqualTo(JanitorReport(0, 0, 0, 1, 0, 0))
+        assertThat(Files.exists(orphan)).isFalse()
+    }
+
+    /** Ages [path] past the janitor's one-hour in-flight grace, so a sweep may consider it settled. */
+    private fun backdateBeyondTheInFlightWindow(path: Path) {
+        Files.setLastModifiedTime(
+            path,
+            java.nio.file.attribute.FileTime.from(java.time.Instant.now(clock).minusSeconds(7_200)),
+        )
+    }
+
+    private class CapturedSweep<T>(val value: T, val lines: List<String>)
+
+    /** Runs [block] with a `ListAppender` on the foundation's own logger category, so a test can assert
+     * the exact shape of the lines the sweep chose to write. */
+    private fun <T> captureFoundationLogs(block: () -> T): CapturedSweep<T> {
+        val logger = LoggerFactory.getLogger("kr.co.genomecompanion.foundation") as Logger
+        val appender = ListAppender<ILoggingEvent>().also { it.start() }
+        val previousLevel = logger.level
+        logger.addAppender(appender)
+        logger.level = Level.TRACE
+        try {
+            val value = block()
+            return CapturedSweep(value, appender.list.map { it.formattedMessage })
+        } finally {
+            logger.detachAppender(appender)
+            logger.level = previousLevel
+            appender.stop()
+        }
+    }
+
+    /** A document still waiting for its upload owns its untrusted key even before the row records it:
+     * a sweep racing the upload's atomic move must never delete the file it just landed. */
+    @Test
+    fun theJanitorLeavesAnUploadPendingDocumentsFileAlone() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "janitor-pending")
+        val landed = quarantineRoot.resolve("untrusted").resolve("$documentId.pdf")
+        Files.createDirectories(landed.parent)
+        Files.write(landed, fixturePdf)
+        // Past the one-hour in-flight grace: without the UPLOAD_PENDING reservation this file would
+        // read as a settled orphan, so a zero orphan count here proves the reservation, not the grace
+        // period that the other janitor test already covers on its own.
+        backdateBeyondTheInFlightWindow(landed)
+        assertThat(
+            jdbc.queryForObject("SELECT object_key FROM gc_document WHERE document_id = ?", String::class.java, documentId),
+        ).isNull()
+
+        assertThat(janitor.sweep().orphanFiles).isZero()
+
+        assertThat(Files.exists(landed)).isTrue()
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+    }
+
     private fun login(subjectId: String): TestClient {
         val response = mockMvc.perform(
             post("/api/foundation/session")
                 .header(HttpHeaders.ORIGIN, allowedOrigin)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     json(
@@ -2786,7 +3590,8 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             builder
                 .cookie(client.cookie)
                 .header(HttpHeaders.ORIGIN, allowedOrigin)
-                .header(FOUNDATION_CSRF_HEADER, client.csrf),
+                .header(FOUNDATION_CSRF_HEADER, client.csrf)
+                .header(FOUNDATION_REQUESTED_WITH_HEADER, FOUNDATION_REQUESTED_WITH_VALUE),
         )
 
     private fun read(builder: MockHttpServletRequestBuilder, client: TestClient) =
@@ -2803,8 +3608,61 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
             documentId,
         )
 
+    @Test
+    fun `audit leak needles are matched as literal text and never as regular expression syntax`() {
+        // countRawHealthValuesInAudit joins its needles into one POSIX alternation, so anything not
+        // escaped is read as syntax by PostgreSQL: `HbA1c (%)` compiles to a group that matches the
+        // different text `HbA1c %`, and a lone `(` does not compile at all and throws instead of
+        // finding nothing. Both make the receipt field lie about what is in the audit trail.
+        jdbc.update(
+            """
+            INSERT INTO gc_audit_event(event_id, subject_hash, event_type, resource_type, outcome, occurred_at)
+            VALUES (?, ?, ?, ?, 'SUCCESS', ?)
+            """.trimIndent(),
+            UUID.randomUUID(),
+            "c".repeat(64),
+            "PROBE_HbA1c (%)",
+            "PROBE",
+            java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC),
+        )
+
+        // Present in the row exactly as written, parentheses and percent sign included.
+        assertThat(repository.countRawHealthValuesInAudit(listOf("PROBE_HbA1c (%)"))).isEqualTo(1)
+        // What the old escape would have matched in its place is not in the row at all.
+        assertThat(repository.countRawHealthValuesInAudit(listOf("PROBE_HbA1c %"))).isZero()
+        // An unbalanced metacharacter is a needle, not a syntax error.
+        assertThat(repository.countRawHealthValuesInAudit(listOf("PROBE_HbA1c ("))).isEqualTo(1)
+        // ...and a needle that contains `|` is one literal, not two alternatives.
+        assertThat(repository.countRawHealthValuesInAudit(listOf("PROBE|NOT_A_REAL_EVENT"))).isZero()
+    }
+
     private fun count(table: String): Long =
         jdbc.queryForObject("SELECT COUNT(*) FROM $table", Long::class.java) ?: 0L
+
+    /**
+     * Every audit row whose content contains one of the synthetic lifecycle's own health values,
+     * labels, unit, reference range or filename extensions, plus any [extraNeedles] (the exam dates
+     * the calling test actually used). The haystack is the whole row as JSON text rather than the
+     * three columns this check used to name, minus the opaque identifier and bookkeeping columns —
+     * see [FoundationRepository.AUDIT_CONTENT_TEXT] for which six and why. The rows themselves are
+     * returned, not a count, so a failure names the leak instead of just asserting a number.
+     */
+    private fun auditRowsContaining(vararg extraNeedles: String): List<String> {
+        fun matching(needles: List<String>): List<String> = jdbc.queryForList(
+            "SELECT ${FoundationRepository.AUDIT_CONTENT_TEXT} FROM gc_audit_event a " +
+                "WHERE ${FoundationRepository.AUDIT_CONTENT_TEXT} ~ ?",
+            String::class.java,
+            needles.joinToString("|") { FoundationRepository.escapePosixRegexLiteral(it) },
+        )
+        // Positive control: an all-zero result only means something if the haystack can match at
+        // all. `outcome` is one of the searched columns and 'SUCCESS' is in it on every lifecycle,
+        // so this proves the query reaches the content columns rather than passing vacuously.
+        assertThat(matching(listOf("SUCCESS"))).describedAs("audit-leak query positive control").isNotEmpty()
+        return matching(
+            listOf("188", "5.2", "42", "190", "Cholesterol", "HbA1c", "Vitamin D", "120-199", ".pdf", ".png") +
+                extraNeedles,
+        )
+    }
 
     private fun countForSubject(table: String, subjectId: String): Long =
         jdbc.queryForObject(
@@ -2814,16 +3672,16 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         ) ?: 0L
 
     companion object {
-        private const val allowedOrigin = "http://127.0.0.1:3137"
-        private const val aliceCredential = "alice-foundation-test-credential-00000001"
-        private const val bobCredential = "bob-foundation-test-credential-00000000002"
-        private val fixturePdf =
-            "%PDF-1.7\nGenome Companion synthetic fixture only; no real health data.\n%%EOF\n".toByteArray()
-        private val fixtureDigest = FoundationHashing.sha256(fixturePdf)
-        private val januaryFixturePdf =
-            "%PDF-1.7\nGenome Companion synthetic fixture 2026-01 only; no real health data.\n%%EOF\n"
-                .toByteArray()
-        private val januaryFixtureDigest = FoundationHashing.sha256(januaryFixturePdf)
+        // Every value below lives in FoundationTestProperties so this test and
+        // FoundationOpenApiContractTest cannot drift into describing two different applications.
+        private const val allowedOrigin = FoundationTestProperties.ALLOWED_ORIGIN
+        private const val aliceCredential = FoundationTestProperties.ALICE_CREDENTIAL
+        private const val bobCredential = FoundationTestProperties.BOB_CREDENTIAL
+        private const val workerCredential = FoundationTestProperties.WORKER_CREDENTIAL
+        private val fixturePdf = FoundationTestProperties.fixturePdf
+        private val fixtureDigest = FoundationTestProperties.fixtureDigest
+        private val januaryFixturePdf = FoundationTestProperties.januaryFixturePdf
+        private val januaryFixtureDigest = FoundationTestProperties.januaryFixtureDigest
         private fun demoCandidates(observedOn: String, values: List<String>) = listOf(
             ExtractedCandidate(1, "Cholesterol", values[0], "mg/dL", observedOn, 1, EvidenceBox(0.08, 0.10, 0.30, 0.02), "1".repeat(64)),
             ExtractedCandidate(2, "HbA1c", values[1], "%", observedOn, 1, EvidenceBox(0.08, 0.14, 0.20, 0.02), "2".repeat(64)),
@@ -2831,48 +3689,14 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         )
         private val julyCandidates = demoCandidates("2026-07-28", listOf("188", "5.2", "42"))
         private val januaryCandidates = demoCandidates("2026-01-15", listOf("194", "5.4", "45"))
-        private const val onePixelPngBase64 =
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
-        private val quarantineRoot: Path = Path.of(
-            System.getenv("GC_TEST_QUARANTINE_ROOT") ?: System.getProperty("java.io.tmpdir"),
-        ).resolve("gc-foundation-postgres-integration").toAbsolutePath().normalize()
+        private const val onePixelPngBase64 = FoundationTestProperties.ONE_PIXEL_PNG_BASE64
+        private val quarantineRoot: Path =
+            FoundationTestProperties.quarantineRoot("gc-foundation-postgres-integration")
 
         @JvmStatic
         @DynamicPropertySource
         fun foundationProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url") { checkNotNull(System.getenv("GC_TEST_POSTGRES_URL")) }
-            registry.add("spring.datasource.username") { "postgres" }
-            registry.add("spring.datasource.password") { "" }
-            // The concurrency (race) tests below genuinely need 2+ live connections at once; the pool
-            // otherwise grows lazily and a fresh second connection's one-time setup cost can itself decide
-            // an otherwise-tight two-thread race.
-            registry.add("spring.datasource.hikari.minimum-idle") { "4" }
-            registry.add("spring.datasource.hikari.maximum-pool-size") { "8" }
-            registry.add("security.oidc.enabled") { "true" }
-            registry.add("security.oidc.issuer") { "https://issuer.test.invalid" }
-            registry.add("security.oidc.jwk-set-uri") { "https://issuer.test.invalid/.well-known/jwks.json" }
-            registry.add("security.oidc.audience") { "https://api.genome-companion.test" }
-            registry.add("security.oidc.client-id") { "synthetic-web-client" }
-            registry.add("gc.foundation.enabled") { "true" }
-            registry.add("gc.foundation.demo-bootstrap-enabled") { "true" }
-            registry.add("gc.foundation.document-boundary-enabled") { "true" }
-            registry.add("gc.foundation.worker-credential-sha256") { "c".repeat(64) }
-            registry.add("gc.foundation.allow-synthetic-scanner-results") { "true" }
-            registry.add("gc.foundation.allowed-origin") { allowedOrigin }
-            registry.add("gc.foundation.secure-cookies") { "false" }
-            registry.add("gc.foundation.quarantine-root") { quarantineRoot.toString() }
-            registry.add("gc.foundation.audit-pepper") {
-                "foundation-integration-test-pepper-64-characters-minimum-value"
-            }
-            registry.add("gc.foundation.allowed-document-sha256") { "$fixtureDigest,$januaryFixtureDigest" }
-            registry.add("gc.foundation.local-identities[0].subject-id") { "synthetic-alice" }
-            registry.add("gc.foundation.local-identities[0].credential-sha256") {
-                FoundationHashing.sha256(aliceCredential)
-            }
-            registry.add("gc.foundation.local-identities[1].subject-id") { "synthetic-bob" }
-            registry.add("gc.foundation.local-identities[1].credential-sha256") {
-                FoundationHashing.sha256(bobCredential)
-            }
+            FoundationTestProperties.register(registry, quarantineRoot)
         }
     }
 }

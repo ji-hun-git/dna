@@ -5,6 +5,23 @@
             <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX,UTC} level=%level logger=%logger{36} correlation_id=%X{correlation_id:-none} %msg%n</pattern>
         </encoder>
     </appender>
+    <!-- Task 21: neither category may reach a log line with request or document content in it.
+         org.springframework.web at DEBUG prints request bodies and resolved exception messages (a
+         Jackson parse failure quotes the offending request text verbatim); PDFBox warns with the
+         content of the object it could not parse. Both are pinned above those levels here so that a
+         stray `logging.level` change cannot reintroduce the echo. -->
+    <logger name="org.springframework.web" level="WARN"/>
+    <logger name="org.apache.pdfbox" level="ERROR"/>
+    <!-- Task 21 fix round 1: the same rule, one layer lower. Below INFO both of these print bind
+         parameters — `org.springframework.jdbc.core.StatementCreatorUtils` at TRACE says "Setting SQL
+         statement parameter value: column index 7, parameter value [188]", and the pgjdbc wire log
+         prints `FE=> Bind(... $7=<('188')>, $19=<('Cholesterol')> ...)`, i.e. every value, label and
+         exam date the person uploaded. That is PHI in a log file, so neither category may drop below
+         INFO even when an operator raises the root level during an incident. SQL text itself is not
+         lost: it is a constant in `FoundationRepository`, and a slow query is found through Postgres'
+         own logging, which never leaves the database host. -->
+    <logger name="org.springframework.jdbc" level="INFO"/>
+    <logger name="org.postgresql" level="INFO"/>
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>

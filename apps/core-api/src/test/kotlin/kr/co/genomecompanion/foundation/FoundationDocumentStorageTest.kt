@@ -101,6 +101,21 @@ class FoundationDocumentStorageTest {
         assertThat(rendered).doesNotContain(badKey, goodKey, goodDocumentId.toString(), ".pdf")
     }
 
+    @Test
+    fun `streams an upload into place and removes the part file on a digest mismatch`() {
+        val storage = storage()
+        val bytes = "%PDF-1.7\nsynthetic stream fixture\n%%EOF\n".toByteArray()
+        val id = UUID.randomUUID()
+        val stored = storage.putUntrusted(id, bytes.inputStream(), bytes.size.toLong(), FoundationHashing.sha256(bytes))
+        assertThat(stored.createdNew).isTrue()
+        assertThat(Files.readAllBytes(root.resolve("untrusted").resolve("$id.pdf"))).containsExactly(*bytes)
+        val other = UUID.randomUUID()
+        assertThatThrownBy { storage.putUntrusted(other, bytes.inputStream(), bytes.size.toLong(), "0".repeat(64)) }
+            .isInstanceOf(FoundationBadRequestException::class.java).hasMessage("content_digest_mismatch")
+        assertThat(Files.exists(root.resolve("untrusted").resolve("$other.pdf"))).isFalse()
+        assertThat(Files.exists(root.resolve("untrusted").resolve("$other.pdf.part"))).isFalse()
+    }
+
     private fun storage() = FoundationDocumentStorage(FoundationProperties(quarantineRoot = root))
 
     companion object {

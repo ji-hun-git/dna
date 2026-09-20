@@ -300,12 +300,14 @@ class FoundationRepository(
         """.trimIndent()
 
     /** Transaction-scoped lock makes the cap durable and serial across API replicas/restarts.
-     * Deleted subjects count too: deletion must not reset an anonymous provisioning budget.
+     * Capacity is active subjects: deletion and expiry return it. The 20-per-minute creation rate
+     * still counts deleted rows so deletion cannot reset the per-minute budget.
      */
     fun reserveDemoBootstrap(now: Instant): DemoBootstrapBudget {
         jdbc.execute("SELECT pg_advisory_xact_lock(714220910)")
         val total = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM gc_subject WHERE subject_id LIKE 'synthetic-demo-%'", Long::class.java,
+            "SELECT COUNT(*) FROM gc_subject WHERE subject_id LIKE 'synthetic-demo-%' AND deleted_at IS NULL",
+            Long::class.java,
         ) ?: 0L
         val recent = jdbc.queryForObject(
             "SELECT COUNT(*) FROM gc_subject WHERE subject_id LIKE 'synthetic-demo-%' AND created_at > ?",
@@ -370,6 +372,37 @@ class FoundationRepository(
             tokenHash,
             now.atOffset(ZoneOffset.UTC),
         ).firstOrNull()
+
+    /** True exactly once per session: the row was live and this call is the one that ended it. */
+    fun revokeSession(sessionId: UUID, now: Instant): Boolean =
+        jdbc.update(
+            "UPDATE gc_session SET revoked_at = ? WHERE session_id = ? AND revoked_at IS NULL",
+            now.atOffset(ZoneOffset.UTC),
+            sessionId,
+        ) == 1
+
+    /**
+     * Janitor sweep (Task 23): a session row is dead either way — `findActiveSession` requires both
+     * `revoked_at IS NULL` and a future `expires_at`, so neither kind can authenticate anything again
+     * and keeping them only grows the table. Deleted by predicate with no explicit row lock and in its
+     * own short transaction, so it can never sit between the target-row and idempotency locks that the
+     * lifecycle paths take (see [lockDocument]) and deadlock against them.
+     */
+    @Transactional
+    fun deleteExpiredSessions(now: Instant): Int =
+        jdbc.update(
+            "DELETE FROM gc_session WHERE expires_at <= ? OR revoked_at IS NOT NULL",
+            now.atOffset(ZoneOffset.UTC),
+        )
+
+    /** Janitor sweep: an expired capability can no longer be presented ([findActiveUploadCapability]
+     * requires `expires_at > now`), revoked or not. */
+    @Transactional
+    fun deleteExpiredUploadCapabilities(now: Instant): Int =
+        jdbc.update(
+            "DELETE FROM gc_upload_capability WHERE expires_at <= ?",
+            now.atOffset(ZoneOffset.UTC),
+        )
 
     fun grantConsent(consentId: UUID, subjectId: String, purposeCode: String, policyVersion: String, now: Instant) {
         jdbc.update(
@@ -1473,6 +1506,65 @@ class FoundationRepository(
             subjectId,
         )
 
+    /**
+     * One keyset page of [listRecords]'s exact order — `(observed_on, confirmed_at, record_id)`.
+     * `afterVersionId` is the CURRENT version id of the last row the caller already holds; the row it
+     * names is looked up **within the subject**, so a version id belonging to somebody else (or to a
+     * deleted row) yields an empty page rather than a window into another person's records. The query
+     * asks for `limit + 1` rows so the caller can tell whether a further page exists without a second
+     * round trip and without a COUNT. PostgreSQL row-wise comparison `(a,b,c) > (x,y,z)` is exactly the
+     * lexicographic "strictly after" of that ORDER BY, so a page boundary can neither skip nor repeat a
+     * row even when many records share an exam date and an instant.
+     */
+    fun listRecordsPage(subjectId: String, afterVersionId: UUID?, limit: Int): List<FoundationRecordRow> {
+        if (afterVersionId == null) {
+            return jdbc.query(
+                """
+                $recordProjection
+                WHERE r.subject_id = ? AND v.status = 'CURRENT'
+                ORDER BY r.observed_on, r.confirmed_at, r.record_id
+                LIMIT ?
+                """.trimIndent(),
+                recordMapper,
+                subjectId,
+                limit + 1,
+            )
+        }
+        val cursor = findRecordVersion(subjectId, afterVersionId) ?: return emptyList()
+        return jdbc.query(
+            """
+            $recordProjection
+            WHERE r.subject_id = ? AND v.status = 'CURRENT'
+              AND (r.observed_on, r.confirmed_at, r.record_id)
+                  > (CAST(? AS DATE), CAST(? AS TIMESTAMPTZ), CAST(? AS UUID))
+            ORDER BY r.observed_on, r.confirmed_at, r.record_id
+            LIMIT ?
+            """.trimIndent(),
+            recordMapper,
+            subjectId,
+            cursor.observedOn,
+            cursor.confirmedAt.atOffset(ZoneOffset.UTC),
+            cursor.recordId,
+            limit + 1,
+        )
+    }
+
+    /** CURRENT record versions this subject owns: the export/aggregate cap counts rows, never values. */
+    fun countCurrentRecords(subjectId: String): Long =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM gc_health_record_version WHERE subject_id = ? AND status = 'CURRENT'",
+            Long::class.java,
+            subjectId,
+        ) ?: 0L
+
+    /** Documents this subject owns, in any state: the second half of the export cap. */
+    fun countDocuments(subjectId: String): Long =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM gc_document WHERE subject_id = ?",
+            Long::class.java,
+            subjectId,
+        ) ?: 0L
+
     fun correctRecord(
         subjectId: String,
         recordId: UUID,
@@ -1544,6 +1636,78 @@ class FoundationRepository(
             },
             subjectId,
         ).flatten().distinct()
+
+    /**
+     * Every object key any row still points at, across all subjects — the janitor's definition of
+     * "not an orphan". It is deliberately a superset of [listObjectKeys]:
+     *
+     * - `gc_document`'s three key columns and the `gc_preview_artifact` row that can outlive
+     *   `preview_object_key` (see [deletePreviewArtifactIfExists]).
+     * - the *reserved* untrusted key of every `UPLOAD_PENDING` document. That file lands on disk
+     *   (an atomic move out of `<key>.part`) a moment before `markDocumentUploaded` records
+     *   `object_key`, so a sweep running inside that window would otherwise delete a perfectly live
+     *   upload. Reserving the key for the pending state only — not for every document ever created —
+     *   keeps the retry path intact: once a document is terminated or its key cleared, a file left
+     *   behind by a failed post-commit delete is an orphan again and gets swept.
+     */
+    fun listKnownObjectKeys(): Set<Pair<StorageTrustZone, String>> =
+        jdbc.query(
+            """
+            SELECT 'UNTRUSTED' AS zone, object_key AS key FROM gc_document WHERE object_key IS NOT NULL
+            UNION
+            SELECT 'APPROVED_SOURCE', approved_object_key FROM gc_document WHERE approved_object_key IS NOT NULL
+            UNION
+            SELECT 'DERIVED_SAFE_ARTIFACT', preview_object_key FROM gc_document WHERE preview_object_key IS NOT NULL
+            UNION
+            SELECT 'DERIVED_SAFE_ARTIFACT', object_key FROM gc_preview_artifact
+            UNION
+            SELECT 'UNTRUSTED', document_id || '.pdf' FROM gc_document WHERE status = 'UPLOAD_PENDING'
+            """.trimIndent(),
+            RowMapper { result, _ ->
+                StorageTrustZone.valueOf(result.getString("zone")) to result.getString("key")
+            },
+        ).toSet()
+
+    /**
+     * Janitor sweep: a job that was queued (or left retryable) and never picked up before [olderThan]
+     * is never going to be — its document would otherwise wait forever in a non-terminal state with no
+     * worker coming. Both statements run in one short transaction in the same order every worker path
+     * uses — job rows first, then documents ([terminateDocumentsForRevokedConsent]'s KDoc) — and take
+     * no explicit row locks, so a worker completing mid-sweep blocks rather than deadlocks.
+     *
+     * Leased jobs are untouched (a worker holds them; lease expiry is [leaseNextDocumentJob]'s job) and
+     * so are terminal ones. The document update skips documents that already reached a terminal or
+     * completed state, so a sweep can never walk a finished document backwards.
+     */
+    @Transactional
+    fun failStaleQueuedJobs(olderThan: Instant, now: Instant): List<UUID> {
+        val staleDocumentIds = jdbc.query(
+            """
+            UPDATE gc_document_job
+            SET status = 'FAILED_TERMINAL', failure_code = 'stale',
+                lease_token_hash = NULL, lease_expires_at = NULL, worker_id_hash = NULL, updated_at = ?
+            WHERE status IN ('QUEUED', 'FAILED_RETRYABLE') AND created_at < ?
+            RETURNING document_id
+            """.trimIndent(),
+            RowMapper { result, _ -> result.getObject("document_id", UUID::class.java) },
+            now.atOffset(ZoneOffset.UTC),
+            olderThan.atOffset(ZoneOffset.UTC),
+        ).distinct()
+        if (staleDocumentIds.isEmpty()) return emptyList()
+        val placeholders = staleDocumentIds.joinToString(", ") { "?" }
+        jdbc.update(
+            """
+            UPDATE gc_document
+            SET status = 'FAILED_TERMINAL', failure_code = 'stale',
+                state_version = state_version + 1, updated_at = ?
+            WHERE document_id IN ($placeholders)
+              AND status NOT IN ('COMPLETED', 'DELETED', 'DELETION_PENDING', 'FAILED_TERMINAL', 'TERMINATED_BY_REVOCATION')
+            """.trimIndent(),
+            now.atOffset(ZoneOffset.UTC),
+            *staleDocumentIds.toTypedArray(),
+        )
+        return staleDocumentIds
+    }
 
     fun completeDeletion(subjectId: String, subjectHash: String, deletionId: UUID, now: Instant): UUID {
         jdbc.update(
@@ -1644,15 +1808,59 @@ class FoundationRepository(
             subjectHash,
         )
 
-    fun countRawHealthValuesInAudit(): Long =
+    /**
+     * Counts audit rows whose **content** contains any of [forbidden]. The haystack is the whole
+     * row rendered as JSON text, not the three columns this check used to name, so a value that
+     * leaks into a column added later (V9's `purpose_code`, or anything after it) is caught without
+     * anybody remembering to extend this query — the old form could go quietly vacuous as the table
+     * grew.
+     *
+     * [AUDIT_CONTENT_TEXT] removes the six columns that carry no content the subject ever typed or
+     * uploaded: `audit_sequence` (a counter), `event_id`/`resource_id` (server-generated UUIDs),
+     * `subject_hash`/`actor_session_hash` (peppered SHA-256 digests) and `occurred_at` (the instant
+     * the row was appended). All six are full of incidental digits, and leaving them in would make
+     * a needle such as `2026-` match `occurred_at` on every row and turn the receipt field into a
+     * constant `true` — the same coincidence the log-capture test masks for. A leaked value would
+     * have to land inside a UUID or a hex digest to hide here.
+     *
+     * Each needle is escaped with [escapePosixRegexLiteral] before it joins the alternation, so a
+     * caller may pass any literal -- `HbA1c (%)`, `120-199`, `5.2` -- without part of it being read
+     * as POSIX regex syntax. Only the `|` this method inserts itself is meant as an operator.
+     */
+    fun countRawHealthValuesInAudit(forbidden: List<String>): Long =
         jdbc.queryForObject(
-            """
-            SELECT COUNT(*)
-            FROM gc_audit_event
-            WHERE event_type LIKE '%188%'
-               OR event_type LIKE '%190%'
-               OR resource_type LIKE '%mg/dL%'
-            """.trimIndent(),
+            "SELECT COUNT(*) FROM gc_audit_event a WHERE $AUDIT_CONTENT_TEXT ~ ?",
             Long::class.java,
+            forbidden.joinToString("|") { escapePosixRegexLiteral(it) },
         ) ?: 0L
+
+    companion object {
+        /**
+         * Every column of `gc_audit_event` as one JSON text, minus the opaque identifier and
+         * bookkeeping columns. Shared with `FoundationLifecyclePostgresIntegrationTest`'s
+         * audit-leak assertion so both search exactly the same surface.
+         */
+        const val AUDIT_CONTENT_TEXT: String =
+            "(to_jsonb(a) - 'audit_sequence' - 'event_id' - 'resource_id' " +
+                "- 'subject_hash' - 'actor_session_hash' - 'occurred_at')::text"
+
+        /**
+         * Every character PostgreSQL's POSIX regular expressions treat as syntax. `Regex.escape` is
+         * the wrong tool here: it emits Java's `\Q...\E` quoting, which PostgreSQL does not
+         * implement, and stripping those markers back off again leaves every metacharacter live. A
+         * needle such as `HbA1c (%)` would then compile as a group and match the *different* text
+         * `HbA1c %`, and an unbalanced one such as `f(x` would make the query throw rather than
+         * find nothing.
+         */
+        private val POSIX_REGEX_METACHARACTERS: Set<Char> =
+            setOf('[', ']', '(', ')', '{', '}', '.', '*', '+', '?', '^', '$', '|', '\\')
+
+        /** [literal] as a POSIX ERE that matches exactly [literal] and nothing else. */
+        fun escapePosixRegexLiteral(literal: String): String = buildString(literal.length) {
+            literal.forEach { character ->
+                if (character in POSIX_REGEX_METACHARACTERS) append('\\')
+                append(character)
+            }
+        }
+    }
 }

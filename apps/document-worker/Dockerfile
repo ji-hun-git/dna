@@ -17,10 +17,21 @@ ADD --checksum=sha256:28d6efc5b4423e7830c3559339552eb53870a9eac51ac4efb37d60530d
 RUN mkdir --parents /opt/clamav \
     && dpkg-deb --extract /tmp/clamav-1.5.4.deb /opt/clamav
 
+# Signatures are fetched once, at build time, so the running image never reaches the internet. A build
+# without network access fails here on purpose; pass --build-arg GC_ALLOW_OFFLINE_SIGNATURES=true to get
+# an image with no signatures, whose /healthz then reports scan-unavailable rather than pretending to scan.
+ARG GC_ALLOW_OFFLINE_SIGNATURES=false
+RUN printf 'DatabaseMirror database.clamav.net\nDatabaseDirectory /opt/clamav/share\nDatabaseOwner root\nLogVerbose no\n' > /opt/clamav/freshclam.conf \
+    && mkdir --parents /opt/clamav/share \
+    && ( LD_LIBRARY_PATH=/opt/clamav/usr/local/lib64:/opt/clamav/usr/local/lib CVD_CERTS_DIR=/opt/clamav/usr/local/etc/certs \
+         /opt/clamav/usr/local/bin/freshclam --config-file=/opt/clamav/freshclam.conf --stdout \
+         || { [ "$GC_ALLOW_OFFLINE_SIGNATURES" = "true" ] && echo "offline build: no signatures; /healthz will report scan-unavailable"; } )
+
 FROM eclipse-temurin:21-jre-jammy@sha256:eebd356ad7358b7094758e5787a6726f332917cfd56feab6457c56dab895cdbf AS runtime
 ENV GC_WORKER_CLAMSCAN_PATH=/usr/local/bin/clamscan
 ENV GC_WORKER_CLAMAV_VERSION=1.5.4
 ENV CVD_CERTS_DIR=/usr/local/etc/certs
+ENV GC_WORKER_SIGNATURE_DIR=/usr/local/share/clamav
 ENV LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib
 WORKDIR /app
 
@@ -29,6 +40,7 @@ RUN groupadd --gid 10001 genome-companion \
     && mkdir --parents /usr/local/share/clamav \
     && chown 10001:10001 /usr/local/share/clamav
 COPY --from=clamav /opt/clamav/usr/local/ /usr/local/
+COPY --from=clamav --chown=10001:10001 /opt/clamav/share/ /usr/local/share/clamav/
 COPY --from=build --chown=10001:10001 /workspace/apps/document-worker/build/install/document-worker/ /app/
 
 USER 10001:10001

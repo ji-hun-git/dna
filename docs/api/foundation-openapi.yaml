@@ -1,0 +1,1330 @@
+# The foundation HTTP contract, written by hand and kept honest by
+# apps/core-api/src/test/kotlin/kr/co/genomecompanion/foundation/FoundationOpenApiContractTest.kt:
+# that test compares this file against the live controller in BOTH directions (a route missing here
+# fails; a route documented here with no controller mapping fails) and validates real response bodies
+# captured from a full synthetic lifecycle against the schemas below. Nothing here is generated, and
+# nothing here may be edited without the test agreeing.
+openapi: 3.1.0
+info:
+  title: Genome Companion Korea — foundation API
+  version: '2026-09-19'
+  summary: The synthetic-only lifecycle a person drives themselves, from sign-in to deletion.
+  description: >-
+    Responses omit null members (Jackson non_null); only the export marks `referenceRangeText`
+    ALWAYS (explicit null). Instants are UTC ISO-8601; `observedOn` is a date string; export
+    filenames use `exportedAt` in Asia/Seoul.
+
+
+    Every state-changing operation (POST, PUT, PATCH, DELETE) additionally requires the exact
+    allowed `Origin`, the session-bound `X-GC-CSRF` header and `X-Requested-With: GC-Foundation`.
+    The last of those is documented once as the reusable `RequestedWith` parameter and repeated on
+    each such operation; a request missing it is refused with 403 `requested_with_denied` before any
+    handler runs. Errors always carry the same `{"code": "..."}` body — `components/responses/Problem`
+    — under `application/problem+json`; the full vocabulary is `components/x-error-codes`. Each
+    operation lists the statuses it can actually produce in `x-error-statuses`.
+
+
+    Subjects, documents and values in this API are synthetic fixtures only. Nothing here is a
+    diagnosis, a normality judgement, a risk score or a clinical recommendation.
+servers:
+- url: /
+  description: The core API, same origin as the web app.
+tags:
+- name: session
+- name: consent
+- name: document
+- name: review
+- name: history
+paths:
+  /api/foundation/session:
+    post:
+      operationId: createLocalSession
+      tags: [session]
+      summary: Open a local synthetic session.
+      description: >-
+        Only a configured synthetic subject may sign in. Repeated failures answer 429 `login_locked`
+        with `Retry-After`. No session exists yet, so `X-Requested-With` is required but `X-GC-CSRF`
+        is not.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalSessionRequest'
+      responses:
+        '201':
+          description: Session created; sets the GC_SESSION and GC_CSRF cookies.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalSessionResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 403, 415, 429, 500, 503]
+    get:
+      operationId: getLocalSession
+      tags: [session]
+      summary: Read the current session.
+      responses:
+        '200':
+          description: The live session. `csrfToken` is issued only at creation, so it is absent here.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalSessionResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 429, 500, 503]
+  /api/foundation/demo-session:
+    post:
+      operationId: bootstrapDemoSession
+      tags: [session]
+      summary: Open a throwaway demo session.
+      description: A fresh synthetic-demo subject. It grants no consent and owns no data yet.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      responses:
+        '201':
+          description: Demo session created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalSessionResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [403, 429, 500, 503]
+  /api/foundation/session/logout:
+    post:
+      operationId: logout
+      tags: [session]
+      summary: End the current session.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Session ended; both cookies are expired. No body.
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 429, 500, 503]
+  /api/foundation/consents:
+    get:
+      operationId: listConsents
+      tags: [consent]
+      summary: Every purpose as the person sees it.
+      responses:
+        '200':
+          description: One row per purpose; NOT_GRANTED rows carry no id and no instants.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConsentReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 429, 500, 503]
+  /api/foundation/consents/document-extraction:
+    get:
+      operationId: getDocumentExtractionConsent
+      tags: [consent]
+      summary: Read the document-extraction consent.
+      responses:
+        '200':
+          description: ACTIVE, REVOKED or NOT_GRANTED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 429, 500, 503]
+    post:
+      operationId: grantDocumentExtractionConsent
+      tags: [consent]
+      summary: Grant the document-extraction consent.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '201':
+          description: Granted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 409, 429, 500, 503]
+  /api/foundation/consents/{purposeCode}:
+    parameters:
+    - $ref: '#/components/parameters/PurposeCode'
+    post:
+      operationId: grantConsent
+      tags: [consent]
+      summary: Grant one purpose by code.
+      description: >-
+        The literal `/consents/document-extraction` mapping wins over this template for that one path.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Granted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 409, 422, 429, 500, 503]
+  /api/foundation/consents/{consentId}/revocation:
+    parameters:
+    - $ref: '#/components/parameters/ConsentId'
+    post:
+      operationId: revokeConsent
+      tags: [consent]
+      summary: Revoke one consent.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Revoked; in-flight documents for that purpose are terminated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 409, 429, 500, 503]
+  /api/foundation/documents:
+    post:
+      operationId: requestDocument
+      tags: [document]
+      summary: Ask for an upload ticket for one synthetic PDF.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+      responses:
+        '201':
+          description: A document row plus the bounded, single-object upload capability.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTicketResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 409, 413, 415, 422, 429, 500, 503]
+  /api/foundation/documents/active:
+    get:
+      operationId: getActiveDocument
+      tags: [document]
+      summary: The document still in flight, if any.
+      responses:
+        '200':
+          description: '`document` is omitted entirely when nothing is in flight.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentActivityResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 429, 500, 503]
+  /api/foundation/documents/{documentId}:
+    parameters:
+    - $ref: '#/components/parameters/DocumentId'
+    get:
+      operationId: getDocument
+      tags: [document]
+      summary: One document receipt.
+      responses:
+        '200':
+          description: The document as its owner sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 429, 500, 503]
+  /api/foundation/documents/{documentId}/content:
+    parameters:
+    - $ref: '#/components/parameters/DocumentId'
+    put:
+      operationId: uploadDocumentContent
+      tags: [document]
+      summary: Upload the declared bytes once.
+      description: >-
+        The exact length and digest declared at ticket time must match the leased bytes; the file
+        lands in the hostile-document quarantine zone and is never parsed by the API process.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      - $ref: '#/components/parameters/UploadCapabilityId'
+      - $ref: '#/components/parameters/UploadCapability'
+      requestBody:
+        required: true
+        content:
+          application/pdf:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 409, 413, 415, 429, 500, 503]
+  /api/foundation/documents/{documentId}/finalization:
+    parameters:
+    - $ref: '#/components/parameters/DocumentId'
+    post:
+      operationId: finalizeDocument
+      tags: [document]
+      summary: Close intake and queue the worker pipeline.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '202':
+          description: Accepted; security inspection and extraction are queued for the worker.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 409, 429, 500, 503]
+  /api/foundation/documents/{documentId}/preview:
+    parameters:
+    - $ref: '#/components/parameters/DocumentId'
+    get:
+      operationId: getDocumentPreview
+      tags: [document]
+      summary: The approved synthetic preview image.
+      responses:
+        '200':
+          description: >-
+            The PNG the worker rendered from the approved source, served `nosniff` and inline. It
+            exists only while the document's own preview key and source digest still match.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 429, 500, 503]
+  /api/foundation/documents/{documentId}/candidate:
+    parameters:
+    - $ref: '#/components/parameters/DocumentId'
+    get:
+      operationId: getCandidateForDocument
+      tags: [review]
+      summary: The next candidate awaiting review.
+      responses:
+        '200':
+          description: The first PENDING candidate, else the first candidate by ordinal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 429, 500, 503]
+  /api/foundation/documents/{documentId}/candidates:
+    parameters:
+    - $ref: '#/components/parameters/DocumentId'
+    get:
+      operationId: listCandidatesForDocument
+      tags: [review]
+      summary: Every candidate of one document, by ordinal.
+      responses:
+        '200':
+          description: The document's candidates.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CandidateReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 429, 500, 503]
+  /api/foundation/candidates/{candidateId}:
+    parameters:
+    - $ref: '#/components/parameters/CandidateId'
+    get:
+      operationId: getCandidate
+      tags: [review]
+      summary: One candidate.
+      responses:
+        '200':
+          description: The candidate as its owner sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 429, 500, 503]
+  /api/foundation/candidates/{candidateId}/confirmation:
+    parameters:
+    - $ref: '#/components/parameters/CandidateId'
+    post:
+      operationId: confirmCandidate
+      tags: [review]
+      summary: Confirm one candidate as the person's own record.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidateConfirmationRequest'
+      responses:
+        '201':
+          description: A first CURRENT record version.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 409, 413, 415, 422, 429, 500, 503]
+  /api/foundation/candidates/{candidateId}/exclusion:
+    parameters:
+    - $ref: '#/components/parameters/CandidateId'
+    post:
+      operationId: excludeCandidate
+      tags: [review]
+      summary: Leave one candidate out.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Excluded; no record is created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 409, 422, 429, 500, 503]
+  /api/foundation/records:
+    get:
+      operationId: listRecords
+      tags: [history]
+      summary: One page of confirmed records.
+      description: >-
+        Keyset pagination in the single read-model order `(observedOn, confirmedAt, recordId)`.
+        `after` is the `recordVersionId` of the last row already held — an opaque cursor, only ever
+        echoed back from `X-GC-Next-After`. A cursor that is not this subject's own returns an empty
+        page rather than somebody else's rows.
+      parameters:
+      - $ref: '#/components/parameters/After'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: >-
+            One page. `X-GC-Next-After` is present only when at least one further row follows, so its
+            absence — not an empty page — is the end of the list.
+          headers:
+            X-GC-Next-After:
+              $ref: '#/components/headers/NextAfter'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecordReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 429, 500, 503]
+  /api/foundation/records/{recordId}:
+    parameters:
+    - $ref: '#/components/parameters/RecordId'
+    get:
+      operationId: getRecord
+      tags: [history]
+      summary: One record.
+      responses:
+        '200':
+          description: The CURRENT version of that record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 429, 500, 503]
+  /api/foundation/records/{recordId}/corrections:
+    parameters:
+    - $ref: '#/components/parameters/RecordId'
+    post:
+      operationId: correctRecord
+      tags: [history]
+      summary: Correct one record's value.
+      description: >-
+        Optimistic: the version this request supersedes is fixed when the request is read, so a racing
+        correction makes this one 409 `record_state_changed` rather than silently rebasing.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordCorrectionRequest'
+      responses:
+        '200':
+          description: A new CURRENT version; the previous one becomes SUPERSEDED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 404, 409, 413, 415, 422, 429, 500, 503]
+  /api/foundation/health-events:
+    get:
+      operationId: listHealthEvents
+      tags: [history]
+      summary: One page of health events.
+      description: >-
+        The same read model as `/records`, projected as events, over the same record cursor. Events
+        are sorted *within* a page by `(observedOn, concept, confirmedAt)`; the page boundaries follow
+        record order.
+      parameters:
+      - $ref: '#/components/parameters/After'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page; `X-GC-Next-After` as on `/records`.
+          headers:
+            X-GC-Next-After:
+              $ref: '#/components/headers/NextAfter'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HealthEvent'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [400, 401, 403, 429, 500, 503]
+  /api/foundation/changes:
+    get:
+      operationId: getChangeSummary
+      tags: [history]
+      summary: This time beside last time.
+      description: >-
+        An aggregate over the whole history, so it refuses with 413 `payload_cap_exceeded` above
+        5,000 current records or 200 documents; the paged `/records` and `/health-events` stay
+        available at any size. Subtraction and division only — no direction, colour or threshold.
+      responses:
+        '200':
+          description: The latest document's values beside the previous value of each item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeSummary'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 413, 429, 500, 503]
+  /api/foundation/series:
+    get:
+      operationId: getSeries
+      tags: [history]
+      summary: Every item's values in time order.
+      description: >-
+        Same whole-history cap as `/changes`: 413 `payload_cap_exceeded` above 5,000 current records
+        or 200 documents. No unit conversion, no meaning.
+      responses:
+        '200':
+          description: One series per connected (concept, unit) component.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 413, 429, 500, 503]
+  /api/foundation/health-events/export:
+    get:
+      operationId: exportHealthEvents
+      tags: [history]
+      summary: The person's own events as one file.
+      description: >-
+        `Content-Disposition` carries `alm-health-events-<yyyyMMdd>.json`, where the date is
+        `exportedAt` rendered in Asia/Seoul — one instant decides both, so the filename and the body
+        can never disagree about which side of midnight the export happened on. Same whole-history
+        cap as `/changes`.
+      responses:
+        '200':
+          description: The whole file, including each document's verbatim reference-range text.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthEventExport'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 413, 429, 500, 503]
+  /api/foundation/health-events/export/fhir:
+    get:
+      operationId: exportHealthEventsAsFhir
+      tags: [history]
+      summary: The same events as a FHIR R4 Bundle.
+      description: >-
+        `Content-Disposition` carries `alm-health-events-<yyyyMMdd>.fhir.json` from the same instant
+        as `timestamp`, in Asia/Seoul. There is deliberately no `interpretation`, `subject` or
+        `performer`, and a reference range is text only. Same whole-history cap as `/changes`.
+      responses:
+        '200':
+          description: A `collection` Bundle of Observations, tagged synthetic.
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/FhirBundle'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 413, 429, 500, 503]
+  /api/foundation/profile:
+    delete:
+      operationId: deleteProfile
+      tags: [session]
+      summary: Delete everything this subject owns.
+      parameters:
+      - $ref: '#/components/parameters/RequestedWith'
+      - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Deleted; both cookies are expired and the subject may not sign in again.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletionReceipt'
+        default:
+          $ref: '#/components/responses/Problem'
+      x-error-statuses: [401, 403, 409, 429, 500, 503]
+components:
+  headers:
+    NextAfter:
+      description: >-
+        The `recordVersionId` to pass as `after` for the next page. Present only when a further row
+        follows.
+      required: false
+      schema:
+        type: string
+        format: uuid
+  parameters:
+    RequestedWith:
+      name: X-Requested-With
+      in: header
+      required: true
+      description: >-
+        Must be exactly `GC-Foundation` on every state-changing operation. A cross-site form,
+        `<img>` or navigation cannot set a custom request header, so this value proves the request
+        came from our own fetch code. It is checked in addition to — never instead of — the exact
+        `Origin` and the session-bound CSRF token. Missing or wrong: 403 `requested_with_denied`.
+      schema:
+        type: string
+        const: GC-Foundation
+    CsrfHeader:
+      name: X-GC-CSRF
+      in: header
+      required: true
+      description: >-
+        The random, session-bound token handed out at session creation (also readable from the
+        non-HttpOnly `GC_CSRF` cookie). Missing or wrong: 403 `csrf_denied`.
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >-
+        Replaying the same key with the same body returns the first result; replaying it with a
+        different body is 422 `idempotency_key_mismatch`.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+    UploadCapabilityId:
+      name: X-GC-Upload-Capability-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UploadCapability:
+      name: X-GC-Upload-Capability
+      in: header
+      required: true
+      description: The raw capability token from the upload ticket. It is shown exactly once.
+      schema:
+        type: string
+    After:
+      name: after
+      in: query
+      required: false
+      description: Opaque cursor — the `recordVersionId` of the last row already held.
+      schema:
+        type: string
+        format: uuid
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: 'Page size, 1..200. Absent means 200. Outside that range: 400 `request_invalid`.'
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 200
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CandidateId:
+      name: candidateId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RecordId:
+      name: recordId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ConsentId:
+      name: consentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PurposeCode:
+      name: purposeCode
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Problem:
+      description: >-
+        The one error shape. `code` is a stable machine token from `x-error-codes`; no message, no
+        request text and no health value ever appears in an error body. 429 additionally carries
+        `Retry-After`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+  schemas:
+    ApiProblem:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: One of `x-error-codes`.
+    LocalSessionRequest:
+      type: object
+      required: [subjectId, credential]
+      properties:
+        subjectId:
+          type: string
+          pattern: '^synthetic-[a-z0-9-]+$'
+        credential:
+          type: string
+          minLength: 32
+          maxLength: 256
+    LocalSessionResponse:
+      type: object
+      required: [sessionId, subjectId, status, expiresAt]
+      properties:
+        sessionId: {type: string, format: uuid}
+        subjectId: {type: string}
+        status: {type: string, const: AUTHENTICATED}
+        expiresAt: {type: string, format: date-time}
+        csrfToken:
+          type: string
+          description: Issued only when the session is created; omitted on every later read.
+    ConsentResponse:
+      type: object
+      required: [purposeCode, status]
+      properties:
+        consentId:
+          type: string
+          format: uuid
+          description: Omitted while the purpose is NOT_GRANTED.
+        purposeCode: {type: string}
+        status: {type: string, enum: [ACTIVE, REVOKED, NOT_GRANTED]}
+    ConsentReceipt:
+      type: object
+      required: [purposeCode, status, policyVersion]
+      properties:
+        consentId: {type: string, format: uuid}
+        purposeCode: {type: string}
+        status: {type: string, enum: [ACTIVE, REVOKED, NOT_GRANTED]}
+        policyVersion: {type: string}
+        grantedAt: {type: string, format: date-time}
+        revokedAt: {type: string, format: date-time}
+    DocumentRequest:
+      type: object
+      required: [consentId, mediaType, contentLength, sha256]
+      properties:
+        consentId: {type: string, format: uuid}
+        mediaType: {type: string, const: application/pdf}
+        contentLength: {type: integer, format: int64}
+        sha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+    ExtractionAbstention:
+      type: object
+      required: [label, reason]
+      properties:
+        label: {type: string, minLength: 1, maxLength: 80}
+        reason:
+          type: string
+          enum: [unreadable, ambiguous_value, ambiguous_unit, missing_evidence, qualified_value, qualitative, previous_column]
+        evidencePage: {type: integer, minimum: 1, maximum: 20}
+    DocumentReceipt:
+      type: object
+      required: [documentId, status, stateVersion, previewAvailable, abstentions, quarantineBoundary]
+      properties:
+        documentId: {type: string, format: uuid}
+        status: {type: string}
+        sha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+          description: Omitted until the declared bytes are stored.
+        contentLength: {type: integer, format: int64}
+        stateVersion: {type: integer, format: int64}
+        failureCode:
+          type: string
+          description: Omitted unless the document failed.
+        previewAvailable: {type: boolean}
+        abstentions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtractionAbstention'
+        quarantineBoundary: {type: string, const: HOSTILE_DOCUMENT_TRUST_ZONE}
+    BoundedUploadCapability:
+      type: object
+      required: [capabilityId, method, uploadPath, expiresAt, expectedLength, expectedSha256, requiredHeaders, replaySemantics]
+      properties:
+        capabilityId: {type: string, format: uuid}
+        method: {type: string}
+        uploadPath: {type: string}
+        expiresAt: {type: string, format: date-time}
+        expectedLength: {type: integer, format: int64}
+        expectedSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        requiredHeaders:
+          type: object
+          additionalProperties: {type: string}
+        replaySemantics: {type: string}
+    DocumentTicketResponse:
+      type: object
+      required: [document, uploadCapability]
+      properties:
+        document:
+          $ref: '#/components/schemas/DocumentReceipt'
+        uploadCapability:
+          $ref: '#/components/schemas/BoundedUploadCapability'
+    DocumentActivityResponse:
+      type: object
+      required: []
+      properties:
+        document:
+          $ref: '#/components/schemas/DocumentReceipt'
+    EvidenceBox:
+      type: object
+      required: [x, y, width, height]
+      properties:
+        x: {type: number, minimum: 0, maximum: 1}
+        y: {type: number, minimum: 0, maximum: 1}
+        width: {type: number, minimum: 0, maximum: 1}
+        height: {type: number, minimum: 0, maximum: 1}
+    CandidateReceipt:
+      type: object
+      required: [candidateId, documentId, status, ordinal, totalCandidates, label, value, unit, observedOn, evidencePage, sourceTextSha256, documentSha256, sourceType, extractionMethod, createdAt]
+      properties:
+        candidateId: {type: string, format: uuid}
+        documentId: {type: string, format: uuid}
+        status: {type: string, enum: [PENDING, CONFIRMED, EXCLUDED]}
+        ordinal: {type: integer}
+        totalCandidates: {type: integer}
+        label: {type: string}
+        value: {type: string}
+        unit: {type: string}
+        observedOn: {type: string, format: date}
+        evidencePage: {type: integer}
+        sourceTextSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        documentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        conceptCode:
+          type: string
+          description: A dictionary key, not a meaning. Omitted when the catalogue has no match.
+        evidenceBox:
+          $ref: '#/components/schemas/EvidenceBox'
+        sourceType: {type: string}
+        extractionMethod: {type: string}
+        createdAt: {type: string, format: date-time}
+        originalLabel:
+          type: string
+          description: The item name the sheet printed. Document text, not a meaning.
+    RecordReceipt:
+      type: object
+      required: [recordId, recordVersionId, candidateId, documentId, status, reviewDecision, label, value, originalValue, unit, observedOn, originalObservedOn, confirmedAt, evidencePage, sourceTextSha256, documentSha256]
+      properties:
+        recordId: {type: string, format: uuid}
+        recordVersionId:
+          type: string
+          format: uuid
+          description: Also the `after` cursor for `/records` and `/health-events`.
+        supersedesVersionId: {type: string, format: uuid}
+        candidateId: {type: string, format: uuid}
+        documentId: {type: string, format: uuid}
+        status: {type: string, enum: [CURRENT, SUPERSEDED]}
+        reviewDecision: {type: string}
+        label: {type: string}
+        value: {type: string}
+        originalValue: {type: string}
+        unit: {type: string}
+        observedOn: {type: string, format: date}
+        originalObservedOn: {type: string, format: date}
+        confirmedAt: {type: string, format: date-time}
+        correctionReason: {type: string, maxLength: 200}
+        evidencePage: {type: integer}
+        sourceTextSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        documentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        conceptCode: {type: string}
+        originalLabel: {type: string}
+    HealthEventSource:
+      type: object
+      required: [documentId, page, documentSha256, sourceTextSha256, previewAvailable]
+      properties:
+        documentId: {type: string, format: uuid}
+        page: {type: integer}
+        documentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        sourceTextSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        previewAvailable: {type: boolean}
+    HealthEvent:
+      type: object
+      required: [eventId, recordId, domain, concept, value, unit, observedOn, verification, corrected, confirmedAt, originalValue, source]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: The CURRENT record version id — the same value as `RecordReceipt.recordVersionId`.
+        recordId: {type: string, format: uuid}
+        domain: {type: string, const: lab}
+        concept: {type: string}
+        conceptCode: {type: string}
+        value: {type: string}
+        unit: {type: string}
+        observedOn: {type: string, format: date}
+        verification:
+          type: string
+          enum: [verified, uncertain]
+          description: >-
+            Whether the person can still see the page this came from, nothing more. Never a
+            judgement about the value.
+        corrected: {type: boolean}
+        confirmedAt: {type: string, format: date-time}
+        originalValue: {type: string}
+        correctionReason: {type: string}
+        originalObservedOn: {type: string, format: date}
+        source:
+          $ref: '#/components/schemas/HealthEventSource'
+        originalLabel: {type: string}
+    ChangeDelta:
+      type: object
+      required: [absolute]
+      properties:
+        absolute:
+          type: string
+          description: '`latest − previous`, sign explicit. Arithmetic only.'
+        percent:
+          type: string
+          description: Omitted when `previous` is zero or negative.
+    ChangeValue:
+      type: object
+      required: [eventId, value, observedOn]
+      properties:
+        eventId: {type: string, format: uuid}
+        value: {type: string}
+        observedOn: {type: string, format: date}
+    ChangeDocument:
+      type: object
+      required: [documentId, observedOn, completedAt, eventCount]
+      properties:
+        documentId: {type: string, format: uuid}
+        observedOn: {type: string, format: date}
+        completedAt: {type: string, format: date-time}
+        eventCount: {type: integer}
+    ChangeItem:
+      type: object
+      required: [concept, unit, latest]
+      properties:
+        conceptCode: {type: string}
+        concept: {type: string}
+        unit: {type: string}
+        latest:
+          $ref: '#/components/schemas/ChangeValue'
+        previous:
+          $ref: '#/components/schemas/ChangeValue'
+        delta:
+          $ref: '#/components/schemas/ChangeDelta'
+    ChangeSummary:
+      type: object
+      required: [items, newConcepts, unchangedCount]
+      properties:
+        latestDocument:
+          $ref: '#/components/schemas/ChangeDocument'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChangeItem'
+        newConcepts:
+          type: array
+          items: {type: string}
+        unchangedCount: {type: integer}
+    SeriesPoint:
+      type: object
+      required: [eventId, value, observedOn, documentId]
+      properties:
+        eventId: {type: string, format: uuid}
+        value: {type: string}
+        observedOn: {type: string, format: date}
+        documentId: {type: string, format: uuid}
+        originalLabel: {type: string}
+    SeriesDerived:
+      type: object
+      required: []
+      properties:
+        lastDifference:
+          $ref: '#/components/schemas/ChangeDelta'
+        per30Days: {type: string}
+        meanOfLast3: {type: string}
+    MeasurementSeries:
+      type: object
+      required: [concept, unit, points, derived]
+      properties:
+        conceptCode: {type: string}
+        concept: {type: string}
+        unit: {type: string}
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeriesPoint'
+        derived:
+          $ref: '#/components/schemas/SeriesDerived'
+    SeriesResponse:
+      type: object
+      required: [series]
+      properties:
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeasurementSeries'
+    ExportedHealthEvent:
+      type: object
+      description: >-
+        A HealthEvent unwrapped (`@JsonUnwrapped`) beside the document's own reference-range text.
+        `referenceRangeText` is the one member in this API marked ALWAYS, so it is present even when
+        null; it is the text exactly as printed, never displayed, compared or interpreted.
+      required: [eventId, recordId, domain, concept, value, unit, observedOn, verification, corrected, confirmedAt, originalValue, source, referenceRangeText]
+      properties:
+        eventId: {type: string, format: uuid}
+        recordId: {type: string, format: uuid}
+        domain: {type: string, const: lab}
+        concept: {type: string}
+        conceptCode: {type: string}
+        value: {type: string}
+        unit: {type: string}
+        observedOn: {type: string, format: date}
+        verification: {type: string, enum: [verified, uncertain]}
+        corrected: {type: boolean}
+        confirmedAt: {type: string, format: date-time}
+        originalValue: {type: string}
+        correctionReason: {type: string}
+        originalObservedOn: {type: string, format: date}
+        source:
+          $ref: '#/components/schemas/HealthEventSource'
+        originalLabel: {type: string}
+        referenceRangeText:
+          type: string
+          nullable: true
+    ExportedDocument:
+      type: object
+      required: [documentId, status, abstentions, eventCount]
+      properties:
+        documentId: {type: string, format: uuid}
+        observedOn:
+          type: string
+          format: date
+          description: Present only when every event of this document shares one exam date.
+        status: {type: string}
+        abstentions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtractionAbstention'
+        eventCount: {type: integer}
+    HealthEventExport:
+      type: object
+      required: [schemaVersion, exportedAt, subjectKind, events, documents]
+      properties:
+        schemaVersion: {type: string, const: alm-health-events-export.v3}
+        exportedAt: {type: string, format: date-time}
+        subjectKind: {type: string, const: synthetic}
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedHealthEvent'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedDocument'
+    FhirCoding:
+      type: object
+      required: [system, code]
+      properties:
+        system: {type: string}
+        code: {type: string}
+    FhirCodeableConcept:
+      type: object
+      required: []
+      properties:
+        coding:
+          type: array
+          items:
+            $ref: '#/components/schemas/FhirCoding'
+        text: {type: string}
+    FhirMeta:
+      type: object
+      required: [tag]
+      properties:
+        tag:
+          type: array
+          items:
+            $ref: '#/components/schemas/FhirCoding'
+    FhirQuantity:
+      type: object
+      required: [value, unit]
+      properties:
+        value:
+          type: number
+          description: Always plain decimal notation, scale preserved; never exponent form.
+        unit: {type: string}
+    FhirReferenceRange:
+      type: object
+      required: [text]
+      properties:
+        text: {type: string}
+    FhirAnnotation:
+      type: object
+      required: [text]
+      properties:
+        text: {type: string}
+    FhirObservation:
+      type: object
+      required: [resourceType, id, status, meta, code, effectiveDateTime]
+      properties:
+        resourceType: {type: string, const: Observation}
+        id: {type: string}
+        status: {type: string, const: final}
+        meta:
+          $ref: '#/components/schemas/FhirMeta'
+        category:
+          type: array
+          description: >-
+            Omitted (never an empty array) for concepts this catalogue cannot substantiate as
+            laboratory results, and for events with no concept code. Never `vital-signs`.
+          items:
+            $ref: '#/components/schemas/FhirCodeableConcept'
+        code:
+          $ref: '#/components/schemas/FhirCodeableConcept'
+        effectiveDateTime: {type: string}
+        valueQuantity:
+          $ref: '#/components/schemas/FhirQuantity'
+        valueString: {type: string}
+        referenceRange:
+          type: array
+          items:
+            $ref: '#/components/schemas/FhirReferenceRange'
+        note:
+          type: array
+          items:
+            $ref: '#/components/schemas/FhirAnnotation'
+    FhirBundleEntry:
+      type: object
+      required: [resource]
+      properties:
+        resource:
+          $ref: '#/components/schemas/FhirObservation'
+    FhirBundle:
+      type: object
+      required: [resourceType, type, timestamp, meta]
+      properties:
+        resourceType: {type: string, const: Bundle}
+        type: {type: string, const: collection}
+        timestamp: {type: string, format: date-time}
+        meta:
+          $ref: '#/components/schemas/FhirMeta'
+        entry:
+          type: array
+          description: Omitted when empty; FHIR does not allow an empty array.
+          items:
+            $ref: '#/components/schemas/FhirBundleEntry'
+    CandidateConfirmationRequest:
+      type: object
+      required: [value]
+      properties:
+        value:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$'
+        observedOn:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: The exam date the person says the document states; absent keeps the parser's.
+    RecordCorrectionRequest:
+      type: object
+      required: [value, reason]
+      properties:
+        value:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$'
+        reason: {type: string, minLength: 1, maxLength: 200}
+    DeletionReceipt:
+      type: object
+      required: [deletionId, status, auditEventTypes, rawHealthValuesPresentInAudit]
+      properties:
+        deletionId: {type: string, format: uuid}
+        status: {type: string}
+        auditEventTypes:
+          type: array
+          items: {type: string}
+        rawHealthValuesPresentInAudit:
+          type: boolean
+          description: Always false; the audit trail never carries a health value.
+  # Every `code` any foundation response can carry. The contract test fails if a lifecycle observes
+  # one that is missing here.
+  x-error-codes:
+  - active_consent_required
+  - approved_source_changed
+  - approved_source_overwrite_denied
+  - candidate_not_found
+  - candidate_not_pending
+  - candidate_not_ready
+  - candidate_state_changed
+  - confirmed_value_invalid
+  - consent_not_found
+  - consent_purpose_invalid
+  - consent_revoked
+  - content_digest_mismatch
+  - content_length_mismatch
+  - correction_reason_invalid
+  - csrf_denied
+  - demo_bootstrap_disabled
+  - demo_capacity_exhausted
+  - document_already_uploaded
+  - document_digest_invalid
+  - document_digest_missing
+  - document_intake_already_finalized
+  - document_not_found
+  - document_size_invalid
+  - document_state_changed
+  - document_upload_incomplete
+  - extraction_candidates_invalid
+  - extraction_digest_mismatch
+  - finalization_metadata_mismatch
+  - foundation_principal_missing
+  - idempotency_key_invalid
+  - idempotency_key_mismatch
+  - idempotency_key_reused
+  - idempotency_resource_missing
+  - inspection_digest_mismatch
+  - inspection_evidence_invalid
+  - inspection_policy_mismatch
+  - inspection_result_invalid
+  - inspection_source_changed
+  - internal_error
+  - local_identity_denied
+  - lock_conflict
+  - login_locked
+  - media_type_unsupported
+  - method_not_allowed
+  - object_key_denied
+  - object_path_denied
+  - observed_on_invalid
+  - observed_on_out_of_range
+  - origin_denied
+  - payload_cap_exceeded
+  - payload_too_large
+  - pdf_required
+  - preview_artifact_invalid
+  - preview_digest_mismatch
+  - preview_dimensions_invalid
+  - preview_not_ready
+  - preview_overwrite_denied
+  - preview_png_invalid
+  - preview_png_required
+  - preview_size_invalid
+  - promotion_digest_mismatch
+  - rate_limited
+  - record_not_found
+  - record_state_changed
+  - request_body_invalid
+  - request_header_missing
+  - request_invalid
+  - request_path_invalid
+  - requested_with_denied
+  - session_invalid
+  - session_required
+  - storage_unavailable
+  - subject_deleted
+  - synthetic_fixture_required
+  - synthetic_subject_required
+  - unapproved_scanner
+  - upload_capability_invalid
+  - upload_overwrite_denied
+  - worker_identity_denied
+  - worker_identity_missing
+  - worker_job_lease_invalid
+  - worker_job_type_mismatch
+  - worker_request_failed
+  - worker_source_digest_mismatch

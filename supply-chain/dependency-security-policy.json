@@ -85,9 +85,9 @@
       "source": "https://github.com/JetBrains/kotlin/releases/tag/v2.3.21"
     },
     "bouncyCastle": {
-      "exactVersion": "1.84",
-      "scope": "Kotlin build-time publishing configuration",
-      "reason": "CVE-2026-3505 remediation"
+      "exactVersion": "1.85",
+      "scope": "Forced in the root build for every configuration; no module lockfile resolves BouncyCastle since Kotlin 2.3.21 removed the build-time publishing configuration that pulled it",
+      "reason": "CVE-2026-3505, CVE-2026-8763 and CVE-2026-13506 remediation; the force keeps a non-vulnerable version if the dependency reappears"
     }
   },
   "ciTools": {

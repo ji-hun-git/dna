@@ -53,6 +53,13 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     systemProperty("user.timezone", "UTC")
+    // The PostgreSQL classes are gated by this variable; declaring it as an input re-runs them when it changes
+    // and skips them when nothing changed — no more `cleanTest` ritual.
+    // `providers.environmentVariable`, not `System.getenv`: the latter reads the *daemon's* environment,
+    // which is frozen at daemon start, so a warm daemon would keep reporting the value the first invoking
+    // shell had. The provider API reads the invoking client's environment on every build.
+    inputs.property("gcTestPostgresUrl", providers.environmentVariable("GC_TEST_POSTGRES_URL").orElse("").get())
+    inputs.property("gcTestQuarantineRoot", providers.environmentVariable("GC_TEST_QUARANTINE_ROOT").orElse("").get())
 }
 
 dependencyLocking { lockAllConfigurations() }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "release-readiness.v1",
-  "evaluatedAt": "2026-09-07",
+  "evaluatedAt": "2026-09-18",
   "target": "HOSTED_SYNTHETIC_STAGING",
   "verdict": "NO_GO",
   "gates": [
@@ -122,7 +122,7 @@
       "id": "external_audit_anchor",
       "status": "FAIL",
       "blocking": true,
-      "evidence": "database mutation guard exists, but no separately permissioned external chain-head checkpoint has been exercised"
+      "evidence": "gc_audit_event and security_audit_event are append-only at the database (V3 and V13 triggers; PostgreSQL integration tests reject UPDATE and DELETE), but no separately permissioned external chain-head checkpoint has been exercised"
     },
     {
       "id": "hosted_research_runtime_denial",

@@ -56,6 +56,8 @@ export default defineConfig({
         GC_QUARANTINE_ROOT: quarantineRoot,
         GC_AUDIT_PEPPER: "foundation-browser-e2e-pepper-with-at-least-32-characters",
         GC_ALLOWED_DOCUMENT_SHA256: [fixtureDigest, secondFixtureDigest].join(","),
+        GC_SESSION_RATE_LIMIT_PER_MINUTE: "10000",
+        GC_WORKER_RATE_LIMIT_PER_MINUTE: "100000",
       },
     },
     {
