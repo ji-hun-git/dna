@@ -298,7 +298,7 @@ class DocumentWorkerBoundaryService(
         }
         if (
             request.decision == InspectionDecision.APPROVED &&
-            request.policyVersion != "pdf-security-v1"
+            request.policyVersion != "pdf-security-v2"
         ) {
             return failAndLog(job, "inspection_policy_mismatch", retryable = false, now, INSPECTION_RESULT_ROUTE)
         }

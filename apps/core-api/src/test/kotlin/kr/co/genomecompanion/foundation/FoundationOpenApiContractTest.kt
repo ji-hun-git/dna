@@ -364,7 +364,7 @@ class FoundationOpenApiContractTest @Autowired constructor(
                 encrypted = false,
                 activeContent = false,
                 embeddedFiles = false,
-                policyVersion = "pdf-security-v1",
+                policyVersion = "pdf-security-v2",
                 scannerName = "SyntheticManifestScanner",
                 scannerVersion = "test-only-v1",
                 signatureVersion = "allowlisted-fixture",

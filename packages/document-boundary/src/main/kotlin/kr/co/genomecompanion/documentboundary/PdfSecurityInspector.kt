@@ -18,6 +18,7 @@ import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDResources
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
+import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroup
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.apache.pdfbox.pdmodel.graphics.image.PDInlineImage
 import org.apache.pdfbox.pdmodel.graphics.pattern.PDTilingPattern
@@ -85,14 +86,16 @@ class PdfSecurityInspector(
             catalog.acroForm != null ||
             catalog.cosObject.containsKey(COSName.AA) ||
             annotationActive
-        val totalImagePixels = ImagePixelCounter(policy.maxNestingDepth).count(document)
+        val imageCounter = ImagePixelCounter(policy.maxNestingDepth)
+        val totalImagePixels = imageCounter.count(document)
 
         val reason = when {
             encrypted -> InspectionReason.ENCRYPTED_PDF
             xfa -> InspectionReason.XFA_FORM
             pageCount !in 1..policy.maxPages -> InspectionReason.PAGE_LIMIT_EXCEEDED
             objectCount > policy.maxIndirectObjects -> InspectionReason.OBJECT_LIMIT_EXCEEDED
-            totalImagePixels > policy.maxImagePixels -> InspectionReason.IMAGE_COMPLEXITY_EXCEEDED
+            imageCounter.depthExceeded || totalImagePixels > policy.maxImagePixels ->
+                InspectionReason.IMAGE_COMPLEXITY_EXCEEDED
             embeddedFiles -> InspectionReason.EMBEDDED_FILE
             activeContent -> InspectionReason.ACTIVE_CONTENT
             else -> InspectionReason.CLEAN
@@ -192,19 +195,21 @@ class PdfSecurityInspector(
 
 
 /**
- * Counts every image pixel a renderer could be asked to produce, not just the images a page names
- * directly: a hostile document can hide a 40-megapixel image behind a chain of form XObjects or a
- * tiling pattern, or inline it in the content stream where it has no resource name at all.
+ * Counts unique resource-image pixels and visited inline images. This is not a bound on repeated
+ * rendering work. A hostile document can hide images behind forms or tiling patterns, so crossing
+ * the traversal limit rejects the document instead of approving a partial count.
  *
- * Recursion is bounded twice over - by [maxDepth] and by identity sets of the COS objects already
- * visited - so a self-referencing form costs one visit rather than a stack overflow.
+ * Resource depths are memoized by identity. A shared resource reached along a deeper path must be
+ * checked again; remembering only its first visit would let that path bypass the nesting limit.
  */
 private class ImagePixelCounter(private val maxDepth: Int) : PDFStreamEngine() {
     private val countedImages: MutableSet<COSBase> = Collections.newSetFromMap(IdentityHashMap())
-    private val walkedResources: MutableSet<COSBase> = Collections.newSetFromMap(IdentityHashMap())
-    private val renderedForms: MutableSet<COSBase> = Collections.newSetFromMap(IdentityHashMap())
+    private val walkedResourceDepths = IdentityHashMap<COSBase, Int>()
+    private val renderedFormDepths = IdentityHashMap<COSBase, IdentityHashMap<COSBase?, Int>>()
     private var total = 0L
     private var formDepth = 0
+    var depthExceeded = false
+        private set
 
     init {
         addOperator(Concatenate(this))
@@ -235,30 +240,52 @@ private class ImagePixelCounter(private val maxDepth: Int) : PDFStreamEngine() {
     }
 
     override fun showForm(form: PDFormXObject) {
-        if (formDepth >= maxDepth || !renderedForms.add(form.cosObject)) return
+        inspectForm(form) { super.showForm(form) }
+    }
+
+    override fun showTransparencyGroup(group: PDTransparencyGroup) {
+        inspectForm(group) { super.showTransparencyGroup(group) }
+    }
+
+    private fun inspectForm(form: PDFormXObject, inspect: () -> Unit) {
+        if (formDepth >= maxDepth) {
+            depthExceeded = true
+            return
+        }
+        // Resource-less forms inherit the caller's resources: identical form bytes can expand to
+        // different children on another page or inside another form.
+        val context = resources?.cosObject
+        val depths = renderedFormDepths.getOrPut(form.cosObject) { IdentityHashMap() }
+        if ((depths[context] ?: -1) >= formDepth) return
+        depths[context] = formDepth
         formDepth += 1
         try {
-            super.showForm(form)
+            inspect()
         } finally {
             formDepth -= 1
         }
     }
 
     private fun walk(resources: PDResources?, depth: Int) {
-        if (resources == null || depth > maxDepth) return
-        if (!walkedResources.add(resources.cosObject)) return
+        if (depth > maxDepth) {
+            depthExceeded = true
+            return
+        }
+        if (resources == null) return
+        if ((walkedResourceDepths[resources.cosObject] ?: -1) >= depth) return
+        walkedResourceDepths[resources.cosObject] = depth
         resources.xObjectNames.forEach { name ->
             when (val xobject = runCatching { resources.getXObject(name) }.getOrNull()) {
                 is PDImageXObject ->
                     if (countedImages.add(xobject.cosObject)) add(xobject.width.toLong(), xobject.height.toLong())
                 is PDFormXObject ->
-                    if (depth < maxDepth) walk(runCatching { xobject.resources }.getOrNull(), depth + 1)
+                    walk(runCatching { xobject.resources }.getOrNull(), depth + 1)
                 else -> Unit
             }
         }
         resources.patternNames.forEach { name ->
             val pattern = runCatching { resources.getPattern(name) }.getOrNull()
-            if (pattern is PDTilingPattern && depth < maxDepth) {
+            if (pattern is PDTilingPattern) {
                 walk(runCatching { pattern.resources }.getOrNull(), depth + 1)
             }
         }

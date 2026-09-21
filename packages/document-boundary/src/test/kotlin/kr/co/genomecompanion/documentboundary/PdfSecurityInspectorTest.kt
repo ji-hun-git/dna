@@ -12,6 +12,7 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
 import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory
 import org.apache.pdfbox.pdmodel.graphics.image.PDInlineImage
+import org.apache.pdfbox.pdmodel.graphics.pattern.PDTilingPattern
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationFileAttachment
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm
@@ -50,6 +51,7 @@ class PdfSecurityInspectorTest {
         assertThat(report.reason).isEqualTo(InspectionReason.CLEAN)
         assertThat(report.pageCount).isEqualTo(1)
         assertThat(report.sourceSha256).isEqualTo(sha256(bytes))
+        assertThat(report.policyVersion).isEqualTo("pdf-security-v2")
     }
 
     @Test
@@ -188,6 +190,7 @@ class PdfSecurityInspectorTest {
         }
         val report = inspector.inspect(nested, sha256(nested))
         assertThat(report.totalImagePixels).isEqualTo(4_000_000L)
+        assertThat(report.reason).isEqualTo(InspectionReason.IMAGE_COMPLEXITY_EXCEEDED)
 
         val inline = pdf { document, page ->
             PDPageContentStream(document, page).use { stream ->
@@ -204,7 +207,7 @@ class PdfSecurityInspectorTest {
     }
 
     @Test
-    fun `stops counting images below the nesting depth cap`() {
+    fun `rejects images below the nesting depth cap and accepts the exact boundary`() {
         val deep = pdf { document, page ->
             val image = LosslessFactory.createFromImage(document, BufferedImage(2000, 2000, BufferedImage.TYPE_INT_RGB))
             val inner = PDFormXObject(document).apply {
@@ -217,12 +220,105 @@ class PdfSecurityInspectorTest {
             }
             page.resources = PDResources().also { it.put(COSName.getPDFName("Fx0"), outer) }
         }
-        assertThat(PdfSecurityInspector(PdfInspectionPolicy(), cleanScanner).inspect(deep, sha256(deep)).totalImagePixels)
-            .isEqualTo(4_000_000L)
+        val atBoundary = PdfSecurityInspector(PdfInspectionPolicy(maxNestingDepth = 2), cleanScanner)
+            .inspect(deep, sha256(deep))
+        assertThat(atBoundary.decision).isEqualTo(InspectionDecision.APPROVED)
+        assertThat(atBoundary.totalImagePixels).isEqualTo(4_000_000L)
         assertThat(
             PdfSecurityInspector(PdfInspectionPolicy(maxNestingDepth = 1), cleanScanner)
-                .inspect(deep, sha256(deep)).totalImagePixels,
-        ).isEqualTo(0L)
+                .inspect(deep, sha256(deep)).reason,
+        ).isEqualTo(InspectionReason.IMAGE_COMPLEXITY_EXCEEDED)
+    }
+
+    @Test
+    fun `rejects rendered form recursion using inherited resources`() {
+        val synthetic = pdf { document, page ->
+            val form = PDFormXObject(document).apply {
+                bBox = PDRectangle(10f, 10f)
+                cosObject.createOutputStream().use { it.write("/SyntheticSelf Do\n".toByteArray()) }
+            }
+            page.resources = PDResources().also { it.put(COSName.getPDFName("SyntheticSelf"), form) }
+            PDPageContentStream(document, page).use { it.drawForm(form) }
+        }
+        val report = PdfSecurityInspector(PdfInspectionPolicy(maxNestingDepth = 2), cleanScanner)
+            .inspect(synthetic, sha256(synthetic))
+        assertThat(report.reason).isEqualTo(InspectionReason.IMAGE_COMPLEXITY_EXCEEDED)
+    }
+
+    @Test
+    fun `rejects rendered transparency group recursion using inherited resources`() {
+        val synthetic = pdf { document, page ->
+            val form = PDFormXObject(document).apply {
+                bBox = PDRectangle(10f, 10f)
+                cosObject.setItem(COSName.GROUP, COSDictionary().apply {
+                    setItem(COSName.S, COSName.TRANSPARENCY)
+                })
+                cosObject.createOutputStream().use { it.write("/SyntheticSelf Do\n".toByteArray()) }
+            }
+            page.resources = PDResources().also { it.put(COSName.getPDFName("SyntheticSelf"), form) }
+            PDPageContentStream(document, page).use { it.drawForm(form) }
+        }
+        val report = PdfSecurityInspector(PdfInspectionPolicy(maxNestingDepth = 2), cleanScanner)
+            .inspect(synthetic, sha256(synthetic))
+        assertThat(report.reason).isEqualTo(InspectionReason.IMAGE_COMPLEXITY_EXCEEDED)
+    }
+
+    @Test
+    fun `shared form is inspected again when its inherited resources change`() {
+        val synthetic = pdf { document, page ->
+            val shared = PDFormXObject(document).apply {
+                bBox = PDRectangle(10f, 10f)
+                cosObject.createOutputStream().use { it.write("/SyntheticNext Do\n".toByteArray()) }
+            }
+            val leaf = PDFormXObject(document).apply { bBox = PDRectangle(10f, 10f) }
+            page.resources = PDResources().also {
+                it.put(COSName.getPDFName("SyntheticShared"), shared)
+                it.put(COSName.getPDFName("SyntheticNext"), leaf)
+            }
+            PDPageContentStream(document, page).use { it.drawForm(shared) }
+            val recursivePage = PDPage().apply {
+                resources = PDResources().also { it.put(COSName.getPDFName("SyntheticNext"), shared) }
+            }
+            document.addPage(recursivePage)
+            PDPageContentStream(document, recursivePage).use { it.drawForm(shared) }
+        }
+        val report = PdfSecurityInspector(PdfInspectionPolicy(maxNestingDepth = 2), cleanScanner)
+            .inspect(synthetic, sha256(synthetic))
+        assertThat(report.reason).isEqualTo(InspectionReason.IMAGE_COMPLEXITY_EXCEEDED)
+    }
+
+    @Test
+    fun `rejects nested tiling resources beyond the cap`() {
+        val synthetic = pdf { _, page ->
+            val inner = PDTilingPattern().apply { resources = PDResources() }
+            val outer = PDTilingPattern().apply {
+                resources = PDResources().also { it.put(COSName.getPDFName("SyntheticInner"), inner) }
+            }
+            page.resources = PDResources().also { it.put(COSName.getPDFName("SyntheticOuter"), outer) }
+        }
+        val report = PdfSecurityInspector(PdfInspectionPolicy(maxNestingDepth = 1), cleanScanner)
+            .inspect(synthetic, sha256(synthetic))
+        assertThat(report.decision).isEqualTo(InspectionDecision.REJECTED)
+        assertThat(report.reason).isEqualTo(InspectionReason.IMAGE_COMPLEXITY_EXCEEDED)
+    }
+
+    @Test
+    fun `a shallow visit cannot hide a deeper shared resource path`() {
+        val synthetic = pdf { document, page ->
+            val leaf = PDFormXObject(document).apply { resources = PDResources() }
+            val shared = PDResources().also { it.put(COSName.getPDFName("SyntheticLeaf"), leaf) }
+            val shallow = PDFormXObject(document).apply { resources = shared }
+            val deep = PDFormXObject(document).apply {
+                resources = PDResources().also { it.put(COSName.getPDFName("SyntheticShared"), shallow) }
+            }
+            page.resources = PDResources().also { it.put(COSName.getPDFName("SyntheticShallow"), shallow) }
+            document.addPage(PDPage().apply {
+                resources = PDResources().also { it.put(COSName.getPDFName("SyntheticDeep"), deep) }
+            })
+        }
+        val report = PdfSecurityInspector(PdfInspectionPolicy(maxNestingDepth = 2), cleanScanner)
+            .inspect(synthetic, sha256(synthetic))
+        assertThat(report.reason).isEqualTo(InspectionReason.IMAGE_COMPLEXITY_EXCEEDED)
     }
 
     @Test
@@ -242,6 +338,7 @@ class PdfSecurityInspectorTest {
     ): ByteArray {
         val output = ByteArrayOutputStream()
         PDDocument().use { document ->
+            document.documentInformation.subject = "%GC-SYNTHETIC-ONLY"
             val page = PDPage()
             document.addPage(page)
             block(document, page)

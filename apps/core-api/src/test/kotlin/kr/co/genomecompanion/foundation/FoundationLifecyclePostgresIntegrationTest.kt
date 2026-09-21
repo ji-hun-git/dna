@@ -332,6 +332,29 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun obsoleteInspectionPolicyCannotPromoteSource() {
+        val alice = login("synthetic-alice")
+        val consentId = grantConsent(alice)
+        val documentId = requestDocument(alice, consentId, fixturePdf, "synthetic-obsolete-policy")
+        uploadDocument(alice, documentId, fixturePdf).andExpect(status().isOk)
+        mutate(post("/api/foundation/documents/$documentId/finalization"), alice)
+            .andExpect(status().isAccepted)
+        val lease = checkNotNull(workerService.lease("a".repeat(64)))
+        val receipt = workerService.completeInspection(
+            lease.jobId,
+            lease.leaseToken,
+            approvedInspectionRequest().copy(policyVersion = "pdf-security-v1"),
+        )
+        assertThat(receipt.status).isEqualTo("DEAD_LETTER")
+        assertThat(jdbc.queryForObject(
+            "SELECT approved_object_key FROM gc_document WHERE document_id = ?",
+            String::class.java,
+            documentId,
+        )).isNull()
+        assertThat(workerService.lease("a".repeat(64))).isNull()
+    }
+
+    @Test
     fun concurrentDuplicateWorkerCompletionCreatesExactlyOneResult() {
         val alice = login("synthetic-alice")
         val consentId = grantConsent(alice)
@@ -3579,7 +3602,7 @@ class FoundationLifecyclePostgresIntegrationTest @Autowired constructor(
         encrypted = false,
         activeContent = false,
         embeddedFiles = false,
-        policyVersion = "pdf-security-v1",
+        policyVersion = "pdf-security-v2",
         scannerName = "SyntheticManifestScanner",
         scannerVersion = "test-only-v1",
         signatureVersion = "allowlisted-fixture",

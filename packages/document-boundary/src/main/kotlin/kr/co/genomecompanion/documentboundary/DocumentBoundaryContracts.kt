@@ -113,7 +113,7 @@ data class PdfInspectionPolicy(
     val maxIndirectObjects: Int = 20_000,
     val maxImagePixels: Long = 50_000_000,
     val maxNestingDepth: Int = 8,
-    val policyVersion: String = "pdf-security-v1",
+    val policyVersion: String = "pdf-security-v2",
 )
 
 
