@@ -71,9 +71,10 @@ object PageRenderSubprocess {
         val builder = ProcessBuilder(command)
             .redirectErrorStream(false)
             .redirectError(ProcessBuilder.Redirect.DISCARD)
-        val inherited = System.getenv()
         builder.environment().clear()
-        PASSTHROUGH_ENVIRONMENT.forEach { key -> inherited[key]?.let { builder.environment()[key] = it } }
+        // getenv(name) uses Windows' case-insensitive lookup; getenv()'s Map can contain "Path"
+        // rather than "PATH". Keep the allowlist narrow without dropping that OS variable.
+        PASSTHROUGH_ENVIRONMENT.forEach { key -> System.getenv(key)?.let { builder.environment()[key] = it } }
         val process = builder.start()
 
         // The buffer is owned by the reader thread; the parent only reads it after joining that thread,
@@ -97,26 +98,55 @@ object PageRenderSubprocess {
                 .onFailure { if (it is Error) threadError.compareAndSet(null, it) }
         }, stdinThreadName).also { it.isDaemon = true; it.start() }
 
-        if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-            process.destroyForcibly()
-            // Killing the child breaks both pipes, which unblocks the writer and ends the reader.
-            process.waitFor(REAP_MILLIS, TimeUnit.MILLISECONDS)
+        try {
+            if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                return RenderResult.Failed(TIMED_OUT)
+            }
             writer.join(JOIN_MILLIS)
             reader.join(JOIN_MILLIS)
+            val output = if (reader.isAlive) ByteArray(0) else captured.get()
+            val exitCode = process.exitValue()
+            return when {
+                exitCode == 0 && output.size in 67..MAX_PNG_BYTES -> RenderResult.Png(output)
+                exitCode == 0 -> RenderResult.Failed(UNUSABLE_OUTPUT)
+                // The child's own handler and HotSpot's -XX:+ExitOnOutOfMemoryError both exit with 3.
+                exitCode == 3 -> RenderResult.OutOfMemory
+                else -> RenderResult.Failed(exitCode)
+            }
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw interrupted
+        } finally {
+            // Cancellation can interrupt waitFor or join, not just expire the render timeout.
+            // Every exit owns the child cleanup; otherwise an interrupted worker abandons a JVM
+            // that can retain document bytes and keep both pipe threads blocked.
+            stopAndJoin(process, writer, reader)
             threadError.get()?.let { throw it }
-            return RenderResult.Failed(TIMED_OUT)
         }
-        writer.join(JOIN_MILLIS)
-        reader.join(JOIN_MILLIS)
-        threadError.get()?.let { throw it }
-        val output = if (reader.isAlive) ByteArray(0) else captured.get()
-        val exitCode = process.exitValue()
-        return when {
-            exitCode == 0 && output.size in 67..MAX_PNG_BYTES -> RenderResult.Png(output)
-            exitCode == 0 -> RenderResult.Failed(UNUSABLE_OUTPUT)
-            // The child's own handler and HotSpot's -XX:+ExitOnOutOfMemoryError both exit with 3.
-            exitCode == 3 -> RenderResult.OutOfMemory
-            else -> RenderResult.Failed(exitCode)
+    }
+
+    private fun stopAndJoin(process: Process, writer: Thread, reader: Thread) {
+        var interrupted = Thread.interrupted()
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(REAP_MILLIS + 2 * JOIN_MILLIS)
+        fun await(alive: () -> Boolean, wait: (Long) -> Unit) {
+            while (alive()) {
+                val remaining = deadline - System.nanoTime()
+                if (remaining <= 0) return
+                try {
+                    wait(remaining)
+                } catch (_: InterruptedException) {
+                    // Repeated cancellation must neither skip cleanup nor extend its deadline.
+                    interrupted = true
+                }
+            }
+        }
+        try {
+            if (process.isAlive) process.destroyForcibly()
+            await({ process.isAlive }) { process.waitFor(it, TimeUnit.NANOSECONDS) }
+            await({ writer.isAlive }) { TimeUnit.NANOSECONDS.timedJoin(writer, it) }
+            await({ reader.isAlive }) { TimeUnit.NANOSECONDS.timedJoin(reader, it) }
+        } finally {
+            if (interrupted) Thread.currentThread().interrupt()
         }
     }
 }

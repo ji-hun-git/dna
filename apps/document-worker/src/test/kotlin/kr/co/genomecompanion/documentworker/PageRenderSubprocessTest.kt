@@ -3,9 +3,59 @@ package kr.co.genomecompanion.documentworker
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Duration
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 
 class PageRenderSubprocessTest {
+    @Test
+    fun `interrupting a render stops its child and releases its pipe threads`() {
+        val failure = AtomicReference<Throwable?>()
+        val previousChildren = ProcessHandle.current().children().use { children ->
+            children.map { it.pid() }.toList().toSet()
+        }
+        val previousThreads = Thread.getAllStackTraces().keys.toSet()
+        val rendering = Thread({
+            try {
+                PageRenderSubprocess.render(
+                    SyntheticResultPdf.july + ByteArray(1_400_000) { '%'.code.toByte() },
+                    entryPoint = "kr.co.genomecompanion.documentworker.SleepingRenderMainKt",
+                )
+            } catch (error: Throwable) {
+                failure.set(error)
+            }
+        }, "synthetic-render-cancellation-test")
+        var child: ProcessHandle? = null
+        rendering.start()
+        try {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15)
+            while (child == null && System.nanoTime() < deadline) {
+                child = ProcessHandle.current().children().use { children ->
+                    // Windows does not always expose commandLine through ProcessHandle.Info.
+                    // This test JVM starts only this child during the snapshot interval.
+                    children.filter { it.pid() !in previousChildren }
+                        .findFirst().orElse(null)
+                }
+                if (child == null) Thread.sleep(10)
+            }
+            assertThat(child).describedAs("test render child started").isNotNull()
+            rendering.interrupt()
+            rendering.join(15_000)
+            assertThat(rendering.isAlive).isFalse()
+            assertThat(failure.get()).isInstanceOf(InterruptedException::class.java)
+            assertThat(child!!.isAlive).describedAs("cancelled renderer must not survive its caller").isFalse()
+            assertThat(Thread.getAllStackTraces().keys.filter {
+                it !in previousThreads && it.isAlive &&
+                    it.name in setOf(PageRenderSubprocess.stdinThreadName, PageRenderSubprocess.stdoutThreadName)
+            }).isEmpty()
+        } finally {
+            // The red regression must not leave its deliberately sleeping child behind either.
+            child?.let { if (it.isAlive) it.destroyForcibly(); it.onExit().get(10, TimeUnit.SECONDS) }
+            rendering.interrupt()
+            rendering.join(15_000)
+        }
+    }
+
     @Test
     fun `renders the first page in a child JVM and reports OOM as a distinct result`() {
         val png = PageRenderSubprocess.render(SyntheticResultPdf.july)
