@@ -20,7 +20,7 @@ content and could approve the partial count. The closed rejection reason is
 | --- | --- |
 | Regression before the change | Expected `IMAGE_COMPLEXITY_EXCEEDED`, received `CLEAN` for an over-depth document |
 | Additional inherited-resource regressions | Exposed approval of recursive content and reuse of an earlier form inspection in a different resource context |
-| `./gradlew.bat test --no-daemon` | BUILD SUCCESSFUL in 1m 29s; 353 tests, 65 skipped, zero failures/errors (288 passed); unchanged tasks may reuse outputs |
+| `./gradlew.bat test --no-daemon` | BUILD SUCCESSFUL in 1m 34s; 354 tests, 65 skipped, zero failures/errors (289 passed); unchanged tasks may reuse outputs |
 | Pinned runtime policy | `runtime-policy: PASS node=24.20.0 pnpm=11.20.0 next=16.3.3` |
 | Readiness validation | Exit 0; `release-readiness: NO_GO 12 blocking gate(s) are not PASS` |
 | New-head GitHub CI | Not yet verified at report creation; use the associated PR's checks |
@@ -43,6 +43,9 @@ executed locally. No hosted runtime behavior is claimed.
 - D4 (Wave 7b F07): the API accepted the previous policy identifier. It now accepts
   only v2 approvals. A PostgreSQL integration regression asserts that a v1 approval
   dead-letters the job without an approved object key or an extraction lease.
+- D5: PDFBox dispatches transparency groups through a separate callback. A new
+  synthetic regression first reproduced recursive group approval; ordinary forms
+  and transparency groups now share the depth and resource-context guard.
 
 ## Readiness interpretation
 
@@ -57,7 +60,7 @@ Existing CVE exceptions and other Wave 7b findings remain open.
 Depth overflow uses the existing closed complexity reason, without a schema or
 response-shape change. Tests cover the exact allowed boundary, nested forms and
 tiling patterns, cyclic resources, deeper shared paths, recursive inherited
-resources, and resource-context changes across pages. Fixture PDFs are generated
+resources, transparency groups, and resource-context changes across pages. Fixture PDFs are generated
 in memory and marked synthetic; no document binaries are committed.
 
 Worker and API must be upgraded together: an old worker's v1 approval is rejected

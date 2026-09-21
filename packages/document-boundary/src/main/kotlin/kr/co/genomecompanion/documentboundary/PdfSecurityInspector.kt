@@ -18,6 +18,7 @@ import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDResources
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
+import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroup
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.apache.pdfbox.pdmodel.graphics.image.PDInlineImage
 import org.apache.pdfbox.pdmodel.graphics.pattern.PDTilingPattern
@@ -239,6 +240,14 @@ private class ImagePixelCounter(private val maxDepth: Int) : PDFStreamEngine() {
     }
 
     override fun showForm(form: PDFormXObject) {
+        inspectForm(form) { super.showForm(form) }
+    }
+
+    override fun showTransparencyGroup(group: PDTransparencyGroup) {
+        inspectForm(group) { super.showTransparencyGroup(group) }
+    }
+
+    private fun inspectForm(form: PDFormXObject, inspect: () -> Unit) {
         if (formDepth >= maxDepth) {
             depthExceeded = true
             return
@@ -251,7 +260,7 @@ private class ImagePixelCounter(private val maxDepth: Int) : PDFStreamEngine() {
         depths[context] = formDepth
         formDepth += 1
         try {
-            super.showForm(form)
+            inspect()
         } finally {
             formDepth -= 1
         }

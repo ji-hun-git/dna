@@ -246,6 +246,24 @@ class PdfSecurityInspectorTest {
     }
 
     @Test
+    fun `rejects rendered transparency group recursion using inherited resources`() {
+        val synthetic = pdf { document, page ->
+            val form = PDFormXObject(document).apply {
+                bBox = PDRectangle(10f, 10f)
+                cosObject.setItem(COSName.GROUP, COSDictionary().apply {
+                    setItem(COSName.S, COSName.TRANSPARENCY)
+                })
+                cosObject.createOutputStream().use { it.write("/SyntheticSelf Do\n".toByteArray()) }
+            }
+            page.resources = PDResources().also { it.put(COSName.getPDFName("SyntheticSelf"), form) }
+            PDPageContentStream(document, page).use { it.drawForm(form) }
+        }
+        val report = PdfSecurityInspector(PdfInspectionPolicy(maxNestingDepth = 2), cleanScanner)
+            .inspect(synthetic, sha256(synthetic))
+        assertThat(report.reason).isEqualTo(InspectionReason.IMAGE_COMPLEXITY_EXCEEDED)
+    }
+
+    @Test
     fun `shared form is inspected again when its inherited resources change`() {
         val synthetic = pdf { document, page ->
             val shared = PDFormXObject(document).apply {
