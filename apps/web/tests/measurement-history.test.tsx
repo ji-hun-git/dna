@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { http, HttpResponse } from "msw";
@@ -233,7 +233,8 @@ it("focuses the series that holds the event named in the hash", async () => {
   window.location.hash = "#event-8b2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d62";
   render(<MeasurementHistory />);
   await screen.findAllByTestId("history-series");
-  expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toHaveFocus();
+  // Rendering the series and the passive effect moving focus are separate events.
+  await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "당화혈색소" })).toHaveFocus());
 });
 
 it("says so when there is nothing yet, and passes axe", async () => {

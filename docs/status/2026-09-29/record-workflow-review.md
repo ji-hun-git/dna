@@ -31,6 +31,7 @@ Logs are local under `C:/gc-synthetic-test/`. API totals: 229 tests, 2 skipped. 
 - RECORD-01 (high, fixed): client ignored backend pagination. Lists, counts, CSV inputs and visit questions could omit results after the first page. Continuation tokens are now UUID-validated, cycles and empty intermediate pages are rejected, and failures do not return a partial collection. Reads stop with an explicit error after 100 pages rather than silently truncating or looping forever.
 - RECORD-02 (medium, fixed): home results were plain text, requiring a second search for the source. Each saved result now links to the existing focusable record/source detail.
 - RECORD-03 (medium, addressed): repeated explanations and an unavailable connection count competed with the record task. These were removed while retaining the synthetic-data notice, source review and consent controls.
+- RECORD-04 (test timing, addressed): CI run `36544285572` checked history-heading focus immediately after rows appeared, before the passive focus effect necessarily completed. The assertion now waits for the same required focus state; product behavior is unchanged.
 
 ## Readiness interpretation
 
