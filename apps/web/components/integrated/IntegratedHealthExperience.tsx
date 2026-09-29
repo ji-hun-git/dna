@@ -48,23 +48,23 @@ type ProcessingState = LocalProcessingState | FoundationDocument["status"];
 
 const processingCopy: Record<ProcessingState, string> = {
   IDLE: "대기 중",
-  HASHING: "브라우저에서 파일 확인값을 계산하고 있어요",
-  REQUESTING_UPLOAD: "서버에 업로드 요청을 만들고 있어요",
-  UPLOADING: "허용된 합성 PDF를 전송하고 있어요",
-  UPLOAD_FINALIZING: "서버가 받은 바이트와 요청 정보를 다시 맞추고 있어요",
+  HASHING: "선택한 파일을 확인하고 있어요",
+  REQUESTING_UPLOAD: "파일 전송을 준비하고 있어요",
+  UPLOADING: "예시 PDF를 전송하고 있어요",
+  UPLOAD_FINALIZING: "파일이 제대로 전송됐는지 확인하고 있어요",
   UPLOAD_PENDING: "업로드가 끝나기를 기다리고 있어요",
-  UNTRUSTED_OBJECT: "파일을 신뢰하지 않는 보안 구역에 보관했어요",
-  SECURITY_INSPECTION: "격리된 작업자가 문서를 안전하게 확인하고 있어요",
+  UNTRUSTED_OBJECT: "파일을 받았어요. 보안 검사를 기다리고 있어요",
+  SECURITY_INSPECTION: "파일을 검사하고 있어요",
   SECURITY_REJECTED: "보안 정책에 따라 이 파일을 처리하지 않았어요",
-  SECURITY_APPROVED: "검사한 바이트가 승인됐어요",
-  EXTRACTION_QUEUED: "승인된 바이트에서 글자 정보를 읽을 차례를 기다리고 있어요",
-  EXTRACTION_RUNNING: "격리된 작업자가 결과지의 글자 정보를 읽고 안전한 미리보기를 만들고 있어요",
-  REVIEW_REQUIRED: "직접 확인할 합성 후보가 준비됐어요",
-  COMPLETED: "이 문서의 사용자 확인이 끝났어요",
-  DELETION_PENDING: "문서와 파생물을 지우고 있어요",
-  DELETED: "문서와 파생물을 삭제했어요",
-  FAILED_RETRYABLE: "일시적인 문제로 서버가 안전하게 다시 시도할 준비를 하고 있어요",
-  FAILED_TERMINAL: "안전하게 계속할 수 없어 처리를 중단했어요",
+  SECURITY_APPROVED: "파일 검사를 마쳤어요",
+  EXTRACTION_QUEUED: "파일에서 글자를 읽기 위해 대기 중이에요",
+  EXTRACTION_RUNNING: "결과지에서 글자를 읽고 미리보기를 만들고 있어요",
+  REVIEW_REQUIRED: "결과지에서 읽은 내용을 확인해 주세요",
+  COMPLETED: "결과지 확인을 마쳤어요",
+  DELETION_PENDING: "결과지와 관련 데이터를 삭제하고 있어요",
+  DELETED: "결과지와 관련 데이터를 삭제했어요",
+  FAILED_RETRYABLE: "일시적인 오류가 발생했어요. 다시 처리할 예정이에요",
+  FAILED_TERMINAL: "파일 처리를 중단했어요. 다른 예시 PDF를 선택해 주세요",
   TERMINATED_BY_REVOCATION: "동의를 철회해서 결과지 처리를 종료했어요. 다시 동의한 뒤 새로 올려 주세요.",
 };
 
@@ -128,7 +128,7 @@ export function IntegratedHealthExperience() {
     // A failed or schema-rejected /changes read must not break the home
     // screen: its own .catch() isolates it from the core loads below, so a
     // rejected changes fetch still lets Promise.all resolve and simply hides
-    // the "최근 변화" section.
+    // the "이전 검사값과 비교" section.
     const [loadedConsent, loadedRecords, activity, loadedChanges] = await Promise.all([
       client.getDocumentConsent(),
       client.getRecords(),
@@ -293,7 +293,7 @@ export function IntegratedHealthExperience() {
   const selectDocument = (file: File) => {
     setErrorMessage("");
     if (file.type !== "application/pdf") {
-      setErrorMessage("이 통합 단계에서는 허용된 합성 PDF만 선택할 수 있어요.");
+      setErrorMessage("체험용으로 등록된 예시 PDF만 선택할 수 있어요.");
       return;
     }
     if (file.size < 64 || file.size > 10_485_760) {
@@ -408,7 +408,7 @@ export function IntegratedHealthExperience() {
   if (shellState === "INITIALIZING_SESSION") {
     return (
       <main className="gc-integrated-shell gc-integrated-shell--center" aria-busy="true">
-        <p role="status">서버에서 로그인 상태를 확인하고 있어요.</p>
+        <p role="status">로그인 상태를 확인하고 있어요.</p>
       </main>
     );
   }
@@ -421,7 +421,7 @@ export function IntegratedHealthExperience() {
             <section className="gc-integrated-auth" aria-labelledby="restore-failed-title">
               <p>예시 데이터 체험</p>
               <h1 id="restore-failed-title">체험 상태를 불러오지 못했어요</h1>
-              <p>새 체험을 만들지 않고, 현재 로그인과 기록을 다시 확인해요.</p>
+              <p>기존 체험 기록을 다시 불러와 주세요. 새 체험은 시작하지 않아요.</p>
               {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
               <div className="gc-integrated-actions">
                 <button type="button" disabled={busy} onClick={() => void initialize()}>체험 상태 다시 확인</button>
@@ -436,10 +436,10 @@ export function IntegratedHealthExperience() {
       <main className="gc-integrated-shell gc-integrated-shell--center gc-demo-entry">
         <RecordWorkspace preview>
         <section className="gc-integrated-auth" aria-labelledby="synthetic-login-title">
-          <p className="gc-import__eyebrow">체험 데이터로 시작하기</p>
-          <h1 id="synthetic-login-title">나를 알아가는 기록,<br /><em>한곳에서.</em></h1>
-          <p>흩어진 결과지를 모으고, 적힌 값을 직접 확인해요.
-            지난 기록부터 다음 진료의 질문까지 이어보세요.</p>
+          <p className="gc-import__eyebrow">예시 결과지 체험</p>
+          <h1 id="synthetic-login-title">검사 결과<br /><em>모아보기</em></h1>
+          <p>결과지를 올리고 검사값을 확인한 뒤 저장할 수 있어요.
+            예시 결과지로 사용해 보세요.</p>
           <p><strong>실제 건강정보는 사용하지 않습니다.</strong></p>
           {shellState === "SESSION_EXPIRED" && <strong role="status">로그인 시간이 끝났어요.</strong>}
           <button className="gc-button gc-button--primary" type="button" onClick={() => void signIn()} disabled={busy}>{busy ? "체험을 준비하고 있어요" : "체험 시작"}</button>
@@ -458,7 +458,7 @@ export function IntegratedHealthExperience() {
         <section className="gc-integrated-auth" aria-labelledby="integrated-consent-title">
           <p>목적별 동의</p>
           <h1 id="integrated-consent-title">결과지에서 항목을 확인해도 될까요?</h1>
-          <p>허용된 합성 PDF의 파일 확인값을 검사하고, 합성 후보를 만들어 직접 확인하는 목적에만 사용해요.</p>
+          <p>예시 PDF에서 항목과 검사값을 읽어 확인 화면에 표시해요. 직접 확인한 항목만 기록으로 저장해요.</p>
           <dl className="gc-integrated-facts">
             <div><dt>목적</dt><dd>결과지 항목 확인</dd></div>
             <div><dt>현재 상태</dt><dd>{labelConsentStatus(consent?.status ?? "NOT_GRANTED")}</dd></div>
@@ -466,7 +466,7 @@ export function IntegratedHealthExperience() {
           </dl>
           <div className="gc-integrated-actions">
             <button type="button" onClick={() => setView("home")}>취소</button>
-            <button type="button" onClick={grantConsent} disabled={busy}>{busy ? "서버에 반영 중" : "이 목적에 동의"}</button>
+            <button type="button" onClick={grantConsent} disabled={busy}>{busy ? "저장 중" : "이 목적에 동의"}</button>
           </div>
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
         </section>
@@ -480,27 +480,27 @@ export function IntegratedHealthExperience() {
         <header className="gc-import__appbar"><button type="button" onClick={() => setView("home")}>이전</button><span>앎</span><button type="button" onClick={() => setView("home")}>닫기</button></header>
         <div className="gc-import__shell">
           <section className="gc-import__question" aria-labelledby="integrated-source-title">
-            <p className="gc-import__eyebrow">1. 합성 결과지 선택</p>
-            <h1 id="integrated-source-title">허용된 합성 PDF를<br />선택해 주세요</h1>
-            <p className="gc-import__lead">이 단계에서는 서버가 미리 허용한 합성 PDF만 처리합니다.</p>
+            <p className="gc-import__eyebrow">1. 결과지 선택</p>
+            <h1 id="integrated-source-title">예시 결과지를<br />선택해 주세요</h1>
+            <p className="gc-import__lead">체험용으로 등록된 예시 PDF만 사용할 수 있어요. 실제 결과지는 올리지 마세요.</p>
             <div className="gc-integrated-actions">
               <button type="button" disabled={busy} onClick={() => void selectDocument(new File([buildSyntheticResultPdf("2026-07")], "gc-synthetic-2026-07.pdf", { type: "application/pdf" }))}>7월 예시 결과지로 시작</button>
               <button type="button" disabled={busy} onClick={() => void selectDocument(new File([buildSyntheticResultPdf("2026-01")], "gc-synthetic-2026-01.pdf", { type: "application/pdf" }))}>1월 예시 결과지로 시작</button>
             </div>
-            <button className="gc-import__action gc-import__action--primary" type="button" onClick={() => fileInput.current?.click()}>합성 PDF 선택</button>
+            <button className="gc-import__action gc-import__action--primary" type="button" onClick={() => fileInput.current?.click()}>예시 PDF 선택</button>
             <input
               ref={fileInput}
               className="gc-import__file-input"
               type="file"
               accept="application/pdf,.pdf"
-              aria-label="허용된 합성 PDF 선택"
+              aria-label="등록된 예시 PDF 선택"
               onChange={(event) => {
                 const file = event.currentTarget.files?.[0];
                 if (file) void selectDocument(file);
                 event.currentTarget.value = "";
               }}
             />
-            <p className="gc-import__privacy-note">파일을 선택한 뒤 전송 여부를 직접 확인해요. 서버가 허용한 합성 PDF 확인값과 일치하지 않으면 업로드 요청 자체를 만들지 않아요.</p>
+            <p className="gc-import__privacy-note">파일을 선택하면 전송 전에 한 번 더 확인해요. 등록된 예시 파일과 내용이 다르면 전송하지 않아요.</p>
             {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
           </section>
         </div>
@@ -523,7 +523,7 @@ export function IntegratedHealthExperience() {
               <div><dt>파일 크기</dt><dd>{selectedFile.size.toLocaleString("ko-KR")}바이트</dd></div>
               <div><dt>처리 목적</dt><dd>결과지의 항목을 읽고 직접 확인하기</dd></div>
             </dl>
-            <p>예시 파일만 전송해 주세요. 이 화면은 개인정보를 지우거나 실제 결과지의 전송을 허용하는 기능이 아니에요.</p>
+            <p>예시 파일만 전송해 주세요. 개인정보를 자동으로 지워주지 않으므로 실제 결과지는 올리지 마세요.</p>
             <ol className="gc-upload-check__steps"><li>파일 전송</li><li>문서에서 읽은 내용 확인</li><li>확인한 기록 저장</li></ol>
             <div className="gc-integrated-actions">
               <button type="button" onClick={cancelSelection}>선택 취소</button>
@@ -541,25 +541,25 @@ export function IntegratedHealthExperience() {
         <header className="gc-import__appbar"><button type="button" onClick={() => setView("home")}>이전</button><span>앎</span><button type="button" onClick={() => setView("home")}>닫기</button></header>
         <div className="gc-import__shell">
           <section className="gc-import__processing" aria-labelledby="server-processing-title">
-            <p className="gc-import__eyebrow">2. 서버 처리 상태</p>
-            <h1 id="server-processing-title">서버가 알려준 상태를<br />그대로 보여드려요</h1>
+            <p className="gc-import__eyebrow">2. 파일 처리</p>
+            <h1 id="server-processing-title">파일 처리 상태</h1>
             <p className="gc-import__lead" role="status" aria-live="polite">{processingCopy[processingState]}</p>
             {processingState === "FAILED_TERMINAL" && documentReceipt?.failureCode === "render_error" && (
-              <p className="gc-import__lead">미리보기를 만들다 메모리 한도를 넘어 처리를 중단했어요.</p>
+              <p className="gc-import__lead">미리보기 처리 중 메모리 한도를 넘었어요. 다른 예시 PDF를 선택해 주세요.</p>
             )}
             {documentReceipt && (
               <dl className="gc-integrated-facts">
                 <div><dt>문서 상태</dt><dd>{processingCopy[documentReceipt.status]} <code aria-label="서버 상태 코드">{documentReceipt.status}</code></dd></div>
                 <div><dt>파일 확인값</dt><dd><code>{documentReceipt.sha256 ? shortDigest(documentReceipt.sha256) : "아직 없음"}</code></dd></div>
-                <div><dt>신뢰 경계</dt><dd>적대적 문서 격리 구역</dd></div>
-                <div><dt>안전한 미리보기</dt><dd>{documentReceipt.previewAvailable ? "승인된 PNG 준비됨" : "승인 전에는 표시하지 않음"}</dd></div>
+                <div><dt>파일 보관</dt><dd>검사용 임시 보관</dd></div>
+                <div><dt>안전한 미리보기</dt><dd>{documentReceipt.previewAvailable ? "미리보기 준비됨" : "검사가 끝나기 전에는 표시하지 않아요"}</dd></div>
               </dl>
             )}
             <div className="gc-integrated-actions">
               {!busy && errorMessage && !documentReceipt && <button type="button" onClick={() => { setErrorMessage(""); setView("source"); }}>파일 선택으로 돌아가기</button>}
               {activeCandidate && <button type="button" onClick={() => setView("review")} disabled={busy}>이어서 확인</button>}
               {pollingPaused && <button type="button" onClick={() => { setErrorMessage(""); setPollingPaused(false); setPollingNonce((value) => value + 1); }}>상태 다시 확인</button>}
-              {(processingState === "SECURITY_REJECTED" || processingState === "FAILED_TERMINAL" || processingState === "TERMINATED_BY_REVOCATION") && <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>}
+              {(processingState === "SECURITY_REJECTED" || processingState === "FAILED_TERMINAL" || processingState === "TERMINATED_BY_REVOCATION") && <button type="button" onClick={() => setView("source")}>다른 예시 PDF 선택</button>}
             </div>
             {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
           </section>
@@ -597,7 +597,7 @@ export function IntegratedHealthExperience() {
     return (
       <main className="gc-integrated-shell gc-integrated-shell--center">
         <section className="gc-integrated-auth" aria-labelledby="integrated-empty-title" role="status" aria-live="polite">
-          <p>서버 처리 완료</p>
+          <p>처리 결과</p>
           <h1 id="integrated-empty-title">이 결과지에서 읽을 수 있는 항목이 없었어요</h1>
           <p>
             {scanLikeDocument
@@ -617,7 +617,7 @@ export function IntegratedHealthExperience() {
           )}
           <div className="gc-integrated-actions">
             <button type="button" onClick={() => { setView("home"); void loadProductTruth(); }}>홈으로</button>
-            <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>
+            <button type="button" onClick={() => setView("source")}>다른 예시 PDF 선택</button>
           </div>
         </section>
       </main>
@@ -630,10 +630,10 @@ export function IntegratedHealthExperience() {
     return (
       <main className="gc-integrated-shell gc-integrated-shell--center">
         <section className="gc-integrated-auth" aria-labelledby="integrated-complete-title" role="status" aria-live="polite">
-          <p>서버 처리 완료</p>
+          <p>처리 결과</p>
           <h1 id="integrated-complete-title">이 결과지 확인을 마쳤어요</h1>
           <p className="gc-review-summary">저장 {confirmedCount}개 · 제외 {excludedCount}개</p>
-          <p>저장한 값은 출처와 확인 버전을 함께 남겼어요. 제외한 항목은 건강 기록으로 만들지 않았습니다.</p>
+          <p>확인한 값과 결과지 출처를 저장했어요. 제외한 항목은 저장하지 않았어요.</p>
           {savedRecords.length > 0 && (
             <ul className="gc-review-saved">
               {savedRecords.map((record) => (
@@ -649,7 +649,7 @@ export function IntegratedHealthExperience() {
           <div className="gc-integrated-actions">
             <button type="button" onClick={() => { setView("home"); void loadProductTruth(); }}>홈으로</button>
             <a href="/records">저장된 기록 보기</a>
-            <a href="/my-data">나의 데이터에서 한 칸씩 보기</a>
+            <a href="/my-data">기록 한눈에 보기</a>
             <a href="/prepare">진료 준비 목록 보기</a>
           </div>
         </section>
@@ -667,7 +667,7 @@ export function IntegratedHealthExperience() {
           <section className="gc-integrated-auth" aria-label="빠른 실행">
             <p className="gc-import__eyebrow">예시 데이터로 체험</p>
             <h1>내 건강 기록<em>.</em></h1>
-            <p className="gc-home-description">한 장씩 모으고, 하나씩 알아가요.</p>
+            <p className="gc-home-description">추가한 결과지와 저장한 검사값을 확인하세요.</p>
             <div className="gc-health-home__hero-actions">
               <button
                 className="gc-button gc-button--primary"

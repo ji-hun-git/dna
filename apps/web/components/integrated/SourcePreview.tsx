@@ -18,7 +18,7 @@ export function SourcePreview({ documentId, page = 1 }: { documentId: string; pa
       {firstPage
         ? "예시 데이터 · 업로드한 결과지의 첫 페이지를 이미지로 보여드려요. "
         : `예시 데이터 · 값은 ${page}쪽에 있어요. 미리보기는 결과지의 첫 페이지만 보여드려요. `}
-      항목은 결과지의 글자 정보에서 읽은 값이며, 이미지를 판독한 결과가 아니에요.
+      검사값은 PDF 텍스트에서 읽었어요. 사진이나 스캔 이미지를 읽은 결과가 아니에요.
     </figcaption>
   </figure>;
 }

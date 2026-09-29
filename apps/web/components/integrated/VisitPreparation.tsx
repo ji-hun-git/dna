@@ -8,10 +8,10 @@ import { formatKoreanDate } from "@/lib/format/korean-date";
 import { shortDigest } from "@/lib/format/short-digest";
 import { buildVisitQuestions } from "@/lib/records/visit-questions";
 
-const preparationNote = "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.";
+const preparationNote = "진료 때 참고할 질문 목록이에요. 검사값이나 건강 상태에 대한 판단은 포함하지 않아요.";
 
 /** Printed alongside the boundary note so the paper sheet also names the source of the values. */
-const exampleValueNote = "이 값은 예시 결과지의 글자 정보에서 읽어 직접 확인한 값이에요. 실제 기관에서 가져오지 않았어요.";
+const exampleValueNote = "예시 결과지에서 읽고 직접 확인한 값이에요. 실제 의료기관의 기록은 아니에요.";
 
 type VisitPreparationProps = {
   records: FoundationRecord[];
@@ -60,15 +60,15 @@ export function VisitPreparation({ records, loading, errorMessage, onPrint, onRe
             {questions.map((question, index) => (
               <li key={question.id}>
                 <article aria-labelledby={`prepare-question-${index}`}>
-                  <p className="gc-import__eyebrow">질문 {index + 1} · 기록으로 만든 고정 질문</p>
+                  <p className="gc-import__eyebrow">질문 {index + 1} · 검사 기록에 대한 질문</p>
                   <h2 id={`prepare-question-${index}`}>{question.text}</h2>
                   <p>{question.reason}</p>
                   <div className="gc-prepare__sources">{question.records.map((record) => <div key={record.recordVersionId} className="gc-prepare__source">
                   <p>예시 데이터 · {formatKoreanDate(record.observedOn)}</p>
                   <p className="gc-prepare__value"><strong>{record.value}</strong><span>{record.unit}</span></p>
                   <details className="gc-prepare__detail"><summary>확인 정보</summary><dl>
-                    <div><dt>근거 쪽수</dt><dd>{record.evidencePage}쪽</dd></div>
-                    <div><dt>문서 확인값</dt><dd><code>{shortDigest(record.documentSha256)}</code></dd></div>
+                    <div><dt>결과지 페이지</dt><dd>{record.evidencePage}쪽</dd></div>
+                    <div><dt>파일 식별값</dt><dd><code>{shortDigest(record.documentSha256)}</code></dd></div>
                     <div><dt>확인 방식</dt><dd>{record.reviewDecision === "CORRECTED" ? "사용자가 값을 수정함" : "사용자가 원문과 같다고 확인함"}</dd></div>
                   </dl></details>
                   <a href={`/records#record-${record.recordId}`}>이 질문의 출처 보기</a>

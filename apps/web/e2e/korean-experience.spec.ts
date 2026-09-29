@@ -101,12 +101,12 @@ test("데이터 관리 화면은 실행되지 않는 삭제 기능을 명확히 
 test("로그인과 건강정보 연결은 실제 연동 전 상태를 숨기지 않는다", async ({ page }) => {
   await openHealthApplication(page, "/connections");
 
-  await expect(page.getByRole("heading", { name: "필요한 정보만 연결해요" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "외부 서비스 연결" })).toBeVisible();
   await expect(page.getByText("로그인은 건강정보 제공 동의가 아니에요")).toBeVisible();
   await expect(page.getByRole("button", { name: "카카오 로그인 준비 중" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "네이버 로그인 준비 중" })).toBeDisabled();
   await expect(page.getByText("건강정보고속도로")).toBeVisible();
-  await expect(page.getByText("연결 준비 전")).toBeVisible();
+  await expect(page.getByText("현재 연결 안 됨")).toBeVisible();
   await expect(page.getByText("실제 건강정보 API 요청 0건")).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });

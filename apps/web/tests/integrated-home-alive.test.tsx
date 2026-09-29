@@ -45,8 +45,8 @@ afterEach(() => {
 
 it("renders the two action links as separate block elements, never run together inline", async () => {
   render(<IntegratedHealthExperience />);
-  const dataControlLink = await screen.findByRole("link", { name: "동의와 삭제 상태 보기" });
-  const prepareLink = screen.getByRole("link", { name: "진료 때 물어볼 내용 준비" });
+  const dataControlLink = await screen.findByRole("link", { name: "데이터 관리 열기" });
+  const prepareLink = screen.getByRole("link", { name: "질문 목록 보기" });
   // Each link's own parent must be a block-level wrapper (its own <p> or list item), and the two
   // links must not share the same parent element the way inline run-together text would.
   expect(dataControlLink.parentElement).not.toBeNull();
@@ -59,7 +59,7 @@ it("renders the two action links as separate block elements, never run together 
 it("prioritizes saved records without a decorative chart or invented personal profile", async () => {
   records = [syntheticRecord()];
   const { rerender } = render(<IntegratedHealthExperience />);
-  await screen.findByRole("heading", { name: "가장 최근에 확인한 값" });
+  await screen.findByRole("heading", { name: "최근 검사 기록" });
 
   expect(document.querySelector("svg[role='img']")).toBeNull();
   expect(screen.queryByText("프로필 · 예시")).toBeNull();
@@ -94,7 +94,7 @@ it("sorts the home records table by exam date descending, not server insertion o
     }),
   ];
   render(<IntegratedHealthExperience />);
-  await screen.findByRole("heading", { name: "가장 최근에 확인한 값" });
+  await screen.findByRole("heading", { name: "최근 검사 기록" });
   const table = screen.getByRole("table");
   const itemCells = within(table).getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[0].textContent);
   expect(itemCells).toEqual(["최신 값", "오래된 값"]);

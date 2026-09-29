@@ -331,7 +331,7 @@ it("says what the server is doing and keeps the raw status word inside a labelle
 
   const documentState = await screen.findByText("문서 상태");
   expect(documentState.parentElement).toHaveTextContent(
-    "격리된 작업자가 문서를 안전하게 확인하고 있어요 SECURITY_INSPECTION",
+    "파일을 검사하고 있어요 SECURITY_INSPECTION",
   );
   expect(screen.getByLabelText("서버 상태 코드")).toHaveTextContent("SECURITY_INSPECTION");
 });
@@ -380,7 +380,7 @@ it("shows the latest saved value's record row on the home screen with a humanise
   // v5: the home screen is the alive-trajectory grid; the latest record now renders as a row
   // in the records panel's table (state column always "직접 확인함"), not a standalone metric
   // card, but a CURRENT record must still appear and the raw server enum must still never leak.
-  expect(await screen.findByRole("heading", { name: "가장 최근에 확인한 값" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "최근 검사 기록" })).toBeVisible();
   expect(screen.getByRole("cell", { name: "총콜레스테롤" })).toBeVisible();
   expect(screen.getByRole("cell", { name: "직접 확인함" })).toBeVisible();
   expect(screen.queryByText("CURRENT")).toBeNull();
@@ -490,11 +490,11 @@ it("reaches the zero-candidate screen when the active document is already comple
   expect(screen.queryByRole("heading", { name: "서버가 알려준 상태를 그대로 보여드려요" })).toBeNull();
 });
 
-it("shows 최근 변화 on the home screen only when the server reports items", async () => {
+it("shows 이전 검사값과 비교 on the home screen only when the server reports items", async () => {
   server.use(http.get("/api/foundation/documents/active", () => HttpResponse.json({})));
   render(<IntegratedHealthExperience />);
   expect(await screen.findByRole("heading", { name: "아직 저장된 기록이 없어요" })).toBeVisible();
-  expect(screen.queryByRole("heading", { name: "최근 변화" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "이전 검사값과 비교" })).toBeNull();
   cleanup();
 
   changes = {
@@ -515,13 +515,13 @@ it("shows 최근 변화 on the home screen only when the server reports items", 
     unchangedCount: 0,
   };
   render(<IntegratedHealthExperience />);
-  expect(await screen.findByRole("heading", { name: "최근 변화" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "이전 검사값과 비교" })).toBeVisible();
   expect(screen.getByTestId("change-item")).toHaveTextContent(
     "총콜레스테롤 · 이번 2026. 7. 28. 188 mg/dL · 이전 2026. 1. 15. 194 mg/dL",
   );
 });
 
-it("keeps the home screen working when /changes fails, hiding 최근 변화 instead of blocking restore", async () => {
+it("keeps the home screen working when /changes fails, hiding 이전 검사값과 비교 instead of blocking restore", async () => {
   server.use(
     http.get("/api/foundation/documents/active", () => HttpResponse.json({})),
     http.get("/api/foundation/changes", () => HttpResponse.json({ code: "retryable_dependency_failure" }, { status: 500 })),
@@ -529,12 +529,12 @@ it("keeps the home screen working when /changes fails, hiding 최근 변화 inst
   render(<IntegratedHealthExperience />);
 
   expect(await screen.findByRole("heading", { name: "아직 저장된 기록이 없어요" })).toBeVisible();
-  expect(screen.queryByRole("heading", { name: "최근 변화" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "이전 검사값과 비교" })).toBeNull();
   expect(screen.queryByText("체험 상태를 불러오지 못했어요")).toBeNull();
   expect(screen.queryByRole("button", { name: "체험 상태 다시 확인" })).toBeNull();
 });
 
-it("keeps the home screen working when /changes returns a schema-rejected body, hiding 최근 변화", async () => {
+it("keeps the home screen working when /changes returns a schema-rejected body, hiding 이전 검사값과 비교", async () => {
   server.use(
     http.get("/api/foundation/documents/active", () => HttpResponse.json({})),
     http.get("/api/foundation/changes", () => HttpResponse.json({
@@ -547,7 +547,7 @@ it("keeps the home screen working when /changes returns a schema-rejected body, 
   render(<IntegratedHealthExperience />);
 
   expect(await screen.findByRole("heading", { name: "아직 저장된 기록이 없어요" })).toBeVisible();
-  expect(screen.queryByRole("heading", { name: "최근 변화" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "이전 검사값과 비교" })).toBeNull();
   expect(screen.queryByText("체험 상태를 불러오지 못했어요")).toBeNull();
   expect(screen.queryByRole("button", { name: "체험 상태 다시 확인" })).toBeNull();
 });

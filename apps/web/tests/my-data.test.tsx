@@ -32,13 +32,13 @@ it("loads events into cells and a table, and opens the drawer from either", asyn
   expect(within(table).getAllByRole("row")).toHaveLength(4);
   const januaryCell = within(figure).getByRole("button", { name: "총콜레스테롤 194 mg/dL, 2026. 1. 15." });
   await userEvent.click(januaryCell);
-  expect(screen.getByRole("region", { name: "총콜레스테롤 근거" })).toHaveTextContent("194 mg/dL");
-  expect(screen.getByRole("heading", { name: "총콜레스테롤 근거" })).toHaveFocus();
-  await userEvent.click(screen.getByRole("button", { name: "근거 닫기" }));
-  expect(screen.queryByRole("region", { name: "총콜레스테롤 근거" })).toBeNull();
+  expect(screen.getByRole("region", { name: "총콜레스테롤 출처" })).toHaveTextContent("194 mg/dL");
+  expect(screen.getByRole("heading", { name: "총콜레스테롤 출처" })).toHaveFocus();
+  await userEvent.click(screen.getByRole("button", { name: "출처 닫기" }));
+  expect(screen.queryByRole("region", { name: "총콜레스테롤 출처" })).toBeNull();
   expect(januaryCell).toHaveFocus();
-  await userEvent.click(within(table).getByRole("button", { name: "당화혈색소 5.2 %, 2026. 7. 28. 근거 보기" }));
-  expect(screen.getByRole("region", { name: "당화혈색소 근거" })).toBeVisible();
+  await userEvent.click(within(table).getByRole("button", { name: "당화혈색소 5.2 %, 2026. 7. 28. 출처 보기" }));
+  expect(screen.getByRole("region", { name: "당화혈색소 출처" })).toBeVisible();
   expect(within(table).getByRole("row", { name: /당화혈색소/ })).toHaveAttribute("aria-current", "true");
   expect(await axe(container)).toHaveNoViolations();
 });
@@ -46,7 +46,7 @@ it("loads events into cells and a table, and opens the drawer from either", asyn
 it("filters by exact concept and says so, including zero results", async () => {
   render(<MyData />);
   await screen.findByRole("figure", { name: "나의 데이터: 한 칸이 하나의 기록" });
-  const input = screen.getByRole("searchbox", { name: "내 데이터에서 항목 찾기" });
+  const input = screen.getByRole("searchbox", { name: "검사 항목 검색" });
   await userEvent.type(input, "총콜레스테롤");
   expect(screen.getByRole("status", { name: "검색 결과" })).toHaveTextContent("총콜레스테롤 기록 2개");
   expect(screen.getByRole("button", { name: "당화혈색소 5.2 %, 2026. 7. 28." })).toHaveAttribute("data-dim", "true");
@@ -85,6 +85,6 @@ it("links to the measurement history and opens the evidence drawer named in the 
   render(<MyData />);
   await screen.findByRole("figure", { name: "나의 데이터: 한 칸이 하나의 기록" });
   expect(screen.getByRole("link", { name: "측정 이력" })).toHaveAttribute("href", "/my-data/history");
-  expect(await screen.findByRole("region", { name: "당화혈색소 근거" })).toBeVisible();
+  expect(await screen.findByRole("region", { name: "당화혈색소 출처" })).toBeVisible();
   window.location.hash = "";
 });

@@ -103,14 +103,14 @@ function purposeRow(purpose: string) {
 it("lists the four purposes in Korean with the fixed sentences and no raw enum", async () => {
   render(<IntegratedDataControl />);
 
-  expect(await screen.findByRole("heading", { name: "서비스 제공(결과지 처리)" })).toBeVisible();
-  for (const title of ["연구 활용", "연구 연락", "프로젝트별"]) {
+  expect(await screen.findByRole("heading", { name: "결과지 처리" })).toBeVisible();
+  for (const title of ["연구 활용", "연구 연락", "연구별 동의"]) {
     expect(screen.getByRole("heading", { name: title })).toBeVisible();
   }
-  expect(screen.getByText("연구 동의 없이도 모든 기능을 쓸 수 있어요.", { exact: false })).toBeVisible();
-  expect(screen.getByText("가명처리 후 연구에 쓰는 것에 대한 선택. 지금은 진행 중인 연구가 없어요.")).toBeVisible();
-  expect(screen.getByText("적합한 연구가 있을 때 참여 제안을 받을지. 지금은 연락 채널이 없어요.")).toBeVisible();
-  expect(screen.getByText("프로젝트가 생기면 여기서 개별로 물어요.")).toBeVisible();
+  expect(screen.getByText("연구에 동의하지 않아도 기록 기능을 사용할 수 있어요.", { exact: false })).toBeVisible();
+  expect(screen.getByText("개인을 바로 알아볼 수 없도록 가명처리한 기록을 연구에 사용하는 데 동의할지 선택해요. 현재 진행 중인 연구는 없어요.")).toBeVisible();
+  expect(screen.getByText("연구 참여 안내를 받을지 선택해요. 현재는 안내를 보내지 않아요.")).toBeVisible();
+  expect(screen.getByText("참여할 연구가 생기면 연구별로 동의를 받아요.")).toBeVisible();
   expect(purposeRow("DOCUMENT_EXTRACTION").getByText("동의함")).toBeVisible();
   expect(purposeRow("RESEARCH_USE").getByText("동의 전")).toBeVisible();
   expect(purposeRow("RESEARCH_CONTACT").getByText("동의 전")).toBeVisible();
@@ -134,7 +134,7 @@ it("grants and revokes a research consent without touching the document consent"
   expect(purposeRow("RESEARCH_CONTACT").getByText("동의 전")).toBeVisible();
   expect(grantHeaders).toHaveLength(1);
   expect(grantHeaders[0]).toMatch(/^consent-[0-9a-f-]{36}$/);
-  expect(screen.getByText("연구 활용 동의를 서버에 기록했어요.")).toBeVisible();
+  expect(screen.getByText("연구 활용 동의 내역을 저장했어요.")).toBeVisible();
 
   await userEvent.click(screen.getByRole("button", { name: "연구 활용 동의 철회" }));
 
@@ -154,7 +154,7 @@ it("revokes the document consent from its own labelled button", async () => {
   await waitFor(() => expect(screen.getAllByText("철회함")).toHaveLength(2));
   expect(revokedIds).toEqual([documentConsentId]);
   expect(document.querySelector("article[data-purpose='DOCUMENT_EXTRACTION']")).toHaveAttribute("data-status", "revoked");
-  expect(screen.getByText("결과지 처리 동의를 서버에서 철회했어요.")).toBeVisible();
+  expect(screen.getByText("결과지 처리 동의를 철회했어요.")).toBeVisible();
   expect(screen.getByRole("button", { name: "결과지 처리 동의" })).toBeEnabled();
 });
 
@@ -220,7 +220,7 @@ it("offers the export link that opens the core URL directly when there are event
   const link = await screen.findByRole("link", { name: "내 기록 내보내기(JSON)" });
   expect(link).toHaveAttribute("href", "/api/foundation/health-events/export");
   expect(link).toHaveAttribute("download");
-  expect(screen.getByText("브라우저가 파일을 저장해요. 서버에 사본이 남지 않아요.")).toBeVisible();
+  expect(screen.getByText("내보내기 파일을 기기에 저장해요. 내보내기용 사본은 서버에 보관하지 않으며, 기존 기록은 그대로 남아요.")).toBeVisible();
   expect(screen.queryByText("내보낼 기록이 없어요")).toBeNull();
 });
 
@@ -240,7 +240,7 @@ it("offers a second export link in FHIR form with its one-line explanation", asy
   const link = await screen.findByRole("link", { name: "내 기록 내보내기(FHIR)" });
   expect(link).toHaveAttribute("href", "/api/foundation/health-events/export/fhir");
   expect(link).toHaveAttribute("download");
-  expect(screen.getByText("다른 건강기록 도구가 읽을 수 있는 형식이에요.")).toBeVisible();
+  expect(screen.getByText("JSON 또는 FHIR 형식을 지원하는 다른 프로그램에서 사용할 수 있어요.")).toBeVisible();
   expect(screen.getByRole("link", { name: "내 기록 내보내기(JSON)" })).toHaveAttribute("href", "/api/foundation/health-events/export");
 });
 

@@ -19,6 +19,8 @@ The data section always offers **한눈에 보기 → 기록 목록 → 측정 �
 
 ## Review before shipping
 
+Follow [Korean product copy](korean-product-copy.md) for terminology, headings, actions and honest capability limits across these routes.
+
 Run the web tests/build and real foundation browser suite. The existing capture matrix checks seven widths (320–1920px), all four navigation targets, page overflow, shared backgrounds, and the visible upload/review controls. Inspect mobile and desktop captures of different routes together. Keyboard/reflow tests are not a real screen-reader audit.
 
 Keep errors readable on their actual background, retain reduced-motion support, and preserve the clean printable visit sheet. Changes to one screen must not add a route-specific theme that breaks the next screen in the journey.

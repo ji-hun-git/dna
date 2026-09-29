@@ -19,7 +19,7 @@ it("uses current corrected values, never superseded values or mismatched units",
   const questions = buildVisitQuestions([current, older, superseded]);
   expect(questions).toHaveLength(1);
   expect(questions[0].sourceRecordIds).toEqual(["older", "current"]);
-  expect(questions[0].text).toContain("이전 결과와 함께");
+  expect(questions[0].text).toContain("결과와 비교하면");
   expect(buildVisitQuestions([superseded])).toEqual([]);
   expect(buildVisitQuestions([current, { ...older, unit: "%" }])).toHaveLength(2);
 });

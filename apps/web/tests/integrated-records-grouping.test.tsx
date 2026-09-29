@@ -188,7 +188,7 @@ it("names the record state in Korean instead of the server enum", async () => {
   render(<IntegratedRecords />);
 
   await screen.findByRole("heading", { name: "현재 기록 3개" });
-  await user.click(screen.getAllByText("출처와 버전 보기")[0]);
+  await user.click(screen.getAllByText("출처와 수정 내역 보기")[0]);
 
   expect(screen.getAllByText("현재 값")[0]).toBeVisible();
   expect(screen.queryByText("CURRENT")).toBeNull();

@@ -26,7 +26,7 @@
 .visit { padding: 24px; background: #e9eddf; border-radius: 3px; }
 .visitIcon { display: block; font-size: 30px; line-height: 1; color: #536147; margin-bottom: 28px; }
 .visit p { margin: 0 0 18px; font-size: .875rem; color: #4c5648; line-height: 1.8; }
-.visit h2 { font-size: 25px; font-weight: 500; line-height: 1.5; letter-spacing: -.055em; margin: 0 0 18px; }
+.visit h2 { font-size: 25px; font-weight: 500; line-height: 1.5; letter-spacing: -.055em; margin: 0 0 18px; word-break: keep-all; text-wrap: balance; }
 .visit p:last-child { margin: 0; }
 .visit a, .privacy a { display: inline-flex; align-items: center; min-height: 44px; gap: 8px; color: var(--gc-color-text-primary); font-size: .875rem; text-decoration: underline; text-underline-offset: 5px; }
 .privacy { padding: 28px 0 0; }

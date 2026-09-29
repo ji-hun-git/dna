@@ -10,8 +10,8 @@ import { HistoryGraph } from "@/components/my-data/history/HistoryGraph";
 import styles from "@/components/my-data/history/History.module.css";
 
 const NOT_COMPUTABLE = "계산할 수 없어요";
-const NEEDS_TWO = "측정 2회부터 계산해요";
-const NEEDS_THREE = "측정 3회부터 계산해요";
+const NEEDS_TWO = "검사 기록이 2개 이상 있어야 계산할 수 있어요";
+const NEEDS_THREE = "검사 기록이 3개 이상 있어야 계산할 수 있어요";
 const SAME_DAY = "같은 날 측정이라 계산하지 않아요";
 const GAP_TOO_SHORT = "측정 간격이 30일보다 짧아 계산하지 않아요";
 
@@ -117,9 +117,9 @@ export function MeasurementHistory() {
             <h1 id="history-title">측정 이력</h1>
             {/* Verbatim, wave4-mockup-decision.md — always in the hero, never tied to any one
                 series' drawable state (I1), so it cannot disappear when a series has no graph. */}
-            <p>직접 확인한 값을 검사일 순서로 모았어요. 점은 확인한 값이고, 점 사이의 선은 값이 아니에요.</p>
-            <p>선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.</p>
-            <p>뺄셈과 나눗셈으로만 계산했어요. 의미는 판단하지 않아요.</p>
+            <p>각 점은 검사일에 확인한 값이에요. 점 사이의 선은 실제 측정값을 나타내지 않아요.</p>
+            <p>선 모양은 건강 상태를 나타내지 않아요. 색은 검사 시기를 구분하기 위한 표시예요.</p>
+            <p>검사값 사이의 차이를 계산한 것이며, 건강 상태에 대한 해석은 제공하지 않아요.</p>
             {earliestDate && latestDate ? (
               <div className={styles.timebar} aria-hidden="true" data-testid="history-timebar">
                 <div className={styles.timebarEnds}>
@@ -131,7 +131,7 @@ export function MeasurementHistory() {
             ) : null}
           </section>
 
-          {loading && <p role="status" aria-live="polite">서버에서 측정 이력을 불러오고 있어요.</p>}
+          {loading && <p role="status" aria-live="polite">검사 이력을 불러오고 있어요.</p>}
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}{" "}
             {errorAction === "sign-in" && <a href="/">홈에서 다시 로그인</a>}
             {errorAction === "retry-read" && <button type="button" disabled={loading} onClick={() => setLoadAttempt((attempt) => attempt + 1)}>다시 불러오기</button>}

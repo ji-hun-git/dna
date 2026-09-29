@@ -98,13 +98,13 @@ export function CandidateReview({
           <div className="gc-import__review-heading">
             <div>
               <p className="gc-import__eyebrow">
-                3. 출처부터 확인 ·{" "}
+                3. 검사값 확인 ·{" "}
                 <span className="gc-review-progress" role="status" aria-label="검토 진행">
                   {candidate.ordinal} / {candidate.totalCandidates}
                 </span>
               </p>
               <h1 id="server-candidate-title" ref={heading} tabIndex={-1}>결과지에 이렇게 적혀 있나요?</h1>
-              <p className="gc-import__lead">결과지의 글자 정보에서 읽은 값이에요. 이미지를 판독한 결과가 아니며, 확인하기 전까지 기록이 아니에요.</p>
+              <p className="gc-import__lead">PDF에 포함된 텍스트에서 읽은 값이에요. 사진이나 스캔 이미지를 읽은 결과가 아니에요. 직접 확인한 뒤에만 기록으로 저장해요.</p>
             </div>
             <span className="gc-import__review-state">{labelCandidateStatus(candidate.status)}</span>
           </div>
@@ -115,7 +115,7 @@ export function CandidateReview({
               <p className="gc-import__candidate-original" data-testid="original-label">{originalLabelLine(candidate.originalLabel, candidate.label)}</p>
             )}
             <p className="gc-import__candidate-value"><strong>{candidate.value}</strong><span>{candidate.unit}</span></p>
-            <p className="gc-import__candidate-source">결과지 텍스트에서 읽은 값 · 문자 인식 아님</p>
+            <p className="gc-import__candidate-source">PDF 텍스트에서 읽음 · 사진·스캔 인식은 지원하지 않음</p>
             <dl>
               <div>
                 <dt>검사일</dt>
@@ -126,25 +126,25 @@ export function CandidateReview({
                   )}
                 </dd>
               </div>
-              <div><dt>근거 쪽수</dt><dd>{candidate.evidencePage}쪽</dd></div>
-              {candidate.evidenceBox && <div><dt>근거 위치</dt><dd>{describeEvidenceBox(candidate.evidenceBox)}</dd></div>}
+              <div><dt>결과지 페이지</dt><dd>{candidate.evidencePage}쪽</dd></div>
+              {candidate.evidenceBox && <div><dt>결과지 내 위치</dt><dd>{describeEvidenceBox(candidate.evidenceBox)}</dd></div>}
             </dl>
             <details className="gc-review-evidence"><summary>출처 정보 자세히</summary><dl>
-              <div><dt>문서 확인값</dt><dd><code>{shortDigest(candidate.documentSha256)}</code></dd></div>
-              <div><dt>후보 근거값</dt><dd><code>{shortDigest(candidate.sourceTextSha256)}</code></dd></div>
-              <div><dt>생성 방식</dt><dd>결과지 텍스트에서 읽은 값 · 문자 인식 아님</dd></div>
+              <div><dt>파일 식별값</dt><dd><code>{shortDigest(candidate.documentSha256)}</code></dd></div>
+              <div><dt>원문 식별값</dt><dd><code>{shortDigest(candidate.sourceTextSha256)}</code></dd></div>
+              <div><dt>생성 방식</dt><dd>PDF 텍스트에서 읽음 · 사진·스캔 인식은 지원하지 않음</dd></div>
             </dl></details>
           </article>
           {previewUrl && !previewFailed ? (
             <details className="gc-review-source" open>
             <summary>결과지 원문 보기 · 예시 데이터</summary>
             <figure className="gc-import__safe-preview">
-              <img key={previewUrl} src={previewUrl} alt="승인된 합성 결과지의 첫 페이지 PNG 미리보기" onLoad={() => setPreviewLoaded(true)} onError={() => { setPreviewLoaded(false); setPreviewFailed(true); }} />
+              <img key={previewUrl} src={previewUrl} alt="예시 결과지 첫 페이지 미리보기" onLoad={() => setPreviewLoaded(true)} onError={() => { setPreviewLoaded(false); setPreviewFailed(true); }} />
               <figcaption>결과지 첫 페이지예요. 값의 의미나 건강 상태를 판단하지 않아요.</figcaption>
               <a href={previewUrl} target="_blank" rel="noreferrer">원문 크게 보기</a>
             </figure>
             </details>
-          ) : <p role="status">원문 미리보기를 확인할 수 없어요. 확인을 잠시 멈추고 다시 불러와 주세요. {previewUrl && <button type="button" onClick={() => setPreviewFailed(false)}>다시 불러오기</button>}</p>}
+          ) : <p role="status">결과지 미리보기를 불러오지 못했어요. 미리보기가 열려야 값을 확인할 수 있어요. {previewUrl && <button type="button" onClick={() => setPreviewFailed(false)}>다시 불러오기</button>}</p>}
           {correctionMode ? (
             <form
               className="gc-integrated-correction gc-review-decision-bar"

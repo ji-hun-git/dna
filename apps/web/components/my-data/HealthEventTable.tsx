@@ -16,7 +16,7 @@ export function HealthEventTable({ events, selectedId, matchedIds, onSelect }: H
     <div className={styles.tableWrap}>
     <table className={styles.table} aria-label="기록 목록">
       <thead>
-        <tr><th scope="col">항목</th><th scope="col">값</th><th scope="col">검사일</th><th scope="col">확인</th><th scope="col">근거</th></tr>
+        <tr><th scope="col">항목</th><th scope="col">값</th><th scope="col">검사일</th><th scope="col">확인</th><th scope="col">출처</th></tr>
       </thead>
       <tbody>
         {visible.map((event) => (
@@ -27,8 +27,8 @@ export function HealthEventTable({ events, selectedId, matchedIds, onSelect }: H
             <td>{event.corrected ? "직접 수정" : "직접 확인"}{event.verification === "uncertain" ? " · 출처 미리보기 없음" : ""}</td>
             <td>
               <button type="button" onClick={(click) => onSelect(event.eventId, click.currentTarget)}
-                aria-label={`${event.concept} ${event.value} ${event.unit}, ${formatKoreanDate(event.observedOn)} 근거 보기`}>
-                근거 보기
+                aria-label={`${event.concept} ${event.value} ${event.unit}, ${formatKoreanDate(event.observedOn)} 출처 보기`}>
+                출처 보기
               </button>
             </td>
           </tr>

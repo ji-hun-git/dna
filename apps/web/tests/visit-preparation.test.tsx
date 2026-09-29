@@ -50,10 +50,10 @@ it("creates one grounded question per topic, capped at three total", () => {
 
   expect(screen.getByRole("heading", { level: 1, name: "다음 진료에서 물어볼 것" })).toBeVisible();
   expect(screen.getByText(
-    "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.",
+    "진료 때 참고할 질문 목록이에요. 검사값이나 건강 상태에 대한 판단은 포함하지 않아요.",
   )).toBeVisible();
   expect(screen.getByText(
-    "이 값은 예시 결과지의 글자 정보에서 읽어 직접 확인한 값이에요. 실제 기관에서 가져오지 않았어요.",
+    "예시 결과지에서 읽고 직접 확인한 값이에요. 실제 의료기관의 기록은 아니에요.",
   )).toBeVisible();
 
   const items = screen.getAllByRole("article");
