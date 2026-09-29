@@ -5,6 +5,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { IntegratedHealthExperience } from "@/components/integrated/IntegratedHealthExperience";
 import type { ChangeSummary, FoundationCandidate, FoundationRecord } from "@/lib/foundation/client";
+import * as foundationClient from "@/lib/foundation/client";
 import { syntheticCandidates, syntheticDocumentId } from "./fixtures/foundation";
 
 let candidates: FoundationCandidate[] = [];
@@ -88,6 +89,29 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  vi.restoreAllMocks();
+});
+
+it("keeps a selected example local until explicit upload and lets the person cancel", async () => {
+  vi.spyOn(foundationClient, "sha256Blob").mockResolvedValue("a".repeat(64));
+  const intake = vi.fn(() => HttpResponse.json({ code: "retryable_dependency_failure" }, { status: 503 }));
+  server.use(
+    http.get("/api/foundation/documents/active", () => HttpResponse.json({ document: null })),
+    http.post("/api/foundation/documents", intake),
+  );
+  render(<IntegratedHealthExperience />);
+  await userEvent.click(await screen.findByRole("button", { name: "결과지 추가" }));
+  await userEvent.click(screen.getByRole("button", { name: "7월 예시 결과지로 시작" }));
+  expect(await screen.findByRole("heading", { name: "전송할 파일을 확인해 주세요" })).toBeVisible();
+  expect(screen.getByText("아직 파일을 전송하지 않았어요.")).toBeVisible();
+  expect(intake).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "선택 취소" }));
+  expect(screen.queryByText("gc-synthetic-2026-07.pdf")).toBeNull();
+  expect(intake).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "1월 예시 결과지로 시작" }));
+  await userEvent.click(screen.getByRole("button", { name: "이 파일 전송하기" }));
+  await waitFor(() => expect(intake).toHaveBeenCalledTimes(1));
+  expect(await screen.findByRole("button", { name: "파일 선택으로 돌아가기" })).toBeVisible();
 });
 
 it.each([

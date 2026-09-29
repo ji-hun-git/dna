@@ -36,7 +36,7 @@ type ShellState =
   | "RESTORE_FAILED"
   | "AUTHORIZATION_DENIED";
 
-type View = "home" | "consent" | "source" | "processing" | "review" | "complete";
+type View = "home" | "consent" | "source" | "upload-check" | "processing" | "review" | "complete";
 
 type LocalProcessingState =
   | "IDLE"
@@ -85,6 +85,8 @@ function newIdempotencyKey(prefix: string) {
 export function IntegratedHealthExperience() {
   const client = useMemo(() => createFoundationClient(), []);
   const fileInput = useRef<HTMLInputElement>(null);
+  const uploadInFlight = useRef(false);
+  const [selectedFile, setSelectedFile] = useState<File>();
   const [shellState, setShellState] = useState<ShellState>("INITIALIZING_SESSION");
   const [session, setSession] = useState<FoundationSession>();
   const [consent, setConsent] = useState<FoundationConsent>();
@@ -272,6 +274,7 @@ export function IntegratedHealthExperience() {
 
   const beginImport = () => {
     setErrorMessage("");
+    setSelectedFile(undefined);
     setDocumentReceipt(undefined);
     setCandidates([]);
     setSavedRecords([]);
@@ -295,7 +298,7 @@ export function IntegratedHealthExperience() {
     }
   };
 
-  const selectDocument = async (file: File) => {
+  const selectDocument = (file: File) => {
     setErrorMessage("");
     if (file.type !== "application/pdf") {
       setErrorMessage("이 통합 단계에서는 허용된 합성 PDF만 선택할 수 있어요.");
@@ -310,6 +313,21 @@ export function IntegratedHealthExperience() {
       setErrorMessage("결과지 처리 동의를 먼저 확인해 주세요.");
       return;
     }
+    setSelectedFile(file);
+    setView("upload-check");
+  };
+
+  const uploadSelectedDocument = async () => {
+    const file = selectedFile;
+    if (!file || uploadInFlight.current) return;
+    if (!consent?.consentId || consent.status !== "ACTIVE") {
+      setSelectedFile(undefined);
+      setView("consent");
+      return;
+    }
+    uploadInFlight.current = true;
+    setSelectedFile(undefined);
+    setErrorMessage("");
     setBusy(true);
     try {
       setProcessingState("HASHING");
@@ -333,6 +351,7 @@ export function IntegratedHealthExperience() {
     } catch (error) {
       setErrorMessage(describeFoundationError(error));
     } finally {
+      uploadInFlight.current = false;
       setBusy(false);
     }
   };
@@ -488,8 +507,35 @@ export function IntegratedHealthExperience() {
                 event.currentTarget.value = "";
               }}
             />
-            <p className="gc-import__privacy-note">선택한 파일은 신뢰하지 않는 보안 구역으로만 전송됩니다. 서버가 허용한 합성 PDF 확인값과 일치하지 않으면 업로드 요청 자체를 만들지 않아요.</p>
+            <p className="gc-import__privacy-note">파일을 선택한 뒤 전송 여부를 직접 확인해요. 서버가 허용한 합성 PDF 확인값과 일치하지 않으면 업로드 요청 자체를 만들지 않아요.</p>
             {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  if (view === "upload-check" && selectedFile) {
+    const cancelSelection = () => { setSelectedFile(undefined); setView("source"); };
+    return (
+      <main className="gc-import" data-stage="upload-check">
+        <header className="gc-import__appbar"><button type="button" onClick={cancelSelection}>이전</button><span>앎</span><button type="button" onClick={() => { setSelectedFile(undefined); setView("home"); }}>닫기</button></header>
+        <div className="gc-import__shell">
+          <section className="gc-import__question" aria-labelledby="upload-check-title">
+            <p className="gc-import__eyebrow">전송 전 확인</p>
+            <h1 id="upload-check-title">전송할 파일을 확인해 주세요</h1>
+            <p className="gc-import__lead">아직 파일을 전송하지 않았어요.</p>
+            <dl className="gc-integrated-facts gc-upload-check__facts">
+              <div><dt>선택한 파일</dt><dd>{selectedFile.name}</dd></div>
+              <div><dt>파일 크기</dt><dd>{selectedFile.size.toLocaleString("ko-KR")}바이트</dd></div>
+              <div><dt>처리 목적</dt><dd>결과지의 항목을 읽고 직접 확인하기</dd></div>
+            </dl>
+            <p>예시 파일만 전송해 주세요. 이 화면은 개인정보를 지우거나 실제 결과지의 전송을 허용하는 기능이 아니에요.</p>
+            <ol className="gc-upload-check__steps"><li>파일 전송</li><li>문서에서 읽은 내용 확인</li><li>확인한 기록 저장</li></ol>
+            <div className="gc-integrated-actions">
+              <button type="button" onClick={cancelSelection}>선택 취소</button>
+              <button className="gc-button gc-button--primary" type="button" disabled={busy} onClick={() => void uploadSelectedDocument()}>이 파일 전송하기</button>
+            </div>
           </section>
         </div>
       </main>
@@ -517,6 +563,7 @@ export function IntegratedHealthExperience() {
               </dl>
             )}
             <div className="gc-integrated-actions">
+              {!busy && errorMessage && !documentReceipt && <button type="button" onClick={() => { setErrorMessage(""); setView("source"); }}>파일 선택으로 돌아가기</button>}
               {activeCandidate && <button type="button" onClick={() => setView("review")} disabled={busy}>이어서 확인</button>}
               {pollingPaused && <button type="button" onClick={() => { setErrorMessage(""); setPollingPaused(false); setPollingNonce((value) => value + 1); }}>상태 다시 확인</button>}
               {(processingState === "SECURITY_REJECTED" || processingState === "FAILED_TERMINAL" || processingState === "TERMINATED_BY_REVOCATION") && <button type="button" onClick={() => setView("source")}>다른 합성 PDF 선택</button>}

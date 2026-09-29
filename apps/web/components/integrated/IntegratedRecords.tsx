@@ -9,6 +9,7 @@ import { formatKoreanDate, formatKoreanDateTime } from "@/lib/format/korean-date
 import { describeReviewDecision, labelRecordStatus } from "@/lib/format/status-labels";
 import { originalLabelLine } from "@/lib/format/original-label";
 import { compareRecords } from "@/lib/records/compare-records";
+import { downloadRecordCsv } from "@/lib/records/export-csv";
 import { shortDigest } from "@/lib/format/short-digest";
 import { SourcePreview } from "@/components/integrated/SourcePreview";
 import styles from "@/components/records/HealthTimeline.module.css";
@@ -147,6 +148,17 @@ export function IntegratedRecords() {
 
           {!loading && !errorMessage && records.length === 0 && (
             <p className="gc-integrated-empty">아직 저장된 합성 기록이 없어요. 홈에서 허용된 합성 PDF를 확인해 주세요.</p>
+          )}
+
+          {!loading && !errorMessage && records.some((record) => record.status === "CURRENT") && (
+            <section className="gc-records-next" aria-label="기록 활용">
+              <div><h2>확인한 기록을 가져가세요</h2><p>날짜·값·단위와 출처를 함께 내려받아요. 예시 데이터로 만든 개인 기록 정리본이에요.</p></div>
+              <div className="gc-integrated-actions">
+                <button type="button" onClick={() => downloadRecordCsv(records)}>기록 내려받기(CSV)</button>
+                <a href="/prepare">진료 준비·인쇄</a>
+                <a href="/">다른 결과지 추가하기</a>
+              </div>
+            </section>
           )}
 
           {!loading && comparisons.length > 0 && <RecordComparison comparisons={comparisons} />}

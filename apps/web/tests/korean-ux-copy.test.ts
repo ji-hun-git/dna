@@ -16,6 +16,7 @@ const userFacingFiles = [
   "components/integrated/VisitPreparation.tsx",
   "components/integrated/SourcePreview.tsx",
   "lib/records/visit-questions.ts",
+  "lib/records/export-csv.ts",
   "components/concept/RecordImportConcept.tsx",
   "components/connections/ConnectionExperience.tsx",
   "components/experience/HealthExperience.tsx",

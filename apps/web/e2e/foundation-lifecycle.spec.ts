@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 type BrowserApiResult = {
@@ -186,6 +187,10 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("heading", { name: /허용된 합성 PDF를\s*선택해 주세요/ })).toBeVisible();
 
   await page.getByRole("button", {name: "7월 예시 결과지로 시작"}).click();
+  await expect(page.getByRole("heading", { name: "전송할 파일을 확인해 주세요" })).toBeVisible();
+  expect(await browserApi(page, "/api/foundation/documents/active")).toEqual({ status: 200, body: {} });
+  await captureMatrix(page, test.info(), "upload-check");
+  await page.getByRole("button", { name: "이 파일 전송하기" }).click();
   await expect(page.getByText("적대적 문서 격리 구역", { exact: true })).toBeVisible();
   await waitForServerReview(page);
   await expect(page.getByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible({
@@ -255,6 +260,14 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
   await expect(page.getByTestId("durable-record")).toHaveCount(2);
   await expect(page.getByTestId("durable-record").filter({hasText: "비타민 D"})).toHaveCount(0);
+  const csvDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "기록 내려받기(CSV)" }).click();
+  const downloadedRecords = await csvDownload;
+  expect(downloadedRecords.suggestedFilename()).toBe("alm-example-records.csv");
+  const csv = await readFile((await downloadedRecords.path())!, "utf8");
+  expect(csv).toContain("예시 데이터 · 개인 기록 정리본");
+  expect(csv).toContain('"190"');
+  expect(csv).not.toContain("비타민 D");
   await expect(page.getByTestId("durable-record").filter({ hasText: "당화혈색소" }))
     .toContainText("사용자가 검사일을 수정함 · 원래 2026. 7. 28.");
   await expect(page.locator(".gc-records-group").filter({ hasText: "2026. 7. 27." })).toHaveCount(1);
@@ -321,6 +334,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await page.getByRole("button", { name: "결과지 추가" }).click();
   await expect(page.getByRole("heading", { name: /허용된 합성 PDF를\s*선택해 주세요/ })).toBeVisible();
   await page.getByRole("button", {name: "1월 예시 결과지로 시작"}).click();
+  await page.getByRole("button", { name: "이 파일 전송하기" }).click();
   await waitForServerReview(page);
   await expect(page.getByRole("heading", { name: "결과지에 이렇게 적혀 있나요?" })).toBeVisible({
     timeout: 10_000,
@@ -665,6 +679,8 @@ test(`server states remain keyboard operable at a ${zoom} percent equivalent vie
     mimeType: "application/pdf",
     buffer: fixtureBytes,
   });
+  await page.getByRole("button", { name: "이 파일 전송하기" }).focus();
+  await page.keyboard.press("Enter");
   const processingStatus = page.locator("main[data-stage='processing'] [role='status']");
   await expect(processingStatus).toHaveText(/보안 구역|안전하게 확인|다시 시도|미리보기/);
   await expect(processingStatus).toHaveAttribute("aria-live", "polite");
