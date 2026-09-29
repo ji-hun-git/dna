@@ -34,6 +34,7 @@ const userFacingFiles = [
   "lib/format/original-label.ts",
   "components/home/AliveTrajectory.tsx",
   "components/home/AliveEntryLayout.tsx",
+  "components/home/RecordWorkspace.tsx",
 ] as const;
 
 const forbiddenUserTerms = [

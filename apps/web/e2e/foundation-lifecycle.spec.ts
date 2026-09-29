@@ -58,7 +58,7 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
     }
     if (["entry", "home", "my-data", "history", "records", "prepare", "data-control"].includes(state)) {
       const surface = await page.locator("main").evaluate((element) => getComputedStyle(element).backgroundColor);
-      expect(surface, `${state} uses the shared product background`).toBe("rgb(247, 248, 250)");
+      expect(surface, `${state} uses the shared product background`).toBe("rgb(250, 250, 247)");
     }
     if (state === "entry") {
       const button = await page.getByRole("button", {name: "체험 시작"}).boundingBox();
@@ -154,9 +154,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await captureMatrix(page, info, "entry");
 
   await page.getByRole("button", { name: "체험 시작" }).click();
-  // v5: the logged-in home is the same alive-trajectory grid as the entry screen (no more
-  // "값보다 먼저 / 출처를 확인하세요" card copy) — assert a home-only marker (the entry screen's
-  // hero is also `role="img"`, so that alone never discriminates logged-in from logged-out).
+  // The record workspace exposes an honest empty state and the primary import action.
   await expect(page.getByRole("button", { name: "결과지 추가" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "아직 저장된 기록이 없어요" })).toBeVisible();
   await captureMatrix(page, info, "home");
@@ -172,8 +170,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
       .toHaveAttribute("aria-current", "page");
   }
 
-  // These routes are still reachable, but no longer have their own top-level
-  // nav entry: 기록/진료 준비 live under 나의 데이터, and 홈 is the brand link.
+  // Primary destinations and the records sub-view retain direct URLs.
   for (const path of ["/records", "/prepare", "/"]) {
     await page.goto(path);
     if (path === "/records") {

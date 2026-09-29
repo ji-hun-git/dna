@@ -47,8 +47,8 @@ export function IntegratedShell({ current, status, children }: IntegratedShellPr
     <header className="gc-shell gc-shell--unified">
       <div className="gc-shell__bar">
         <a className="gc-shell__brand" href="/" aria-label="앎 건강 홈">
-          <span aria-hidden="true">앎</span>
-          <strong>앎</strong>
+          <strong>앎<span aria-hidden="true">.</span></strong>
+          <span className="gc-shell__brand-caption">나를 알아가는 기록</span>
         </a>
         <nav className="gc-shell__nav" aria-label="주요 메뉴">
           {routes.map((route) => (
@@ -64,7 +64,7 @@ export function IntegratedShell({ current, status, children }: IntegratedShellPr
             </a>
           ))}
         </nav>
-        {status ? <span className="gc-shell__status">{status}</span> : null}
+        {status ? <span className="gc-shell__status"><i aria-hidden="true" />{status}</span> : null}
       </div>
       {navGroup[current] === "my-data" && (
         <nav className="gc-view-nav" aria-label="기록 보기 방식">

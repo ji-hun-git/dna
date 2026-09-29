@@ -1,10 +1,10 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "vitest";
 import { IntegratedHealthExperience } from "@/components/integrated/IntegratedHealthExperience";
 import type { ChangeSummary, FoundationCandidate, FoundationRecord } from "@/lib/foundation/client";
-import { syntheticDocumentId, syntheticRecord } from "./fixtures/foundation";
+import { syntheticRecord } from "./fixtures/foundation";
 
 let candidates: FoundationCandidate[] = [];
 let records: FoundationRecord[] = [];
@@ -56,35 +56,24 @@ it("renders the two action links as separate block elements, never run together 
   expect(["P", "LI"]).toContain(prepareLink.parentElement!.tagName);
 });
 
-it("does not restart the hero effect when re-rendering the home with the same records", async () => {
+it("prioritizes saved records without a decorative chart or invented personal profile", async () => {
   records = [syntheticRecord()];
   const { rerender } = render(<IntegratedHealthExperience />);
   await screen.findByRole("heading", { name: "가장 최근에 확인한 값" });
 
-  const svg = document.querySelector("svg[role='img']")!;
-  const axis = svg.querySelector('[data-role="axis"]')!;
-  // The heading can commit before the hero's passive effect populates the SVG.
-  // Wait for that effect, not an arbitrary delay or a lucky scheduler ordering.
-  await waitFor(() => expect(axis.getAttribute("d")).toBeTruthy());
-
-  // Re-rendering with an unrelated prop change (there are none on this component, so re-render
-  // with the exact same element) must not tear down and recreate the hero's SVG subtree: the
-  // same DOM node instance should still be there afterward, proving buildHomePhases/
-  // homeIdentityCounts were memoised rather than rebuilt into fresh array identities every time.
+  expect(document.querySelector("svg[role='img']")).toBeNull();
+  expect(screen.queryByText("프로필 · 예시")).toBeNull();
+  expect(screen.getByRole("region", { name: "내 기록 요약" })).toHaveTextContent("1");
   rerender(<IntegratedHealthExperience />);
-  const svgAfter = document.querySelector("svg[role='img']")!;
-  const axisAfter = svgAfter.querySelector('[data-role="axis"]')!;
-  expect(axisAfter).toBe(axis);
+  expect(screen.getByRole("table")).toBeInTheDocument();
 });
 
-it("shows no current-phase marker on the phase strip when there are no records", async () => {
+it("gives an honest empty state with a useful next action and no example values", async () => {
   render(<IntegratedHealthExperience />);
   await screen.findByRole("heading", { name: "아직 저장된 기록이 없어요" });
-  const strip = document.querySelector("nav[aria-label='검진 시기']")!;
-  expect(within(strip as HTMLElement).getByText(/다음 결과지/)).toBeInTheDocument();
-  // No phase item is marked current: the marker text (" · 현재") never appears anywhere in the
-  // strip when there is no ring at all (the trailing open phase alone must not claim it).
-  expect(within(strip as HTMLElement).queryByText(/· 현재/)).toBeNull();
+  expect(screen.getByRole("button", { name: "결과지 추가" })).toBeEnabled();
+  expect(screen.queryByRole("table")).toBeNull();
+  expect(screen.getByRole("region", { name: "내 기록 요약" })).toHaveTextContent("아직 없음");
 });
 
 it("sorts the home records table by exam date descending, not server insertion order", async () => {
