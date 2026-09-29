@@ -25,7 +25,7 @@ export function VisitPreparation({ records, loading, errorMessage, onPrint, onRe
   const questions = !loading && !errorMessage ? buildVisitQuestions(records) : [];
   return (
     <main className="gc-prepare">
-      <header className="gc-prepare__heading">
+      <header className="gc-prepare__heading gc-page-heading">
         <p>진료 전 준비</p>
         <h1>다음 진료에서 물어볼 것</h1>
         <p className="gc-prepare__note">{preparationNote}</p>

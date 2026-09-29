@@ -5,22 +5,37 @@ import { IntegratedShell } from "@/components/integrated/IntegratedShell";
 
 afterEach(cleanup);
 
-it("offers two destinations and marks the group the current screen belongs to", () => {
+it("keeps home, records, preparation and management reachable from every screen", () => {
   render(<IntegratedShell current="prepare"><main>본문</main></IntegratedShell>);
   const nav = screen.getByRole("navigation", { name: "주요 메뉴" });
   expect(within(nav).getAllByRole("link").map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+    ["홈", "/"],
     ["나의 데이터", "/my-data"],
+    ["진료 준비", "/prepare"],
     ["데이터 관리", "/data-control"],
   ]);
-  expect(within(nav).getByRole("link", { name: "나의 데이터" })).toHaveAttribute("aria-current", "page");
+  expect(within(nav).getByRole("link", { name: "진료 준비" })).toHaveAttribute("aria-current", "page");
   expect(within(nav).getByRole("link", { name: "데이터 관리" })).not.toHaveAttribute("aria-current");
   expect(screen.getByRole("link", { name: "앎 건강 홈" })).toHaveAttribute("href", "/");
 });
 
-it("marks nothing current on the entry screen", () => {
+it("identifies home as the current destination", () => {
   render(<IntegratedShell current="home"><main>본문</main></IntegratedShell>);
   const nav = screen.getByRole("navigation", { name: "주요 메뉴" });
-  expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
+  expect(within(nav).getByRole("link", { name: "홈" })).toHaveAttribute("aria-current", "page");
+});
+
+it("offers the same record views and identifies the exact view", () => {
+  for (const current of ["my-data", "records", "history"] as const) {
+    render(<IntegratedShell current={current}><main>본문</main></IntegratedShell>);
+    const views = screen.getByRole("navigation", { name: "기록 보기 방식" });
+    expect(within(views).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/my-data", "/records", "/my-data/history",
+    ]);
+    const selected = views.querySelector('[aria-current="page"]');
+    expect(selected).toHaveAttribute("href", current === "history" ? "/my-data/history" : `/${current}`);
+    cleanup();
+  }
 });
 
 it("shows the server status pill only when the screen has one", () => {

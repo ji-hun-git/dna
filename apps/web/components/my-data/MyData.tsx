@@ -87,17 +87,13 @@ export function MyData() {
 
   return (
     <IntegratedShell current="my-data" status="예시 데이터">
-      <main className={styles.page}>
-        <div className={styles.shell}>
-          <section className={styles.hero} aria-labelledby="my-data-title">
+      <main className={`${styles.page} gc-product-page`}>
+        <div className={`${styles.shell} gc-page-content`}>
+          <section className={`${styles.hero} gc-page-heading`} aria-labelledby="my-data-title">
             <p>직접 확인한 기록을 시간 순서로</p>
             <h1 id="my-data-title">나의 데이터</h1>
             <p>한 칸이 확인한 기록 하나예요. 칸을 고르면 값과 출처를 볼 수 있어요. 값의 의미나 변화의 방향은 판단하지 않아요.</p>
           </section>
-
-          <nav className={styles.secondary} aria-label="나의 데이터 다른 보기">
-            <a href="/my-data/history">측정 이력</a>
-          </nav>
 
           {loading && <p role="status" aria-live="polite">서버에서 기록을 불러오고 있어요.</p>}
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}{" "}
@@ -106,7 +102,10 @@ export function MyData() {
           </p>}
 
           {!loading && !errorMessage && events.length === 0 && (
-            <p>아직 확인한 기록이 없어요. 데이터 관리에서 결과지를 추가하면 여기에 한 칸씩 쌓여요.</p>
+            <section className="gc-product-empty">
+              <p>아직 확인한 기록이 없어요. 홈에서 결과지를 추가하고 직접 확인해 주세요.</p>
+              <a className="gc-button gc-button--primary" href="/">결과지 추가하러 가기</a>
+            </section>
           )}
 
           {events.length > 0 && (

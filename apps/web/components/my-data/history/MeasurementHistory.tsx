@@ -109,10 +109,10 @@ export function MeasurementHistory() {
   }, [series]);
 
   return (
-    <IntegratedShell current="my-data" status="예시 데이터">
-      <main className={styles.page}>
-        <div className={styles.shell}>
-          <section className={styles.hero} aria-labelledby="history-title">
+    <IntegratedShell current="history" status="예시 데이터">
+      <main className={`${styles.page} gc-product-page`}>
+        <div className={`${styles.shell} gc-page-content`}>
+          <section className={`${styles.hero} gc-page-heading`} aria-labelledby="history-title">
             <p><a href="/my-data">나의 데이터로 돌아가기</a></p>
             <h1 id="history-title">측정 이력</h1>
             {/* Verbatim, wave4-mockup-decision.md — always in the hero, never tied to any one

@@ -440,7 +440,7 @@ export function IntegratedHealthExperience() {
       );
     }
     return (
-      <IntegratedShell current="home" status="예시 데이터로 체험" tone="dark">
+      <IntegratedShell current="home" status="예시 데이터로 체험">
       <main className="gc-integrated-shell gc-integrated-shell--center gc-demo-entry">
         <AliveEntryLayout>
         <section className="gc-integrated-auth" aria-labelledby="synthetic-login-title">
@@ -685,7 +685,7 @@ export function IntegratedHealthExperience() {
   };
 
   return (
-    <IntegratedShell current="home" status={session ? "예시 데이터로 체험 중" : undefined} tone="dark">
+    <IntegratedShell current="home" status={session ? "예시 데이터로 체험 중" : undefined}>
       <main className="gc-integrated-shell gc-integrated-shell--center gc-demo-entry">
         <AliveEntryLayout
           identity={homeIdentity}
@@ -716,6 +716,7 @@ export function IntegratedHealthExperience() {
         >
           <section className="gc-integrated-auth" aria-label="빠른 실행">
             <p className="gc-import__eyebrow">예시 데이터로 체험</p>
+            <h1>내 건강 기록</h1>
             <div className="gc-health-home__hero-actions">
               <button
                 className="gc-button gc-button--primary"

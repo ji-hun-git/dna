@@ -1,0 +1,90 @@
+/* Live routes share surfaces, spacing, type and controls. Legacy concept styles
+   stay available to their isolated stories, outside the product body. */
+.gc-product {
+  --gc-page-width: 72rem;
+  --gc-page-gutter: clamp(1rem, 3vw, 2rem);
+  --gc-color-surface-canvas: #f7f8fa;
+  --gc-color-surface-raised: #fff;
+  --gc-color-surface-soft: #eef1f5;
+  --gc-color-text-primary: #20242c;
+  --gc-color-text-secondary: #535d6b;
+  --gc-color-text-tertiary: #626d7a;
+  --gc-color-line-subtle: #dce1e7;
+  --gc-color-line-strong: #aeb8c5;
+  --gc-color-brand-primary: #254fbb;
+  --gc-color-brand-deep: #1c3f97;
+  --gc-color-brand-soft: #e9effd;
+  --gc-radius-md: 12px;
+  margin: 0;
+  background: var(--gc-color-surface-canvas);
+  color: var(--gc-color-text-primary);
+  font-family: var(--gc-type-sans);
+  line-height: 1.65;
+}
+.gc-product :is(button, input, select, textarea) { font: inherit; }
+.gc-product :is(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--gc-color-focus-ring); outline-offset: 3px; }
+.gc-product :is(.gc-shell, .gc-import__appbar) { background: var(--gc-color-surface-raised); border-bottom: 1px solid var(--gc-color-line-subtle); }
+.gc-product .gc-shell__bar { width: min(calc(100% - 2 * var(--gc-page-gutter)), var(--gc-page-width)); grid-template-columns: auto 1fr auto; gap: 24px; }
+.gc-product .gc-shell__nav { justify-self: center; border: 0; box-shadow: none; background: transparent; }
+.gc-product .gc-shell__status { font-size: .75rem; max-width: 10rem; color: var(--gc-color-text-secondary); }
+.gc-product .gc-shell__brand { color: var(--gc-color-text-primary); }
+.gc-view-nav { display: flex; flex-wrap: wrap; gap: 8px; width: min(calc(100% - 2 * var(--gc-page-gutter)), var(--gc-page-width)); margin: 0 auto; padding: 0 0 12px; }
+.gc-view-nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 16px; border-radius: 8px; font-size: .875rem; color: var(--gc-color-text-secondary); }
+.gc-view-nav a[aria-current="page"] { background: var(--gc-color-brand-soft); color: var(--gc-color-brand-deep); font-weight: 700; }
+.gc-product :is(.gc-product-page, .gc-records-unified, .gc-data-control, .gc-connections, .gc-demo-entry, .gc-import, .gc-integrated-shell) {
+  background: var(--gc-color-surface-canvas); color: var(--gc-color-text-primary); min-height: calc(100dvh - 5rem);
+}
+.gc-product :is(.gc-page-content, .gc-data-control__shell, .gc-connections__shell, .gc-demo-entry, .gc-prepare) {
+  box-sizing: border-box; width: min(calc(100% - 2 * var(--gc-page-gutter)), var(--gc-page-width)); max-width: none;
+  margin-inline: auto; padding: 32px 0 48px;
+}
+.gc-product .gc-page-heading { padding: 0 0 24px; margin: 0 0 24px; gap: 16px; min-width: 0; border-bottom: 1px solid var(--gc-color-line-subtle); }
+.gc-product .gc-page-heading h1, .gc-product .gc-demo-entry h1, .gc-product .gc-import h1, .gc-product .gc-integrated-auth h1 {
+  max-width: none; margin: 0; font: 700 clamp(1.75rem, 3vw, 2.5rem)/1.25 var(--gc-type-sans); letter-spacing: -.035em; color: var(--gc-color-text-primary); word-break: keep-all; overflow-wrap: anywhere;
+}
+.gc-product .gc-page-heading p { max-width: 46rem; margin: 8px 0 0; color: var(--gc-color-text-secondary); font-family: var(--gc-type-sans); font-size: 1rem; letter-spacing: 0; line-height: 1.65; }
+.gc-product .gc-page-heading > p:first-child, .gc-product .gc-page-heading > div > p:first-child { font-size: .8125rem; font-weight: 600; color: var(--gc-color-text-secondary); }
+.gc-product .gc-data-control__hero-copy { padding-top: 0; }
+.gc-product .gc-data-control__hero-copy > strong { color: var(--gc-color-text-secondary); }
+.gc-product .gc-demo-entry { display: block; overflow: visible; }
+.gc-product .gc-demo-entry .gc-integrated-auth { width: 100%; max-width: none; padding: 24px; border: 1px solid var(--gc-color-line-subtle); border-radius: var(--gc-radius-md); background: var(--gc-color-surface-raised); color: var(--gc-color-text-primary); box-shadow: none; }
+.gc-product .gc-demo-entry .gc-integrated-auth :is(p, ul) { color: var(--gc-color-text-secondary); font-size: .9375rem; }
+.gc-product .gc-demo-entry .gc-integrated-auth > p:first-child { font-size: .8125rem; letter-spacing: 0; }
+.gc-product .gc-demo-entry .gc-integrated-auth h2 { font-size: 1.25rem; }
+.gc-product .gc-demo-entry .gc-button { width: auto; margin-block: 8px; }
+.gc-product .gc-demo-entry .gc-integrated-auth .gc-integrated-error { color: #8d2222; background: #fff3f3; }
+.gc-product :is(.gc-integrated-auth, .gc-product-empty, .gc-integrated-empty, .gc-records-next, .gc-prepare__empty, .gc-prepare__list article) { border-radius: var(--gc-radius-md); box-shadow: none; }
+.gc-product :is(.gc-records-next, .gc-prepare__list article) { background: var(--gc-color-surface-raised); border: 1px solid var(--gc-color-line-subtle); }
+.gc-product .gc-product-empty { padding: 24px; border: 1px solid var(--gc-color-line-subtle); background: var(--gc-color-surface-raised); }
+.gc-product .gc-product-empty p { margin: 0 0 16px; }
+.gc-product :is(.gc-button, .gc-import__action, .gc-integrated-actions > button, .gc-integrated-actions > a, .gc-prepare__actions > button, .gc-prepare__actions > a, .gc-data-control__danger > button) {
+  display: inline-flex; justify-content: center; align-items: center; min-height: 44px; padding: 10px 18px; border: 1px solid var(--gc-color-line-strong); border-radius: 10px;
+  background: var(--gc-color-surface-raised); color: var(--gc-color-text-primary); font-size: .9375rem; font-weight: 600; line-height: 1.4; text-decoration: none; cursor: pointer;
+}
+.gc-product .gc-button.gc-button--primary, .gc-product .gc-import__action.gc-import__action--primary { background: var(--gc-color-brand-primary); border-color: var(--gc-color-brand-primary); color: #fff; }
+.gc-product .gc-button.gc-button--primary:hover, .gc-product .gc-import__action.gc-import__action--primary:hover { background: var(--gc-color-brand-deep); }
+.gc-product button:disabled { opacity: .55; cursor: not-allowed; }
+.gc-product .gc-import__appbar { padding-inline: var(--gc-page-gutter); }
+.gc-product .gc-import__shell { width: min(calc(100% - 2 * var(--gc-page-gutter)), var(--gc-page-width)); padding-top: 32px; }
+.gc-product .gc-import__question { padding-top: 0; }
+.gc-product .gc-prepare__list { max-width: 52rem; }
+.gc-product .gc-records-unified .gc-page-heading { grid-template-columns: minmax(0, 1fr) minmax(14rem, 20rem); }
+.gc-product .gc-records-unified .gc-page-heading aside { border: 1px solid var(--gc-color-line-subtle); border-radius: var(--gc-radius-md); box-shadow: none; background: var(--gc-color-surface-raised); color: var(--gc-color-text-primary); }
+.gc-product .gc-records-unified .gc-page-heading aside :is(header, footer) { background: none; color: var(--gc-color-text-secondary); border-color: var(--gc-color-line-subtle); }
+.gc-product .gc-records-unified .gc-page-heading aside p { margin: 0; color: var(--gc-color-text-primary); }
+@media (max-width: 800px) {
+  .gc-product .gc-shell__bar { grid-template-columns: auto 1fr; gap: 12px; }
+  .gc-product .gc-shell__status { justify-self: end; }
+  .gc-product .gc-shell__nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-radius: 0; border-top: 1px solid var(--gc-color-line-subtle); background: var(--gc-color-surface-raised); padding: 6px 8px max(6px, env(safe-area-inset-bottom)); }
+  .gc-product .gc-shell__nav a { flex-direction: column; min-width: 0; min-height: 56px; padding: 4px 2px; gap: 4px; font-size: .75rem; }
+  .gc-product .gc-shell + main { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+  .gc-product .gc-records-unified .gc-page-heading { grid-template-columns: minmax(0, 1fr); }
+  .gc-product .gc-page-heading { margin-bottom: 20px; }
+  .gc-product :is(.gc-page-content, .gc-data-control__shell, .gc-connections__shell, .gc-demo-entry, .gc-prepare) { padding-top: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+@media print {
+  .gc-product { background: white; }
+  .gc-product .gc-shell { display: none; }
+  .gc-product .gc-prepare { width: 100%; margin: 0; padding: 0; }
+}

@@ -36,8 +36,8 @@ export function PublicProviderExplorer({ embedded = false }: { embedded?: boolea
   const rowCount = mode === "providers" ? providerRows.length : priceRows.length;
 
   return (
-    <main className={styles.page}>
-      <div className={styles.shell}>
+    <main className={`${styles.page} gc-product-page`}>
+      <div className={`${styles.shell} gc-page-content`}>
         {!embedded && <header className={styles.appbar}>
           <a className={styles.brand} href="/" aria-label="앎 건강 홈으로 돌아가기"><span>앎</span><strong>앎</strong></a>
           <nav aria-label="공공 의료정보 메뉴">
@@ -48,7 +48,7 @@ export function PublicProviderExplorer({ embedded = false }: { embedded?: boolea
           <span className={styles.appbarState}>예시 데이터 · 실제 API 연결 전</span>
         </header>}
 
-        <section className={styles.hero} aria-labelledby="provider-explorer-title">
+        <section className={`${styles.hero} gc-page-heading`} aria-labelledby="provider-explorer-title">
           <div className={styles.heroCopy}>
             <p>공공 의료정보</p>
             <h1 id="provider-explorer-title">공개 의료정보를<br />출처와 함께 살펴봐요</h1>

@@ -54,7 +54,7 @@ export function ConnectionExperience({ embedded = false }: { embedded?: boolean 
           <a className="gc-connections__back" href="/">홈으로 <ArrowIcon /></a>
         </header>}
 
-        <section className="gc-connections__hero" aria-labelledby="connections-title">
+        <section className="gc-connections__hero gc-page-heading" aria-labelledby="connections-title">
           <p>데이터 연결</p>
           <h1 id="connections-title">필요한 정보만 연결해요</h1>
           <div className="gc-connections__hero-copy">

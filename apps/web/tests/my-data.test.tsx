@@ -61,7 +61,8 @@ it("filters by exact concept and says so, including zero results", async () => {
 it("shows the empty state and the server error state honestly, both without accessibility violations", async () => {
   server.use(http.get("/api/foundation/health-events", () => HttpResponse.json([])));
   const empty = render(<MyData />);
-  expect(await screen.findByText("아직 확인한 기록이 없어요. 데이터 관리에서 결과지를 추가하면 여기에 한 칸씩 쌓여요.")).toBeVisible();
+  expect(await screen.findByText("아직 확인한 기록이 없어요. 홈에서 결과지를 추가하고 직접 확인해 주세요.")).toBeVisible();
+  expect(screen.getByRole("link", { name: "결과지 추가하러 가기" })).toHaveAttribute("href", "/");
   expect(await axe(empty.container)).toHaveNoViolations();
   empty.unmount();
   server.use(http.get("/api/foundation/health-events", () => HttpResponse.json({ code: "INTERNAL" }, { status: 500 })));

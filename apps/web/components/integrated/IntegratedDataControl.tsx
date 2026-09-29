@@ -151,8 +151,8 @@ export function IntegratedDataControl() {
     <IntegratedShell current="data-control" status="예시 데이터로 체험 중">
       <main className="gc-data-control">
         <div className="gc-data-control__shell">
-          <section className="gc-data-control__hero" aria-labelledby="integrated-data-title">
-            <div><p>동의와 보관 상태</p><h1 id="integrated-data-title">내 데이터</h1></div>
+          <section className="gc-data-control__hero gc-page-heading" aria-labelledby="integrated-data-title">
+            <div><p>동의와 보관 상태</p><h1 id="integrated-data-title">데이터 관리</h1></div>
             <div className="gc-data-control__hero-copy"><p>목적별 동의를 확인하고, 내 기록을 파일로 내보내거나, 체험 중 만든 기록을 삭제할 수 있어요.</p><strong>예시 데이터 전용 · 실제 개인정보 없음</strong></div>
           </section>
           <div className="gc-integrated-actions"><a href="/connections">연결 상태 확인</a><a href="/providers">공공정보 실험실</a></div>
