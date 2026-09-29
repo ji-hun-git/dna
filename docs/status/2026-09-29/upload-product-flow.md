@@ -20,6 +20,8 @@ Pinned Node 24.20.0, pnpm 11.20.0, Java 21. The browser test uses a newly create
 | `gradlew.bat --no-daemon :apps:core-api:classes :apps:document-worker:classes` | BUILD SUCCESSFUL |
 | `gradlew.bat test --no-daemon` with dedicated PostgreSQL, after Jackson upgrade | BUILD SUCCESSFUL (4m10s); XML reports: 355 tests, 352 passed, 3 skipped; unchanged document-boundary task reused its 30 passing tests |
 | `pnpm foundation:e2e` | 3 passed (2.2m): two documents, reload persistence, source review, actual CSV download, consent revocation/deletion, 200%/400% equivalent keyboard viewports |
+| `pnpm foundation:e2e` after Jackson upgrade | 3 passed again (2.9m) against the patched Spring/worker runtime |
+| Targeted home, review-loop and CSV Vitest suites | 30 passed after fixing the existing hero test's passive-effect timing race |
 
 Local logs are in `C:/gc-synthetic-test/upload-product-*.log`. The default fork-based full test run stalled on this Windows machine; the complete suite passed using two thread workers. Initial browser execution caught an incorrect new test expectation: the real empty active-document response is `{}`, not `{document:null}`. The assertion now checks the real 200/empty-object contract. The other two browser cases passed in that run.
 
@@ -33,7 +35,7 @@ The browser run also checked horizontal fit at seven widths (320–1920px), incl
 - U4: the local run guide incorrectly described fixed worker values. It now states the existing PDF text-layer extraction behavior and the new upload step.
 - U5: the first PR CI scan found CVE-2026-68497 in the inherited Jackson 2.21.5 lockfiles. The catalog and all three affected Gradle locks now resolve 2.21.6, the [upstream patched version](https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-q4xh-88c3-wmh7). A small XML duration regression fixture failed against 2.21.5 because it bypassed the configured numeric length limit. No scanner exception was added.
 
-The numeric-length regression passes with 2.21.6. Local JVM skips were in the Docker-gated consent repository fixture, optional Synthea bundle fixture and real ClamAV integration fixture; this Windows run does not establish those three cases. The first PR CI run passed every other job, including Linux integration and image checks, but failed its dependency policy scan; the updated revision needs a fresh scan.
+The numeric-length regression passes with 2.21.6. Local JVM skips were in the Docker-gated consent repository fixture, optional Synthea bundle fixture and real ClamAV integration fixture; this Windows run does not establish those three cases. The first PR CI run passed every other job, including Linux integration and image checks, but failed its dependency policy scan. The patched revision's dependency policy passed. Its PR integration job exposed an existing home test race: finding the heading did not guarantee the hero's passive effect had populated its SVG path. The assertion now waits for that path before comparing node identity; the product implementation and assertion strength are unchanged. Require complete CI for the final revision.
 
 ## Readiness interpretation
 

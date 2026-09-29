@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "vitest";
@@ -63,8 +63,9 @@ it("does not restart the hero effect when re-rendering the home with the same re
 
   const svg = document.querySelector("svg[role='img']")!;
   const axis = svg.querySelector('[data-role="axis"]')!;
-  const firstD = axis.getAttribute("d");
-  expect(firstD).toBeTruthy();
+  // The heading can commit before the hero's passive effect populates the SVG.
+  // Wait for that effect, not an arbitrary delay or a lucky scheduler ordering.
+  await waitFor(() => expect(axis.getAttribute("d")).toBeTruthy());
 
   // Re-rendering with an unrelated prop change (there are none on this component, so re-render
   // with the exact same element) must not tear down and recreate the hero's SVG subtree: the
