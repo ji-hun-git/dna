@@ -113,6 +113,7 @@ export function IntegratedHealthExperience() {
           ? b.confirmedAt.localeCompare(a.confirmedAt)
           : b.observedOn.localeCompare(a.observedOn)))
         .map((record) => ({
+          recordId: record.recordId,
           item: record.label,
           value: record.value,
           unit: record.unit,
@@ -667,7 +668,6 @@ export function IntegratedHealthExperience() {
           <section className="gc-integrated-auth" aria-label="빠른 실행">
             <p className="gc-import__eyebrow">예시 데이터로 체험</p>
             <h1>내 건강 기록<em>.</em></h1>
-            <p className="gc-home-description">추가한 결과지와 저장한 검사값을 확인하세요.</p>
             <div className="gc-health-home__hero-actions">
               <button
                 className="gc-button gc-button--primary"
@@ -677,7 +677,6 @@ export function IntegratedHealthExperience() {
                 {unfinished ? "이어서 확인" : "결과지 추가"}
               </button>
             </div>
-            <p className="gc-home-boundary">예시 데이터로 체험 중이에요 · 외부 기관 연결 0곳</p>
             {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}</p>}
           </section>
         </RecordWorkspace>

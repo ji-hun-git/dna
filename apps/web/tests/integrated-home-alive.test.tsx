@@ -68,6 +68,15 @@ it("prioritizes saved records without a decorative chart or invented personal pr
   expect(screen.getByRole("table")).toBeInTheDocument();
 });
 
+it("opens a saved home result at its original document instead of making people search again", async () => {
+  const record = syntheticRecord();
+  records = [record];
+  render(<IntegratedHealthExperience />);
+  const result = await screen.findByRole("link", { name: record.label });
+  expect(result).toHaveAttribute("href", `/records#record-${record.recordId}`);
+  expect(screen.queryByText(/외부 기관 연결 0곳/)).toBeNull();
+});
+
 it("gives an honest empty state with a useful next action and no example values", async () => {
   render(<IntegratedHealthExperience />);
   await screen.findByRole("heading", { name: "아직 저장된 기록이 없어요" });

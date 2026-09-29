@@ -366,6 +366,7 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     schema: z.ZodType<T>,
     init: RequestInit = {},
     mutation = false,
+    onHeaders?: (headers: Headers) => void,
   ): Promise<T> {
     const headers = new Headers(init.headers);
     if (mutation) {
@@ -412,7 +413,30 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     }
     const parsed = schema.safeParse(body);
     if (!parsed.success) throw new FoundationClientError("invalid_server_response", response.status);
+    onHeaders?.(response.headers);
     return parsed.data;
+  }
+
+  async function readCollection<T>(path: string, schema: z.ZodType<T>): Promise<T[]> {
+    const items: T[] = [];
+    const seen = new Set<string>();
+    let after: string | undefined;
+    // Bound malformed or continually changing servers; never return an incomplete collection.
+    for (let page = 0; page < 100; page += 1) {
+      let next: string | null = null;
+      const batch = await request(after ? `${path}?after=${encodeURIComponent(after)}` : path,
+        z.array(schema), { method: "GET" }, false,
+        (headers) => { next = headers.get("X-GC-Next-After"); });
+      items.push(...batch);
+      if (next === null) return items;
+      const cursor = uuidSchema.safeParse(next);
+      if (!cursor.success || seen.has(cursor.data) || batch.length === 0) {
+        throw new FoundationClientError("invalid_server_response", 200);
+      }
+      seen.add(cursor.data);
+      after = cursor.data;
+    }
+    throw new FoundationClientError("invalid_server_response", 200);
   }
 
   function requireUuid(value: string) {
@@ -549,8 +573,8 @@ export function createFoundationClient(options: FoundationClientOptions = {}) {
     // travels in the `X-GC-Next-After` response header, not in the body — so the body these two parse
     // is unchanged and no schema here needs a new field. They deliberately ask for page one only;
     // until a screen needs more than 200 rows, adding a cursor argument would be untested surface.
-    getRecords: () => request("/api/foundation/records", z.array(recordSchema), { method: "GET" }),
-    getHealthEvents: () => request("/api/foundation/health-events", z.array(healthEventSchema), { method: "GET" }),
+    getRecords: () => readCollection("/api/foundation/records", recordSchema),
+    getHealthEvents: () => readCollection("/api/foundation/health-events", healthEventSchema),
     getChanges: () => request("/api/foundation/changes", changeSummarySchema, { method: "GET" }),
     getSeries: () => request("/api/foundation/series", seriesResponseSchema, { method: "GET" }),
     getRecord: async (recordId: string) => request(

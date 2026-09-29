@@ -398,6 +398,16 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
 
   await page.goto("/records");
   await expect(page.getByTestId("durable-record")).toHaveCount(5);
+  // Exercise the real Spring continuation header through the Next proxy using
+  // small pages. The unmodified client must still display all five saved results.
+  const collections = /\/api\/foundation\/(records|health-events)(\?.*)?$/;
+  await page.route(collections, async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("limit", "2");
+    await route.continue({ url: url.toString() });
+  });
+  await page.reload();
+  await expect(page.getByTestId("durable-record")).toHaveCount(5);
   await expect(page.getByText("120-199")).toHaveCount(0);
   expect(await page.content()).not.toContain("120-199");
 
@@ -407,6 +417,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   const cells = figure.getByRole("button");
   await expect(cells).toHaveCount(5);
   await expect(page.getByRole("table", { name: "기록 목록" }).getByRole("row")).toHaveCount(5 + 1);
+  await page.unroute(collections);
   await cells.first().click();
   const drawer = page.getByRole("region", { name: /출처$/ });
   await expect(drawer).toBeVisible();
