@@ -152,12 +152,9 @@ export type AliveEntryLayoutProps = {
 };
 
 /**
- * The dense, gridded trajectory composition shared by the pre-login entry screen and the
- * logged-in home screen: a copy/actions block and an identity panel in the left column, the
- * alive-trajectory hero owning the centre, a records panel (plus an optional second panel) on the
- * right, and a phase strip along the bottom. Under ~900px it stacks: hero (reduced height), copy,
- * identity, records, strip. Every prop defaults to the pre-login example dataset, so the entry
- * screen's call site is unchanged; the home screen passes the person's own records instead.
+ * Shared entry/home composition: actions and trajectory first, then records and example
+ * identity. Mobile follows the same reading order, keeping the primary action above the
+ * decorative visualization. The home passes confirmed server records instead of entry examples.
  */
 export function AliveEntryLayout({
   children,
@@ -180,7 +177,6 @@ export function AliveEntryLayout({
     <div className={styles.grid}>
       <div className={styles.left}>
         <div className={styles.copy}>{children}</div>
-        <IdentityPanel identity={identity} />
       </div>
       <div className={styles.center}>
         <AliveTrajectory rings={rings} phaseLabels={phaseLabels} caption={heroCaption} />
@@ -196,6 +192,7 @@ export function AliveEntryLayout({
         />
         {rightExtra}
       </div>
+      <div className={styles.identity}><IdentityPanel identity={identity} /></div>
       <div className={styles.strip}>
         <PhaseStrip labels={phaseLabels} currentIndex={currentPhaseIndex} />
       </div>

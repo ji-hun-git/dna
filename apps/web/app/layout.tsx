@@ -1,6 +1,7 @@
 import "../font-bundle";
 import "@gc/design-tokens/tokens.css";
 import "./globals.css";
+import "./product.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -18,7 +19,7 @@ const applicationInstance = process.env.GC_APPLICATION_INSTANCE_ID ?? "local-unv
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="ko">
-      <body data-application-id={applicationId} data-application-instance={applicationInstance}>{children}</body>
+      <body className="gc-product" data-application-id={applicationId} data-application-instance={applicationInstance}>{children}</body>
     </html>
   );
 }

@@ -1,25 +1,20 @@
-/* Visual-language pilot, this screen only. Tokens are scoped to .page so nothing leaks into the
-   app. Ground/ink/soft-ink/rule/card/link are the mockup's own literal hexes
-   (wave4-mockup-decision.md, wave4-mockup.html), not the app's usual --gc-color-* fallbacks. */
+/* Shared product surfaces and type; graph colour still represents time only. */
 .page {
-  --hist-bg: #f4f4f1;
-  --hist-grid-dot: #cfcfca;
-  --hist-ink: #1b1c1f;
-  --hist-ink-soft: #5d5f66;
-  --hist-card: #f1f0ea;
-  --hist-line: #b9b8b0;
-  --hist-link: #0b4fe0;
+  --hist-bg: var(--gc-color-surface-canvas);
+  --hist-ink: var(--gc-color-text-primary);
+  --hist-ink-soft: var(--gc-color-text-secondary);
+  --hist-card: var(--gc-color-surface-raised);
+  --hist-line: var(--gc-color-line-strong);
+  --hist-link: var(--gc-color-brand-primary);
   --hist-ribbon-band: 26px;           /* fixed thickness: carries no meaning */
   --hist-ribbon-body: 13px;
   --hist-ribbon-centre: 1px;
-  --hist-font-title: "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
+  --hist-font-title: var(--gc-type-sans);
   --hist-font-number: var(--gc-type-mono);
 
   min-height: 100vh;
   color: var(--hist-ink);
   background-color: var(--hist-bg);
-  background-image: radial-gradient(var(--hist-grid-dot) 1px, transparent 1.2px);
-  background-size: 10px 10px;
 }
 .shell { max-width: 1120px; margin: 0 auto; padding: var(--gc-space-6) var(--gc-space-4) var(--gc-space-10); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gc-space-6); min-width: 0; }
 .hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gc-space-2); min-width: 0; overflow-wrap: anywhere; }

@@ -37,8 +37,8 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
     expect(overflow, `${state} at ${width}x${height} overflows horizontally`).toEqual([]);
     const nav = page.getByRole("navigation", { name: "주요 메뉴" });
     if (await nav.count()) {
-      await expect(nav.locator('[aria-current="page"]')).toHaveCount(state === "home" || state === "entry" ? 0 : 1);
-      for (const label of ["나의 데이터", "데이터 관리"]) {
+      await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
+      for (const label of ["홈", "나의 데이터", "진료 준비", "데이터 관리"]) {
         const link = nav.getByRole("link", { name: label, exact: true });
         const target = await link.boundingBox();
         const icon = await link.locator("svg").boundingBox();
@@ -46,15 +46,19 @@ async function captureMatrix(page: Page, info: TestInfo, state: string) {
         expect(target).not.toBeNull();
         expect(icon).not.toBeNull();
         expect(text).not.toBeNull();
-        expect(target!.height).toBeGreaterThanOrEqual(width <= 672 ? 56 : 48);
+        expect(target!.height).toBeGreaterThanOrEqual(width <= 800 ? 56 : 48);
         expect(target!.width).toBeGreaterThanOrEqual(48);
         expect(target!.y).toBeGreaterThanOrEqual(0);
         expect(target!.y + target!.height).toBeLessThanOrEqual(height);
         expect(icon!.width).toBeGreaterThanOrEqual(20);
         expect(text!.x).toBeGreaterThanOrEqual(target!.x);
         expect(text!.x + text!.width).toBeLessThanOrEqual(target!.x + target!.width + 1);
-        if (width <= 672) expect(text!.y).toBeGreaterThanOrEqual(icon!.y + icon!.height);
+        if (width <= 800) expect(text!.y).toBeGreaterThanOrEqual(icon!.y + icon!.height);
       }
+    }
+    if (["entry", "home", "my-data", "history", "records", "prepare", "data-control"].includes(state)) {
+      const surface = await page.locator("main").evaluate((element) => getComputedStyle(element).backgroundColor);
+      expect(surface, `${state} uses the shared product background`).toBe("rgb(247, 248, 250)");
     }
     if (state === "entry") {
       const button = await page.getByRole("button", {name: "체험 시작"}).boundingBox();
@@ -537,7 +541,7 @@ test("visible Korean product persists reloads revokes and deletes the synthetic 
   await captureMatrix(page, info, "prepare");
   for (const route of ["/connections", "/providers", "/data-control"]) {
     await page.goto(route);
-    await expect(page.getByRole("navigation", {name:"주요 메뉴"}).getByRole("link")).toHaveCount(2);
+    await expect(page.getByRole("navigation", {name:"주요 메뉴"}).getByRole("link")).toHaveCount(4);
     await captureMatrix(page, info, route.slice(1));
   }
 

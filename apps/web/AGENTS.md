@@ -7,3 +7,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Product UI consistency
+
+For live product UI changes, follow `../../docs/design/product-ui-contract.md`.
+Use the shared `IntegratedShell` and `app/product.css` contract. Keep navigation,
+page widths, headings, surfaces and controls consistent across routes; review
+the seven-width foundation browser captures before reporting a visual change.

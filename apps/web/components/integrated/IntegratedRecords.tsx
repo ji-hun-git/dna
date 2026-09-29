@@ -125,8 +125,8 @@ export function IntegratedRecords() {
   return (
     <IntegratedShell current="records" status="예시 데이터">
       <main className={`${styles.page} gc-records-unified`}>
-        <div className={styles.shell}>
-          <section className={styles.hero} aria-labelledby="integrated-records-title">
+        <div className={`${styles.shell} gc-page-content`}>
+          <section className={`${styles.hero} gc-page-heading`} aria-labelledby="integrated-records-title">
             <div className={styles.heroCopy}>
               <p>직접 확인한 값과 출처</p>
               <h1 id="integrated-records-title">내 기록</h1>
