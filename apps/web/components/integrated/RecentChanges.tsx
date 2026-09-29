@@ -32,7 +32,7 @@ export function RecentChanges({ changes }: RecentChangesProps) {
   return (
     <section className="gc-health-home__overview" aria-labelledby="recent-changes-title">
       <div className="gc-health-home__section-heading">
-        <div><p>{`새 결과지 · ${formatKoreanDate(latest.observedOn)}`}</p><h2 id="recent-changes-title">최근 변화</h2></div>
+        <div><p>{`새 결과지 · ${formatKoreanDate(latest.observedOn)}`}</p><h2 id="recent-changes-title">이전 검사값과 비교</h2></div>
         <span>{`새 기록 ${latest.eventCount}개`}</span>
       </div>
       <p className="gc-records-comparison__note">새 결과지에서 확인한 값과 같은 항목의 이전 값이에요. 변화의 의미는 판단하지 않아요.</p>

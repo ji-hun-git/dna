@@ -31,8 +31,8 @@ it("freezes a strict synthetic-only contract and records zero live API calls", (
 it("renders the source-first boundary accessibly without presenting live or recommended care", async () => {
   const { container } = render(<PublicProviderExplorer />);
 
-  expect(screen.getByRole("heading", { name: /공개 의료정보를\s*출처와 함께 살펴봐요/ })).toBeVisible();
-  expect(screen.getByText("아직 공공 API와 연결되지 않았어요")).toBeVisible();
+  expect(screen.getByRole("heading", { name: "병원·비급여 정보 예시" })).toBeVisible();
+  expect(screen.getByText("아직 실제 정보를 조회할 수 없어요")).toBeVisible();
   expect(screen.getByText(/실시간 요청 0건/)).toBeVisible();
   expect(screen.getByRole("table", { name: "예시 의료기관 정보 비교" })).toBeVisible();
   expect(screen.getAllByText("예시").length).toBeGreaterThan(0);

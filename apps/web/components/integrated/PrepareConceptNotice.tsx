@@ -9,7 +9,7 @@ export function PrepareConceptNotice() {
       </header>
       <section className="gc-prepare__empty" aria-labelledby="prepare-concept-title">
         <h2 id="prepare-concept-title">확인한 기록이 있으면 여기에 모여요</h2>
-        <p>이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.</p>
+        <p>진료 때 참고할 질문 목록이에요. 검사값이나 건강 상태에 대한 판단은 포함하지 않아요.</p>
         <a href="/">홈으로</a>
       </section>
     </main>

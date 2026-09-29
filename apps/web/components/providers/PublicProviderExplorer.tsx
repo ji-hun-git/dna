@@ -51,12 +51,12 @@ export function PublicProviderExplorer({ embedded = false }: { embedded?: boolea
         <section className={`${styles.hero} gc-page-heading`} aria-labelledby="provider-explorer-title">
           <div className={styles.heroCopy}>
             <p>공공 의료정보</p>
-            <h1 id="provider-explorer-title">공개 의료정보를<br />출처와 함께 살펴봐요</h1>
-            <p className={styles.heroBody}>데이터 출처와 적용 기준, 주의사항을 먼저 보여드려요.</p>
+            <h1 id="provider-explorer-title">병원·비급여 정보 예시</h1>
+            <p className={styles.heroBody}>병원 정보와 비급여 금액을 비교하는 예시 화면이에요.</p>
           </div>
           <div className={styles.heroProof}>
             <span>연동 상태</span>
-            <strong>아직 공공 API와 연결되지 않았어요</strong>
+            <strong>아직 실제 정보를 조회할 수 없어요</strong>
             <p>현재 기관·주소·항목·금액은 모두 화면 확인용 예시예요. 실제 의료기관 조회 결과나 예상 비용이 아닙니다.</p>
             <div><span aria-hidden="true" /> 실시간 요청 0건</div>
           </div>
@@ -108,7 +108,7 @@ export function PublicProviderExplorer({ embedded = false }: { embedded?: boolea
             {mode === "providers" ? (
               <table aria-label="예시 의료기관 정보 비교">
                 <caption>실제 의료기관이 아닌 예시 정보를 기관명 가나다순으로 표시합니다.</caption>
-                <thead><tr><th scope="col">의료기관</th><th scope="col">종류</th><th scope="col">지역·주소</th><th scope="col">연락처</th><th scope="col">근거</th></tr></thead>
+                <thead><tr><th scope="col">의료기관</th><th scope="col">종류</th><th scope="col">지역·주소</th><th scope="col">연락처</th><th scope="col">출처</th></tr></thead>
                 <tbody>{providerRows.map((item) => (
                   <tr key={item.id}>
                     <th scope="row"><span className={styles.syntheticLabel}>예시</span>{item.providerName}</th>
@@ -122,7 +122,7 @@ export function PublicProviderExplorer({ embedded = false }: { embedded?: boolea
             ) : (
               <table aria-label="예시 비급여 금액 비교">
                 <caption>화면 확인용 예시 금액이며 견적이나 예상 청구액이 아닙니다.</caption>
-                <thead><tr><th scope="col">항목</th><th scope="col">의료기관</th><th scope="col">예시 금액</th><th scope="col">적용 기준</th><th scope="col">근거</th></tr></thead>
+                <thead><tr><th scope="col">항목</th><th scope="col">의료기관</th><th scope="col">예시 금액</th><th scope="col">적용 기준</th><th scope="col">출처</th></tr></thead>
                 <tbody>{priceRows.map((item) => (
                   <tr key={item.id}>
                     <th scope="row"><span className={styles.syntheticLabel}>예시</span>{item.itemName}<small>{item.itemCode}</small></th>
@@ -139,9 +139,9 @@ export function PublicProviderExplorer({ embedded = false }: { embedded?: boolea
         </section>
 
         <section className={styles.ledger} aria-labelledby="source-ledger-title">
-          <header><span>확인한 공식 출처</span><strong id="source-ledger-title">실제 연결 전에 살펴본 공공데이터</strong></header>
+          <header><span>확인한 공식 출처</span><strong id="source-ledger-title">연결 예정인 공공데이터</strong></header>
           <div className={styles.ledgerBody}>
-            <div className={styles.unitField} role="img" aria-label="두 개의 공식 출처 계약 중 실제 API 연결은 0개입니다">
+            <div className={styles.unitField} role="img" aria-label="연결 예정인 공공데이터 출처는 2곳이며 아직 연결되지 않았어요">
               {Array.from({ length: 96 }, (_, index) => <span key={index} data-source={index < 2 ? "reviewed" : undefined} aria-hidden="true" />)}
             </div>
             <ol>
@@ -159,7 +159,7 @@ export function PublicProviderExplorer({ embedded = false }: { embedded?: boolea
         </section>
 
         <section className={styles.nextBoundary} aria-labelledby="connection-boundary-title">
-          <div><p>공식 연결 전 확인</p><h2 id="connection-boundary-title">공식 데이터는 확인한 뒤 보여드려요</h2><span>데이터 형식과 출처, 갱신 시각, 오류 상황을 확인한 뒤 예시 표시를 제거해요.</span></div>
+          <div><p>공식 연결 전 확인</p><h2 id="connection-boundary-title">실제 정보는 아직 조회할 수 없어요</h2><span>현재는 예시만 표시해요. 실제 병원 정보나 진료비를 확인할 수 없어요.</span></div>
           <button type="button" disabled>공식 연동 준비 중 <ArrowIcon /></button>
         </section>
       </div>

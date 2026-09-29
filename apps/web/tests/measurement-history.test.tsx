@@ -26,7 +26,7 @@ it("lists every series with its three computed numbers as text and the same numb
   const cholesterol = within(sections[2]);
   expect(cholesterol.getByTestId("derived-last-difference")).toHaveTextContent(/^-4 mg\/dL \(-2\.1%\)$/);
   expect(cholesterol.getByTestId("derived-per-30-days")).toHaveTextContent(/^-0\.6 mg\/dL$/);
-  expect(cholesterol.getByTestId("derived-mean-of-last-3")).toHaveTextContent(/^측정 3회부터 계산해요$/);
+  expect(cholesterol.getByTestId("derived-mean-of-last-3")).toHaveTextContent(/^검사 기록이 3개 이상 있어야 계산할 수 있어요$/);
   const rows = within(cholesterol.getByRole("table", { name: "총콜레스테롤 측정 이력" })).getAllByRole("row");
   expect(rows.map((row) => row.textContent)).toEqual([
     "검사일값단위결과지 표기출처",
@@ -40,9 +40,9 @@ it("lists every series with its three computed numbers as text and the same numb
   expect(within(sections[0]).getByTestId("derived-last-difference")).toHaveTextContent(/^-0\.2 %$/);
   expect(within(sections[0]).getByTestId("derived-per-30-days")).toHaveTextContent(/^-0\.03 %$/);
 
-  expect(screen.getByText("직접 확인한 값을 검사일 순서로 모았어요. 점은 확인한 값이고, 점 사이의 선은 값이 아니에요.")).toBeVisible();
-  expect(screen.getByText("선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.")).toBeVisible();
-  expect(screen.getByText("뺄셈과 나눗셈으로만 계산했어요. 의미는 판단하지 않아요.")).toBeVisible();
+  expect(screen.getByText("각 점은 검사일에 확인한 값이에요. 점 사이의 선은 실제 측정값을 나타내지 않아요.")).toBeVisible();
+  expect(screen.getByText("선 모양은 건강 상태를 나타내지 않아요. 색은 검사 시기를 구분하기 위한 표시예요.")).toBeVisible();
+  expect(screen.getByText("검사값 사이의 차이를 계산한 것이며, 건강 상태에 대한 해석은 제공하지 않아요.")).toBeVisible();
   for (const term of ["마지막 두 값의 차이", "30일로 환산한 차이", "최근 3회 평균"]) expect(cholesterol.getByText(term)).toBeVisible();
   expect(container.textContent).not.toMatch(/120-199|참고치|상승|하락|증가|감소|빨라|느려|좋아|나빠|추세|→|↑|↓/);
   expect(await axe(container)).toHaveNoViolations();
@@ -122,7 +122,7 @@ it("draws every series' ribbon with the same time gradient, never a per-series c
   const ids = [...container.querySelectorAll("linearGradient")].map((gradient) => gradient.getAttribute("id"));
   expect(new Set(ids).size).toBe(ids.length);
 
-  expect(screen.getByText("선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.")).toBeVisible();
+  expect(screen.getByText("선 모양은 건강 상태를 나타내지 않아요. 색은 검사 시기를 구분하기 위한 표시예요.")).toBeVisible();
   const timebar = screen.getByTestId("history-timebar");
   expect(timebar).toHaveAttribute("aria-hidden", "true");
   expect(timebar).toHaveTextContent("2026. 1. 15. 먼저");
@@ -181,8 +181,8 @@ it("keeps the lede on the page even when the first drawable series is later in t
   })));
   render(<MeasurementHistory />);
   await screen.findAllByTestId("history-series");
-  expect(screen.getByText("직접 확인한 값을 검사일 순서로 모았어요. 점은 확인한 값이고, 점 사이의 선은 값이 아니에요.")).toBeVisible();
-  expect(screen.getByText("선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.")).toBeVisible();
+  expect(screen.getByText("각 점은 검사일에 확인한 값이에요. 점 사이의 선은 실제 측정값을 나타내지 않아요.")).toBeVisible();
+  expect(screen.getByText("선 모양은 건강 상태를 나타내지 않아요. 색은 검사 시기를 구분하기 위한 표시예요.")).toBeVisible();
 });
 
 it("shares one x domain across series so the same exam date lands at the same x (I2)", async () => {
@@ -226,7 +226,7 @@ it("names the specific reason a number is missing, decided from the points thems
   expect(within(sections[0]).getByTestId("derived-last-difference")).toHaveTextContent("같은 날 측정이라 계산하지 않아요");
   expect(within(sections[0]).getByTestId("derived-per-30-days")).toHaveTextContent("측정 간격이 30일보다 짧아 계산하지 않아요");
   expect(within(sections[1]).getByTestId("derived-per-30-days")).toHaveTextContent("측정 간격이 30일보다 짧아 계산하지 않아요");
-  expect(within(sections[1]).getByTestId("derived-mean-of-last-3")).toHaveTextContent("측정 3회부터 계산해요");
+  expect(within(sections[1]).getByTestId("derived-mean-of-last-3")).toHaveTextContent("검사 기록이 3개 이상 있어야 계산할 수 있어요");
 });
 
 it("focuses the series that holds the event named in the hash", async () => {
@@ -267,6 +267,6 @@ it("rejects a server that starts sending a direction instead of showing it", asy
   const broken = syntheticSeries();
   server.use(http.get("/api/foundation/series", () => HttpResponse.json({ series: [{ ...broken.series[2], direction: "down" }] })));
   render(<MeasurementHistory />);
-  expect(await screen.findByRole("alert")).toHaveTextContent("서버 응답 형식을 확인할 수 없어");
+  expect(await screen.findByRole("alert")).toHaveTextContent("받은 정보를 확인할 수 없어");
   expect(screen.queryByTestId("history-series")).toBeNull();
 });

@@ -92,10 +92,10 @@ export function MyData() {
           <section className={`${styles.hero} gc-page-heading`} aria-labelledby="my-data-title">
             <p>직접 확인한 기록을 시간 순서로</p>
             <h1 id="my-data-title">나의 데이터</h1>
-            <p>한 칸이 확인한 기록 하나예요. 칸을 고르면 값과 출처를 볼 수 있어요. 값의 의미나 변화의 방향은 판단하지 않아요.</p>
+            <p>칸을 선택하면 검사값과 결과지 출처를 볼 수 있어요. 검사값에 대한 해석은 제공하지 않아요.</p>
           </section>
 
-          {loading && <p role="status" aria-live="polite">서버에서 기록을 불러오고 있어요.</p>}
+          {loading && <p role="status" aria-live="polite">기록을 불러오고 있어요.</p>}
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}{" "}
             {errorAction === "sign-in" && <a href="/">홈에서 다시 로그인</a>}
             {errorAction === "retry-read" && <button type="button" disabled={loading} onClick={() => setLoadAttempt((attempt) => attempt + 1)}>다시 불러오기</button>}
@@ -119,7 +119,7 @@ export function MyData() {
               />
 
               <form className={styles.search} role="search" onSubmit={(submit) => submit.preventDefault()}>
-                <label htmlFor="my-data-search">내 데이터에서 항목 찾기</label>
+                <label htmlFor="my-data-search">검사 항목 검색</label>
                 <input id="my-data-search" type="search" value={query} onChange={(change) => setQuery(change.target.value)}
                   placeholder="예: 총콜레스테롤" autoComplete="off" />
                 <p role="status" aria-label="검색 결과" aria-live="polite">{searchStatus}</p>

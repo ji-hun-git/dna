@@ -115,7 +115,7 @@ export function LivingCellCanvas({ events, selectedId, matchedIds, newIds, onSel
       <figcaption className={styles.caption}>한 칸 = 확인한 기록 하나. 값의 의미나 변화의 방향은 판단하지 않아요.</figcaption>
       {adjusted ? (
         <p className={styles.adjustedNotice} data-testid="cell-adjusted-notice">
-          셀이 겹치지 않도록 위치를 조금 옮겼어요. 정확한 날짜는 셀을 선택해 확인해 주세요.
+          기록이 겹치는 곳은 칸의 위치를 조정했어요. 정확한 검사일은 칸을 선택해 확인하세요.
         </p>
       ) : null}
     </figure>

@@ -19,7 +19,7 @@ const protectionRules = [
   },
   {
     index: "03",
-    title: "의심스러운 연결은 바로 멈춰요",
+    title: "계정 확인이 안 되면 연결을 중단해요",
     body: "로그인 정보가 만료됐거나 계정이 맞지 않으면 연결을 멈추고 다시 확인해요.",
   },
 ] as const;
@@ -56,7 +56,7 @@ export function ConnectionExperience({ embedded = false }: { embedded?: boolean 
 
         <section className="gc-connections__hero gc-page-heading" aria-labelledby="connections-title">
           <p>데이터 연결</p>
-          <h1 id="connections-title">필요한 정보만 연결해요</h1>
+          <h1 id="connections-title">외부 서비스 연결</h1>
           <div className="gc-connections__hero-copy">
             <p>로그인과 건강정보 연결 동의는 서로 달라요. 연결할 기관과 항목, 기간을 따로 선택할 수 있게 준비하고 있어요.</p>
             <span><LockIcon /> 실제 계정이나 건강정보와 연결되지 않은 예시 화면이에요</span>
@@ -67,7 +67,7 @@ export function ConnectionExperience({ embedded = false }: { embedded?: boolean 
           <div className="gc-connections__section-heading">
             <p>1. 로그인</p>
             <div>
-              <h2 id="identity-title">로그인 방법을 선택해요</h2>
+              <h2 id="identity-title">간편 로그인 · 준비 중</h2>
               <p>로그인은 건강정보 제공 동의가 아니에요</p>
             </div>
           </div>
@@ -102,7 +102,7 @@ export function ConnectionExperience({ embedded = false }: { embedded?: boolean 
         <section className="gc-connections__health" aria-labelledby="health-connection-title">
           <header>
             <span>건강정보 연결</span>
-            <strong>연결 준비 전</strong>
+            <strong>현재 연결 안 됨</strong>
           </header>
 
           <div className="gc-connections__health-grid">
@@ -144,7 +144,7 @@ export function ConnectionExperience({ embedded = false }: { embedded?: boolean 
             <p>연결 보호</p>
             <div>
               <h2 id="protection-title">연결이 수상하면 먼저 멈춰요</h2>
-              <p>편리함보다 계정과 건강 기록의 경계를 우선해요.</p>
+              <p>외부 계정을 연결할 때 적용할 보안 원칙이에요.</p>
             </div>
           </div>
           <ol>

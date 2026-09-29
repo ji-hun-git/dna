@@ -17,6 +17,7 @@ const userFacingFiles = [
   "components/integrated/SourcePreview.tsx",
   "lib/records/visit-questions.ts",
   "lib/records/export-csv.ts",
+  "lib/foundation/messages.ts",
   "components/concept/RecordImportConcept.tsx",
   "components/connections/ConnectionExperience.tsx",
   "components/experience/HealthExperience.tsx",
@@ -123,12 +124,12 @@ describe("Korean UX language boundary", () => {
       "실제 파일이나 기관 API에서 가져온 기록이 아니에요",
     );
     expect(source("components/integrated/VisitPreparation.tsx")).toContain(
-      "이 목록은 질문을 준비하기 위한 것이에요. 값의 의미나 건강 상태를 판단하지 않아요.",
+      "진료 때 참고할 질문 목록이에요. 검사값이나 건강 상태에 대한 판단은 포함하지 않아요.",
     );
     expect(source("components/integrated/VisitPreparation.tsx")).toContain(
-      "이 값은 예시 결과지의 글자 정보에서 읽어 직접 확인한 값이에요. 실제 기관에서 가져오지 않았어요.",
+      "예시 결과지에서 읽고 직접 확인한 값이에요. 실제 의료기관의 기록은 아니에요.",
     );
-    expect(source("components/my-data/MyData.tsx")).toContain("값의 의미나 변화의 방향은 판단하지 않아요.");
+    expect(source("components/my-data/MyData.tsx")).toContain("검사값에 대한 해석은 제공하지 않아요.");
   });
 
   it("labels the pre-login hero animation as example data with no health meaning", () => {
@@ -144,8 +145,8 @@ describe("Korean UX language boundary", () => {
 
   it("tells the reviewer the candidate came from the text layer, not from image recognition, and never from a fixture", () => {
     const review = source("components/integrated/CandidateReview.tsx");
-    expect(review).toContain("결과지의 글자 정보에서 읽은 값이에요. 이미지를 판독한 결과가 아니며, 확인하기 전까지 기록이 아니에요.");
-    expect(review).toContain("결과지 텍스트에서 읽은 값 · 문자 인식 아님");
+    expect(review).toContain("PDF에 포함된 텍스트에서 읽은 값이에요. 사진이나 스캔 이미지를 읽은 결과가 아니에요. 직접 확인한 뒤에만 기록으로 저장해요.");
+    expect(review).toContain("PDF 텍스트에서 읽음 · 사진·스캔 인식은 지원하지 않음");
     expect(review).not.toContain("서버가 미리 정한 예시 값");
     const experience = source("components/integrated/IntegratedHealthExperience.tsx");
     expect(experience).toContain("이 결과지에서 읽을 수 있는 항목이 없었어요");
@@ -173,13 +174,13 @@ describe("Korean UX language boundary", () => {
 
   it("names the memory limit when the preview render was stopped, not just a generic terminal failure", () => {
     const experience = source("components/integrated/IntegratedHealthExperience.tsx");
-    expect(experience).toContain("미리보기를 만들다 메모리 한도를 넘어 처리를 중단했어요.");
+    expect(experience).toContain("미리보기 처리 중 메모리 한도를 넘었어요. 다른 예시 PDF를 선택해 주세요.");
     expect(experience).toMatch(/documentReceipt\?\.failureCode === "render_error"/);
   });
 
   it("describes the recent changes as two values without a judgement", () => {
     const recent = source("components/integrated/RecentChanges.tsx");
-    expect(recent).toContain("최근 변화");
+    expect(recent).toContain("이전 검사값과 비교");
     expect(recent).toContain("새 결과지에서 확인한 값과 같은 항목의 이전 값이에요. 변화의 의미는 판단하지 않아요.");
     expect(recent).not.toContain("→");
     expect(recent).toContain("두 값의 차이:");
@@ -244,11 +245,11 @@ describe("Korean UX language boundary", () => {
   it("states that research consent is optional, stored only, and asked again per project", () => {
     const control = source("components/integrated/IntegratedDataControl.tsx");
     for (const sentence of [
-      "연구 동의 없이도 모든 기능을 쓸 수 있어요.",
-      "실제 활용 전에는 프로젝트별 동의를 다시 물어요.",
-      "가명처리 후 연구에 쓰는 것에 대한 선택. 지금은 진행 중인 연구가 없어요.",
-      "적합한 연구가 있을 때 참여 제안을 받을지. 지금은 연락 채널이 없어요.",
-      "프로젝트가 생기면 여기서 개별로 물어요.",
+      "연구에 동의하지 않아도 기록 기능을 사용할 수 있어요.",
+      "현재는 동의 내역만 저장하며, 연구에 사용하기 전에는 해당 연구에 대한 동의를 별도로 받아요.",
+      "개인을 바로 알아볼 수 없도록 가명처리한 기록을 연구에 사용하는 데 동의할지 선택해요. 현재 진행 중인 연구는 없어요.",
+      "연구 참여 안내를 받을지 선택해요. 현재는 안내를 보내지 않아요.",
+      "참여할 연구가 생기면 연구별로 동의를 받아요.",
     ]) {
       expect(control, `data control lacks: ${sentence}`).toContain(sentence);
     }
@@ -260,11 +261,11 @@ describe("Korean UX language boundary", () => {
     const control = source("components/integrated/IntegratedDataControl.tsx");
     expect(control).toContain('href="/api/foundation/health-events/export"');
     expect(control).toContain("내 기록 내보내기(JSON)");
-    expect(control).toContain("브라우저가 파일을 저장해요. 서버에 사본이 남지 않아요.");
+    expect(control).toContain("내보내기 파일을 기기에 저장해요. 내보내기용 사본은 서버에 보관하지 않으며, 기존 기록은 그대로 남아요.");
     expect(control).toContain("내보낼 기록이 없어요");
     expect(control).toContain('href="/api/foundation/health-events/export/fhir"');
     expect(control).toContain("내 기록 내보내기(FHIR)");
-    expect(control).toContain("다른 건강기록 도구가 읽을 수 있는 형식이에요.");
+    expect(control).toContain("JSON 또는 FHIR 형식을 지원하는 다른 프로그램에서 사용할 수 있어요.");
     expect(control).not.toContain("/api/export");
   });
 
@@ -273,9 +274,9 @@ describe("Korean UX language boundary", () => {
     const graph = source("components/my-data/history/HistoryGraph.tsx");
     // I1: the lede lives in the hero (MeasurementHistory.tsx), not tied to any one series'
     // drawable state, so it cannot disappear when that series has no graph.
-    expect(history).toContain("직접 확인한 값을 검사일 순서로 모았어요. 점은 확인한 값이고, 점 사이의 선은 값이 아니에요.");
-    expect(history).toContain("선의 모양이 건강 상태를 뜻하지 않아요. 색은 시간의 위치만 나타내요.");
-    expect(history).toContain("뺄셈과 나눗셈으로만 계산했어요. 의미는 판단하지 않아요.");
+    expect(history).toContain("각 점은 검사일에 확인한 값이에요. 점 사이의 선은 실제 측정값을 나타내지 않아요.");
+    expect(history).toContain("선 모양은 건강 상태를 나타내지 않아요. 색은 검사 시기를 구분하기 위한 표시예요.");
+    expect(history).toContain("검사값 사이의 차이를 계산한 것이며, 건강 상태에 대한 해석은 제공하지 않아요.");
     for (const term of ["마지막 두 값의 차이", "30일로 환산한 차이", "최근 3회 평균"]) expect(history).toContain(term);
     for (const file of [history, graph]) {
       expect(file).not.toMatch(/[↑↓▲▼→]/);

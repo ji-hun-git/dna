@@ -26,23 +26,23 @@ type ConsentRowCopy = {
 const consentRows: ConsentRowCopy[] = [
   {
     purposeCode: "DOCUMENT_EXTRACTION",
-    title: "서비스 제공(결과지 처리)",
+    title: "결과지 처리",
     short: "결과지 처리",
-    description: "허용된 합성 PDF에 대해 문서 요청, 논리 격리, 검사, 합성 후보 확인을 허용합니다. 철회하면 새 결과지를 처리하지 않아요.",
+    description: "등록된 예시 PDF를 검사하고 항목과 검사값을 읽는 데 동의해요. 동의를 철회하면 새 결과지를 처리하지 않아요.",
     purpose: "결과지 항목 확인",
   },
   {
     purposeCode: "RESEARCH_USE",
     title: "연구 활용",
     short: "연구 활용",
-    description: "가명처리 후 연구에 쓰는 것에 대한 선택. 지금은 진행 중인 연구가 없어요.",
+    description: "개인을 바로 알아볼 수 없도록 가명처리한 기록을 연구에 사용하는 데 동의할지 선택해요. 현재 진행 중인 연구는 없어요.",
     purpose: "연구 활용 · 현재 없음",
   },
   {
     purposeCode: "RESEARCH_CONTACT",
     title: "연구 연락",
     short: "연구 연락",
-    description: "적합한 연구가 있을 때 참여 제안을 받을지. 지금은 연락 채널이 없어요.",
+    description: "연구 참여 안내를 받을지 선택해요. 현재는 안내를 보내지 않아요.",
     purpose: "참여 제안 연락 · 현재 없음",
   },
 ];
@@ -103,7 +103,7 @@ export function IntegratedDataControl() {
     try {
       await client.grantConsent(purposeCode, newIdempotencyKey("consent"));
       setConsents(await client.getConsents());
-      setActionMessage(`${short} 동의를 서버에 기록했어요.`);
+      setActionMessage(`${short} 동의 내역을 저장했어요.`);
     } catch (error) {
       setErrorMessage(describeFoundationError(error));
     } finally {
@@ -120,7 +120,7 @@ export function IntegratedDataControl() {
     try {
       await client.revokeConsent(consentId);
       setConsents(await client.getConsents());
-      setActionMessage(`${short} 동의를 서버에서 철회했어요.`);
+      setActionMessage(`${short} 동의를 철회했어요.`);
     } catch (error) {
       setErrorMessage(describeFoundationError(error));
     } finally {
@@ -155,24 +155,24 @@ export function IntegratedDataControl() {
             <div><p>동의와 보관 상태</p><h1 id="integrated-data-title">데이터 관리</h1></div>
             <div className="gc-data-control__hero-copy"><p>목적별 동의를 확인하고, 내 기록을 파일로 내보내거나, 체험 중 만든 기록을 삭제할 수 있어요.</p><strong>예시 데이터 전용 · 실제 개인정보 없음</strong></div>
           </section>
-          <div className="gc-integrated-actions"><a href="/connections">연결 상태 확인</a><a href="/providers">공공정보 실험실</a></div>
+          <div className="gc-integrated-actions"><a href="/connections">연결 상태 확인</a><a href="/providers">병원·비급여 정보 예시</a></div>
 
-          {loading && <p role="status">서버에서 동의 상태를 확인하고 있어요.</p>}
+          {loading && <p role="status">동의 내역을 불러오고 있어요.</p>}
           {actionMessage && <p role="status" aria-live="polite">{actionMessage}</p>}
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage} {!session && <a href="/">홈에서 다시 로그인</a>}</p>}
 
           {!loading && session && (
             <>
-              <section className="gc-data-control__summary" aria-label="현재 서버 데이터 상태">
+              <section className="gc-data-control__summary" aria-label="현재 데이터 상태">
                 <article><span>체험 상태</span><strong>활성</strong><p>이 브라우저에서 체험 중</p></article>
                 <article><span>결과지 처리 동의</span><strong>{labelConsentStatus(documentConsentStatus)}</strong><p>예시 결과지 항목 확인</p></article>
-                <article><span>외부 연결</span><strong>0</strong><p>카카오·네이버·MyHealthWay 비활성화</p><a href="/connections">외부 연결 상태</a></article>
+                <article><span>외부 연결</span><strong>0</strong><p>카카오·네이버·건강정보고속도로 연결 안 됨</p><a href="/connections">외부 연결 상태</a></article>
               </section>
 
               <section className="gc-data-control__purposes" aria-labelledby="server-consent-title">
                 <header>
                   <div><p>현재 동의 상태</p><h2 id="server-consent-title">목적별 동의</h2></div>
-                  <p>연구 동의 없이도 모든 기능을 쓸 수 있어요. 연구 동의는 저장만 되고, 실제 활용 전에는 프로젝트별 동의를 다시 물어요.</p>
+                  <p>연구에 동의하지 않아도 기록 기능을 사용할 수 있어요. 현재는 동의 내역만 저장하며, 연구에 사용하기 전에는 해당 연구에 대한 동의를 별도로 받아요.</p>
                 </header>
                 <div className="gc-data-control__purpose-list">
                   {consentRows.map((row, index) => {
@@ -195,10 +195,10 @@ export function IntegratedDataControl() {
                   <article data-purpose="PROJECT" data-status={projectConsents.some((item) => item.status === "ACTIVE") ? "active" : "revoked"}>
                     <span className="gc-data-control__purpose-index">04</span>
                     <div className="gc-data-control__purpose-copy">
-                      <div><h3>프로젝트별</h3><strong>{projectConsents.length === 0 ? "아직 없음" : `${projectConsents.filter((item) => item.status === "ACTIVE").length}개 동의함`}</strong></div>
-                      <p>프로젝트가 생기면 여기서 개별로 물어요.</p>
+                      <div><h3>연구별 동의</h3><strong>{projectConsents.length === 0 ? "아직 없음" : `${projectConsents.filter((item) => item.status === "ACTIVE").length}개 동의함`}</strong></div>
+                      <p>참여할 연구가 생기면 연구별로 동의를 받아요.</p>
                       {projectConsents.length > 0 && (
-                        <ul className="gc-review-saved" aria-label="프로젝트별 동의">
+                        <ul className="gc-review-saved" aria-label="연구별 동의">
                           {projectConsents.map((item) => {
                             const name = item.purposeCode.slice(projectPrefix.length);
                             return (
@@ -221,7 +221,7 @@ export function IntegratedDataControl() {
                         </ul>
                       )}
                     </div>
-                    <span className="gc-data-control__purpose-lock">지금은 물어볼 프로젝트가 없어요</span>
+                    <span className="gc-data-control__purpose-lock">현재 참여할 연구가 없어요</span>
                   </article>
                 </div>
               </section>
@@ -229,7 +229,7 @@ export function IntegratedDataControl() {
               <section className="gc-integrated-auth" aria-labelledby="server-export-title">
                 <p>내 기록</p>
                 <h2 id="server-export-title">내 기록 내보내기</h2>
-                <p>브라우저가 파일을 저장해요. 서버에 사본이 남지 않아요.</p>
+                <p>내보내기 파일을 기기에 저장해요. 내보내기용 사본은 서버에 보관하지 않으며, 기존 기록은 그대로 남아요.</p>
                 <div className="gc-integrated-actions">
                   {events.length > 0
                     ? <a className="gc-button gc-button--weak" href="/api/foundation/health-events/export" download>내 기록 내보내기(JSON)</a>
@@ -238,22 +238,22 @@ export function IntegratedDataControl() {
                     ? <a className="gc-button gc-button--weak" href="/api/foundation/health-events/export/fhir" download>내 기록 내보내기(FHIR)</a>
                     : <button type="button" disabled>내 기록 내보내기(FHIR)</button>}
                 </div>
-                <p>다른 건강기록 도구가 읽을 수 있는 형식이에요.</p>
+                <p>JSON 또는 FHIR 형식을 지원하는 다른 프로그램에서 사용할 수 있어요.</p>
                 {events.length === 0 && <p className="gc-integrated-empty">내보낼 기록이 없어요</p>}
               </section>
 
               <section className="gc-data-control__danger" aria-labelledby="server-delete-title">
                 <div><p>체험 데이터</p><h2 id="server-delete-title">계정과 데이터 모두 삭제</h2><span>결과지와 확인한 기록을 삭제하고 이 체험을 끝내요.</span></div>
-                <button type="button" onClick={() => setReviewingDeletion(true)} disabled={busy}>삭제 요청 검토</button>
+                <button type="button" onClick={() => setReviewingDeletion(true)} disabled={busy}>전체 삭제하기</button>
               </section>
 
               {reviewingDeletion && (
                 <section className="gc-integrated-auth" aria-labelledby="delete-confirm-title">
                   <p>삭제 확인</p>
-                  <h2 id="delete-confirm-title">합성 프로필을 삭제할까요?</h2>
-                  <p>세션, 동의, 문서, 후보와 기록이 삭제되고 현재 세션도 끝납니다. 감사 이벤트에는 건강 수치를 남기지 않습니다.</p>
+                  <h2 id="delete-confirm-title">체험 기록을 모두 삭제할까요?</h2>
+                  <p>체험 계정, 동의 내역, 결과지, 확인 전 항목과 저장한 기록을 모두 삭제해요. 삭제하면 복구할 수 없고 체험도 종료돼요. 보안 감사 기록에는 건강 수치를 남기지 않아요.</p>
                   <label><input type="checkbox" checked={confirmedDeletion} onChange={(event) => setConfirmedDeletion(event.target.checked)} /> 위 내용을 확인했습니다</label>
-                  <div className="gc-integrated-actions"><button type="button" onClick={() => { setReviewingDeletion(false); setConfirmedDeletion(false); }}>취소</button><button type="button" onClick={() => void deleteProfile()} disabled={!confirmedDeletion || busy}>{busy ? "삭제 상태 확인 중" : "서버에 삭제 요청"}</button></div>
+                  <div className="gc-integrated-actions"><button type="button" onClick={() => { setReviewingDeletion(false); setConfirmedDeletion(false); }}>취소</button><button type="button" onClick={() => void deleteProfile()} disabled={!confirmedDeletion || busy}>{busy ? "삭제 상태 확인 중" : "모두 삭제"}</button></div>
                 </section>
               )}
             </>
@@ -261,10 +261,10 @@ export function IntegratedDataControl() {
 
           {deletion?.status === "COMPLETED" && (
             <section className="gc-integrated-auth" aria-labelledby="delete-complete-title" role="status">
-              <p>서버 완료 상태</p>
+              <p>삭제 결과</p>
               <h2 id="delete-complete-title">삭제가 완료됐어요</h2>
               <p>체험 데이터가 삭제됐고 이 브라우저의 체험도 끝났어요.</p>
-              <dl className="gc-integrated-facts"><div><dt>삭제 ID</dt><dd><code>{deletion.deletionId}</code></dd></div><div><dt>감사에 건강 수치</dt><dd>{deletion.rawHealthValuesPresentInAudit ? "발견됨 · 중단 필요" : "없음"}</dd></div></dl>
+              <dl className="gc-integrated-facts"><div><dt>삭제 ID</dt><dd><code>{deletion.deletionId}</code></dd></div><div><dt>보안 감사 기록의 건강 수치</dt><dd>{deletion.rawHealthValuesPresentInAudit ? "발견됨 · 중단 필요" : "없음"}</dd></div></dl>
               <div className="gc-integrated-actions"><a href="/">홈으로 돌아가기</a></div>
             </section>
           )}

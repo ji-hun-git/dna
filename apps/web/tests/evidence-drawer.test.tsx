@@ -10,7 +10,7 @@ afterEach(cleanup);
 it("shows source, page, digests and confirmation time for a verified event", () => {
   const event = syntheticHealthEvent();
   render(<EvidenceDrawer event={event} onClose={() => {}} />);
-  const region = screen.getByRole("region", { name: "총콜레스테롤 근거" });
+  const region = screen.getByRole("region", { name: "총콜레스테롤 출처" });
   expect(region).toHaveTextContent("188 mg/dL");
   expect(region).toHaveTextContent("2026. 7. 28.");
   expect(region).toHaveTextContent("1쪽");
@@ -45,7 +45,7 @@ it("explains a missing preview instead of hiding it, and lists the correction hi
     source: { ...syntheticHealthEvent().source, previewAvailable: false },
   });
   render(<EvidenceDrawer event={event} onClose={() => {}} />);
-  expect(screen.getByText("출처 미리보기를 지금은 볼 수 없어요. 값은 그대로 두고, 출처 상태만 표시해요.")).toBeVisible();
+  expect(screen.getByText("결과지 미리보기를 불러오지 못했어요. 저장된 검사값은 변경되지 않았어요.")).toBeVisible();
   expect(screen.getByText("직접 수정한 값")).toBeVisible();
   expect(screen.queryByRole("img")).toBeNull();
   const history = screen.getByText("수정 이력").nextElementSibling;
@@ -66,7 +66,7 @@ it("says 수정 없음 when nothing was corrected, and lists only the date when 
 it("closes from the button", async () => {
   const onClose = vi.fn();
   render(<EvidenceDrawer event={syntheticHealthEvent()} onClose={onClose} />);
-  await userEvent.click(screen.getByRole("button", { name: "근거 닫기" }));
+  await userEvent.click(screen.getByRole("button", { name: "출처 닫기" }));
   expect(onClose).toHaveBeenCalled();
 });
 

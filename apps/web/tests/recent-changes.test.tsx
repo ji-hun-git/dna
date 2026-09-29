@@ -36,7 +36,7 @@ afterEach(cleanup);
 it("states this time's value and the previous value of each item side by side without judging", () => {
   render(<RecentChanges changes={summary} />);
 
-  expect(screen.getByRole("heading", { name: "최근 변화" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "이전 검사값과 비교" })).toBeVisible();
   expect(screen.getByText("새 결과지 · 2026. 7. 28.")).toBeVisible();
   expect(screen.getByText("새 기록 2개")).toBeVisible();
   expect(screen.getByText("새 결과지에서 확인한 값과 같은 항목의 이전 값이에요. 변화의 의미는 판단하지 않아요.")).toBeVisible();

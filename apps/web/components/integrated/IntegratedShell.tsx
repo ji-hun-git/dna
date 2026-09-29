@@ -48,7 +48,7 @@ export function IntegratedShell({ current, status, children }: IntegratedShellPr
       <div className="gc-shell__bar">
         <a className="gc-shell__brand" href="/" aria-label="앎 건강 홈">
           <strong>앎<span aria-hidden="true">.</span></strong>
-          <span className="gc-shell__brand-caption">나를 알아가는 기록</span>
+          <span className="gc-shell__brand-caption">건강 기록</span>
         </a>
         <nav className="gc-shell__nav" aria-label="주요 메뉴">
           {routes.map((route) => (

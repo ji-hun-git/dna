@@ -112,7 +112,7 @@ export function IntegratedRecords() {
       setRecords((current) => current.map((item) => item.recordId === corrected.recordId ? corrected : item));
       setEditingId(undefined);
       setReason("");
-      setSuccessMessage(`${corrected.label} 기록을 새 버전으로 저장했어요.`);
+      setSuccessMessage(`${corrected.label} 수정 내용을 저장했어요.`);
     } catch (error) {
       setErrorMessage(describeFoundationError(error));
       // A failed write is not automatically replayed by the read-retry control.
@@ -132,14 +132,14 @@ export function IntegratedRecords() {
               <h1 id="integrated-records-title">내 기록</h1>
               <p>날짜별로 모은 값과 출처를 살펴보세요. 직접 수정한 값은 원래 값과 함께 확인할 수 있어요.</p>
             </div>
-            <aside className={styles.truthPanel} aria-label="서버 기록 상태">
+            <aside className={styles.truthPanel} aria-label="저장된 기록">
               <header><span>데이터 상태</span><strong>예시 데이터</strong></header>
               <p><strong>{loading || errorMessage ? "—" : String(records.length).padStart(2, "0")}</strong><span>현재 기록</span></p>
               <footer>실제 개인정보·외부기관 데이터 없음</footer>
             </aside>
           </section>
 
-          {loading && <p role="status" aria-live="polite">서버에서 건강 기록을 불러오고 있어요.</p>}
+          {loading && <p role="status" aria-live="polite">기록을 불러오고 있어요.</p>}
           {successMessage && <p role="status" aria-live="polite">{successMessage}</p>}
           {errorMessage && <p className="gc-integrated-error" role="alert">{errorMessage}{" "}
             {errorAction === "sign-in" && <a href="/">홈에서 다시 로그인</a>}
@@ -147,12 +147,12 @@ export function IntegratedRecords() {
           </p>}
 
           {!loading && !errorMessage && records.length === 0 && (
-            <p className="gc-integrated-empty">아직 저장된 합성 기록이 없어요. 홈에서 허용된 합성 PDF를 확인해 주세요.</p>
+            <p className="gc-integrated-empty">아직 저장한 기록이 없어요. 홈에서 예시 결과지를 추가해 주세요.</p>
           )}
 
           {!loading && !errorMessage && records.some((record) => record.status === "CURRENT") && (
             <section className="gc-records-next" aria-label="기록 활용">
-              <div><h2>확인한 기록을 가져가세요</h2><p>날짜·값·단위와 출처를 함께 내려받아요. 예시 데이터로 만든 개인 기록 정리본이에요.</p></div>
+              <div><h2>기록 내려받기</h2><p>검사일, 검사값, 단위, 출처를 CSV 파일로 저장해요. 현재 기록은 모두 예시 데이터예요.</p></div>
               <div className="gc-integrated-actions">
                 <button type="button" onClick={() => downloadRecordCsv(records)}>기록 내려받기(CSV)</button>
                 <a href="/prepare">진료 준비·인쇄</a>
@@ -165,7 +165,7 @@ export function IntegratedRecords() {
 
           {!loading && records.length > 0 && (
             <section className={styles.history} aria-labelledby="durable-history-title">
-              <header className={styles.sectionHeading}><div><p>출처와 버전</p><h2 id="durable-history-title">현재 기록 {records.length}개</h2></div><span>서버 응답만 표시해요</span></header>
+              <header className={styles.sectionHeading}><div><p>출처 및 수정 내역</p><h2 id="durable-history-title">현재 기록 {records.length}개</h2></div><span>저장된 기록만 표시해요</span></header>
               {groupRecords(records).map((group) => (
                 <section key={group.key} className="gc-records-group" aria-labelledby={`record-group-${group.key}`}>
                   <h3 id={`record-group-${group.key}`}>{formatKoreanDate(group.observedOn)} · 결과지 {shortDigest(group.documentSha256)}</h3>
@@ -176,15 +176,15 @@ export function IntegratedRecords() {
                         <div className={styles.historyValue}><strong>{record.value}</strong><span>{record.unit}</span></div>
                         <div className={styles.historySource}><strong>{record.label}</strong>{originalLabelLine(record.originalLabel, record.label) && <span className={styles.historyOriginal} data-testid="original-label">{originalLabelLine(record.originalLabel, record.label)}</span>}<span>예시 데이터</span><span>{describeReviewDecision(record)}</span></div>
                         <details>
-                          <summary>출처와 버전 보기</summary>
+                          <summary>출처와 수정 내역 보기</summary>
                           <SourcePreview key={record.documentId} documentId={record.documentId} page={record.evidencePage} />
                           <dl>
                             <div><dt>현재 상태</dt><dd>{labelRecordStatus(record.status)}</dd></div>
-                            <div><dt>원래 후보</dt><dd>{record.originalValue} {record.unit}</dd></div>
+                            <div><dt>처음 읽은 값</dt><dd>{record.originalValue} {record.unit}</dd></div>
                             <div><dt>현재 버전</dt><dd><code>{record.recordVersionId}</code></dd></div>
                             <div><dt>이전 버전</dt><dd>{record.supersedesVersionId ? <code>{record.supersedesVersionId}</code> : "없음"}</dd></div>
-                            <div><dt>문서 확인값</dt><dd><code>{shortDigest(record.documentSha256)}</code></dd></div>
-                            <div><dt>후보 근거값</dt><dd><code>{shortDigest(record.sourceTextSha256)}</code></dd></div>
+                            <div><dt>파일 식별값</dt><dd><code>{shortDigest(record.documentSha256)}</code></dd></div>
+                            <div><dt>원문 식별값</dt><dd><code>{shortDigest(record.sourceTextSha256)}</code></dd></div>
                             <div><dt>확인 시각</dt><dd>{formatKoreanDateTime(record.confirmedAt)}</dd></div>
                             {record.correctionReason && <div><dt>수정 이유</dt><dd>{record.correctionReason}</dd></div>}
                           </dl>
@@ -194,7 +194,7 @@ export function IntegratedRecords() {
                               <input id={`record-value-${record.recordId}`} value={draftValue} onChange={(event) => setDraftValue(event.target.value)} inputMode="decimal" pattern="-?([0-9]{1,3}(,[0-9]{3})+|[0-9]+)([.][0-9]+)?" maxLength={64} required />
                               <label htmlFor={`record-reason-${record.recordId}`}>수정 이유</label>
                               <input id={`record-reason-${record.recordId}`} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={200} required />
-                              <div className="gc-integrated-actions"><button type="button" onClick={() => setEditingId(undefined)}>취소</button><button type="submit" disabled={busy}>{busy ? "서버에 반영 중" : "새 버전으로 저장"}</button></div>
+                              <div className="gc-integrated-actions"><button type="button" onClick={() => setEditingId(undefined)}>취소</button><button type="submit" disabled={busy}>{busy ? "저장 중" : "수정 내용 저장"}</button></div>
                             </form>
                           ) : (
                             <button type="button" onClick={() => { setEditingId(record.recordId); setDraftValue(record.value); setReason(""); }}>이 기록 수정</button>
@@ -208,7 +208,7 @@ export function IntegratedRecords() {
             </section>
           )}
 
-          <section className={styles.boundary} aria-labelledby="integrated-record-boundary"><div><p>현재 제품 경계</p><h2 id="integrated-record-boundary">기록을 보존하지만 진단하지 않아요</h2><span>이 합성 값만으로 정상·비정상, 질환, 치료를 판단하지 않습니다.</span></div><a href="/">홈으로</a></section>
+          <section className={styles.boundary} aria-labelledby="integrated-record-boundary"><div><p>이용 안내</p><h2 id="integrated-record-boundary">검사 결과에 대한 판단은 제공하지 않아요</h2><span>예시 검사값만 표시하며 질환이나 치료에 대한 판단은 제공하지 않아요.</span></div><a href="/">홈으로</a></section>
         </div>
       </main>
     </IntegratedShell>

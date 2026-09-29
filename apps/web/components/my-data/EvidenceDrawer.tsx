@@ -47,8 +47,8 @@ export function EvidenceDrawer({
   return (
     <section className={styles.drawer} aria-labelledby={titleId}>
       <header>
-        <h2 id={titleId} ref={headingRef} tabIndex={-1}>{event.concept} 근거</h2>
-        <button type="button" onClick={onClose}>근거 닫기</button>
+        <h2 id={titleId} ref={headingRef} tabIndex={-1}>{event.concept} 출처</h2>
+        <button type="button" onClick={onClose}>출처 닫기</button>
       </header>
       <dl>
         {originalLabelLine(event.originalLabel, event.concept) && (
@@ -65,7 +65,7 @@ export function EvidenceDrawer({
       </dl>
       {event.source.previewAvailable
         ? <SourcePreview documentId={event.source.documentId} page={event.source.page} />
-        : <p role="status">출처 미리보기를 지금은 볼 수 없어요. 값은 그대로 두고, 출처 상태만 표시해요.</p>}
+        : <p role="status">결과지 미리보기를 불러오지 못했어요. 저장된 검사값은 변경되지 않았어요.</p>}
       <p><a href={`/records#record-${event.recordId}`}>기록 목록에서 이 값 보기</a></p>
       <p><a href={`/my-data/history#event-${event.eventId}`}>이 항목의 측정 이력 보기</a></p>
     </section>
