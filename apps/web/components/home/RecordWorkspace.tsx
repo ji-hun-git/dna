@@ -6,7 +6,7 @@ import styles from "./RecordWorkspace.module.css";
 type Props = {
   children: ReactNode;
   preview?: boolean;
-  rows?: ExampleNode[];
+  rows?: (ExampleNode & { recordId?: string })[];
   documentCount?: number;
   belowRecords?: ReactNode;
 };
@@ -41,7 +41,9 @@ export function RecordWorkspace({ children, preview = false, rows = [], document
                 <thead><tr><th scope="col">항목</th><th scope="col">값</th><th scope="col">검사일</th><th scope="col">상태</th></tr></thead>
                 <tbody>{visibleRows.map((row, index) => (
                   <tr key={`${row.item}-${index}`}>
-                    <td>{row.item}</td><td><strong>{row.value}</strong> <span>{row.unit}</span></td>
+                    <td>{!preview && "recordId" in row && row.recordId
+                      ? <a className={styles.recordLink} href={`/records#record-${row.recordId}`}>{row.item}</a>
+                      : row.item}</td><td><strong>{row.value}</strong> <span>{row.unit}</span></td>
                     <td>{formatKoreanDate(row.observedOn)}</td><td>직접 확인함</td>
                   </tr>
                 ))}</tbody>
@@ -60,14 +62,11 @@ export function RecordWorkspace({ children, preview = false, rows = [], document
         <aside className={styles.aside}>
           <section className={styles.visit}>
             <span className={styles.visitIcon} aria-hidden="true">↗</span>
-            <p>진료 준비</p>
             <h2>진료 때 물어볼 질문</h2>
-            <p>저장한 검사값에 대한 질문을<br />확인하고 인쇄할 수 있어요.</p>
             <p><a href="/prepare">질문 목록 보기 <span aria-hidden="true">›</span></a></p>
           </section>
           <div className={styles.privacy}>
             <p>동의 및 삭제</p>
-            <p>동의 내역을 확인하거나<br />체험 기록을 삭제할 수 있어요.</p>
             <p><a href="/data-control">데이터 관리 열기 <span aria-hidden="true">›</span></a></p>
           </div>
         </aside>
